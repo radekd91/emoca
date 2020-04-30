@@ -1,0 +1,26 @@
+InputOutput:
+  visualize: true
+  data_dir: data/COMA
+  output_dir: results/COMA
+  template_fname: data/COMA/template/template.obj
+  
+ModelParameters:
+  model: Coma
+  eval: true
+  checkpoint_file: false
+  n_layers: 4
+  z: 8
+  downsampling_factors: [4, 4, 4, 4]
+  num_conv_filters: [16, 16, 16, 32, 32]
+  polygon_order: [6, 6, 6, 6, 6]
+
+LearningParameters:
+  batch_size: 16
+  learning_rate: 0.008
+  learning_rate_decay: 0.99
+  weight_decay: 0.0005
+  epoch: 300
+  optimizer: sgd
+
+DataParameters:
+  workers_thread: 6
