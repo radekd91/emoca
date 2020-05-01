@@ -15,7 +15,7 @@ from datasets.coma_dataset import ComaDataset
 # from utils.logging import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
-
+import skimage.io as skio
 
 import wandb
 
@@ -328,9 +328,13 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
             if psbody_available:
                 result_mesh = Mesh(v=save_out, f=template_mesh.f)
                 expected_mesh = Mesh(v=expected_out, f=template_mesh.f)
-
-                result_fname = os.path.join(output_dir, 'eval_%.4d.obj' % i)
-                expected_fname = os.path.join(output_dir, 'gt_%.4d.obj' % i)
+                if epoch is not None:
+                    visual_folder = os.path.join(output_dir, "%.5d" % epoch)
+                else:
+                    visual_folder = os.path.join(output_dir)
+                os.makedirs(visual_folder, exist_ok=True)
+                result_fname = os.path.join(visual_folder, 'eval_%.4d.obj' % i)
+                expected_fname = os.path.join(visual_folder, 'gt_%.4d.obj' % i)
                 result_mesh.write_obj(result_fname)
                 expected_mesh.write_obj(expected_fname)
                 if logger is not None:
@@ -343,12 +347,13 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
 
                 meshviewer[0][0].set_dynamic_meshes([result_mesh])
                 meshviewer[0][1].set_dynamic_meshes([expected_mesh])
-                image_fname = os.path.join(output_dir, 'comparison_%.4d.png' % i)
-                meshviewer[0][0].save_snapshot(image_fname, blocking=False)
+                image_fname = os.path.join(visual_folder, 'comparison_%.4d.png' % i)
+                meshviewer[0][0].save_snapshot(image_fname, blocking=True)
                 if logger is not None:
                     logger.log_image(
                         epoch=epoch,
                         images={
+                          # "comparison_%.4d" % i: skio.imread(image_fname),
                           "comparison_%.4d" % i: image_fname,
                         })
     return total_loss/len(dataset)
