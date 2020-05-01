@@ -256,7 +256,7 @@ def training_loop(model, optimizer, lr_scheduler,
     logger.watch_model(model)
 
     if eval_flag:
-        val_loss = evaluate(model, None, visual_out_dir, test_loader, template_mesh, device, visualize)
+        val_loss = evaluate(model, None, visual_out_dir, test_loader, template_mesh, device, logger=logger, visualize=visualize)
         print('val loss', val_loss)
         return
 
@@ -274,7 +274,7 @@ def training_loop(model, optimizer, lr_scheduler,
 
         logger.log_values(epoch, {'loss': train_loss})
 
-        val_loss = evaluate(model, epoch, visual_out_dir, test_loader, template_mesh, device, visualize=visualize)
+        val_loss = evaluate(model, epoch, visual_out_dir, test_loader, template_mesh, device, logger=logger, visualize=visualize)
 
         logger.log_values(epoch, {'val_loss': val_loss})
 
@@ -338,17 +338,17 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                         epoch=epoch,
                         models={
                           "result_%.4d" % i: result_fname,
-                          "gt_%.4d" % i : expected_fname
+                          "gt_%.4d" % i: expected_fname
                         })
 
                 meshviewer[0][0].set_dynamic_meshes([result_mesh])
                 meshviewer[0][1].set_dynamic_meshes([expected_mesh])
-                image_fname = os.path.join(output_dir, 'comparison_%.4d.png')
+                image_fname = os.path.join(output_dir, 'comparison_%.4d.png' % i)
                 meshviewer[0][0].save_snapshot(image_fname, blocking=False)
                 if logger is not None:
                     logger.log_image(
                         epoch=epoch,
-                        models={
+                        images={
                           "comparison_%.4d" % i: image_fname,
                         })
     return total_loss/len(dataset)
