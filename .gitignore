@@ -1,0 +1,5 @@
+results/
+*/wandb/*
+.idea/
+*.pyc
+data/
