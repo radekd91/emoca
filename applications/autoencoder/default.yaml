@@ -6,7 +6,6 @@ InputOutput:
   
 ModelParameters:
   model: Coma
-  eval: true
   checkpoint_file: false
   n_layers: 4
   z: 8
@@ -15,6 +14,7 @@ ModelParameters:
   polygon_order: [6, 6, 6, 6, 6]
 
 LearningParameters:
+  eval: false
   batch_size: 16
   learning_rate: 0.008
   learning_rate_decay: 0.99

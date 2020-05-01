@@ -1,5 +1,5 @@
 import os
-os.system('wandb login ac022f3e88af42e979689d6a8f7617288a0ed93f')
+# os.system('wandb login ac022f3e88af42e979689d6a8f7617288a0ed93f')
 # os.system('wandb login')
 
 import wandb
@@ -21,11 +21,14 @@ class AbstractLogger(object):
     def log_3D_shape(self, epoch, models: dict):
         raise NotImplementedError()
 
+    def get_experiment_id(self):
+        raise NotImplementedError()
 
 class WandbLogger(AbstractLogger):
 
     def __init__(self, project_name, run_name, output_foder, id=None):
         os.makedirs(output_foder)
+        self.id = id
         self.wandb_run = wandb.init(project=project_name,
                    name=run_name,
                    sync_tensorboard=True,
@@ -54,6 +57,8 @@ class WandbLogger(AbstractLogger):
         ims = {key: wandb.Image(value) for key, value in images.items()}
         wandb.log(ims, step=epoch)
 
+    def get_experiment_id(self):
+        return self.id
 
 if __name__ == "__main__":
     logger = WandbLogger('test_project_name', 'test_run_name', 'test_out_folder', None)

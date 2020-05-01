@@ -12,10 +12,66 @@ from pytorch3d.io import load_obj, save_obj
 from utils import mesh_operations
 from models.Coma import Coma
 from datasets.coma_dataset import ComaDataset
-from utils.logging import WandbLogger
+# from utils.logging import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
 
+
+import wandb
+
+class AbstractLogger(object):
+
+    def add_config(self, cfg: dict):
+        raise NotImplementedError()
+
+    def watch_model(self, model):
+        raise NotImplementedError()
+
+    def log_values(self, epochm, values: dict):
+        raise NotImplementedError()
+
+    def log_image(self, epoch, images: dict):
+        raise NotImplementedError()
+
+    def log_3D_shape(self, epoch, models: dict):
+        raise NotImplementedError()
+
+
+class WandbLogger(AbstractLogger):
+
+    def __init__(self, project_name, run_name, output_foder, id=None):
+        os.makedirs(output_foder)
+        self.id = id
+        self.wandb_run = wandb.init(project=project_name,
+                   name=run_name,
+                   sync_tensorboard=True,
+                   dir=output_foder,
+                   id=id
+                   )
+
+    def add_config(self, config: dict):
+        wandb.config = config
+
+    def watch_model(self, model):
+        wandb.watch(model)
+
+    def log_values(self, epoch: int, values: dict):
+        # wandb.log(vals, step=epoch) # epoch into dict or not?
+        vals = values.copy()
+        # vals['epoch'] = epoch
+        wandb.log(vals, step=epoch)
+        # wandb.log(vals)
+
+    def log_3D_shape(self, epoch: int, models: dict):
+        shapes = {key: wandb.Object3D(value) for key, value in models.items() }
+        wandb.log(shapes, step=epoch)
+
+    def log_image(self, epoch, images: dict):
+        ims = {key: wandb.Image(value) for key, value in images.items()}
+        wandb.log(ims, step=epoch)
+
+    def get_experiment_id(self):
+        return self.id
 
 try:
     from psbody.mesh import Mesh, MeshViewers
@@ -57,7 +113,8 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, run_id, checkpoint_
     checkpoint['train_loss'] = train_loss
     checkpoint['val_loss'] = val_loss
     checkpoint['run_id'] = run_id
-    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_'+ str(epoch)+'.pt'))
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_.%4d.pt' % epoch))
 
 
 def load_model(model, optimizer, device, checkpoint_file):
@@ -114,7 +171,7 @@ def main(args):
     config['DataParameters']['split'] = args.split
     config['DataParameters']['split_term'] = args.split_term
 
-    logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    # logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
 
     normalize_transform = NormalizeGeometricData() # the normalization params (mean and std) will get loaded
     dataset_train = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term, pre_transform=normalize_transform)
@@ -168,7 +225,7 @@ def main(args):
     model.to(device)
 
 
-    # logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     logger.add_config(config)
     training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
 
@@ -199,7 +256,7 @@ def training_loop(model, optimizer, lr_scheduler,
     logger.watch_model(model)
 
     if eval_flag:
-        val_loss = evaluate(model, visual_out_dir, test_loader, template_mesh, device, visualize)
+        val_loss = evaluate(model, None, visual_out_dir, test_loader, template_mesh, device, visualize)
         print('val loss', val_loss)
         return
 
@@ -208,21 +265,22 @@ def training_loop(model, optimizer, lr_scheduler,
 
     for epoch in range(start_epoch, total_epochs + 1):
         print("Training for epoch ", epoch)
-        lr_scheduler.step(epoch)
+        # optimizer.step()
+        # lr_scheduler.step(epoch)
 
         logger.log_values(epoch, {'lr': lr_scheduler.get_lr()})
 
-        train_loss = train_epoch(model, train_loader, len(train_loader.dataset), optimizer, device)
+        train_loss = train_epoch(model, epoch, train_loader, len(train_loader.dataset), optimizer, lr_scheduler, device)
 
         logger.log_values(epoch, {'loss': train_loss})
 
-        val_loss = evaluate(model, visual_out_dir, test_loader, template_mesh, device, visualize=visualize)
+        val_loss = evaluate(model, epoch, visual_out_dir, test_loader, template_mesh, device, visualize=visualize)
 
         logger.log_values(epoch, {'val_loss': val_loss})
 
         print('epoch ', epoch,' Train loss ', train_loss, ' Val loss ', val_loss)
         if val_loss < best_val_loss:
-            save_model(model, optimizer, epoch, train_loss, val_loss, checkpoint_dir)
+            save_model(model, optimizer, epoch, train_loss, val_loss, logger.get_experiment_id(), checkpoint_dir)
             best_val_loss = val_loss
 
         val_loss_history.append(val_loss)
@@ -233,17 +291,19 @@ def training_loop(model, optimizer, lr_scheduler,
 
 
 
-def train_epoch(coma, train_loader, len_dataset, optimizer, device):
-    coma.train()
+def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, device):
+    model.train()
     total_loss = 0
     for data in train_loader:
         data = data.to(device)
         optimizer.zero_grad()
-        out = coma(data)
+        out = model(data)
         loss = F.l1_loss(out, data.y)
         total_loss += data.num_graphs * loss.item()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step(epoch)
+
     return total_loss / len_dataset
 
 
@@ -272,7 +332,7 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                 result_fname = os.path.join(output_dir, 'eval_%.4d.obj' % i)
                 expected_fname = os.path.join(output_dir, 'gt_%.4d.obj' % i)
                 result_mesh.write_obj(result_fname)
-                expected_out.write_obj(expected_fname)
+                expected_mesh.write_obj(expected_fname)
                 if logger is not None:
                     logger.log_3D_shape(
                         epoch=epoch,
@@ -295,8 +355,8 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
 
 
 if __name__ == '__main__':
-    logger = WandbLogger("Coma", 'a', os.path.join('a', 'logs'), id='aa')
-    print("yo")
+    # logger = WandbLogger("Coma", 'a', os.path.join('a', 'logs'), id='aa')
+    # print("yo")
     parser = argparse.ArgumentParser(description='Pytorch Trainer for Convolutional Mesh Autoencoders')
     parser.add_argument('-c', '--conf', help='path of config file')
     parser.add_argument('-s', '--split', default='sliced', help='split can be sliced, expression or identity ')
