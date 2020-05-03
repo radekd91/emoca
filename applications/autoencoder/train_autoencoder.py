@@ -16,6 +16,7 @@ from datasets.coma_dataset import ComaDataset
 from transforms.normalize import NormalizeGeometricData
 import yaml
 import skimage.io as skio
+from utils.logging import TbXLogger
 
 import wandb
 
@@ -114,7 +115,7 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, run_id, checkpoint_
     checkpoint['val_loss'] = val_loss
     checkpoint['run_id'] = run_id
     os.makedirs(checkpoint_dir, exist_ok=True)
-    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_.%4d.pt' % epoch))
+    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_%.4d.pt' % epoch))
 
 
 def load_model(model, optimizer, device, checkpoint_file):
@@ -225,9 +226,13 @@ def main(args):
     model.to(device)
 
 
-    logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    wandb_logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    # logger = TbXLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    logger = TbXLogger("Coma", experiment_name, output_dir, id=experiment_name, wandb_logger=wandb_logger)
     logger.add_config(config)
     training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
+    print("Training finished")
+
 
 
 def training_loop(model, optimizer, lr_scheduler,
@@ -278,7 +283,7 @@ def training_loop(model, optimizer, lr_scheduler,
 
         logger.log_values(epoch, {'val_loss': val_loss})
 
-        print('epoch ', epoch,' Train loss ', train_loss, ' Val loss ', val_loss)
+        print('epoch ', epoch, ' Train loss ', train_loss, ' Val loss ', val_loss)
         if val_loss < best_val_loss:
             save_model(model, optimizer, epoch, train_loss, val_loss, logger.get_experiment_id(), checkpoint_dir)
             best_val_loss = val_loss
