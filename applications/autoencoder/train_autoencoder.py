@@ -1,5 +1,5 @@
 import os, sys
-sys.path += ['../..']
+sys.path += [os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..')]
 import argparse
 import configparser
 import numpy as np
@@ -299,7 +299,11 @@ def training_loop(model, optimizer, lr_scheduler,
 def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, device):
     model.train()
     total_loss = 0
+    i = 0
     for data in train_loader:
+        if i % 10 == 0:
+            break
+        i+=1
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)
