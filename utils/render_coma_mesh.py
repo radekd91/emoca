@@ -38,7 +38,6 @@ def render(mesh, device, renderer='flat'):
 
     # Load obj file
 
-    print(verts[None, :].shape)
     verts_rgb = torch.ones_like(verts)[None]  # (1, V, 3)
 
     verts_rgb[:,:,0] = 135/255
