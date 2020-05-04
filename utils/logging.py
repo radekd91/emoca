@@ -63,6 +63,7 @@ class WandbLogger(AbstractLogger):
 
 
 import tensorboardX as tbx
+from utils.io import load_mesh
 
 
 class TbXLogger(AbstractLogger):
@@ -107,20 +108,11 @@ class TbXLogger(AbstractLogger):
     def log_3D_shape(self, epoch: int, models: dict):
         if self.wandb_logger is not None:
             self.wandb_logger.log_3D_shape(epoch, models)
-        from pytorch3d.io import load_obj, load_ply
         # shapes = {key: wandb.Object3D(value) for key, value in models.items() }
         for key, value in models.items():
             if isinstance(value, str):
-                fname, ext = os.path.splitext(value)
-                if ext == '.ply':
-                    vertices, faces = load_ply(value)
-                    colors = None
-                elif ext == '.obj':
-                    vertices, face_data, _ = load_obj(value)
-                    faces = face_data[0]
-                    colors = None
-                else:
-                    raise ValueError("Unknown extension '%s'" % ext)
+                vertices, faces = load_mesh(value)
+                colors = None
             elif isinstance(value, tuple) or isinstance(value, list):
                 vertices = value[0]
                 faces = value[1]

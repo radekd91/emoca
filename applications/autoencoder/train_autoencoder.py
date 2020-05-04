@@ -15,10 +15,12 @@ from datasets.coma_dataset import ComaDataset
 # from utils.logging import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
-import skimage.io as skio
 from utils.logging import TbXLogger
-
+from utils.render_coma_mesh import render
 import wandb
+import skimage.io as skio
+from skimage.exposure import rescale_intensity
+from skimage.util import img_as_ubyte
 
 class AbstractLogger(object):
 
@@ -301,8 +303,8 @@ def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler
     total_loss = 0
     i = 0
     for data in train_loader:
-        if i % 10 == 0:
-            break
+        # if i % 10 == 0:
+        #     break
         i+=1
         data = data.to(device)
         optimizer.zero_grad()
@@ -354,17 +356,49 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                           "gt_%.4d" % i: expected_fname
                         })
 
-                meshviewer[0][0].set_dynamic_meshes([result_mesh])
-                meshviewer[0][1].set_dynamic_meshes([expected_mesh])
-                image_fname = os.path.join(visual_folder, 'comparison_%.4d.png' % i)
-                meshviewer[0][0].save_snapshot(image_fname, blocking=True)
+                meshviewer[0][0].set_dynamic_meshes([expected_mesh])
+                meshviewer[0][1].set_dynamic_meshes([result_mesh])
+
+                image_result_flat = render(result_fname, device=device, renderer='flat')
+                image_gt_flat = render(expected_fname, device=device, renderer='flat')
+
+                comparison = torch.cat([image_gt_flat, image_result_flat], dim=2)
+                comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
+                comparison = {"comparison_%.4d_flat_view_%.2d" % (i, j) :
+                                  rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
+                              for j in range(len(comparison))}
+                for name, im in comparison.items():
+                    skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
                 if logger is not None:
                     logger.log_image(
                         epoch=epoch,
-                        images={
-                          # "comparison_%.4d" % i: skio.imread(image_fname),
-                          "comparison_%.4d" % i: image_fname,
-                        })
+                        images=comparison)
+
+
+                image_result_smooth = render(result_fname, device=device, renderer='smooth')
+                image_gt_smooth = render(expected_fname, device=device, renderer='smooth')
+
+                comparison = torch.cat([image_gt_smooth, image_result_smooth], dim=2)
+                comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
+                comparison = {"comparison_%.4d_smooth_view_%.2d" % (i, j) :
+                                  rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
+                              for j in range(len(comparison))}
+                for name, im in comparison.items():
+                    skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
+                if logger is not None:
+                    logger.log_image(
+                        epoch=epoch,
+                        images=comparison)
+
+                # image_fname = os.path.join(visual_folder, 'comparison_%.4d.png' % i)
+                # meshviewer[0][0].save_snapshot(image_fname, blocking=True)
+                # if logger is not None:
+                #     logger.log_image(
+                #         epoch=epoch,
+                #         images={
+                #           # "comparison_%.4d" % i: skio.imread(image_fname),
+                #           "comparison_%.4d" % i: image_fname,
+                #         })
     return total_loss/len(dataset)
 
 
