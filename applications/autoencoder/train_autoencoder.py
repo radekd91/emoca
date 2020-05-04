@@ -21,6 +21,8 @@ import wandb
 import skimage.io as skio
 from skimage.exposure import rescale_intensity
 from skimage.util import img_as_ubyte
+from tqdm import tqdm
+
 
 class AbstractLogger(object):
 
@@ -302,7 +304,7 @@ def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler
     model.train()
     total_loss = 0
     i = 0
-    for data in train_loader:
+    for data in tqdm(train_loader):
         # if i % 10 == 0:
         #     break
         i+=1
@@ -324,7 +326,8 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
     total_loss = 0
     if psbody_available:
         meshviewer = MeshViewers(shape=(1, 2))
-    for i, data in enumerate(test_loader):
+    print("Testing")
+    for i, data in tqdm(enumerate(test_loader)):
         data = data.to(device)
         with torch.no_grad():
             out = coma(data)
@@ -421,3 +424,5 @@ if __name__ == '__main__':
               'it from current directory', args.conf)
 
     main(args)
+else:
+    print("Importing train_autoencoder.py ")

@@ -108,9 +108,6 @@ def render(mesh, device, renderer='flat'):
 
     meshes = mesh.extend(batch_size)
 
-    print(meshes.device)
-    print(materials.device)
-
     images = renderer(meshes,
                       materials=materials
                       )
