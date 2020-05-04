@@ -67,7 +67,7 @@ def render(mesh, device, renderer='flat'):
 
     # We will also create a phong renderer. This is simpler and only needs to render one face per pixel.
     raster_settings = RasterizationSettings(
-        image_size=1024,
+        image_size=512,
         blur_radius=0.0,
         faces_per_pixel=1,
     )

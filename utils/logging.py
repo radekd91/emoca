@@ -138,8 +138,8 @@ class TbXLogger(AbstractLogger):
                                          global_step=epoch)
 
     def log_image(self, epoch, images: dict):
-        if self.wandb_logger is not None:
-            self.wandb_logger.log_image(epoch, images)
+        # if self.wandb_logger is not None:
+        #     self.wandb_logger.log_image(epoch, images)
         from skimage.io import imread
         for key, value in images.items():
             if isinstance(value, str):
@@ -158,5 +158,8 @@ class TbXLogger(AbstractLogger):
 
 
 if __name__ == "__main__":
+    import tqdm
     logger = WandbLogger('test_project_name', 'test_run_name', 'test_out_folder', None)
     print("Logger initialized")
+    for i in tqdm.tqdm(range(1000)):
+        logger.log_values(i, {'y=2x': 2*i})

@@ -334,7 +334,7 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
         loss = F.l1_loss(out, data.y)
         total_loss += data.num_graphs * loss.item()
 
-        if visualize and i % 100 == 0:
+        if visualize and i % 200 == 0:
             save_out = out.detach().cpu().numpy()
             save_out = save_out*dataset.std.numpy()+dataset.mean.numpy()
             expected_out = (data.y.detach().cpu().numpy())*dataset.std.numpy()+dataset.mean.numpy()
@@ -378,20 +378,20 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                         images=comparison)
 
 
-                image_result_smooth = render(result_fname, device=device, renderer='smooth')
-                image_gt_smooth = render(expected_fname, device=device, renderer='smooth')
-
-                comparison = torch.cat([image_gt_smooth, image_result_smooth], dim=2)
-                comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
-                comparison = {"comparison_%.4d_smooth_view_%.2d" % (i, j) :
-                                  rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
-                              for j in range(len(comparison))}
-                for name, im in comparison.items():
-                    skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
-                if logger is not None:
-                    logger.log_image(
-                        epoch=epoch,
-                        images=comparison)
+                # image_result_smooth = render(result_fname, device=device, renderer='smooth')
+                # image_gt_smooth = render(expected_fname, device=device, renderer='smooth')
+                #
+                # comparison = torch.cat([image_gt_smooth, image_result_smooth], dim=2)
+                # comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
+                # comparison = {"comparison_%.4d_smooth_view_%.2d" % (i, j) :
+                #                   rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
+                #               for j in range(len(comparison))}
+                # for name, im in comparison.items():
+                #     skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
+                # if logger is not None:
+                #     logger.log_image(
+                #         epoch=epoch,
+                #         images=comparison)
 
                 # image_fname = os.path.join(visual_folder, 'comparison_%.4d.png' % i)
                 # meshviewer[0][0].save_snapshot(image_fname, blocking=True)
