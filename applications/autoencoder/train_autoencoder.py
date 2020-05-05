@@ -17,13 +17,13 @@ from utils.loggers import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
 from utils.loggers import TbXLogger
-from utils.render_coma_mesh import render, ComaMeshRenderer
+from utils.render import render, ComaMeshRenderer
 from utils.image import concatenate_image_batch_to_wide_image
 import skimage.io as skio
 from skimage.exposure import rescale_intensity
 from skimage.util import img_as_ubyte
 from tqdm import tqdm
-
+from utils.image import torchFloatToNpUintImage
 
 try:
     from psbody.mesh import Mesh, MeshViewers
@@ -319,29 +319,37 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                 meshviewer[0][0].set_dynamic_meshes([expected_mesh])
                 meshviewer[0][1].set_dynamic_meshes([result_mesh])
 
-                image_result_flat = render_images.render(result_fname)
-                image_gt_flat = render_images.render(result_fname)
+                # image_result_flat = render_images.render(result_fname)
+                # image_gt_flat = render_images.render(expected_fname)
+                image_result_flat = render_images.render([result_mesh.v, result_mesh.f])
+                image_gt_flat = render_images.render([expected_mesh.v, expected_mesh.f])
 
                 image_result_flat = concatenate_image_batch_to_wide_image(image_result_flat)
                 image_gt_flat = concatenate_image_batch_to_wide_image(image_gt_flat)
 
-                # image_result_flat = render(result_fname, device=device, renderer='flat')
-                # image_gt_flat = render(expected_fname, device=device, renderer='flat')
-
-                image_result_flat = image_result_flat.reshape([-1] + image_result_flat.shape[1:])
-                image_gt_flat = image_gt_flat.reshape([-1] + image_result_flat.shape[1:])
                 comparison = torch.cat([image_gt_flat, image_result_flat], dim=0)
+                comparison = torchFloatToNpUintImage(comparison)
 
-                comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
-                comparison = {"comparison_%.4d_flat_view_%.2d" % (i, j) :
-                                  rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
-                              for j in range(len(comparison))}
-                for name, im in comparison.items():
-                    skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
+                skio.imsave(os.path.join(visual_folder, "comparison_%.4d.png" % i),
+                            img_as_ubyte(comparison))
+
                 if logger is not None:
                     logger.log_image(
                         epoch=epoch,
-                        images=comparison)
+                        images={"comparison_%.4d.png" % i : comparison})
+
+                # comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
+                # comparison = {"comparison_%.4d_flat" % (i, j) :
+                #                   rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
+                #               for j in range(len(comparison))}
+
+
+                # for name, im in comparison.items():
+                #     skio.imsave(os.path.join(visual_folder, name + ".png"), img_as_ubyte(im))
+                # if logger is not None:
+                #     logger.log_image(
+                #         epoch=epoch,
+                #         images=comparison)
 
 
                 # image_result_smooth = render(result_fname, device=device, renderer='smooth')

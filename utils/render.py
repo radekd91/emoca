@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 
 from utils.mesh import load_mesh
 
@@ -18,11 +19,6 @@ from pytorch3d.renderer import (
     HardPhongShader,
     HardFlatShader
 )
-
-
-import os
-
-# from pytorch3d.utils import image_grid
 
 class RendererWrapper(object):
 
@@ -43,6 +39,12 @@ class RendererWrapper(object):
         elif isinstance(mesh, list) or isinstance(mesh, tuple):
             verts = mesh[0]
             faces = mesh[1]
+            if isinstance(faces, np.ndarray):
+                verts = torch.Tensor(verts)
+            if isinstance(faces, np.ndarray):
+                if faces.dtype == np.uint32:
+                    faces = faces.astype(dtype=np.int32)
+                faces = torch.Tensor(faces)
         else:
             raise ValueError("Unexpected mesh input of type '%s'. Pass in either a path to a mesh or its vertices "
                              "and faces in a list or tuple" % str(type(mesh)))

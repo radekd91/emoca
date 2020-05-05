@@ -1,8 +1,6 @@
 import os
-# os.system('wandb login ac022f3e88af42e979689d6a8f7617288a0ed93f')
-# os.system('wandb login')
-
 import wandb
+
 
 class AbstractLogger(object):
 
@@ -163,7 +161,7 @@ class TbXLogger(AbstractLogger):
 
     def save_model(self, filename):
         if self.wandb_logger is not None:
-            self.save_model(filename)
+            self.wandb_logger.save_model(filename)
 
 
 if __name__ == "__main__":
