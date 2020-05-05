@@ -24,6 +24,9 @@ class AbstractLogger(object):
     def get_experiment_id(self):
         raise NotImplementedError()
 
+    def save_model(self, filename):
+        raise NotImplementedError()
+
 
 class WandbLogger(AbstractLogger):
 
@@ -61,9 +64,12 @@ class WandbLogger(AbstractLogger):
     def get_experiment_id(self):
         return self.id
 
+    def save_model(self, filename):
+        wandb.save(filename)
+
 
 import tensorboardX as tbx
-from utils.io import load_mesh
+from utils.mesh import load_mesh
 
 
 class TbXLogger(AbstractLogger):
@@ -152,9 +158,12 @@ class TbXLogger(AbstractLogger):
                                           global_step=epoch,
                                           dataformats='HWC')
 
-
     def get_experiment_id(self):
         return self.id
+
+    def save_model(self, filename):
+        if self.wandb_logger is not None:
+            self.save_model(filename)
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ LearningParameters:
   learning_rate: 0.008
   learning_rate_decay: 0.99
   weight_decay: 0.0005
-  epoch: 300
+  num_epochs: 300
   optimizer: sgd
 
 DataParameters:

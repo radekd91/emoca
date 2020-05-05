@@ -13,11 +13,12 @@ from pytorch3d.io import load_obj, save_obj
 from utils import mesh_operations
 from models.Coma import Coma
 from datasets.coma_dataset import ComaDataset
-from utils.logging import WandbLogger
+from utils.loggers import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
-from utils.logging import TbXLogger
-from utils.render_coma_mesh import render
+from utils.loggers import TbXLogger
+from utils.render_coma_mesh import render, ComaMeshRenderer
+from utils.image import concatenate_image_batch_to_wide_image
 import skimage.io as skio
 from skimage.exposure import rescale_intensity
 from skimage.util import img_as_ubyte
@@ -42,6 +43,7 @@ def scipy_to_torch_sparse(scp_matrix):
     sparse_tensor = torch.sparse.FloatTensor(i, v, torch.Size(shape))
     return sparse_tensor
 
+
 def adjust_learning_rate(optimizer, lr_decay):
     for param_group in optimizer.param_groups:
         param_group['lr'] = param_group['lr'] * lr_decay
@@ -65,7 +67,9 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, run_id, checkpoint_
     checkpoint['val_loss'] = val_loss
     checkpoint['run_id'] = run_id
     os.makedirs(checkpoint_dir, exist_ok=True)
-    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_%.4d.pt' % epoch))
+    checkpoint_fname = os.path.join(checkpoint_dir, 'checkpoint_%.4d.pt' % epoch)
+    torch.save(checkpoint, checkpoint_fname)
+    return checkpoint_fname
 
 
 def load_model(model, optimizer, device, checkpoint_file):
@@ -118,11 +122,8 @@ def main(args):
     batch_size = config['LearningParameters']['batch_size']
     workers_thread = config['DataParameters']['workers_thread']
 
-
     config['DataParameters']['split'] = args.split
     config['DataParameters']['split_term'] = args.split_term
-
-    # logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
 
     normalize_transform = NormalizeGeometricData() # the normalization params (mean and std) will get loaded
     dataset_train = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term, pre_transform=normalize_transform)
@@ -143,7 +144,7 @@ def main(args):
 
     print('Loading model')
 
-    start_epoch = 1
+    start_epoch = 0
     if config['ModelParameters']['model'] == 'Coma':
         model = Coma(dataset_train.num_features, config['ModelParameters'], D_t, U_t, A_t, num_nodes)
     # if config['ModelParameters']['model'] == 'spline':
@@ -152,8 +153,7 @@ def main(args):
     #     model = EdgeComa(dataset_train.num_features, config, D_t, U_t, A_t, num_nodes)
     else:
         raise ValueError("Unsupported model '%s'" % config['ModelParameters']['model'])
-    total_epochs = config['LearningParameters']['epoch']
-
+    total_epochs = config['LearningParameters']['num_epochs']
 
     lr = config['LearningParameters']['learning_rate']
     lr_decay = config['LearningParameters']['learning_rate_decay']
@@ -175,18 +175,16 @@ def main(args):
         config['InputOutput']['experiment_name'] = experiment_name
     model.to(device)
 
-
     wandb_logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     # logger = TbXLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     logger = TbXLogger("Coma", experiment_name, output_dir, id=experiment_name, wandb_logger=wandb_logger)
     logger.add_config(config)
-    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
+    train_eval(model, optimizer, lr_scheduler, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
     print("Training finished")
 
 
-
-def training_loop(model, optimizer, lr_scheduler,
-                  train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger):
+def train_eval(model, optimizer, lr_scheduler,
+               train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger):
     print('Initializing parameters')
     template_file_path = config['InputOutput']['template_fname']
     template_mesh = Mesh(filename=template_file_path)
@@ -210,18 +208,21 @@ def training_loop(model, optimizer, lr_scheduler,
 
     logger.watch_model(model)
 
+    renderer = ComaMeshRenderer('flat', device, image_size=1024, num_views=5)
+
     if eval_flag:
-        val_loss = evaluate(model, None, visual_out_dir, test_loader, template_mesh, device, logger=logger, visualize=visualize)
+        val_loss = evaluate(model, None, visual_out_dir, test_loader, template_mesh, device, logger=logger,
+                            visualize=visualize, render_images=renderer, log_meshes=True)
         print('val loss', val_loss)
         return
 
     best_val_loss = float('inf')
     val_loss_history = []
+    best_checkpoint_fname = None
+    last_checkpoint_fname = None
 
-    for epoch in range(start_epoch, total_epochs + 1):
+    for epoch in range(start_epoch, total_epochs):
         print("Training for epoch ", epoch)
-        # optimizer.step()
-        # lr_scheduler.step(epoch)
 
         logger.log_values(epoch, {'lr': lr_scheduler.get_lr()})
 
@@ -229,21 +230,29 @@ def training_loop(model, optimizer, lr_scheduler,
 
         logger.log_values(epoch, {'loss': train_loss})
 
-        val_loss = evaluate(model, epoch, visual_out_dir, test_loader, template_mesh, device, logger=logger, visualize=visualize)
+
+        log_meshes = epoch == start_epoch or epoch == total_epochs-1 or epoch % 10 == 0
+
+        val_loss = evaluate(model, epoch, visual_out_dir, test_loader, template_mesh, device,
+                            logger=logger, visualize=visualize, render_images=renderer, log_meshes=log_meshes)
 
         logger.log_values(epoch, {'val_loss': val_loss})
 
         print('epoch ', epoch, ' Train loss ', train_loss, ' Val loss ', val_loss)
         if val_loss < best_val_loss:
-            save_model(model, optimizer, epoch, train_loss, val_loss, logger.get_experiment_id(), checkpoint_dir)
+            best_checkpoint_fname = save_model(model, optimizer, epoch, train_loss, val_loss, logger.get_experiment_id(), checkpoint_dir)
+            best_val_loss = val_loss
+
+        if epoch == total_epochs-1:
+            last_checkpoint_fname = save_model(model, optimizer, epoch, train_loss, val_loss, logger.get_experiment_id(), checkpoint_dir)
             best_val_loss = val_loss
 
         val_loss_history.append(val_loss)
         val_losses.append(best_val_loss)
 
-        # if opt == 'sgd':
-        #     adjust_learning_rate(optimizer, lr_decay)
-
+    logger.save_model(best_checkpoint_fname)
+    if last_checkpoint_fname != best_checkpoint_fname:
+        logger.save_model(last_checkpoint_fname)
 
 
 def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, device):
@@ -266,7 +275,8 @@ def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler
     return total_loss / len_dataset
 
 
-def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger=None, visualize=False):
+def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger=None,
+             visualize=False, render_images=None, log_meshes=False, visualization_frequency=200):
     dataset = test_loader.dataset
     coma.eval()
     total_loss = 0
@@ -280,7 +290,7 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
         loss = F.l1_loss(out, data.y)
         total_loss += data.num_graphs * loss.item()
 
-        if visualize and i % 200 == 0:
+        if visualize and i % visualization_frequency == 0:
             save_out = out.detach().cpu().numpy()
             save_out = save_out*dataset.std.numpy()+dataset.mean.numpy()
             expected_out = (data.y.detach().cpu().numpy())*dataset.std.numpy()+dataset.mean.numpy()
@@ -293,25 +303,35 @@ def evaluate(coma, epoch, output_dir, test_loader, template_mesh, device, logger
                 else:
                     visual_folder = os.path.join(output_dir)
                 os.makedirs(visual_folder, exist_ok=True)
-                result_fname = os.path.join(visual_folder, 'eval_%.4d.obj' % i)
-                expected_fname = os.path.join(visual_folder, 'gt_%.4d.obj' % i)
-                result_mesh.write_obj(result_fname)
-                expected_mesh.write_obj(expected_fname)
-                if logger is not None:
-                    logger.log_3D_shape(
-                        epoch=epoch,
-                        models={
-                          "result_%.4d" % i: result_fname,
-                          "gt_%.4d" % i: expected_fname
-                        })
+                if log_meshes:
+                    result_fname = os.path.join(visual_folder, 'eval_%.4d.obj' % i)
+                    expected_fname = os.path.join(visual_folder, 'gt_%.4d.obj' % i)
+                    result_mesh.write_obj(result_fname)
+                    expected_mesh.write_obj(expected_fname)
+                    if logger is not None:
+                        logger.log_3D_shape(
+                            epoch=epoch,
+                            models={
+                              "result_%.4d" % i: result_fname,
+                              "gt_%.4d" % i: expected_fname
+                            })
 
                 meshviewer[0][0].set_dynamic_meshes([expected_mesh])
                 meshviewer[0][1].set_dynamic_meshes([result_mesh])
 
-                image_result_flat = render(result_fname, device=device, renderer='flat')
-                image_gt_flat = render(expected_fname, device=device, renderer='flat')
+                image_result_flat = render_images.render(result_fname)
+                image_gt_flat = render_images.render(result_fname)
 
-                comparison = torch.cat([image_gt_flat, image_result_flat], dim=2)
+                image_result_flat = concatenate_image_batch_to_wide_image(image_result_flat)
+                image_gt_flat = concatenate_image_batch_to_wide_image(image_gt_flat)
+
+                # image_result_flat = render(result_fname, device=device, renderer='flat')
+                # image_gt_flat = render(expected_fname, device=device, renderer='flat')
+
+                image_result_flat = image_result_flat.reshape([-1] + image_result_flat.shape[1:])
+                image_gt_flat = image_gt_flat.reshape([-1] + image_result_flat.shape[1:])
+                comparison = torch.cat([image_gt_flat, image_result_flat], dim=0)
+
                 comparison = np.split(comparison.cpu().numpy(), indices_or_sections=comparison.shape[0], axis=0)
                 comparison = {"comparison_%.4d_flat_view_%.2d" % (i, j) :
                                   rescale_intensity(np.squeeze(comparison[j]*255), in_range='uint8')
