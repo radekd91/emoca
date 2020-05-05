@@ -63,10 +63,11 @@ class ComaDataset(InMemoryDataset):
         return processed_files
 
     def process(self):
+        from psbody.mesh import Mesh
         train_data, val_data, test_data = [], [], []
         train_vertices = []
         for idx, data_file in tqdm(enumerate(self.data_file)):
-            mesh = Dataset(filename=data_file)
+            mesh = Mesh(filename=data_file)
             mesh_verts = torch.Tensor(mesh.v)
             adjacency = get_vert_connectivity(mesh.v, mesh.f).tocoo()
             edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col)))

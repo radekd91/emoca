@@ -103,5 +103,7 @@ conda activate $CONDAENV
 #cd ~/Repos/gdl/applications/autoencoder
 cd ~/Repos/gdl
 #python train_autoencoder.py --split sliced --split_term sliced
-python applications/autoencoder/train_autoencoder.py --split sliced --split_term sliced
+#python applications/autoencoder/train_autoencoder.py --split sliced --split_term sliced
+python applications/autoencoder/train_autoencoder.py --split expression --split_term bareteeth
+#python applications/autoencoder/train_autoencoder.py --split identity --split_term FaceTalk_170731_00024_TA
 ENDBSUB
