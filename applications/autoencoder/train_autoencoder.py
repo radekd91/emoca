@@ -1,5 +1,6 @@
 import os, sys
 sys.path += [os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..')]
+#os.environ['WANDB_MODE'] = 'dryrun'
 import argparse
 import configparser
 import numpy as np
