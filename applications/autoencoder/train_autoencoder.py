@@ -13,71 +13,16 @@ from pytorch3d.io import load_obj, save_obj
 from utils import mesh_operations
 from models.Coma import Coma
 from datasets.coma_dataset import ComaDataset
-# from utils.logging import WandbLogger
+from utils.logging import WandbLogger
 from transforms.normalize import NormalizeGeometricData
 import yaml
 from utils.logging import TbXLogger
 from utils.render_coma_mesh import render
-import wandb
 import skimage.io as skio
 from skimage.exposure import rescale_intensity
 from skimage.util import img_as_ubyte
 from tqdm import tqdm
 
-
-class AbstractLogger(object):
-
-    def add_config(self, cfg: dict):
-        raise NotImplementedError()
-
-    def watch_model(self, model):
-        raise NotImplementedError()
-
-    def log_values(self, epochm, values: dict):
-        raise NotImplementedError()
-
-    def log_image(self, epoch, images: dict):
-        raise NotImplementedError()
-
-    def log_3D_shape(self, epoch, models: dict):
-        raise NotImplementedError()
-
-
-class WandbLogger(AbstractLogger):
-
-    def __init__(self, project_name, run_name, output_foder, id=None):
-        os.makedirs(output_foder)
-        self.id = id
-        self.wandb_run = wandb.init(project=project_name,
-                   name=run_name,
-                   sync_tensorboard=True,
-                   dir=output_foder,
-                   id=id
-                   )
-
-    def add_config(self, config: dict):
-        wandb.config = config
-
-    def watch_model(self, model):
-        wandb.watch(model)
-
-    def log_values(self, epoch: int, values: dict):
-        # wandb.log(vals, step=epoch) # epoch into dict or not?
-        vals = values.copy()
-        # vals['epoch'] = epoch
-        wandb.log(vals, step=epoch)
-        # wandb.log(vals)
-
-    def log_3D_shape(self, epoch: int, models: dict):
-        shapes = {key: wandb.Object3D(value) for key, value in models.items() }
-        wandb.log(shapes, step=epoch)
-
-    def log_image(self, epoch, images: dict):
-        ims = {key: wandb.Image(value) for key, value in images.items()}
-        wandb.log(ims, step=epoch)
-
-    def get_experiment_id(self):
-        return self.id
 
 try:
     from psbody.mesh import Mesh, MeshViewers
@@ -425,5 +370,3 @@ if __name__ == '__main__':
               'it from current directory', args.conf)
 
     main(args)
-else:
-    print("Importing train_autoencoder.py ")

@@ -38,7 +38,7 @@ class WandbLogger(AbstractLogger):
                    )
 
     def add_config(self, config: dict):
-        wandb.config = config
+        wandb.config.update(config)
 
     def watch_model(self, model):
         wandb.watch(model)
