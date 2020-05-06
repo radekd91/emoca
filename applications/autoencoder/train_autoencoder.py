@@ -72,17 +72,18 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, run_id, checkpoint_
     return checkpoint_fname
 
 
-def load_model(model, optimizer, device, checkpoint_file):
+def load_model(model, checkpoint_file, device, optimizer=None):
     checkpoint = torch.load(checkpoint_file)
     start_epoch = checkpoint['epoch_num']
     model.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
     run_id = checkpoint['run_id']
     # To find if this is fixed in pytorch
-    for state in optimizer.state.values():
-        for k, v in state.items():
-            if isinstance(v, torch.Tensor):
-                state[k] = v.to(device)
     return run_id
 
 
@@ -92,13 +93,27 @@ def get_current_time():
     return now.strftime("%Y_%m_%d_%H_%M_%S")
 
 
+def meta_from_config(config, device=None):
+    template_file_path = config['InputOutput']['template_fname']
+    template_mesh = Mesh(filename=template_file_path)
+
+    M, A, D, U = mesh_operations.generate_transform_matrices(
+        template_mesh, config['ModelParameters']['downsampling_factors'])
+
+    device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    D_t = [scipy_to_torch_sparse(d).to(device) for d in D]
+    U_t = [scipy_to_torch_sparse(u).to(device) for u in U]
+    A_t = [scipy_to_torch_sparse(a).to(device) for a in A]
+    num_nodes = [len(M[i].v) for i in range(len(M))]
+
+    return D_t, U_t, A_t, num_nodes
+
+
 def main(args):
     config = read_config(args.conf)
 
-    print('Initializing parameters')
-    template_file_path = config['InputOutput']['template_fname']
-    template_mesh = Mesh(filename=template_file_path)
-    # template_mesh = load_obj(template_file_path)
+    print('Initializing:')
 
     print('Loading Dataset')
     if args.data_dir:
@@ -131,6 +146,12 @@ def main(args):
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
+
+    print("Loading template mesh")
+    template_file_path = config['InputOutput']['template_fname']
+    template_mesh = Mesh(filename=template_file_path)
+    # template_mesh = load_obj(template_file_path)
+
     print('Generating transforms')
     M, A, D, U = mesh_operations.generate_transform_matrices(
         template_mesh, config['ModelParameters']['downsampling_factors'])
@@ -144,9 +165,11 @@ def main(args):
 
     print('Loading model')
 
+    config['ModelParameters']['num_input_features'] = dataset_train.num_features
+
     start_epoch = 0
     if config['ModelParameters']['model'] == 'Coma':
-        model = Coma(dataset_train.num_features, config['ModelParameters'], D_t, U_t, A_t, num_nodes)
+        model = Coma(config['ModelParameters'], D_t, U_t, A_t, num_nodes)
     # if config['ModelParameters']['model'] == 'spline':
     #     model = SplineComa(dataset_train.num_features, config, D_t, U_t, A_t, num_nodes)
     # elif config['ModelParameters']['model'] == 'edge':
@@ -171,7 +194,7 @@ def main(args):
     checkpoint_file = config['ModelParameters']['checkpoint_file']
     print(checkpoint_file)
     if checkpoint_file:
-        experiment_name = load_model(model, optimizer, device, checkpoint_file)
+        experiment_name = load_model(model, checkpoint_file, device, optimizer)
         config['InputOutput']['experiment_name'] = experiment_name
     model.to(device)
 

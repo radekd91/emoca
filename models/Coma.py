@@ -3,15 +3,16 @@ import torch.nn.functional as F
 # from pytorch3d.ops import GraphConv
 from layers.ChebConvComa import ChebConv_Coma
 from layers.Pool import Pool
-
+import copy
 
 class Coma(torch.nn.Module):
 
-    def __init__(self, num_input_features, config, downsample_matrices, upsample_matrices, adjacency_matrices, num_nodes):
+    def __init__(self, config : dict, downsample_matrices, upsample_matrices, adjacency_matrices, num_nodes):
         super(Coma, self).__init__()
+        config = copy.deepcopy(config)
         self.n_layers = config['n_layers']
         self.filters = config['num_conv_filters']
-        self.filters.insert(0, num_input_features)  # To get initial features per node
+        self.filters.insert(0, config['num_input_features'])  # To get initial features per node
         self.K = config['polygon_order']
         self.z = config['z']
         self.downsample_matrices = downsample_matrices
