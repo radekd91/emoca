@@ -34,6 +34,8 @@ class AEMeshGenerator(MeshGeneratorBase):
                                     split_term= self.config['DataParameters']['split_term'],
                                     pre_transform=None)
         self.dataset_mean = dataset_train.mean.numpy()
+        self.dataset_std = dataset_train.std.numpy()
+        self.pre_transform = dataset_train.pre_transform
 
         # just to make sure the topology is loaded consistently
         mesh = Mesh(filename=self.config["InputOutput"]["template_fname"])
@@ -64,26 +66,46 @@ class AEMeshGenerator(MeshGeneratorBase):
 
         self.latent_code = np.zeros(self.model.z)
         self.current_mesh_params = self.get_defaults().copy()
-        self.lower_bounds = self.latent_code - 5
-        self.upper_bounds = self.latent_code + 5
+        self.lower_bounds = self.latent_code - 25
+        self.upper_bounds = self.latent_code + 25
         self.regenerate_mesh()
 
     def regenerate_mesh(self):
         return self.generate_mesh(**self.current_mesh_params)
 
-    def generate_mesh(self, latent_code : np.ndarray = None):
+    def generate_mesh(self, latent_code : [np.ndarray, torch.Tensor] = None):
         if latent_code is not None:
             self.latent_code = latent_code
 
-        z = torch.Tensor(self.latent_code).reshape(1, -1)
-        z = z.to(self.device)
+        if not isinstance(self.latent_code, torch.Tensor):
+            z = torch.Tensor(self.latent_code)
+        else:
+            z = self.latent_code
+
+        z = z.reshape(1, -1)
+        if z.device != self.device:
+            z = z.to(self.device)
 
         verts = self.model.decoder(z)
-
-        v = verts.reshape(-1,3).detach().cpu().numpy() + self.dataset_mean
+        # verts = self.pre_transform.inv(verts)
+        # v = verts.reshape(-1,3).detach().cpu().numpy()
+        v = verts.reshape(-1,3).detach().cpu().numpy()*self.dataset_std + self.dataset_mean
         self.current_mesh.set_vertices(v)
-
+        if self.current_mesh_visualization is not None:
+            self.current_mesh_visualization.set_points(v)
         return self.current_mesh
+
+    def encode_mesh(self, v : [np.ndarray, torch.Tensor]):
+        v = (v - self.dataset_mean)/self.dataset_std
+        vertices = torch.Tensor(v).reshape(1, -1, 3)
+        vertices = vertices.to(self.device)
+        # vertices = self.pre_transform(vertices)
+
+        z = self.model.encoder(vertices)
+        # mesh = self.generate_mesh(z)
+        z = z.detach().cpu().numpy().reshape(-1)
+        return z#, mesh
+
 
     def get_current_mesh(self):
         return self.current_mesh
@@ -102,6 +124,7 @@ class AEMeshGenerator(MeshGeneratorBase):
                                         self.get_parameters(), self.get_defaults(), self)
             # self.current_mesh_visualization.opacity = 0.25
             # self.current_mesh_visualization.show_edges = True
+            self.current_mesh_visualization.set_scalar_field(np.zeros(self.current_mesh.num_vertices()))
 
         visualizations += [self.current_mesh_visualization]
         return visualizations
