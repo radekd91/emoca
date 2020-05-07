@@ -19,10 +19,13 @@ class ComaDataset(InMemoryDataset):
         self.split_term = split_term
         self.nVal = nVal
         self.transform = transform
-        self.pre_tranform = pre_transform
+        self.pre_transform = pre_transform
         self.data_file = glob.glob(self.root_dir + '/*/*/*.ply')
         self.data_file.sort()
-        super(ComaDataset, self).__init__(root_dir, transform, pre_transform)
+
+        self.root_dir = root_dir # backwards compatibility hack, remove in the future
+        self.root = root_dir # backwards compatibility hack, remove in the future
+
         if dtype == 'train':
             data_path = self.processed_paths[0]
         elif dtype == 'val':
@@ -32,10 +35,40 @@ class ComaDataset(InMemoryDataset):
         else:
             raise Exception("train, val and test are supported data types")
 
+        pre_transform_path = self.processed_paths[4]
+
+        # backwards compatiblity hack
+        if not os.path.exists(pre_transform_path) and os.path.exists(data_path):
+            from transforms.normalize import NormalizeGeometricData
+            norm_path = self.processed_paths[3]
+            norm_dict = torch.load(norm_path)
+            self.mean, self.std = norm_dict['mean'], norm_dict['std']
+            pre_transform = NormalizeGeometricData(self.mean, self.std)
+            torch.save(pre_transform, self.processed_paths[4])
+
+        super(ComaDataset, self).__init__(root_dir, transform, pre_transform)
+
         norm_path = self.processed_paths[3]
         norm_dict = torch.load(norm_path)
         self.mean, self.std = norm_dict['mean'], norm_dict['std']
         self.data, self.slices = torch.load(data_path)
+
+        pre_transform_path = self.processed_paths[4]
+        if os.path.exists(pre_transform_path):
+            pre_transform = torch.load(pre_transform_path)
+        else:
+            # backwards compatiblity hack, remove in the future
+            from transforms.normalize import NormalizeGeometricData
+            pre_transform = NormalizeGeometricData(self.mean, self.std)
+            torch.save(self.pre_transform, self.processed_paths[4])
+
+        if self.pre_transform is None:
+            self.pre_transform = pre_transform
+        else:
+            if self.pre_transform.__repr__() != pre_transform.__repr__():
+                print("[BIG WARNING] The specified pre_transform is not the same as the one "
+                      "used to actually preprocess the dataset!!!")
+
         if self.transform:
             self.data = [self.transform(td) for td in self.data]
 
@@ -58,7 +91,7 @@ class ComaDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        processed_files = ['training.pt', 'val.pt', 'test.pt', 'norm.pt']
+        processed_files = ['training.pt', 'val.pt', 'test.pt', 'norm.pt', 'pre_transform.pt']
         processed_files = [self.split_term+'_'+pf for pf in processed_files]
         return processed_files
 
@@ -117,10 +150,10 @@ class ComaDataset(InMemoryDataset):
         norm_dict = {'mean': mean_train, 'std': std_train}
         if self.pre_transform is not None:
             if hasattr(self.pre_transform, 'mean') and hasattr(self.pre_transform, 'std'):
-                if self.pre_tranform.mean is None:
-                    self.pre_tranform.mean = mean_train
+                if self.pre_transform.mean is None:
+                    self.pre_transform.mean = mean_train
                 if self.pre_transform.std is None:
-                    self.pre_tranform.std = std_train
+                    self.pre_transform.std = std_train
             train_data = [self.pre_transform(td) for td in train_data]
             val_data = [self.pre_transform(td) for td in val_data]
             test_data = [self.pre_transform(td) for td in test_data]
@@ -129,6 +162,7 @@ class ComaDataset(InMemoryDataset):
         torch.save(self.collate(val_data), self.processed_paths[1])
         torch.save(self.collate(test_data), self.processed_paths[2])
         torch.save(norm_dict, self.processed_paths[3])
+        torch.save(self.pre_transform, self.processed_paths[4])
 
 
 def prepare_sliced_dataset(path):

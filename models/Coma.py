@@ -5,6 +5,7 @@ from layers.ChebConvComa import ChebConv_Coma
 from layers.Pool import Pool
 import copy
 
+
 class Coma(torch.nn.Module):
 
     def __init__(self, config : dict, downsample_matrices, upsample_matrices, adjacency_matrices, num_nodes):
