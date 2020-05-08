@@ -35,13 +35,14 @@ class AEViewer(PyVistaWindow):
         shape = (1, 1 + len(self.generator_list))
         super().__init__(parent, shape=shape)
         self.setAcceptDrops(True)
-        self.setWindowTitle("Implant Designer")
+        self.setWindowTitle("Autoencoder Viewer")
 
         self.generator_visualizations = []
         self.generator_latent_space_widgets = []
         for vi, vis in enumerate(self.generator.get_visualizations()):
             vis.subplot_index = (0, vi+1)
             self.add_visualization(vis)
+            self.vtk_widget.add_text("Decoded", font_size=10)
             self.generator_visualizations += [vis]
         self.vtk_widget.link_views()
 
@@ -108,6 +109,7 @@ class AEViewer(PyVistaWindow):
             else:
                 self.input_mesh_vis = PyVistaVis(self.input_mesh.pyvista_surface(), "Input Mesh", VisType.SURFACE, subplot_index=(0, 0))
                 self.add_visualization(self.input_mesh_vis)
+                self.vtk_widget.add_text("Input Mesh", font_size=10)
                 self.vis_widget.addWidget(self.input_mesh_vis)
 
             self.encode_input_mesh()
