@@ -22,7 +22,7 @@ class AbstractLogger(object):
     def get_experiment_id(self):
         raise NotImplementedError()
 
-    def save_model(self, filename):
+    def save(self, filename):
         raise NotImplementedError()
 
     def sync(self):
@@ -65,17 +65,21 @@ class WandbLogger(AbstractLogger):
     def get_experiment_id(self):
         return self.id
 
-    def save_model(self, filename):
+    def save(self, filename):
         wandb.save(filename)
 
     def sync(self):
         if 'WANDB_MODE' in os.environ and os.environ['WANDB_MODE'] == "dryrun":
-            print("Syncing wandb")
-            cwd = os.getcwd()
-            os.chdir(os.path.join(self.output_folder, "wandb"))
-            os.system('wandb sync')
-            os.chdir(cwd)
-            print("Wandb synced")
+            with open(os.path.join(self.output_folder, "wandb", "sync_status.txt"), 'w') as f:
+                f.write("not_synced\n")
+
+            # doesn't work on the clusters
+            # print("Syncing wandb")
+            # cwd = os.getcwd()
+            # os.chdir(os.path.join(self.output_folder, "wandb"))
+            # os.system('wandb sync')
+            # os.chdir(cwd)
+            # print("Wandb synced")
         else:
             print("Wandb was synced automatically")
 
@@ -172,9 +176,9 @@ class TbXLogger(AbstractLogger):
     def get_experiment_id(self):
         return self.id
 
-    def save_model(self, filename):
+    def save(self, filename):
         if self.wandb_logger is not None:
-            self.wandb_logger.save_model(filename)
+            self.wandb_logger.save(filename)
 
     def sync(self):
         if self.wandb_logger is not None:

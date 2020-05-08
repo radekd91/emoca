@@ -231,7 +231,7 @@ def main(args):
                                   std=dataset_train.std,
                                   mean=dataset_train.mean
                                   )
-
+    logger.save(os.path.join(output_dir, "pre_transforms.pt"))
     train_eval(model, optimizer, lr_scheduler, loss_function, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
     print("Training finished")
     logger.sync()
@@ -304,9 +304,9 @@ def train_eval(model, optimizer, lr_scheduler, loss_function,
         val_loss_history.append(val_loss)
         val_losses.append(best_val_loss)
 
-    logger.save_model(best_checkpoint_fname)
+    logger.save(best_checkpoint_fname)
     if last_checkpoint_fname != best_checkpoint_fname:
-        logger.save_model(last_checkpoint_fname)
+        logger.save(last_checkpoint_fname)
 
 
 def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, loss_function, device):
