@@ -73,10 +73,11 @@ class WandbLogger(AbstractLogger):
             print("Syncing wandb")
             cwd = os.getcwd()
             os.chdir(os.path.join(self.output_folder, "wandb"))
-            os.execl('wandb sync')
+            os.system('wandb sync')
             os.chdir(cwd)
-        else:
             print("Wandb synced")
+        else:
+            print("Wandb was synced automatically")
 
 import tensorboardX as tbx
 from utils.mesh import load_mesh
