@@ -122,6 +122,9 @@ def main(args):
     else:
         data_dir = config['InputOutput']['data_dir']
 
+    config['DataParameters']['split'] = args.split
+    config['DataParameters']['split_term'] = args.split_term
+
     if hasattr(args, 'experiment_name') and args.experiment_name:
         experiment_name = args.experiment_name
     else:
@@ -129,6 +132,7 @@ def main(args):
             experiment_name = config['ModelParameters']['experiment_name']
         else:
             experiment_name = config['ModelParameters']['model']
+    experiment_name += "_" + config['DataParameters']['split']
 
     experiment_name = get_current_time() + "_" + experiment_name
     config['InputOutput']['experiment_name'] = experiment_name
@@ -137,8 +141,7 @@ def main(args):
     batch_size = config['LearningParameters']['batch_size']
     workers_thread = config['DataParameters']['workers_thread']
 
-    config['DataParameters']['split'] = args.split
-    config['DataParameters']['split_term'] = args.split_term
+
 
     normalize_transform = NormalizeGeometricData() # the normalization params (mean and std) will get loaded
     dataset_train = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term, pre_transform=normalize_transform)
@@ -198,15 +201,23 @@ def main(args):
         config['InputOutput']['experiment_name'] = experiment_name
     model.to(device)
 
+    loss_label = config['LearningParameters']['loss_function']
+    if loss_label == 'l1':
+        loss_function = F.l1_loss
+    elif loss_label == 'l2':
+        loss_function = F.mse_loss
+    else:
+        raise ValueError("Invalid loss function: '%s'" % loss_label)
+
     wandb_logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     # logger = TbXLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     logger = TbXLogger("Coma", experiment_name, output_dir, id=experiment_name, wandb_logger=wandb_logger)
     logger.add_config(config)
-    train_eval(model, optimizer, lr_scheduler, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
+    train_eval(model, optimizer, lr_scheduler, loss_function, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
     print("Training finished")
 
 
-def train_eval(model, optimizer, lr_scheduler,
+def train_eval(model, optimizer, lr_scheduler, loss_function,
                train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger):
     print('Initializing parameters')
     template_file_path = config['InputOutput']['template_fname']
@@ -249,7 +260,7 @@ def train_eval(model, optimizer, lr_scheduler,
 
         logger.log_values(epoch, {'lr': lr_scheduler.get_lr()})
 
-        train_loss = train_epoch(model, epoch, train_loader, len(train_loader.dataset), optimizer, lr_scheduler, device)
+        train_loss = train_epoch(model, epoch, train_loader, len(train_loader.dataset), optimizer, lr_scheduler, loss_function, device)
 
         logger.log_values(epoch, {'loss': train_loss})
 
@@ -278,18 +289,18 @@ def train_eval(model, optimizer, lr_scheduler,
         logger.save_model(last_checkpoint_fname)
 
 
-def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, device):
+def train_epoch(model, epoch, train_loader, len_dataset, optimizer, lr_scheduler, loss_function, device):
     model.train()
     total_loss = 0
-    i = 0
+    # i = 0
     for data in tqdm(train_loader):
         # if i % 10 == 0:
         #     break
-        i+=1
+        # i+=1
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)
-        loss = F.l1_loss(out, data.y)
+        loss = loss_function(out, data.y)
         total_loss += data.num_graphs * loss.item()
         loss.backward()
         optimizer.step()
@@ -412,6 +423,7 @@ if __name__ == '__main__':
                                                                'or identity name')
     parser.add_argument('-d', '--data_dir', help='path where the downloaded data is stored')
     parser.add_argument('-cp', '--checkpoint_dir', help='path where checkpoints file need to be stored')
+    parser.add_argument('-n', '--name', help='Experiment name.')
 
     args = parser.parse_args()
 

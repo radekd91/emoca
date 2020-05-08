@@ -21,6 +21,7 @@ LearningParameters:
   weight_decay: 0.0005
   num_epochs: 300
   optimizer: sgd
+  loss_function: l1
 
 DataParameters:
   workers_thread: 6
