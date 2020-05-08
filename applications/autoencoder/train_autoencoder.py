@@ -73,6 +73,16 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, run_id, checkpoint_
     return checkpoint_fname
 
 
+def save_preprocessing_transforms(file, pre_transform=None, transform=None, std=None, mean=None):
+    transforms = {}
+    transforms['pre_transform'] = pre_transform
+    transforms['transform'] = transform
+    transforms['std'] = std
+    transforms['mean'] = mean
+    # os.makedirs(checkpoint_dir, exist_ok=True)
+    torch.save(transforms, file)
+
+
 def load_model(model, checkpoint_file, device, optimizer=None):
     checkpoint = torch.load(checkpoint_file)
     start_epoch = checkpoint['epoch_num']
@@ -214,6 +224,14 @@ def main(args):
     # logger = TbXLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     logger = TbXLogger("Coma", experiment_name, output_dir, id=experiment_name, wandb_logger=wandb_logger)
     logger.add_config(config)
+
+    save_preprocessing_transforms(os.path.join(output_dir, "pre_transforms.pt"),
+                                  pre_transform=dataset_train.pre_transform,
+                                  transform=dataset_train.transform,
+                                  std=dataset_train.std,
+                                  mean=dataset_train.mean
+                                  )
+
     train_eval(model, optimizer, lr_scheduler, loss_function, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
     print("Training finished")
     logger.sync()

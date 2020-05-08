@@ -99,10 +99,8 @@ echo -e "Using $NUM_GPUS GPUS\n"
 
 
 
-echo -e "Copying default.yaml to config_2020-05-08-15-55-55.yaml"
 CFG_FNAME="~/configs/config_$(date '+%Y-%m-%d-%H-%M-%S').yaml"
-
-
+echo -e "Copying default.yaml to $CFG_FNAME"
 scp default.yaml $USERNAME@$CHOSTNAME:$CFG_FNAME
 
 WAND_AUTH=$(cat hash.wandb_auth)
