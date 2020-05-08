@@ -112,8 +112,9 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate $CONDAENV
 #cd ~/Repos/gdl/applications/autoencoder
 cd ~/Repos/gdl
+git pull
 wandb login "$WAND_AUTH"
-python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split sliced --split_term sliced --name BaseComa
-#python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split expression --split_term bareteeth
-#python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
+python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split sliced --split_term sliced
+#python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split expression --split_term bareteeth
+#python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
 ENDBSUB

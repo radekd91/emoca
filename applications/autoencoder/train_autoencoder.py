@@ -126,8 +126,8 @@ def main(args):
     config['DataParameters']['split'] = args.split
     config['DataParameters']['split_term'] = args.split_term
 
-    if hasattr(args, 'experiment_name') and args.experiment_name:
-        experiment_name = args.experiment_name
+    if hasattr(args, 'name') and args.name:
+        experiment_name = args.name
     else:
         if 'experiment_name' in config.keys():
             experiment_name = config['ModelParameters']['experiment_name']
