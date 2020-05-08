@@ -50,6 +50,7 @@ def adjust_learning_rate(optimizer, lr_decay):
 
 
 def read_config(fname):
+    fname = os.path.expanduser(fname)
     if not os.path.exists(fname):
         print('Config not found %s' % fname)
         return
