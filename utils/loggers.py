@@ -69,7 +69,7 @@ class WandbLogger(AbstractLogger):
         wandb.save(filename)
 
     def sync(self):
-        if 'dryrun' in os.environ and os.environ[''] == "dryrun":
+        if 'WANDB_MODE' in os.environ and os.environ['WANDB_MODE'] == "dryrun":
             print("Syncing wandb")
             cwd = os.getcwd()
             os.chdir(os.path.join(self.output_folder, "wandb"))
