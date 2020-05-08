@@ -2,7 +2,7 @@ InputOutput:
   visualize: true
   data_dir: data/COMA
   output_dir: results/COMA
-  template_fname: data/COMA/template/centered_template.ply
+  template_fname: data/COMA/template/template_centered.ply
   
 ModelParameters:
   model: Coma

@@ -97,13 +97,23 @@ if ! [[ "$NUM_GPUS" =~ ^[0-9]+$ ]]; then
 fi
 echo -e "Using $NUM_GPUS GPUS\n"
 
+
+
+echo -e "Copying default.yaml to config_2020-05-08-15-55-55.yaml"
+CFG_FNAME="~/configs/config_$(date '+%Y-%m-%d-%H-%M-%S').yaml"
+
+
+scp default.yaml $USERNAME@$CHOSTNAME:$CFG_FNAME
+
+WAND_AUTH=$(cat hash.wandb_auth)
+
 ssh $USERNAME@$CHOSTNAME bsub -n $NUM_CORES -W $RUN_TIME -G ls_grossm  -R "rusage[mem=$MEM_PER_CORE,ngpus_excl_p=$NUM_GPUS]" -R 'select[gpu_model0==GeForceRTX2080Ti]' <<ENDBSUB
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate $CONDAENV
 #cd ~/Repos/gdl/applications/autoencoder
 cd ~/Repos/gdl
-#python train_autoencoder.py --split sliced --split_term sliced
-python applications/autoencoder/train_autoencoder.py --split sliced --split_term sliced
-#python applications/autoencoder/train_autoencoder.py --split expression --split_term bareteeth
-#python applications/autoencoder/train_autoencoder.py --split identity --split_term FaceTalk_170731_00024_TA
+wandb login "$WAND_AUTH"
+python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split sliced --split_term sliced --name BaseComa
+#python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split expression --split_term bareteeth
+#python applications/autoencoder/train_autoencoder.py --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
 ENDBSUB

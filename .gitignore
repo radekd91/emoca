@@ -3,3 +3,4 @@ results/
 .idea/
 *.pyc
 data/
+*.wandb_auth
