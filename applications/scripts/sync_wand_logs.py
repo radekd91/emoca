@@ -37,8 +37,8 @@ if __name__ == "__main__":
     from pathlib import Path
 
     paths_to_sync = []
-    # for path in Path(path).rglob('dryrun*'):
-    for path in Path(path).rglob('run*'):
+    for path in Path(path).rglob('dryrun*'):
+    # for path in Path(path).rglob('run*'):
         paths_to_sync += [str(path)]
 
     multi = False
