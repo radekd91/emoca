@@ -25,18 +25,21 @@ class AbstractLogger(object):
     def save_model(self, filename):
         raise NotImplementedError()
 
+    def sync(self):
+        pass
 
 class WandbLogger(AbstractLogger):
 
-    def __init__(self, project_name, run_name, output_foder, id=None):
-        os.makedirs(output_foder)
+    def __init__(self, project_name, run_name, output_fodler, id=None):
+        os.makedirs(output_fodler)
+        self.output_folder = output_fodler
         self.id = id
         self.wandb_run = wandb.init(project=project_name,
-                   name=run_name,
-                   sync_tensorboard=True,
-                   dir=output_foder,
-                   id=id
-                   )
+                                    name=run_name,
+                                    sync_tensorboard=True,
+                                    dir=output_fodler,
+                                    id=id
+                                    )
 
     def add_config(self, config: dict):
         wandb.config.update(config)
@@ -65,6 +68,15 @@ class WandbLogger(AbstractLogger):
     def save_model(self, filename):
         wandb.save(filename)
 
+    def sync(self):
+        if 'dryrun' in os.environ and os.environ[''] == "dryrun":
+            print("Syncing wandb")
+            cwd = os.getcwd()
+            os.chdir(os.path.join(self.output_folder, "wandb"))
+            os.execl('wandb sync')
+            os.chdir(cwd)
+        else:
+            print("Wandb synced")
 
 import tensorboardX as tbx
 from utils.mesh import load_mesh
@@ -162,6 +174,10 @@ class TbXLogger(AbstractLogger):
     def save_model(self, filename):
         if self.wandb_logger is not None:
             self.wandb_logger.save_model(filename)
+
+    def sync(self):
+        if self.wandb_logger is not None:
+            self.wandb_logger.sync()
 
 
 if __name__ == "__main__":

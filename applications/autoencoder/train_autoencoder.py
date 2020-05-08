@@ -216,6 +216,7 @@ def main(args):
     logger.add_config(config)
     train_eval(model, optimizer, lr_scheduler, loss_function, train_loader, test_loader, start_epoch, total_epochs, device, output_dir, config, logger)
     print("Training finished")
+    logger.sync()
 
 
 def train_eval(model, optimizer, lr_scheduler, loss_function,
