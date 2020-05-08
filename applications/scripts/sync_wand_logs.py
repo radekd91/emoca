@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # for path in Path(path).rglob('run*'):
         paths_to_sync += [str(path)]
 
-    multi = False
+    multi = True
     if multi:
         with Pool(5) as p:
             print(p.map(sync_if_not_synced, paths_to_sync))
