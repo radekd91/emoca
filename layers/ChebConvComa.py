@@ -4,6 +4,7 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.conv.cheb_conv import ChebConv
 from torch_geometric.utils import remove_self_loops
 
+
 class ChebConv_Coma(ChebConv):
     def __init__(self, in_channels, out_channels, K, normalization=None, bias=True):
         super(ChebConv_Coma, self).__init__(in_channels, out_channels, K, normalization, bias)
