@@ -14,7 +14,7 @@ function print_usage {
 }
 
 # if number of command line arguments is different from 5 or if $1==-h or $1==--help
-if [ "$#" !=  6 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+if [ "$#" !=  7 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     print_usage
     exit
 fi
@@ -99,6 +99,10 @@ echo -e "Using $NUM_GPUS GPUS\n"
 
 
 
+# number of cores to be used
+RUN_NAME=$7
+echo -e "Name of the run: $RUN_NAME\n"
+
 CFG_FNAME="~/configs/config_$(date '+%Y-%m-%d-%H-%M-%S').yaml"
 echo -e "Copying default.yaml to $CFG_FNAME"
 scp default.yaml $USERNAME@$CHOSTNAME:$CFG_FNAME
@@ -112,7 +116,10 @@ conda activate $CONDAENV
 cd ~/Repos/gdl
 git pull
 wandb login "$WAND_AUTH"
-python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split sliced --split_term sliced
-#python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split expression --split_term bareteeth
-#python applications/autoencoder/train_autoencoder.py --name BaseComaTest --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
+#python applications/autoencoder/train_autoencoder.py --name BaseComaSanityCheck --conf "$CFG_FNAME" --split sliced --split_term sliced
+#python applications/autoencoder/train_autoencoder.py --name BaseComaSanityCheck --conf "$CFG_FNAME" --split expression --split_term bareteeth
+#python applications/autoencoder/train_autoencoder.py --name BaseComaSanityCheck --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
+python applications/autoencoder/train_autoencoder.py --name "$RUN_NAME" --conf "$CFG_FNAME" --split sliced --split_term sliced
+#python applications/autoencoder/train_autoencoder.py --name "$RUN_NAME" --conf "$CFG_FNAME" --split expression --split_term bareteeth
+#python applications/autoencoder/train_autoencoder.py --name "$RUN_NAME" --conf "$CFG_FNAME" --split identity --split_term FaceTalk_170731_00024_TA
 ENDBSUB
