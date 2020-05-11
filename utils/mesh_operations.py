@@ -10,21 +10,22 @@ def row(A):
 def col(A):
     return A.reshape((-1, 1))
 
-def get_vert_connectivity(mesh_v, mesh_f):
+def get_vert_connectivity(mesh_v, mesh_f, dtype=None):
     """Returns a sparse matrix (of size #verts x #verts) where each nonzero
     element indicates a neighborhood relation. For example, if there is a
     nonzero element in position (15,12), that means vertex 15 is connected
     by an edge to vertex 12."""
 
-    vpv = sp.csc_matrix((len(mesh_v),len(mesh_v)))
+    dtype = dtype or np.int32
+    vpv = sp.csc_matrix((len(mesh_v),len(mesh_v)), dtype=dtype)
 
     # for each column in the faces...
     for i in range(3):
         IS = mesh_f[:,i]
         JS = mesh_f[:,(i+1)%3]
-        data = np.ones(len(IS))
+        data = np.ones(len(IS), dtype=dtype)
         ij = np.vstack((row(IS.flatten()), row(JS.flatten())))
-        mtx = sp.csc_matrix((data, ij), shape=vpv.shape)
+        mtx = sp.csc_matrix((data, ij), shape=vpv.shape, dtype=dtype)
         vpv = vpv + mtx + mtx.T
 
     return vpv
@@ -228,11 +229,11 @@ def setup_deformation_transfer(source, target, use_normals=False):
         if n_id == 0:
             # Closest surface point in triangle
             A = np.vstack((source.v[nearest_f])).T
-            coeffs_v[3 * i:3 * i + 3] = np.linalg.lstsq(A, nearest_v)[0]
+            coeffs_v[3 * i:3 * i + 3] = np.linalg.lstsq(A, nearest_v, rcond=-1)[0]
         elif n_id > 0 and n_id <= 3:
             # Closest surface point on edge
             A = np.vstack((source.v[nearest_f[n_id - 1]], source.v[nearest_f[n_id % 3]])).T
-            tmp_coeffs = np.linalg.lstsq(A, target.v[i])[0]
+            tmp_coeffs = np.linalg.lstsq(A, target.v[i], rcond=-1)[0]
             coeffs_v[3 * i + n_id - 1] = tmp_coeffs[0]
             coeffs_v[3 * i + n_id % 3] = tmp_coeffs[1]
         else:
