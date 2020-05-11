@@ -36,11 +36,17 @@ except ImportError as e:
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
     indices = np.vstack((scp_matrix.row, scp_matrix.col))
-    i = torch.LongTensor(indices)
-    v = torch.FloatTensor(values)
     shape = scp_matrix.shape
+    i = torch.LongTensor(indices)
+    if values.dtype == np.int32 or values.dtype == np.int64:
+        v = torch.LongTensor(values)
+        sparse_tensor = torch.sparse.LongTensor(i, v, torch.Size(shape))
+    else:
+        v = torch.FloatTensor(values)
+        sparse_tensor = torch.sparse.FloatTensor(i, v, torch.Size(shape))
 
-    sparse_tensor = torch.sparse.FloatTensor(i, v, torch.Size(shape))
+    # sparse_tensor = torch.sparse.FloatTensor(i, v, torch.Size(shape))
+    # sparse_tensor = torch.sparse.Tensor(i, v, torch.Size(shape), dtype=values.dype)
     return sparse_tensor
 
 
@@ -160,6 +166,14 @@ def main(args):
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
+    # import pickle as pkl
+    # # for batch in train_loader:
+    # #     break
+    # # with open("test_batch.pkl", "wb") as f:
+    # #     pkl.dump(batch, f)
+    # with open("test_batch.pkl", "rb") as f:
+    #     batch = pkl.load(f)
+    #     config['ModelParameters']['num_input_features'] = 3
 
     print("Loading template mesh")
     template_file_path = config['InputOutput']['template_fname']
@@ -192,6 +206,12 @@ def main(args):
         raise ValueError("Unsupported model '%s'" % config['ModelParameters']['model'])
     total_epochs = config['LearningParameters']['num_epochs']
 
+    # batch = batch.to(device)
+    # model.to(device)
+    # out = model(batch)
+    # print("Peace")
+    # exit(0)
+
     lr = config['LearningParameters']['learning_rate']
     lr_decay = config['LearningParameters']['learning_rate_decay']
     weight_decay = config['LearningParameters']['weight_decay']
@@ -221,6 +241,7 @@ def main(args):
         raise ValueError("Invalid loss function: '%s'" % loss_label)
 
     wandb_logger = WandbLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
+    # wandb_logger = None
     # logger = TbXLogger("Coma", experiment_name, os.path.join(output_dir, 'logs'), id=experiment_name)
     logger = TbXLogger("Coma", experiment_name, output_dir, id=experiment_name, wandb_logger=wandb_logger)
     logger.add_config(config)
