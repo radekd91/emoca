@@ -283,8 +283,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
                 mesh_paths = sorted(list((subject_path / sequence).glob("*.ply")))
 
-                if len(mesh_paths) != int(mesh_paths[-1].stem[-6:]):
-                    print("Missing a mesh file in sequence '%s/%s'. Skipping" % (subject_path, sequence))
+                # if len(mesh_paths) == int(mesh_paths[-1].stem[-6:]):
+                #     print("Missing a mesh file in sequence '%s/%s'. Skipping" % (subject_path, sequence))
+                #     continue
+
+                if len(mesh_paths) == 0:
+                    print("Missing all mesh files in sequence '%s/%s'. Skipping" % (subject_path, sequence))
                     continue
 
                 relative_mesh_paths = [path.relative_to(self.root_mesh_dir) for path in mesh_paths]
