@@ -181,6 +181,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def version(self):
         return 1
 
+    def _index_from_mesh_path(self, meshpath):
+        return int(meshpath.stem[-6:])
+
     def _load_templates(self):
         self.subjects_templates = [pv.read(template_path) for template_path in self.personalized_template_paths]
 
@@ -379,15 +382,26 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                     length = min(audio_data_resampled.shape[1], audio_data_aligned.shape[1] - start_at)
                     audio_data_aligned[:, start_at:(start_at + length)] = audio_data_resampled[:, :length]
 
+                    print("Starting processing sequence: '%s' of subject '%s'" % (seq_name, subject_name))
+                    old_index = -1
                     for i, mesh_name in enumerate(meshes):
-                        mesh = pv.read( Path(self.root_mesh_dir) / mesh_name)
+                        mesh_path = Path(self.root_mesh_dir) / mesh_name
+                        mesh = pv.read(mesh_path)
+                        index = self._index_from_mesh_path(mesh_path) - 1
+
+                        if index != old_index+1:
+                            print("Skipping frames between %d and %d due to missing frames" % (old_index, index))
+
                         self.vertex_array[mesh_idx, :] = np.reshape(mesh.points, newshape=(1, -1))
-                        self.raw_audio_array[mesh_idx, :] = audio_data_aligned[0, i * self.num_audio_samples_per_scan:(i + 1) * self.num_audio_samples_per_scan].numpy()
+                        # self.raw_audio_array[mesh_idx, :] = audio_data_aligned[0, i * self.num_audio_samples_per_scan:(i + 1) * self.num_audio_samples_per_scan].numpy()
+                        self.raw_audio_array[mesh_idx, :] = audio_data_aligned[0, index * self.num_audio_samples_per_scan:(index + 1) * self.num_audio_samples_per_scan].numpy()
 
                         self.emotion_array[mesh_idx, 0] = Emotion.fromString(seq_name).value
                         self.identity_array[mesh_idx, 0] = self.identity_name2idx[subject_name]
                         self.sentence_array[mesh_idx, 0] = sentence_number
                         self.sequence_array[mesh_idx, 0] = sequence_idx
+
+                        old_index = index
 
                         mesh_idx += 1
                         pbar.update()
