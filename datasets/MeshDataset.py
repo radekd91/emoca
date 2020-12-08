@@ -5,9 +5,9 @@ import pytorch_lightning as pl
 import glob, os, sys
 from pathlib import Path
 import pyvista as pv
-from utils.mesh import load_mesh
-from scipy.io import wavfile
-import resampy
+# from utils.mesh import load_mesh
+# from scipy.io import wavfile
+# import resampy
 import numpy as np
 import torch
 import torchaudio
@@ -448,12 +448,12 @@ class EmoSpeechDataset(Dataset):
 
     def __getitem__(self, index):
         mesh_fname = self.mesh_paths[index]
-        vertices, faces = load_mesh(mesh_fname)
-        load_mesh(filename=mesh_fname)
+        # vertices, faces = load_mesh(mesh_fname)
+        # load_mesh(filename=mesh_fname)
         sample = {
             "mesh_path": mesh_fname,
-            "vertices" : vertices,
-            "faces": faces,
+            # "vertices" : vertices,
+            # "faces": faces,
             "emotion": None
         }
 
