@@ -340,7 +340,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
                     sentence_number = sentenceID(seq_name)
 
-                    num_meshes_in_sequence = len(meshes)
+                    # num_meshes_in_sequence = len(meshes)
+                    num_meshes_in_sequence = self._index_from_mesh_path(meshes[-1])
 
                     audio_subpath = Path(subject_name) / "scanner" / (seq_name + ".wav")
                     audio_file = Path(self.root_audio_dir) / audio_subpath
