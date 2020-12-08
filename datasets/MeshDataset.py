@@ -270,7 +270,20 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             # sequences = sorted([os.path.basename(dir) for dir in glob.glob(subject_path.as_posix()) if os.path.isdir(dir)])
             seq2paths = OrderedDict()
             for sequence in tqdm(sequences):
+                audio_file = Path(self.root_audio_dir) / subject / "scanner" / (sequence + ".wav")
+
+
+                if not audio_file.is_file():
+                    # skip this sequence, the file is missing
+                    print("'%s' is missing. Skipping" % audio_file)
+                    continue
+
                 mesh_paths = sorted(list((subject_path / sequence).glob("*.ply")))
+
+                if len(mesh_paths) != int(mesh_paths[-1].stem[-6:]):
+                    print("Missing a mesh file in sequence '%s'. Skipping" % subject_path/sequence)
+                    continue
+
                 relative_mesh_paths = [path.relative_to(self.root_mesh_dir) for path in mesh_paths]
                 seq2paths[sequence] = relative_mesh_paths
                 self.all_mesh_paths += relative_mesh_paths
