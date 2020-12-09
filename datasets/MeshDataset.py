@@ -192,10 +192,11 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         # is dataset already processed?
         if outdir.is_dir():
-            print("The dataset is already processed")
+            print("The dataset is already processed. Loading")
+            self._loadMeta()
             self._load_templates()
             self._loadArrays()
-            self._loadMeta()
+            print("Dataset loaded")
             return
 
         self._gather_data()
@@ -244,7 +245,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             pkl.dump(self.sound_alignment, f)
 
     def _loadMeta(self):
-        with open(self.metadata_path, "wb") as f:
+        with open(self.metadata_path, "rb") as f:
             version = pkl.load(f)
             self.all_mesh_paths = pkl.load(f)
             self.all_audio_paths = pkl.load(f)
@@ -432,8 +433,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def _loadArrays(self):
         # load data arrays in read mode
 
-        self.vertex_array = np.memmap(self.verts_array_path, dtype='float32', mode='r', shape=(self.num_samples, 4))
-        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r', shape=(self.num_samples, 4))
+        self.vertex_array = np.memmap(self.verts_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.num_verts*3))
+        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.num_audio_samples_per_scan))
 
         with open(self.emotion_array_path, "rb") as f:
             self.emotion_array = pkl.load(f)
@@ -450,8 +451,72 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         with open(self.sequence_length_array_path, "rb") as f:
             self.sequence_length_array = pkl.load(f)
 
-        with open(self.templates_path, "rb") as f:
-            self.subjects_templates = pkl.load(f)
+        # with open(self.templates_path, "rb") as f:
+        #     self.subjects_templates = pkl.load(f)
+
+
+    def create_dataset_video(self, filename=None):
+        import pyvistaqt as pvqt
+        import cv2
+
+        if filename is None:
+            filename = os.path.join(self.output_dir, "video.mp4")
+
+        mesh = pv.read(self.personalized_template_paths[0])
+
+        # camera = [(0.01016587953526246, -0.10710759494716658, 0.7154280129463031),
+        #         (-0.00125928595662117, -0.032396093010902405, -0.03774198144674301),
+        #         (-0.012844951984790388, 0.9950148277606915, 0.09889640916064582)]
+        # camera = [(0.017643774223258905, -0.10476257652816602, 0.7149231439996583),
+        #          (-0.03735078070331948, -0.002708379456682772, -0.03309953157283428),
+        #          (-0.024679802806785948, 0.9902746786078623, 0.13691956851200532)]
+        camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
+                 (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
+                 (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
+        pl = pvqt.BackgroundPlotter()
+        pl.set_background([0,0,0])
+        pl.camera_position = camera
+        actor = pl.add_mesh(mesh)
+        # pl.show()
+        from time import sleep
+        textActor = pl.add_text("")
+
+        height, width, layers = pl.image.shape
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self.mesh_fps, (width, height))
+
+        for i in tqdm(range(self.vertex_array.shape[0])):
+            mesh.points[...] = np.reshape(self.vertex_array[i,...], newshape=(-1,3))
+            textActor.SetText(2, str(self.all_mesh_paths[i].parent.parent))
+            textActor.SetText(3, str(self.all_mesh_paths[i].stem))
+            im = pl.image
+            video.write(im)
+            # import matplotlib.pyplot as plt
+            # plt.imshow(im)
+            # sleep(0.05)
+
+        video.release()
+
+    def create_dataset_audio(self, filename=None):
+        if filename is None:
+            filename = os.path.join(self.output_dir, "video.mp4")
+        audio_filename = os.path.splitext(str(filename))[0] + ".wav"
+        audio_tensor = torch.Tensor(self.raw_audio_array).view(1,-1)
+        torchaudio.save(audio_filename, audio_tensor.clamp(-1,1), self.sound_target_samplerate)
+
+
+    def combine_video_audio(self, filaneme=None, video=None, audio=None):
+        if filaneme is None:
+            filename = os.path.join(self.output_dir, "video_with_sound.mp4")
+        if video is None:
+            video = os.path.join(self.output_dir, "video.mp4")
+        if audio is None:
+            audio = os.path.join(self.output_dir, "video.wav")
+        import moviepy.editor as mpe
+        my_clip = mpe.VideoFileClip(video)
+        audio_background = mpe.AudioFileClip(audio, fps=self.sound_target_samplerate)
+        final_clip = my_clip.set_audio(audio_background)
+        final_clip.write_videofile(filename,fps=self.mesh_fps)
+
 
 
     def setup(self, stage: Optional[str] = None):
@@ -495,9 +560,21 @@ class EmoSpeechDataset(Dataset):
 def main():
     root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
     processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
-    dataset = EmoSpeechDataModule(root_dir, processed_dir)
+    subfolder = "processed_2020_Dec_09_00-30-18"
+
+    # sample_rate, audio_data = wavfile.read(audio_file)
+    # audio_data, sample_rate = torchaudio.load(Path(root_dir) / "EmotionalSpeech_data/audio/EmotionalSpeech_171213_50034_TA/scanner/ang_sentence01.wav")
+    # torchaudio.save("test.wav", audio_data, sample_rate)
+    # audio_data_resampled = torchaudio.transforms.Resample(sample_rate, 22020)(
+    #     audio_data[0, :].view(1, -1))
+    # torchaudio.save("test_resampled.wav", audio_data_resampled, 22020)
+
+    dataset = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dataset.prepare_data()
-    # sample = dataset[0]
+    dataset.create_dataset_video()
+    # dataset.create_dataset_audio()
+    dataset.combine_video_audio()
+    # # sample = dataset[0]
     print("Peace out")
 
 
