@@ -225,8 +225,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             pkl.dump(self.sequence_array, f)
         with open(self.sequence_length_array_path, "wb") as f:
             pkl.dump(self.sequence_length_array, f)
-        with open(self.templates_path, "wb") as f:
-            pkl.dump(self.subjects_templates, f)
+        # with open(self.templates_path, "wb") as f:
+        #     pkl.dump(self.subjects_templates, f)
 
         self._saveMeta()
 
@@ -252,9 +252,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             self.identity_name2idx = pkl.load(f)
             self.sound_alignment = pkl.load(f)
 
-    def _gather_data(self):
+    def _gather_data(self, exist_ok=False):
         print("Processing dataset")
-        Path(self.output_dir).mkdir(parents=True)
+        Path(self.output_dir).mkdir(parents=True, exist_ok=exist_ok)
         root_mesh_path = Path(self.root_mesh_dir)
         # root_audio_path = Path(self.root_audio_dir)
 
