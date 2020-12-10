@@ -80,6 +80,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                  train_transforms=None,
                  val_transforms=None,
                  test_transforms=None,
+                 train_pattern="sentences?(0[0-9]|1[0-1])",
+                 validation_pattern="sentences?(1[2-4])",
+                 test_pattern="sentences?15",
                  dims=None
                  ):
         self.root_dir = root_dir
@@ -88,9 +91,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.root_mesh_dir = os.path.join(self.root_dir, "EmotionalSpeech_alignments_new", "seq_align")
         self.root_audio_dir = os.path.join(self.root_dir, "EmotionalSpeech_data", "audio")
 
-        train_pattern = ""
-        valiation_pattern = ""
-        test_pattern = ""
+        self.train_pattern = train_pattern
+        self.validation_pattern = validation_pattern
+        self.test_pattern = test_pattern
 
         self.mesh_fps = mesh_fps
 
@@ -195,7 +198,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             print("The dataset is already processed. Loading")
             self._loadMeta()
             self._load_templates()
-            self._loadArrays()
+            self._load_arrays()
             print("Dataset loaded")
             return
 
@@ -232,8 +235,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self._saveMeta()
 
         # close data arrays
-        self._cleanupMemmaps()
-        self._loadArrays()
+        self._cleanup_memmaps()
+
+        # self._load_arrays()
 
     def _saveMeta(self):
         with open(self.metadata_path, "wb") as f:
@@ -418,8 +422,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self.sequence_length_array = np.array(sequence_lengths, dtype=np.int32)
 
-
-    def _cleanupMemmaps(self):
+    def _cleanup_memmaps(self):
         if self.vertex_array is not None:
             del self.vertex_array
             self.vertex_array = None
@@ -428,9 +431,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             self.raw_audio_array = None
 
     def __del__(self):
-        self._cleanupMemmaps()
+        self._cleanup_memmaps()
 
-    def _loadArrays(self):
+    def _load_arrays(self):
         # load data arrays in read mode
 
         self.vertex_array = np.memmap(self.verts_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.num_verts*3))
@@ -454,6 +457,59 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         # with open(self.templates_path, "rb") as f:
         #     self.subjects_templates = pkl.load(f)
 
+
+    def setup(self, stage: Optional[str] = None):
+        # is dataset already processed?
+        if not Path(self.output_dir).is_dir():
+            raise RuntimeError("The folder with the processed not not found")
+
+        print("Loading the dataset")
+        self._loadMeta()
+        self._load_templates()
+        self._load_arrays()
+        print("Dataset loaded")
+
+        import re
+        self.training_indices = np.array([i for i, name in enumerate(self.all_mesh_paths) if re.search(self.train_pattern, str(name)) ], dtype=np.int32)
+        self.val_indices = np.array([i for i, name in enumerate(self.all_mesh_paths) if re.search(self.validation_pattern, str(name)) ], dtype=np.int32)
+        self.test_indices = np.array([i for i, name in enumerate(self.all_mesh_paths) if re.search(self.test_pattern, str(name)) ], dtype=np.int32)
+
+        if self.training_indices.size == 0:
+            raise ValueError("The training set is empty.")
+        if self.val_indices.size == 0:
+            raise ValueError("The validation set is empty.")
+        if self.test_indices.size == 0:
+            raise ValueError("The test set is empty.")
+
+        if len(set(self.training_indices.tolist()).intersection(set(self.val_indices.tolist()))) != 0 or \
+            len(set(self.training_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 or \
+            len(set(self.val_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 :
+            raise ValueError("The training, validation and test set are not disjoint!")
+
+
+        if self.training_indices.size + self.val_indices.size + self.test_indices.size != self.num_samples:
+            forgotten_samples = sorted(list(set(range(self.num_samples)).difference(set(self.training_indices.tolist() + self.val_indices.tolist() + self.test_indices.tolist()))))
+            forgotten_example = self.all_mesh_paths[forgotten_samples[0]]
+            raise ValueError("Train, test and vaiidation samples do not include all the samples in the dataset. "
+                             "Some samples got forgotten. For instance '%s'" % forgotten_example)
+
+        print("The training set contains %d/%d samples, %.1f%% of the entire dataset " % (self.training_indices.size, self.num_samples, 100*self.training_indices.size/self.num_samples))
+        print("The validation set contains %d/%d samples, %.1f%% of the entire dataset " % (self.val_indices.size, self.num_samples, 100*self.val_indices.size/self.num_samples))
+        print("The test set contains %d/%d samples, %.1f%% of the entire dataset " % (self.test_indices.size, self.num_samples, 100*self.test_indices.size/self.num_samples))
+
+        self.dataset_train = EmoSpeechDataset(self, self.training_indices)
+        self.dataset_val = EmoSpeechDataset(self, self.val_indices)
+        self.dataset_test = EmoSpeechDataset(self, self.test_indices)
+
+
+    def train_dataloader(self, *args, **kwargs) -> DataLoader:
+        return DataLoader(self.dataset_train, batch_size=64, shuffle=True)
+
+    def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
+        return [DataLoader(self.dataset_val, batch_size=64), ]
+
+    def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
+        return [DataLoader(self.dataset_test, batch_size=64), ]
 
     def create_dataset_video(self, filename=None):
         import pyvistaqt as pvqt
@@ -506,55 +562,55 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
     def combine_video_audio(self, filaneme=None, video=None, audio=None):
         if filaneme is None:
-            filename = os.path.join(self.output_dir, "video_with_sound.mp4")
+             filename = os.path.join(self.output_dir, "video_with_sound.mp4")
         if video is None:
             video = os.path.join(self.output_dir, "video.mp4")
         if audio is None:
             audio = os.path.join(self.output_dir, "video.wav")
-        import moviepy.editor as mpe
-        my_clip = mpe.VideoFileClip(video)
-        audio_background = mpe.AudioFileClip(audio, fps=self.sound_target_samplerate)
-        final_clip = my_clip.set_audio(audio_background)
-        final_clip.write_videofile(filename,fps=self.mesh_fps)
+        import ffmpeg
+        video = ffmpeg.input(video)
+        audio = ffmpeg.input(audio)
+        out = ffmpeg.output(video, audio, filename, vcodec='copy', acodec='aac', strict='experimental')
+        out.run()
 
-
-
-    def setup(self, stage: Optional[str] = None):
-        pass
-
-    def train_dataloader(self, *args, **kwargs) -> DataLoader:
-        pass
-
-    def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        pass
-
-    def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        pass
-
+        # import moviepy.editor as mpe
+        # my_clip = mpe.VideoFileClip(video)
+        # audio_background = mpe.AudioFileClip(audio, fps=self.sound_target_samplerate)
+        # final_clip = my_clip.set_audio(audio_background)
+        # final_clip.write_videofile(filename,fps=self.mesh_fps)
 
 class EmoSpeechDataset(Dataset):
 
-    def __init__(self, root_mesh_dir, root_audio_dir=None, mesh_fps=60, sound_alignment=SoundAlignment.ENDS_AT):
+    def __init__(self, dm : EmoSpeechDataModule, indices):
+        self.vertex_array = dm.vertex_array
+        self.audio_array = dm.raw_audio_array
+        self.subjects_templates = dm.subjects_templates
 
-        self.root_mesh_dir = root_mesh_dir
-        self.root_audio_dir = root_audio_dir
-        self.mesh_fps = mesh_fps
-        self.sound_alignment = sound_alignment
-        self.sound_target_samplerate = 22020
+        self.emotion_array = dm.emotion_array
+        self.sentence_array = dm.sentence_array
+        self.identity_array = dm.identity_array
+        self.sequence_array = dm.sequence_array
 
+        self.mesh_paths = dm.all_mesh_paths
+
+        self.indices = indices
 
     def __getitem__(self, index):
-        mesh_fname = self.mesh_paths[index]
-        # vertices, faces = load_mesh(mesh_fname)
-        # load_mesh(filename=mesh_fname)
+        i = self.indices[index]
         sample = {
-            "mesh_path": mesh_fname,
-            # "vertices" : vertices,
-            # "faces": faces,
-            "emotion": None
+            "mesh_path": [str(self.mesh_paths[i]),],
+            "vertices" : torch.from_numpy(self.vertex_array[i,...]),
+            "faces": torch.from_numpy(self.subjects_templates[0].faces),
+            "emotion": torch.from_numpy(self.emotion_array[i]),
+            "identity": torch.from_numpy(self.identity_array[i]),
+            "sentence": torch.from_numpy(self.emotion_array[i]),
+            "sequence": torch.from_numpy(self.sequence_array[i])
         }
-
         return sample
+
+    def __len__(self):
+        return self.indices.size
+
 
 
 def main():
@@ -569,12 +625,19 @@ def main():
     #     audio_data[0, :].view(1, -1))
     # torchaudio.save("test_resampled.wav", audio_data_resampled, 22020)
 
-    dataset = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
-    dataset.prepare_data()
-    dataset.create_dataset_video()
-    # dataset.create_dataset_audio()
-    dataset.combine_video_audio()
-    # # sample = dataset[0]
+    dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
+    dm.prepare_data()
+    dm.setup()
+    # dm.create_dataset_video()
+    # dm.create_dataset_audio()
+    # dm.combine_video_audio()
+    # # sample = dm[0]
+
+    train_dl = dm.train_dataloader()
+    for batch in train_dl:
+        print(batch)
+        break
+
     print("Peace out")
 
 
