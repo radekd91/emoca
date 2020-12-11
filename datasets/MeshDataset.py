@@ -160,6 +160,30 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         return os.path.join(self.output_dir, "sequence.pkl")
 
     @property
+    def fitted_vertex_array_path(self):
+        return os.path.join(self.output_dir, "verts_fitted.pkl")
+
+    @property
+    def expr_array_path(self):
+        return os.path.join(self.output_dir, "expression.memmap")
+
+    @property
+    def pose_array_path(self):
+        return os.path.join(self.output_dir, "pose.memmap")
+
+    @property
+    def neck_array_path(self):
+        return os.path.join(self.output_dir, "neck.memmap")
+
+    @property
+    def eye_array_path(self):
+        return os.path.join(self.output_dir, "eye.memmap")
+
+    @property
+    def translation_array_path(self):
+        return os.path.join(self.output_dir, "translation.memmap")
+
+    @property
     def sequence_length_array_path(self):
         return os.path.join(self.output_dir, "sequence_length.pkl")
 
@@ -170,6 +194,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     @property
     def metadata_path(self):
         return os.path.join(self.output_dir, "metadata.pkl")
+
 
     @property
     def personalized_template_paths(self):
@@ -432,6 +457,11 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._raw_audio_to_deepspeech()
 
+        self._fit_flame()
+
+    def _fit_flame(self):
+        pass
+
     def _raw_audio_to_deepspeech(self, audio_scaler=32500):
         from utils.DeepSpeechConverter import DeepSpeechConverter
         ah = DeepSpeechConverter('/home/rdanecek/Workspace/Repos/voca/ds_graph/output_graph.pb')
@@ -656,7 +686,7 @@ def main():
 
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm._raw_audio_to_deepspeech()
+    # dm._raw_audio_to_deepspeech()
     # dm.setup()
     # dm.create_dataset_video()
     # dm.create_dataset_audio()
@@ -723,7 +753,20 @@ def main2():
     # print(model.sampleRate())
     # model.stt()
 
+def main3():
+    root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
+    processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
+    subfolder = "processed_2020_Dec_09_00-30-18"
+    dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
+    dm.prepare_data()
+
+    dm.ds_array[0:50]
+
+    pass
+
+
 if __name__ == "__main__":
     # main()
-    main2()
+    # main2()
+    main3()
 

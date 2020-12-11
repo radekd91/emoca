@@ -1,0 +1,216 @@
+from models.FLAME import FLAME
+import torch
+import numpy as np
+import os
+from applications.FLAME.config import get_config
+from tqdm import tqdm
+
+def fit_registered(flame : FLAME,
+                   target_mesh,
+                   v_template = None,
+                   max_iters=10000,
+                   eps=1e-6,
+                   fit_shape=True,
+                   fit_expression=True,
+                   fit_pose=True,
+                   fit_neck=True,
+                   fit_eyes=True,
+                   fit_translations=True,
+                   visualize=True):
+
+    # personalize FLAME template
+    if v_template is not None:
+        flame.flame_model.v_template = torch.Tensor(v_template)
+
+    shape_params =  torch.zeros(1, 300)
+    shape_params = torch.autograd.Variable(shape_params, requires_grad=fit_shape)
+
+    expression_params = torch.zeros(1, 100)
+    expression_params = torch.autograd.Variable(expression_params, requires_grad=fit_expression)
+
+    pose_params = torch.zeros(1, 6)
+    pose_params = torch.autograd.Variable(pose_params, requires_grad=fit_pose)
+
+    neck_pose = torch.zeros(1, 3)
+    neck_pose = torch.autograd.Variable(neck_pose, requires_grad=fit_neck)
+
+    eye_pose = torch.zeros(1, 6)
+    eye_pose = torch.autograd.Variable(eye_pose, requires_grad=fit_eyes)
+
+    transl = torch.zeros(1, 3)
+    transl = torch.autograd.Variable(transl, requires_grad=fit_translations)
+
+
+    parameters = [
+        shape_params,
+        expression_params,
+        pose_params,
+        neck_pose,
+        eye_pose,
+        transl,
+    ]
+
+    # for param in parameters:
+    #     param.requires_grad = True
+
+    # freeze FLAME
+    for param in flame.parameters():
+        param.requires_grad = False
+
+    optimizer = torch.optim.SGD(parameters, lr=0.1)
+    criterion = torch.nn.MSELoss()
+
+
+    if not isinstance(target_mesh, list):
+        target_mesh = [target_mesh,]
+
+    final_mesh = []
+    shape = []
+    expr = []
+    pose = []
+    neck = []
+    eye = []
+    trans = []
+
+    for mesh_idx, tm in tqdm(enumerate(target_mesh)):
+
+        target_vertices = torch.Tensor(tm.points).view(1, -1, 3)
+
+        fm = tm.copy(deep=True)
+
+        print("Optimizing for mesh %.6d" % mesh_idx)
+        if visualize:
+            import pyvista as pv
+            import pyvistaqt as pvqt
+
+            pl = pvqt.BackgroundPlotter()
+            pl.add_mesh(tm, opacity=0.5)
+            pl.add_mesh(fm)
+            pl.show()
+
+            text = pl.add_text("Iter: %5d" % 0)
+
+        for i in range(max_iters):
+            optimizer.zero_grad()
+            vertices, landmarks = flame.forward(shape_params=shape_params, expression_params=expression_params,
+                                                pose_params=pose_params, neck_pose=neck_pose, eye_pose=eye_pose, transl=transl)
+            # mse = (vertices - target_vertices).square().mean()
+            loss = criterion(vertices, target_vertices)
+            print("Iter %.4d, loss=%.6f" % (i, loss))
+            if loss < eps:
+                break
+
+            loss.backward()
+            optimizer.step()
+
+            fm.points = vertices[0].detach().numpy()
+
+            if visualize:
+                text.SetText(2, "Iter: %5d" % (i+1))
+
+        final_mesh += [fm.copy(deep=True)]
+        shape += [shape_params.detach().numpy()]
+        expr += [expression_params.detach().numpy()]
+        pose += [pose_params.detach().numpy() ]
+        neck += [neck_pose.detach().numpy()]
+        eye += [eye_pose.detach().numpy()]
+        trans += [transl.detach().numpy()]
+
+        if visualize:
+            pl.close()
+
+    return final_mesh, shape, expr, pose, neck, eye, trans
+
+
+
+
+
+def load_FLAME(gender : str,
+               shape_params=300,
+               expression_params = 100,
+               use_3d_trans= True,
+               use_face_contour= False,
+               batch_size=1):
+    gender = gender.lower()
+    path_to_models = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "FLAME")
+
+    cfg = get_config()
+
+    cfg.static_landmark_embedding_path = os.path.join(path_to_models, 'flame_static_embedding.pkl')
+    cfg.dynamic_landmark_embedding_path = os.path.join(path_to_models, 'flame_dynamic_embedding.npy')
+    cfg.use_face_contour = use_face_contour
+    cfg.use_3D_translation = use_3d_trans
+    cfg.batch_size = batch_size
+    cfg.shape_params = shape_params
+    cfg.expression_params = expression_params
+
+    if gender == 'male':
+        cfg.flame_model_path = os.path.join(path_to_models, 'male_model.pkl')
+    elif gender == 'female':
+        cfg.flame_model_path = os.path.join(path_to_models, 'female_model.pkl')
+    elif gender == 'neutral':
+        cfg.flame_model_path = os.path.join(path_to_models, 'generic_model.pkl')
+    else:
+        raise ValueError("Invalid model specifier for FLAME: '%s'" % gender)
+    return FLAME(cfg)
+
+
+def main():
+    from datasets.MeshDataset import EmoSpeechDataModule
+
+
+    # flame_male = load_FLAME('male')
+    # flame_female = load_FLAME('female')
+    expression_params = 100
+    flame = load_FLAME('neutral', expression_params=expression_params)
+
+    root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
+    processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
+    subfolder = "processed_2020_Dec_09_00-30-18"
+    dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
+    dm.prepare_data()
+
+    fitted_vertex_array = np.memmap(dm.fitted_vertex_array_path, dtype=np.float32, mode='w+',
+                                  shape=(dm.num_samples, 3 * dm.num_verts))
+    expr_array = np.memmap(dm.expr_array_path, dtype=np.float32, mode='w+',
+                                  shape=(dm.num_samples, expression_params))
+
+    pose_array = np.memmap(dm.pose_array_path, dtype=np.float32, mode='w+',
+                                  shape=(dm.num_samples, 6))
+
+    neck_array = np.memmap(dm.neck_array_path, dtype=np.float32, mode='w+',
+                                  shape=(dm.num_samples, 3))
+
+    eye_array = np.memmap(dm.eye_array_path, dtype=np.float32, mode='w+',
+                                  shape=(dm.num_samples, 6))
+
+    translation_array = np.memmap(dm.translation_array_path, dtype=np.float32, mode='w+',
+                          shape=(dm.num_samples, 3))
+
+
+    for id, mesh in enumerate(dm.subjects_templates):
+        # verts = torch.from_numpy(mesh.points)
+
+        frames = np.where(dm.identity_array == id)[0]
+
+        verts = dm.vertex_array[frames, ...].view(frames.size, -1, 3)
+        target_verts = np.split( verts,1 , 0)
+
+        fitted_verts, shape, expr, pose, neck, eye, trans = fit_registered(flame, target_verts, v_template=mesh.points, fit_shape=False)
+
+        fitted_vertex_array[frames, ...] = fitted_verts
+        expr_array[frames, ...] = expr
+        pose_array[frames, ...] = pose
+        neck_array[frames, ...] = neck
+        eye_array[frames, ...] = eye
+        translation_array[frames, ...] = trans
+
+
+
+
+
+    print("YEAH")
+
+
+if __name__ == "__main__":
+    main()
