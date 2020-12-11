@@ -65,8 +65,8 @@ class FLAME(nn.Module):
         # Fixing remaining expression betas
         # There are total 100 shape expression parameters to control FLAME; But one can use the first few parameters to express
         # the expression. For example 50 expression parameters are used for RingNet project 
-        default_exp = torch.zeros([self.batch_size, 100 - config.expression_params],
-                                    dtype=self.dtype, requires_grad=False)
+        default_exp = torch.zeros([self.batch_size, 100 - config.flame_expression_params],
+                                  dtype=self.dtype, requires_grad=False)
         self.register_parameter('expression_betas', nn.Parameter(default_exp,
                                                             requires_grad=False))
 

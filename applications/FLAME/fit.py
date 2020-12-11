@@ -150,7 +150,7 @@ def load_FLAME(gender : str,
     cfg.use_3D_translation = use_3d_trans
     cfg.batch_size = batch_size
     cfg.shape_params = shape_params
-    cfg.expression_params = expression_params
+    cfg.flame_expression_params = expression_params
 
     if gender == 'male':
         cfg.flame_model_path = os.path.join(path_to_models, 'male_model.pkl')
