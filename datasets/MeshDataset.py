@@ -124,6 +124,10 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.identity_array = None
         self.sequence_array = None
 
+        self.temporal_window = 16
+        self.temporal_stride = 1
+        self.ds_alphabet = 29
+
         super().__init__(train_transforms, val_transforms, test_transforms)
 
 
@@ -134,6 +138,10 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     @property
     def raw_audio_array_path(self):
         return os.path.join(self.output_dir, "raw_audio.memmap")
+
+    @property
+    def ds_array_path(self):
+        return os.path.join(self.output_dir, "ds.memmap")
 
     @property
     def emotion_array_path(self):
@@ -392,7 +400,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                     length = min(audio_data_resampled.shape[1], audio_data_aligned.shape[1] - start_at)
                     audio_data_aligned[:, start_at:(start_at + length)] = audio_data_resampled[:, :length]
 
-                    print("Starting processing sequence: '%s' of subject '%s'" % (seq_name, subject_name))
+                    print("Starting processing sequence ID %d: '%s' of subject '%s'" % (sequence_idx, seq_name, subject_name))
                     old_index = -1
                     for i, mesh_name in enumerate(meshes):
                         mesh_path = Path(self.root_mesh_dir) / mesh_name
@@ -416,11 +424,23 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                         mesh_idx += 1
                         pbar.update()
 
-                    print("Done processing sequence: '%s' of subject '%s'" % (seq_name, subject_name))
+                    print("Done processing sequence ID %d: '%s' of subject '%s'" % (sequence_idx, seq_name, subject_name))
                     sequence_lengths += [len(meshes)]
                     sequence_idx += 1
 
         self.sequence_length_array = np.array(sequence_lengths, dtype=np.int32)
+        self._raw_audio_to_deepspeach()
+
+    def _raw_audio_to_deepspeach(self):
+        ah = AudioHandler('/home/rdanecek/Workspace/Repos/voca/ds_graph/output_graph.pb')
+        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode='w+',
+                                         shape=(self.num_samples, self.temporal_window, self.ds_alphabet))
+        for si in tqdm(range(self.sequence_array.size)):
+            idxs = np.where(self.sequence_array == si)[0]
+            audio_data_ds = self.raw_audio_array[idxs, ...].reshape(-1)
+            self.ds_array[idxs, ...] = ah.convert_to_deepspeech(audio_data_ds * 32500, self.sound_target_samplerate,
+                                                                self.temporal_window, self.temporal_stride)
+        self._cleanup_memmaps()
 
     def _cleanup_memmaps(self):
         if self.vertex_array is not None:
@@ -429,6 +449,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         if self.raw_audio_array is not None:
             del self.raw_audio_array
             self.raw_audio_array = None
+        if self.ds_array is not None:
+            del self.ds_array
+            self.ds_array = None
 
     def __del__(self):
         self._cleanup_memmaps()
@@ -438,6 +461,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self.vertex_array = np.memmap(self.verts_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.num_verts*3))
         self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.num_audio_samples_per_scan))
+        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode='r', shape=(self.num_samples, self.temporal_window, self.ds_alphabet))
 
         with open(self.emotion_array_path, "rb") as f:
             self.emotion_array = pkl.load(f)
@@ -445,7 +469,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         with open(self.sentence_array_path, "rb") as f:
             self.sentence_array = pkl.load(f)
 
-        with open(self.sentence_array_path, "rb") as f:
+        with open(self.sequence_array_path, "rb") as f:
             self.sequence_array = pkl.load(f)
 
         with open(self.identity_array_path, "rb") as f:
@@ -480,7 +504,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             raise ValueError("The validation set is empty.")
         if self.test_indices.size == 0:
             raise ValueError("The test set is empty.")
-
+        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r',
+                                         shape=(self.num_samples, self.num_audio_samples_per_scan))
         if len(set(self.training_indices.tolist()).intersection(set(self.val_indices.tolist()))) != 0 or \
             len(set(self.training_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 or \
             len(set(self.val_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 :
@@ -579,6 +604,116 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         # final_clip = my_clip.set_audio(audio_background)
         # final_clip.write_videofile(filename,fps=self.mesh_fps)
 
+
+
+import tensorflow as tf
+from python_speech_features import mfcc
+import copy
+import resampy
+class AudioHandler(object):
+
+
+    def __init__(self, graph_fname, fps=60):
+        # Load graph and place_holders
+        # with tf.gfile.GFile(self.config['deepspeech_graph_fname'], "rb") as f:
+        with tf.compat.v1.gfile.GFile(graph_fname, "rb") as f:
+            self.graph_def = tf.compat.v1.GraphDef()
+            self.graph_def.ParseFromString(f.read())
+
+        self.graph = tf.compat.v1.get_default_graph()
+        tf.compat.v1.import_graph_def(self.graph_def, name="deepspeech")
+        self.input_tensor = self.graph.get_tensor_by_name('input_node:0')
+        self.seq_length = self.graph.get_tensor_by_name('input_lengths:0')
+        self.layer_6 = self.graph.get_tensor_by_name('logits:0')
+
+        self.n_input = 26
+        self.n_context = 9
+        self.output_fps = fps
+        self.deep_speech_sample_rate = 50
+
+    def convert_to_deepspeech(self, audio_sample, sample_rate, audio_window_size, audio_window_stride):
+
+        def interpolate_features(features, input_rate, output_rate, output_len=None):
+            num_features = features.shape[1]
+            input_len = features.shape[0]
+            seq_len = input_len / float(input_rate)
+            if output_len is None:
+                output_len = int(seq_len * output_rate)
+            input_timestamps = np.arange(input_len) / float(input_rate)
+            output_timestamps = np.arange(output_len) / float(output_rate)
+            output_features = np.zeros((output_len, num_features))
+            for feat in range(num_features):
+                output_features[:, feat] = np.interp(output_timestamps,
+                                                     input_timestamps,
+                                                     features[:, feat])
+            return output_features
+
+        def audioToInputVector(audio, fs, numcep, numcontext):
+            # Get mfcc coefficients
+            features = mfcc(audio, samplerate=fs, numcep=numcep)
+
+            # We only keep every second feature (BiRNN stride = 2)
+            features = features[::2]
+
+            # One stride per time step in the input
+            num_strides = len(features)
+
+            # Add empty initial and final contexts
+            empty_context = np.zeros((numcontext, numcep), dtype=features.dtype)
+            features = np.concatenate((empty_context, features, empty_context))
+
+            # Create a view into the array with overlapping strides of size
+            # numcontext (past) + 1 (present) + numcontext (future)
+            window_size = 2 * numcontext + 1
+            train_inputs = np.lib.stride_tricks.as_strided(
+                features,
+                (num_strides, window_size, numcep),
+                (features.strides[0], features.strides[0], features.strides[1]),
+                writeable=False)
+
+            # Flatten the second and third dimensions
+            train_inputs = np.reshape(train_inputs, [num_strides, -1])
+
+            train_inputs = np.copy(train_inputs)
+            train_inputs = (train_inputs - np.mean(train_inputs)) / np.std(train_inputs)
+
+            # Return results
+            return train_inputs
+
+
+        # processed_audio = copy.deepcopy(audio)
+        with tf.compat.v1.Session(graph=self.graph) as sess:
+            # for subj in audio.keys():
+            #     for seq in audio[subj].keys():
+            #         print('process audio: %s - %s' % (subj, seq))
+
+            # audio_sample = audio[subj][seq]['audio']
+            # sample_rate = audio[subj][seq]['sample_rate']
+            resampled_audio = resampy.resample(audio_sample.astype(float), sample_rate, 16000)
+            input_vector = audioToInputVector(resampled_audio.astype('int16'), 16000, self.n_input, self.n_context)
+
+            network_output = sess.run(self.layer_6, feed_dict={self.input_tensor: input_vector[np.newaxis, ...],
+                                                          self.seq_length: [input_vector.shape[0]]})
+
+            # Resample network output from 50 fps to 60 fps
+            audio_len_s = float(audio_sample.shape[0]) / sample_rate
+            # audio_len_s = float(audio_sample.shape[1]) / sample_rate
+            num_frames = int(round(audio_len_s * 60))
+            network_output = interpolate_features(network_output[:, 0], 50, 60,
+                                                  output_len=num_frames)
+
+            # Make windows
+            zero_pad = np.zeros((int(audio_window_size / 2), network_output.shape[1]))
+            network_output = np.concatenate((zero_pad, network_output, zero_pad), axis=0)
+            windows = []
+            for window_index in range(0, network_output.shape[0] - audio_window_size, audio_window_stride):
+                windows.append(network_output[window_index:window_index + audio_window_size])
+
+            # processed_audio[subj][seq]['audio'] = np.array(windows)
+            result = np.array(windows)
+        return result
+
+
 class EmoSpeechDataset(Dataset):
 
     def __init__(self, dm : EmoSpeechDataModule, indices):
@@ -627,7 +762,8 @@ def main():
 
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm.setup()
+    dm._raw_audio_to_deepspeach()
+    # dm.setup()
     # dm.create_dataset_video()
     # dm.create_dataset_audio()
     # dm.combine_video_audio()
@@ -641,8 +777,56 @@ def main():
     print("Peace out")
 
 
+def main2():
+    root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
+    processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
+    subfolder = "processed_2020_Dec_09_00-30-18"
+
+    dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
+    dm.prepare_data()
+    dm.setup()
+    #
+    idxs = np.where(dm.sequence_array == 0)[0]
+    audio_data_ds = dm.raw_audio_array[idxs, ...].reshape(1,-1)[:,30:]
+
+    from scipy.io import wavfile
+
+    audio_file = '/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/EmotionalSpeech_data/audio/EmotionalSpeech_171213_50034_TA/scanner/ang_sentence01.wav'
+    # audio_file = '/home/rdanecek/Workspace/Repos/voca/audio/test_sentence.wav'
+
+    sample_rate_wav, audio_data_wav = wavfile.read(audio_file)
+    audio_data_torch, sample_rate_torch = torchaudio.load(audio_file)
+
+    target_sample_rate = 22020
+
+    audio_data_resampled_wav = resampy.resample(audio_data_wav.astype(np.float64), sample_rate_wav, target_sample_rate)
+    audio_data_resampled_torch = torchaudio.transforms.Resample(sample_rate_torch, target_sample_rate)(audio_data_torch[0, :].view(1, -1))
+
+    with open('/home/rdanecek/Workspace/Repos/voca/processed_test_audio.pkl', 'rb') as f:
+        processed_original_audio = pkl.load(f)
+
+    ah = AudioHandler('/home/rdanecek/Workspace/Repos/voca/ds_graph/output_graph.pb')
+    seq1_ds_wav = ah.convert_to_deepspeech(audio_data_resampled_wav, target_sample_rate, 16, 1)
+    seq1_ds_torch = ah.convert_to_deepspeech(audio_data_resampled_torch.numpy()[0], target_sample_rate, 16, 1)
+    seq1_ds_torch_scaled = ah.convert_to_deepspeech(audio_data_resampled_torch.numpy()[0]*32500, target_sample_rate, 16, 1)
+    seq1_ds_scaled = ah.convert_to_deepspeech(audio_data_ds[0,30:audio_data_resampled_torch.shape[1]]*32500, target_sample_rate, 16, 1)
+
+    pass
 
 
+
+    pass
+    # import deepspeech
+    # model_file_path = '/home/rdanecek/Workspace/Data/deepspeech/deepspeech-0.9.2-models.pbmm'
+    # print(os.path.exists(model_file_path))
+    # model = deepspeech.Model(model_file_path)
+    # # model.enableExternalScorer(scorer_file_path)
+    # beam_width = 500
+    # model.setBeamWidth(beam_width)
+    # print(model.sampleRate())
+    # model.stt()
 
 if __name__ == "__main__":
     main()
+    # main2()
+
