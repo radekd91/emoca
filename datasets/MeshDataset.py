@@ -468,7 +468,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._fit_flame()
 
-    def _fit_flame(self):
+    def _fit_flame(self, visualize=False):
         from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
 
         self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='w+',
@@ -500,7 +500,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             verts = self.vertex_array[frames, ...].reshape(frames.size, -1, 3)
             target_verts = np.split(verts, verts.shape[0], 0)
 
-            fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False)
+            fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False, visualize=visualize)
 
             self.fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
             self.expr_array[frames, ...] = expr
@@ -655,7 +655,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return [DataLoader(self.dataset_test, batch_size=64), ]
 
-    def create_dataset_video(self, filename=None, use_flame_fits=False):
+    def create_dataset_video(self, filename=None, use_flame_fits=False, render_into_notebook=False):
         import pyvistaqt as pvqt
         import cv2
 
@@ -676,11 +676,16 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
                  (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
                  (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
-        pl = pvqt.BackgroundPlotter()
+        if render_into_notebook:
+            pl = pv.Plotter(notebook=True)
+        else:
+            pl = pvqt.BackgroundPlotter()
         pl.set_background([0,0,0])
         pl.camera_position = camera
         actor = pl.add_mesh(mesh)
-        # pl.show()
+
+        if render_into_notebook:
+            pl.show(use_ipyvtk=True)
         from time import sleep
         textActor = pl.add_text("")
 
@@ -695,6 +700,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             mesh.points[...] = vertices
             textActor.SetText(2, str(self.all_mesh_paths[i].parent.parent))
             textActor.SetText(3, str(self.all_mesh_paths[i].stem))
+            pl.render()
             im = pl.image
             video.write(im)
             # import matplotlib.pyplot as plt
