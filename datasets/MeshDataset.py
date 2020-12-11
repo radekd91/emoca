@@ -460,7 +460,51 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self._fit_flame()
 
     def _fit_flame(self):
-        pass
+        from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
+        self.expression_params = 100
+
+        fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='w+',
+                                        shape=(self.num_samples, 3 * dm.num_verts))
+        expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='w+',
+                               shape=(self.num_samples, self.expression_params))
+
+        pose_array = np.memmap(self.pose_array_path, dtype=np.float32, mode='w+',
+                               shape=(self.num_samples, 6))
+
+        neck_array = np.memmap(self.neck_array_path, dtype=np.float32, mode='w+',
+                               shape=(self.num_samples, 3))
+
+        eye_array = np.memmap(self.eye_array_path, dtype=np.float32, mode='w+',
+                              shape=(self.num_samples, 6))
+
+        translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='w+',
+                                      shape=(self.num_samples, 3))
+
+        for id, mesh in enumerate(self.subjects_templates):
+            # verts = torch.from_numpy(mesh.points)
+
+            print("Beginning to process mesh %d" % id)
+            frames = np.where(self.identity_array == id)[0]
+            # frames = frames[:100]
+
+            flame = load_FLAME('neutral', expression_params=self.expression_params, v_template=mesh.points)
+
+            verts = self.vertex_array[frames, ...].reshape(frames.size, -1, 3)
+            target_verts = np.split(verts, verts.shape[0], 0)
+
+            fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False)
+
+            fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
+            expr_array[frames, ...] = expr
+            pose_array[frames, ...] = pose
+            neck_array[frames, ...] = neck
+            eye_array[frames, ...] = eye
+            translation_array[frames, ...] = trans
+
+            print("Finished processing mesh %d" % id)
+
+        print("FLAME fitting finished")
+
 
     def _raw_audio_to_deepspeech(self, audio_scaler=32500):
         from utils.DeepSpeechConverter import DeepSpeechConverter

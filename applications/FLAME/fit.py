@@ -5,18 +5,18 @@ import os
 from applications.FLAME.config import get_config
 from tqdm import tqdm
 
-def fit_registered(flame : FLAME,
-                   target_mesh_verts,
-                   # v_template = None,
-                   max_iters=10000,
-                   eps=1e-5,
-                   fit_shape=True,
-                   fit_expression=True,
-                   fit_pose=True,
-                   fit_neck=True,
-                   fit_eyes=True,
-                   fit_translations=True,
-                   visualize=True):
+def fit_FLAME_to_registered(flame : FLAME,
+                            target_mesh_verts,
+                            # v_template = None,
+                            max_iters=10000,
+                            eps=1e-5,
+                            fit_shape=True,
+                            fit_expression=True,
+                            fit_pose=True,
+                            fit_neck=True,
+                            fit_eyes=True,
+                            fit_translations=True,
+                            visualize=True):
 
     # personalize FLAME template
     # if v_template is not None:
@@ -91,22 +91,29 @@ def fit_registered(flame : FLAME,
 
             text = pl.add_text("Iter: %5d" % 0)
 
+        stopping_condition = False
+
         for i in range(max_iters):
             optimizer.zero_grad()
             vertices, landmarks = flame.forward(shape_params=shape_params, expression_params=expression_params,
                                                 pose_params=pose_params, neck_pose=neck_pose, eye_pose=eye_pose, transl=transl)
             # mse = (vertices - target_vertices).square().mean()
+
+            if visualize:
+                final_mesh.points = vertices[0].detach().numpy()
+                text.SetText(2, "Iter: %5d" % (i+1))
+
             loss = criterion(vertices, target_vertices)
-            print("Iter %.4d, loss=%.6f" % (i, loss))
             if loss < eps:
+                stopping_condition = True
                 break
 
             loss.backward()
             optimizer.step()
 
-            if visualize:
-                final_mesh.points = vertices[0].detach().numpy()
-                text.SetText(2, "Iter: %5d" % (i+1))
+        if not stopping_condition:
+            print("[WARNING] Mesh %d did not hit the stopping conditiong but ran ouf of iterations. Iter %.4d, loss=%.6f" % (mesh_idx, i, loss))
+        # print("Iter %.4d, loss=%.6f" % (i, loss))
 
         final_verts += [np.copy(vertices[0].detach().numpy())]
         shape += [shape_params.detach().numpy()]
@@ -192,6 +199,7 @@ def main():
     for id, mesh in enumerate(dm.subjects_templates):
         # verts = torch.from_numpy(mesh.points)
 
+        print("Beginning to process mesh %d" % id)
         frames = np.where(dm.identity_array == id)[0]
         # frames = frames[:100]
 
@@ -200,7 +208,7 @@ def main():
         verts = dm.vertex_array[frames, ...].reshape(frames.size, -1, 3)
         target_verts = np.split(verts, verts.shape[0], 0)
 
-        fitted_verts, shape, expr, pose, neck, eye, trans = fit_registered(flame, target_verts, fit_shape=False)
+        fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False)
 
         fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
         expr_array[frames, ...] = expr
@@ -209,7 +217,7 @@ def main():
         eye_array[frames, ...] = eye
         translation_array[frames, ...] = trans
 
-
+        print("Finished processing mesh %d" % id)
 
 
 
@@ -217,4 +225,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    pass
