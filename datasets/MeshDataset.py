@@ -464,7 +464,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.expression_params = 100
 
         fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='w+',
-                                        shape=(self.num_samples, 3 * dm.num_verts))
+                                        shape=(self.num_samples, 3 * self.num_verts))
         expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='w+',
                                shape=(self.num_samples, self.expression_params))
 
