@@ -76,8 +76,6 @@ def fit_registered(flame : FLAME,
 
         target_vertices = torch.Tensor(target_verts).view(1, -1, 3)
 
-
-
         print("Optimizing for mesh %.6d" % mesh_idx)
         if visualize:
             import pyvista as pv
@@ -106,12 +104,11 @@ def fit_registered(flame : FLAME,
             loss.backward()
             optimizer.step()
 
-            final_mesh.points = vertices[0].detach().numpy()
-
             if visualize:
+                final_mesh.points = vertices[0].detach().numpy()
                 text.SetText(2, "Iter: %5d" % (i+1))
 
-        final_verts += [np.copy(final_mesh.points)]
+        final_verts += [np.copy(vertices[0].detach().numpy())]
         shape += [shape_params.detach().numpy()]
         expr += [expression_params.detach().numpy()]
         pose += [pose_params.detach().numpy() ]
