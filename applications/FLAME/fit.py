@@ -6,10 +6,10 @@ from applications.FLAME.config import get_config
 from tqdm import tqdm
 
 def fit_registered(flame : FLAME,
-                   target_mesh,
-                   v_template = None,
+                   target_mesh_verts,
+                   # v_template = None,
                    max_iters=10000,
-                   eps=1e-6,
+                   eps=1e-5,
                    fit_shape=True,
                    fit_expression=True,
                    fit_pose=True,
@@ -19,10 +19,10 @@ def fit_registered(flame : FLAME,
                    visualize=True):
 
     # personalize FLAME template
-    if v_template is not None:
-        flame.flame_model.v_template = torch.Tensor(v_template)
+    # if v_template is not None:
+    #     flame.flame_model.v_template = torch.Tensor(v_template)
 
-    shape_params =  torch.zeros(1, 300)
+    shape_params = torch.zeros(1, 300)
     shape_params = torch.autograd.Variable(shape_params, requires_grad=fit_shape)
 
     expression_params = torch.zeros(1, 100)
@@ -61,10 +61,10 @@ def fit_registered(flame : FLAME,
     criterion = torch.nn.MSELoss()
 
 
-    if not isinstance(target_mesh, list):
-        target_mesh = [target_mesh,]
+    if not isinstance(target_mesh_verts, list):
+        target_mesh_verts = [target_mesh_verts, ]
 
-    final_mesh = []
+    final_verts = []
     shape = []
     expr = []
     pose = []
@@ -72,20 +72,23 @@ def fit_registered(flame : FLAME,
     eye = []
     trans = []
 
-    for mesh_idx, tm in tqdm(enumerate(target_mesh)):
+    for mesh_idx, target_verts in tqdm(enumerate(target_mesh_verts)):
 
-        target_vertices = torch.Tensor(tm.points).view(1, -1, 3)
+        target_vertices = torch.Tensor(target_verts).view(1, -1, 3)
 
-        fm = tm.copy(deep=True)
+
 
         print("Optimizing for mesh %.6d" % mesh_idx)
         if visualize:
             import pyvista as pv
             import pyvistaqt as pvqt
 
+            target_mesh = pv.PolyData(target_verts[0], np.hstack([np.ones(shape=(flame.faces.shape[0],1), dtype=np.int32 )*3, flame.faces]))
+
             pl = pvqt.BackgroundPlotter()
-            pl.add_mesh(tm, opacity=0.5)
-            pl.add_mesh(fm)
+            pl.add_mesh(target_mesh, opacity=0.5)
+            final_mesh = target_mesh.copy(deep=True)
+            pl.add_mesh(final_mesh)
             pl.show()
 
             text = pl.add_text("Iter: %5d" % 0)
@@ -103,12 +106,12 @@ def fit_registered(flame : FLAME,
             loss.backward()
             optimizer.step()
 
-            fm.points = vertices[0].detach().numpy()
+            final_mesh.points = vertices[0].detach().numpy()
 
             if visualize:
                 text.SetText(2, "Iter: %5d" % (i+1))
 
-        final_mesh += [fm.copy(deep=True)]
+        final_verts += [np.copy(final_mesh.points)]
         shape += [shape_params.detach().numpy()]
         expr += [expression_params.detach().numpy()]
         pose += [pose_params.detach().numpy() ]
@@ -119,7 +122,7 @@ def fit_registered(flame : FLAME,
         if visualize:
             pl.close()
 
-    return final_mesh, shape, expr, pose, neck, eye, trans
+    return final_verts, shape, expr, pose, neck, eye, trans
 
 
 
@@ -130,7 +133,8 @@ def load_FLAME(gender : str,
                expression_params = 100,
                use_3d_trans= True,
                use_face_contour= False,
-               batch_size=1):
+               batch_size=1,
+               v_template = None):
     gender = gender.lower()
     path_to_models = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "FLAME")
 
@@ -152,7 +156,7 @@ def load_FLAME(gender : str,
         cfg.flame_model_path = os.path.join(path_to_models, 'generic_model.pkl')
     else:
         raise ValueError("Invalid model specifier for FLAME: '%s'" % gender)
-    return FLAME(cfg)
+    return FLAME(cfg, v_template=v_template)
 
 
 def main():
@@ -162,7 +166,6 @@ def main():
     # flame_male = load_FLAME('male')
     # flame_female = load_FLAME('female')
     expression_params = 100
-    flame = load_FLAME('neutral', expression_params=expression_params)
 
     root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
     processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
@@ -193,13 +196,16 @@ def main():
         # verts = torch.from_numpy(mesh.points)
 
         frames = np.where(dm.identity_array == id)[0]
+        # frames = frames[:100]
 
-        verts = dm.vertex_array[frames, ...].view(frames.size, -1, 3)
-        target_verts = np.split( verts,1 , 0)
+        flame = load_FLAME('neutral', expression_params=expression_params, v_template=mesh.points)
 
-        fitted_verts, shape, expr, pose, neck, eye, trans = fit_registered(flame, target_verts, v_template=mesh.points, fit_shape=False)
+        verts = dm.vertex_array[frames, ...].reshape(frames.size, -1, 3)
+        target_verts = np.split(verts, verts.shape[0], 0)
 
-        fitted_vertex_array[frames, ...] = fitted_verts
+        fitted_verts, shape, expr, pose, neck, eye, trans = fit_registered(flame, target_verts, fit_shape=False)
+
+        fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
         expr_array[frames, ...] = expr
         pose_array[frames, ...] = pose
         neck_array[frames, ...] = neck
