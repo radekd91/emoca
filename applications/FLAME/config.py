@@ -111,5 +111,5 @@ parser.add_argument(
 )
 
 def get_config():
-    config = parser.parse_args()
-    return config
+    config, unknown = parser.parse_known_args()
+    return config, unknown

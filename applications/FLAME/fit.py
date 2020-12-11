@@ -134,7 +134,7 @@ def load_FLAME(gender : str,
     gender = gender.lower()
     path_to_models = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "FLAME")
 
-    cfg = get_config()
+    cfg, unknown = get_config()
 
     cfg.static_landmark_embedding_path = os.path.join(path_to_models, 'flame_static_embedding.pkl')
     cfg.dynamic_landmark_embedding_path = os.path.join(path_to_models, 'flame_dynamic_embedding.npy')
@@ -169,6 +169,7 @@ def main():
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
+    # dm.setup()
 
     fitted_vertex_array = np.memmap(dm.fitted_vertex_array_path, dtype=np.float32, mode='w+',
                                   shape=(dm.num_samples, 3 * dm.num_verts))
