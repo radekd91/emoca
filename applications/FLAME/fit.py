@@ -76,7 +76,7 @@ def fit_FLAME_to_registered(flame : FLAME,
 
         target_vertices = torch.Tensor(target_verts).view(1, -1, 3)
 
-        print("Optimizing for mesh %.6d" % mesh_idx)
+        # print("Optimizing for mesh %.6d" % mesh_idx)
         if visualize:
             import pyvista as pv
             import pyvistaqt as pvqt
