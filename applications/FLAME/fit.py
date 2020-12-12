@@ -116,12 +116,12 @@ def fit_FLAME_to_registered(flame : FLAME,
         # print("Iter %.4d, loss=%.6f" % (i, loss))
 
         final_verts += [np.copy(vertices[0].detach().numpy())]
-        shape += [shape_params.detach().numpy()]
-        expr += [expression_params.detach().numpy()]
-        pose += [pose_params.detach().numpy() ]
-        neck += [neck_pose.detach().numpy()]
-        eye += [eye_pose.detach().numpy()]
-        trans += [transl.detach().numpy()]
+        shape += [shape_params[0].detach().numpy()]
+        expr += [expression_params[0].detach().numpy()]
+        pose += [pose_params[0].detach().numpy() ]
+        neck += [neck_pose[0].detach().numpy()]
+        eye += [eye_pose[0].detach().numpy()]
+        trans += [transl[0].detach().numpy()]
 
         if visualize:
             pl.close()

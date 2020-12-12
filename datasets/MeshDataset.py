@@ -493,6 +493,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
             print("Beginning to process mesh %d" % id)
             frames = np.where(self.identity_array == id)[0]
+            frames = frames[:10]
 
             flame = load_FLAME('neutral', expression_params=self.flame_expression_params, v_template=mesh.points)
 
@@ -857,8 +858,7 @@ def main3():
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-
-    dm.ds_array[0:50]
+    dm._fit_flame()
 
     pass
 
