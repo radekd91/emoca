@@ -170,7 +170,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
     @property
     def fitted_vertex_array_path(self):
-        return os.path.join(self.output_dir, "verts_fitted.pkl")
+        return os.path.join(self.output_dir, "verts_fitted.memmap")
 
     @property
     def expr_array_path(self):
