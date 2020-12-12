@@ -9,7 +9,7 @@ def fit_FLAME_to_registered(flame : FLAME,
                             target_mesh_verts,
                             # v_template = None,
                             max_iters=10000,
-                            eps=1e-5,
+                            eps=1e-7,
                             fit_shape=True,
                             fit_expression=True,
                             fit_pose=True,
@@ -57,7 +57,8 @@ def fit_FLAME_to_registered(flame : FLAME,
     for param in flame.parameters():
         param.requires_grad = False
 
-    optimizer = torch.optim.SGD(parameters, lr=0.1)
+    # optimizer = torch.optim.SGD(parameters, lr=1)
+    optimizer = torch.optim.Adam(parameters, lr=0.1)
     criterion = torch.nn.MSELoss()
 
 
@@ -72,8 +73,9 @@ def fit_FLAME_to_registered(flame : FLAME,
     eye = []
     trans = []
 
-    for mesh_idx, target_verts in tqdm(enumerate(target_mesh_verts)):
 
+    for mesh_idx in tqdm(range(len(target_mesh_verts))):
+        target_verts = target_mesh_verts[mesh_idx]
         target_vertices = torch.Tensor(target_verts).view(1, -1, 3)
 
         # print("Optimizing for mesh %.6d" % mesh_idx)
@@ -83,7 +85,7 @@ def fit_FLAME_to_registered(flame : FLAME,
 
             target_mesh = pv.PolyData(target_verts[0], np.hstack([np.ones(shape=(flame.faces.shape[0],1), dtype=np.int32 )*3, flame.faces]))
 
-            pl = pvqt.BackgroundPlotter()
+            pl = pvqt.BackgroundPlotter(auto_update=True)
             pl.add_mesh(target_mesh, opacity=0.5)
             final_mesh = target_mesh.copy(deep=True)
             pl.add_mesh(final_mesh)
@@ -104,6 +106,7 @@ def fit_FLAME_to_registered(flame : FLAME,
                 text.SetText(2, "Iter: %5d" % (i+1))
 
             loss = criterion(vertices, target_vertices)
+            # print("Iter %.4d, loss=%.10f" % (i, loss))
             if loss < eps:
                 stopping_condition = True
                 break
@@ -112,8 +115,8 @@ def fit_FLAME_to_registered(flame : FLAME,
             optimizer.step()
 
         if not stopping_condition:
-            print("[WARNING] Mesh %d did not hit the stopping conditiong but ran ouf of iterations. Iter %.4d, loss=%.6f" % (mesh_idx, i, loss))
-        # print("Iter %.4d, loss=%.6f" % (i, loss))
+            print("[WARNING] Mesh %d did not hit the stopping conditiong but ran ouf of iterations. Iter %.5d, loss=%.610" % (mesh_idx, i, loss))
+
 
         final_verts += [np.copy(vertices[0].detach().numpy())]
         shape += [shape_params[0].detach().numpy()]
@@ -176,24 +179,24 @@ def main():
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    # dm.setup()
-
-    fitted_vertex_array = np.memmap(dm.fitted_vertex_array_path, dtype=np.float32, mode='w+',
-                                  shape=(dm.num_samples, 3 * dm.num_verts))
-    expr_array = np.memmap(dm.expr_array_path, dtype=np.float32, mode='w+',
-                                  shape=(dm.num_samples, expression_params))
-
-    pose_array = np.memmap(dm.pose_array_path, dtype=np.float32, mode='w+',
-                                  shape=(dm.num_samples, 6))
-
-    neck_array = np.memmap(dm.neck_array_path, dtype=np.float32, mode='w+',
-                                  shape=(dm.num_samples, 3))
-
-    eye_array = np.memmap(dm.eye_array_path, dtype=np.float32, mode='w+',
-                                  shape=(dm.num_samples, 6))
-
-    translation_array = np.memmap(dm.translation_array_path, dtype=np.float32, mode='w+',
-                          shape=(dm.num_samples, 3))
+    # # dm.setup()
+    #
+    # fitted_vertex_array = np.memmap(dm.fitted_vertex_array_path, dtype=np.float32, mode='r+',
+    #                               shape=(dm.num_samples, 3 * dm.num_verts))
+    # expr_array = np.memmap(dm.expr_array_path, dtype=np.float32, mode='r+',
+    #                               shape=(dm.num_samples, expression_params))
+    #
+    # pose_array = np.memmap(dm.pose_array_path, dtype=np.float32, mode='r+',
+    #                               shape=(dm.num_samples, 6))
+    #
+    # neck_array = np.memmap(dm.neck_array_path, dtype=np.float32, mode='r+',
+    #                               shape=(dm.num_samples, 3))
+    #
+    # eye_array = np.memmap(dm.eye_array_path, dtype=np.float32, mode='r+',
+    #                               shape=(dm.num_samples, 6))
+    #
+    # translation_array = np.memmap(dm.translation_array_path, dtype=np.loat32, mode='r+',
+    #                       shape=(dm.num_samples, 3))
 
 
     for id, mesh in enumerate(dm.subjects_templates):
@@ -201,7 +204,8 @@ def main():
 
         print("Beginning to process mesh %d" % id)
         frames = np.where(dm.identity_array == id)[0]
-        # frames = frames[:100]
+        frames = frames[:100]
+        # frames = frames[99:100]
 
         flame = load_FLAME('neutral', expression_params=expression_params, v_template=mesh.points)
 
@@ -210,12 +214,12 @@ def main():
 
         fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False)
 
-        fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
-        expr_array[frames, ...] = expr
-        pose_array[frames, ...] = pose
-        neck_array[frames, ...] = neck
-        eye_array[frames, ...] = eye
-        translation_array[frames, ...] = trans
+        # fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
+        # expr_array[frames, ...] = expr
+        # pose_array[frames, ...] = pose
+        # neck_array[frames, ...] = neck
+        # eye_array[frames, ...] = eye
+        # translation_array[frames, ...] = trans
 
         print("Finished processing mesh %d" % id)
 
@@ -225,5 +229,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     pass

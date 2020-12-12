@@ -704,7 +704,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         for i in tqdm(range(N)):
             if use_flame_fits:
-                vertices = np.reshape(self.vertex_array[i,...], newshape=(-1,3))
+                vertices = np.reshape(self.fitted_vertex_array[i,...], newshape=(-1,3))
             else:
                 vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
             mesh.points[...] = vertices
@@ -870,7 +870,8 @@ def main3():
     dm.prepare_data()
     # dm._fit_flame()
     # print(dm.fitted_vertex_array[76334])
-    print(dm.fitted_vertex_array[116798])
+    # print(dm.fitted_vertex_array[116798])
+    dm.create_dataset_video(use_flame_fits=True, num_samples=1000)
     pass
 
 
