@@ -493,7 +493,6 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
             print("Beginning to process mesh %d" % id)
             frames = np.where(self.identity_array == id)[0]
-            # frames = frames[:100]
 
             flame = load_FLAME('neutral', expression_params=self.flame_expression_params, v_template=mesh.points)
 
@@ -502,7 +501,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
             fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False, visualize=visualize)
 
-            self.fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
+            self.fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1))
             self.expr_array[frames, ...] = expr
             self.pose_array[frames, ...] = pose
             self.neck_array[frames, ...] = neck
