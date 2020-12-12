@@ -488,12 +488,11 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='r+',
                                       shape=(self.num_samples, 3))
 
-        templates_to_fit = self.subjects_templates.copy()
-        if specify_indentity_indices is not None:
-            templates_to_fit = [templates_to_fit[i] for i in specify_indentity_indices]
+        if specify_indentity_indices is None:
+            specify_indentity_indices = list(range(len(self.subjects_templates)))
 
         # for id, mesh in enumerate(self.subjects_templates):
-        for id in templates_to_fit:
+        for id in specify_indentity_indices:
             # verts = torch.from_numpy(mesh.points)
             mesh = self.subjects_templates[id]
 
