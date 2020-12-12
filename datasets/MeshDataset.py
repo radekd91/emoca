@@ -468,7 +468,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._fit_flame()
 
-    def _fit_flame(self, visualize=False):
+    def _fit_flame(self, visualize=False, specify_indentity_indices=None):
         from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
 
         self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='w+',
@@ -488,7 +488,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='w+',
                                       shape=(self.num_samples, 3))
 
-        for id, mesh in enumerate(self.subjects_templates):
+        templates_to_fit = self.subjects_templates.copy()
+        if specify_indentity_indices is not None:
+            templates_to_fit = [templates_to_fit[i] for i in specify_indentity_indices]
+
+        # for id, mesh in enumerate(self.subjects_templates):
+        for id, mesh in enumerate(templates_to_fit):
             # verts = torch.from_numpy(mesh.points)
 
             print("Beginning to process mesh %d" % id)
@@ -858,8 +863,9 @@ def main3():
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm._fit_flame()
-
+    # dm._fit_flame()
+    # print(dm.fitted_vertex_array[76334])
+    print(dm.fitted_vertex_array[116798])
     pass
 
 
