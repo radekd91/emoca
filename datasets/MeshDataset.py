@@ -493,8 +493,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             templates_to_fit = [templates_to_fit[i] for i in specify_indentity_indices]
 
         # for id, mesh in enumerate(self.subjects_templates):
-        for id, mesh in enumerate(templates_to_fit):
+        for id in templates_to_fit:
             # verts = torch.from_numpy(mesh.points)
+            mesh = self.subjects_templates[id]
 
             print("Beginning to process mesh %d" % id)
             frames = np.where(self.identity_array == id)[0]
