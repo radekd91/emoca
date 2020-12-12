@@ -248,9 +248,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._load_templates()
         # create data arrays
-        self.vertex_array = np.memmap(self.verts_array_path, dtype=np.float32, mode='w+',
+        self.vertex_array = np.memmap(self.verts_array_path, dtype=np.float32, mode='r+',
                                       shape=(self.num_samples,3*self.num_verts))
-        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype=np.float32, mode='w+', shape=(self.num_samples, self.num_audio_samples_per_scan))
+        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype=np.float32, mode='r+', shape=(self.num_samples, self.num_audio_samples_per_scan))
 
         self.emotion_array = np.zeros(dtype=np.int32, shape=(self.num_samples, 1))
         self.sentence_array = np.zeros(dtype=np.int32, shape=(self.num_samples, 1))
@@ -471,21 +471,21 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def _fit_flame(self, visualize=False, specify_indentity_indices=None):
         from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
 
-        self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='w+',
+        self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='r+',
                                         shape=(self.num_samples, 3 * self.num_verts))
-        self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='w+',
+        self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='r+',
                                     shape=(self.num_samples, self.flame_expression_params))
 
-        self.pose_array = np.memmap(self.pose_array_path, dtype=np.float32, mode='w+',
+        self.pose_array = np.memmap(self.pose_array_path, dtype=np.float32, mode='r+',
                                shape=(self.num_samples, 6))
 
-        self.neck_array = np.memmap(self.neck_array_path, dtype=np.float32, mode='w+',
+        self.neck_array = np.memmap(self.neck_array_path, dtype=np.float32, mode='r+',
                                shape=(self.num_samples, 3))
 
-        self.eye_array = np.memmap(self.eye_array_path, dtype=np.float32, mode='w+',
+        self.eye_array = np.memmap(self.eye_array_path, dtype=np.float32, mode='r+',
                               shape=(self.num_samples, 6))
 
-        self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='w+',
+        self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='r+',
                                       shape=(self.num_samples, 3))
 
         templates_to_fit = self.subjects_templates.copy()
@@ -522,7 +522,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def _raw_audio_to_deepspeech(self, audio_scaler=32500):
         from utils.DeepSpeechConverter import DeepSpeechConverter
         ah = DeepSpeechConverter('/home/rdanecek/Workspace/Repos/voca/ds_graph/output_graph.pb')
-        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode='w+',
+        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode='r+',
                                          shape=(self.num_samples, self.temporal_window, self.ds_alphabet))
         for si in tqdm(range(self.sequence_length_array.size)):
             idxs = np.where(self.sequence_array == si)[0]
