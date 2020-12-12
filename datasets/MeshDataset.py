@@ -660,7 +660,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return [DataLoader(self.dataset_test, batch_size=64), ]
 
-    def create_dataset_video(self, filename=None, use_flame_fits=False, render_into_notebook=False):
+    def create_dataset_video(self, filename=None, use_flame_fits=False, render_into_notebook=False, num_samples=None):
         import pyvistaqt as pvqt
         import cv2
 
@@ -697,7 +697,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         height, width, layers = pl.image.shape
         video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self.mesh_fps, (width, height))
 
-        for i in tqdm(range(self.num_samples)):
+        if num_samples is None:
+            N = self.num_samples
+        else:
+            N = min(self.num_samples, num_samples)
+
+        for i in tqdm(range(N)):
             if use_flame_fits:
                 vertices = np.reshape(self.vertex_array[i,...], newshape=(-1,3))
             else:
