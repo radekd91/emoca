@@ -691,13 +691,15 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return [DataLoader(self.dataset_test, batch_size=64), ]
 
-    def create_dataset_video(self, filename=None, use_flame_fits=False, render_into_notebook=False, num_samples=None):
+    def create_dataset_video(self, filename=None, use_flame_fits=0, render_into_notebook=False, num_samples=None):
         import pyvistaqt as pvqt
         import cv2
 
         if filename is None:
-            if use_flame_fits:
+            if use_flame_fits == 1:
                 filename = os.path.join(self.output_dir, "video_flame.mp4")
+            elif use_flame_fits == 2:
+                    filename = os.path.join(self.output_dir, "video_flame_unposed.mp4")
             else:
                 filename = os.path.join(self.output_dir, "video.mp4")
 
@@ -709,9 +711,14 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         # camera = [(0.017643774223258905, -0.10476257652816602, 0.7149231439996583),
         #          (-0.03735078070331948, -0.002708379456682772, -0.03309953157283428),
         #          (-0.024679802806785948, 0.9902746786078623, 0.13691956851200532)]
-        camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
-                 (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
-                 (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
+        if use_flame_fits == 2:
+            camera = [(0.02225547920449346, -0.04407968275428931, 0.7235634265735641),
+                     (0.0032715281910895965, -0.023715174891057587, -0.032877106320792195),
+                     (-0.01525854461690196, 0.999511062330244, 0.0272912640902039)]
+        else:
+            camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
+                     (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
+                     (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
         if render_into_notebook:
             pl = pv.Plotter(notebook=True)
         else:
@@ -734,8 +741,10 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             N = min(self.num_samples, num_samples)
 
         for i in tqdm(range(N)):
-            if use_flame_fits:
+            if use_flame_fits == 1:
                 vertices = np.reshape(self.fitted_vertex_array[i,...], newshape=(-1,3))
+            elif use_flame_fits == 2:
+                vertices = np.reshape(self.unposed_vertex_array[i,...], newshape=(-1,3))
             else:
                 vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
             mesh.points[...] = vertices
@@ -904,9 +913,20 @@ def main3():
     dm.prepare_data()
     dm._fit_flame(visualize=False, specify_sequence_indices=[seq])
 
+def main4():
+    root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
+    processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
+    subfolder = "processed_2020_Dec_09_00-30-18"
+
+
+    dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
+    dm.prepare_data()
+    dm.create_dataset_video(use_flame_fits=2)
+
 
 if __name__ == "__main__":
     # main()
     # main2()
-    main3()
+    # main3()
+    main4()
 
