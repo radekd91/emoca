@@ -796,17 +796,30 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return [DataLoader(self.dataset_test, batch_size=64), ]
 
-    def create_dataset_video(self, filename=None, use_flame_fits=0, render_into_notebook=False, num_samples=None):
+    def create_dataset_video(self, filename=None, use_flame_fits=None, render_into_notebook=False, num_samples=None):
         import pyvistaqt as pvqt
         import cv2
 
+        if use_flame_fits is None:
+            use_flame_fits = list(range(5))
+
+        if isinstance(use_flame_fits, int):
+            use_flame_fits = [use_flame_fits,]
+
         if filename is None:
-            if use_flame_fits == 1:
-                filename = os.path.join(self.output_dir, "video_flame.mp4")
-            elif use_flame_fits == 2:
+            if len(use_flame_fits) == 1:
+                if use_flame_fits[0] == 1:
+                    filename = os.path.join(self.output_dir, "video_flame.mp4")
+                elif use_flame_fits[0] == 2:
+                    filename = os.path.join(self.output_dir, "video_flame_unposed_global.mp4")
+                elif use_flame_fits[0] == 3:
+                    filename = os.path.join(self.output_dir, "video_flame_unposed_neck.mp4")
+                elif use_flame_fits[0] == 4:
                     filename = os.path.join(self.output_dir, "video_flame_unposed.mp4")
+                else:
+                    filename = os.path.join(self.output_dir, "video.mp4")
             else:
-                filename = os.path.join(self.output_dir, "video.mp4")
+                filename = os.path.join(self.output_dir, "composed_video.mp4")
 
         mesh = pv.read(self.personalized_template_paths[0])
 
@@ -816,20 +829,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         # camera = [(0.017643774223258905, -0.10476257652816602, 0.7149231439996583),
         #          (-0.03735078070331948, -0.002708379456682772, -0.03309953157283428),
         #          (-0.024679802806785948, 0.9902746786078623, 0.13691956851200532)]
-        if use_flame_fits >= 2: # camera for unposed global
-            camera = [(0.02225547920449346, -0.04407968275428931, 0.7235634265735641),
-                     (0.0032715281910895965, -0.023715174891057587, -0.032877106320792195),
-                     (-0.01525854461690196, 0.999511062330244, 0.0272912640902039)]
-        else:
-            camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
-                     (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
-                     (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
+
         if render_into_notebook:
             pl = pv.Plotter(notebook=True)
         else:
             pl = pvqt.BackgroundPlotter()
         pl.set_background([0,0,0])
-        pl.camera_position = camera
         actor = pl.add_mesh(mesh)
 
         if render_into_notebook:
@@ -838,7 +843,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         textActor = pl.add_text("")
 
         height, width, layers = pl.image.shape
-        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self.mesh_fps, (width, height))
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), self.mesh_fps, (len(use_flame_fits)*width, height))
 
         if num_samples is None:
             N = self.num_samples
@@ -846,23 +851,44 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             N = min(self.num_samples, num_samples)
 
         for i in tqdm(range(N)):
-            if use_flame_fits == 0:
-                vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
-            elif use_flame_fits == 1:
-                vertices = np.reshape(self.fitted_vertex_array[i,...], newshape=(-1,3))
-            elif use_flame_fits == 2:
-                vertices = np.reshape(self.unposed_vertex_array[i,...], newshape=(-1,3))
-            elif use_flame_fits == 3:
-                vertices = np.reshape(self.unposed_vertex_global_array[i,...], newshape=(-1,3))
-            elif use_flame_fits == 4:
-                vertices = np.reshape(self.unposed_vertex_global_neck_array[i,...], newshape=(-1,3))
 
-            mesh.points[...] = vertices
-            textActor.SetText(2, str(self.all_mesh_paths[i].parent.parent))
-            textActor.SetText(3, str(self.all_mesh_paths[i].stem))
-            pl.render()
-            im = pl.image
-            video.write(im)
+            im = []
+            for type_ in use_flame_fits:
+
+                # if type_ >= 2:  # camera for unposed global
+                camera = [(0.02225547920449346, -0.04407968275428931, 0.7235634265735641),
+                          (0.0032715281910895965, -0.023715174891057587, -0.032877106320792195),
+                          (-0.01525854461690196, 0.999511062330244, 0.0272912640902039)]
+                # else:
+                #     camera = [(0.01406612981243684, -0.0032565289381143343, 0.7221936777551122),
+                #               (-0.04353638534524899, 0.007080320524320914, -0.03249333231780988),
+                #               (-0.03270108662524808, 0.9993341416403784, 0.01618370431688236)]
+                pl.camera_position = camera
+
+                if type_ == 0:
+                    vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
+                    textActor.SetText(0, "Registrations")
+                elif type_ == 1:
+                    vertices = np.reshape(self.fitted_vertex_array[i,...], newshape=(-1,3))
+                    textActor.SetText(0, "FLAME fits")
+                elif type_ == 2:
+                    vertices = np.reshape(self.unposed_vertex_global_array[i,...], newshape=(-1,3))
+                    textActor.SetText(0, "FLAME unposed global")
+                elif type_ == 3:
+                    vertices = np.reshape(self.unposed_vertex_global_neck_array[i,...], newshape=(-1,3))
+                    textActor.SetText(0, "FLAME unposed global+neck")
+                elif type_ == 4:
+                    vertices = np.reshape(self.unposed_vertex_array[i,...], newshape=(-1,3))
+                    textActor.SetText(0, "FLAME unposed global+neck+jaw")
+
+                mesh.points[...] = vertices
+                textActor.SetText(2, str(self.all_mesh_paths[i].parent.parent))
+                textActor.SetText(3, str(self.all_mesh_paths[i].stem))
+                pl.render()
+                im += [np.copy(pl.image)]
+
+            final_im = np.hstack(im)
+            video.write(final_im)
             # import matplotlib.pyplot as plt
             # plt.imshow(im)
             # sleep(0.05)
@@ -1032,12 +1058,12 @@ def main4():
 
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm.create_dataset_video(use_flame_fits=2)
+    dm.create_dataset_video()
 
 
 if __name__ == "__main__":
     # main()
     # main2()
-    main3()
-    # main4()
+    # main3()
+    main4()
 
