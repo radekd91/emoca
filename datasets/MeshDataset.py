@@ -816,7 +816,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         # camera = [(0.017643774223258905, -0.10476257652816602, 0.7149231439996583),
         #          (-0.03735078070331948, -0.002708379456682772, -0.03309953157283428),
         #          (-0.024679802806785948, 0.9902746786078623, 0.13691956851200532)]
-        if use_flame_fits == 2:
+        if use_flame_fits >= 2: # camera for unposed global
             camera = [(0.02225547920449346, -0.04407968275428931, 0.7235634265735641),
                      (0.0032715281910895965, -0.023715174891057587, -0.032877106320792195),
                      (-0.01525854461690196, 0.999511062330244, 0.0272912640902039)]
@@ -846,12 +846,17 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             N = min(self.num_samples, num_samples)
 
         for i in tqdm(range(N)):
-            if use_flame_fits == 1:
+            if use_flame_fits == 0:
+                vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
+            elif use_flame_fits == 1:
                 vertices = np.reshape(self.fitted_vertex_array[i,...], newshape=(-1,3))
             elif use_flame_fits == 2:
                 vertices = np.reshape(self.unposed_vertex_array[i,...], newshape=(-1,3))
-            else:
-                vertices = np.reshape(self.vertex_array[i, ...], newshape=(-1, 3))
+            elif use_flame_fits == 3:
+                vertices = np.reshape(self.unposed_vertex_global_array[i,...], newshape=(-1,3))
+            elif use_flame_fits == 4:
+                vertices = np.reshape(self.unposed_vertex_global_neck_array[i,...], newshape=(-1,3))
+
             mesh.points[...] = vertices
             textActor.SetText(2, str(self.all_mesh_paths[i].parent.parent))
             textActor.SetText(3, str(self.all_mesh_paths[i].stem))
