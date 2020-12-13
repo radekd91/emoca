@@ -180,7 +180,15 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
     @property
     def unposed_vertex_array_path(self):
-        return os.path.join(self.output_dir, "verts_unposed.memmap")
+        return os.path.join(self.output_dir, "verts_unposed.memmap")    \
+
+    @property
+    def unposed_vertex_global_array_path(self):
+        return os.path.join(self.output_dir, "verts_unposed_global.memmap")
+
+    @property
+    def unposed_vertex_global_neck_array_path(self):
+        return os.path.join(self.output_dir, "verts_unposed_global_neck.memmap")
 
     @property
     def expr_array_path(self):
@@ -491,6 +499,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.unposed_vertex_array = np.memmap(self.unposed_vertex_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_array_path),
                                         shape=(self.num_samples, 3 * self.num_verts))
 
+        self.unposed_vertex_global_array = np.memmap(self.unposed_vertex_global_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_global_array_path),
+                                        shape=(self.num_samples, 3 * self.num_verts))
+
+        self.unposed_vertex_global_neck_array= np.memmap(self.unposed_vertex_global_neck_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_global_neck_array_path),
+                                        shape=(self.num_samples, 3 * self.num_verts))
+
         self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode=memmap_mode(self.expr_array_path),
                                     shape=(self.num_samples, self.flame_expression_params))
 
@@ -542,6 +556,85 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         print("FLAME fitting finished")
 
+
+    def _unpose_flame_fits(self, specify_sequence_indices=None, global_unpose=True, neck_unpose=True, jaw_unpose=False):
+        from applications.FLAME.fit import load_FLAME
+
+
+        if global_unpose:
+            self.unposed_vertex_global_array = np.memmap(self.unposed_vertex_global_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_global_array_path),
+                                            shape=(self.num_samples, 3 * self.num_verts))
+
+        if neck_unpose:
+            self.unposed_vertex_global_neck_array= np.memmap(self.unposed_vertex_global_neck_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_global_neck_array_path),
+                                        shape=(self.num_samples, 3 * self.num_verts))
+
+
+        if jaw_unpose:
+            self.unposed_vertex_array = np.memmap(self.unposed_vertex_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_array_path),
+                                            shape=(self.num_samples, 3 * self.num_verts))
+
+        if specify_sequence_indices is None:
+            specify_sequence_indices = list(range(self.num_sequences))
+
+            # for id, mesh in enumerate(self.subjects_templates):
+
+        for id in specify_sequence_indices:
+            frames = np.where(self.sequence_array == id)[0]
+            identities = self.identity_array[frames]
+            mesh_id = identities[0, 0]
+            if (identities - mesh_id).sum() != 0:
+                print("Multiple identities in  sequence %d. This should never happen" % id)
+                raise RuntimeError("Multiple identities in  sequence %d. This should never happen" % id)
+
+            mesh = self.subjects_templates[mesh_id]
+
+            print("Beginning to process sequence %d" % id)
+
+            shape_params=300
+            flame = load_FLAME('neutral',shape_params=shape_params, expression_params=self.flame_expression_params, v_template=mesh.points, batch_size=frames.size)
+
+            # self.fitted_vertex_array[frames, ...]
+            expr = torch.from_numpy(np.copy(self.expr_array[frames, ...]))
+            pose = torch.from_numpy(np.copy(self.pose_array[frames, ...]))
+            neck = torch.from_numpy(np.copy(self.neck_array[frames, ...]))
+            eye = torch.from_numpy(np.copy(self.eye_array[frames, ...]))
+            trans = torch.from_numpy(np.copy(self.translation_array[frames, ...]))
+            shape = torch.zeros(frames.size, shape_params)
+
+
+            # only global pose is fixed
+            if global_unpose:
+                global_pose = pose.clone()
+                global_pose[:, :3] = 0
+
+                vertices, landmarks = flame.forward(shape_params=shape, expression_params=expr,
+                                                pose_params=global_pose, neck_pose=neck, eye_pose=eye, transl=torch.zeros_like(trans))
+
+                self.unposed_vertex_global_array[frames, ...] = vertices.reshape(frames.size, -1).numpy()
+
+            # global pose and neck pose are fixed
+            if neck_unpose:
+                global_pose = pose.clone()
+                global_pose[:, :3] = 0
+                unposed_neck = torch.zeros_like(neck)
+                vertices, landmarks = flame.forward(shape_params=shape, expression_params=expr,
+                                                    pose_params=global_pose, neck_pose=unposed_neck, eye_pose=eye,
+                                                    transl=torch.zeros_like(trans))
+                self.unposed_vertex_global_neck_array[frames, ...] = vertices.reshape(frames.size, -1).numpy()
+
+            # global pose and neck pose and even jaw pose are fixed
+            if jaw_unpose:
+                global_pose = torch.zeros_like(pose)
+                unposed_neck = torch.zeros_like(neck)
+                vertices, landmarks = flame.forward(shape_params=shape, expression_params=expr,
+                                                    pose_params=global_pose, neck_pose=unposed_neck, eye_pose=eye,
+                                                    transl=torch.zeros_like(trans))
+                self.unposed_vertex_array[frames, ...] = vertices.reshape(frames.size, -1).numpy()
+
+            print("Finished processing sequence %d" % id)
+
+        print("FLAME unposing finished")
 
     def _raw_audio_to_deepspeech(self, audio_scaler=32500):
         from utils.DeepSpeechConverter import DeepSpeechConverter
@@ -605,6 +698,18 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         try:
             self.unposed_vertex_array = np.memmap(self.unposed_vertex_array_path, dtype=np.float32, mode='r',
+                                            shape=(self.num_samples, 3 * self.num_verts))
+        except Exception:
+            pass
+
+        try:
+            self.unposed_vertex_global_array = np.memmap(self.unposed_vertex_global_array_path, dtype=np.float32, mode='r',
+                                            shape=(self.num_samples, 3 * self.num_verts))
+        except Exception:
+            pass
+
+        try:
+            self.unposed_vertex_global_neck_array = np.memmap(self.unposed_vertex_global_neck_array_path, dtype=np.float32, mode='r',
                                             shape=(self.num_samples, 3 * self.num_verts))
         except Exception:
             pass
@@ -911,7 +1016,8 @@ def main3():
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm._fit_flame(visualize=False, specify_sequence_indices=[seq])
+    # dm._fit_flame(visualize=False, specify_sequence_indices=[seq])
+    dm._unpose_flame_fits(specify_sequence_indices=[seq], global_unpose=True, neck_unpose=True, jaw_unpose=False)
 
 def main4():
     root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
@@ -927,6 +1033,6 @@ def main4():
 if __name__ == "__main__":
     # main()
     # main2()
-    # main3()
-    main4()
+    main3()
+    # main4()
 
