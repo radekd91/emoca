@@ -111,7 +111,7 @@ def fit_FLAME_to_registered(flame : FLAME,
         # previous_neck = None
         # previous_eye = None
         # previous_transl = None
-        previous_verts = flame.v_template.detach().clone()
+        previous_verts = flame.v_template.detach().clone().view(1,-1,3)
         previous_shape = shape_params.detach()
         previous_expr = expression_params.detach()
         previous_pose = pose_params.detach()

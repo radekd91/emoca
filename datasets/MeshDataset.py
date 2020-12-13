@@ -523,7 +523,6 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
             print("Beginning to process sequence %d" % id)
             frames = np.where(self.sequence_array == id)[0]
-            # frames = frames[:10]
 
             flame = load_FLAME('neutral', expression_params=self.flame_expression_params, v_template=mesh.points)
 
