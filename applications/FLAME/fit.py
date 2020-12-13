@@ -8,6 +8,7 @@ from tqdm import tqdm
 def fit_FLAME_to_registered(flame : FLAME,
                             target_mesh_verts,
                             # v_template = None,
+                            unpose=False,
                             max_iters=10000,
                             eps=1e-7,
                             fit_shape=True,
@@ -16,39 +17,25 @@ def fit_FLAME_to_registered(flame : FLAME,
                             fit_neck=True,
                             fit_eyes=True,
                             fit_translations=True,
-                            visualize=True):
+                            visualize=True,
+                            verbose=False):
 
     # personalize FLAME template
     # if v_template is not None:
     #     flame.flame_model.v_template = torch.Tensor(v_template)
 
     shape_params = torch.zeros(1, 300)
-    shape_params = torch.autograd.Variable(shape_params, requires_grad=fit_shape)
 
     expression_params = torch.zeros(1, 100)
-    expression_params = torch.autograd.Variable(expression_params, requires_grad=fit_expression)
 
     pose_params = torch.zeros(1, 6)
-    pose_params = torch.autograd.Variable(pose_params, requires_grad=fit_pose)
 
     neck_pose = torch.zeros(1, 3)
-    neck_pose = torch.autograd.Variable(neck_pose, requires_grad=fit_neck)
 
     eye_pose = torch.zeros(1, 6)
-    eye_pose = torch.autograd.Variable(eye_pose, requires_grad=fit_eyes)
 
     transl = torch.zeros(1, 3)
-    transl = torch.autograd.Variable(transl, requires_grad=fit_translations)
 
-
-    parameters = [
-        shape_params,
-        expression_params,
-        pose_params,
-        neck_pose,
-        eye_pose,
-        transl,
-    ]
 
     # for param in parameters:
     #     param.requires_grad = True
@@ -57,15 +44,13 @@ def fit_FLAME_to_registered(flame : FLAME,
     for param in flame.parameters():
         param.requires_grad = False
 
-    # optimizer = torch.optim.SGD(parameters, lr=1)
-    optimizer = torch.optim.Adam(parameters, lr=0.1)
-    criterion = torch.nn.MSELoss()
 
 
     if not isinstance(target_mesh_verts, list):
         target_mesh_verts = [target_mesh_verts, ]
 
     final_verts = []
+    unposed_verts = []
     shape = []
     expr = []
     pose = []
@@ -78,7 +63,28 @@ def fit_FLAME_to_registered(flame : FLAME,
         target_verts = target_mesh_verts[mesh_idx]
         target_vertices = torch.Tensor(target_verts).view(1, -1, 3)
 
-        # print("Optimizing for mesh %.6d" % mesh_idx)
+        shape_params = torch.autograd.Variable(shape_params.detach().clone(), requires_grad=fit_shape)
+        expression_params = torch.autograd.Variable(expression_params.detach().clone(), requires_grad=fit_expression)
+        pose_params = torch.autograd.Variable(pose_params.detach().clone(), requires_grad=fit_pose)
+        neck_pose = torch.autograd.Variable(neck_pose.detach().clone(), requires_grad=fit_neck)
+        eye_pose = torch.autograd.Variable(eye_pose.detach().clone(), requires_grad=fit_eyes)
+        transl = torch.autograd.Variable(transl.detach().clone(), requires_grad=fit_translations)
+
+        parameters = [
+            shape_params,
+            expression_params,
+            pose_params,
+            neck_pose,
+            eye_pose,
+            transl,
+        ]
+
+        # optimizer = torch.optim.SGD(parameters, lr=1)
+        optimizer = torch.optim.Adam(parameters, lr=0.1)
+        criterion = torch.nn.MSELoss()
+
+        if verbose:
+            print("Optimizing for mesh %.6d" % mesh_idx)
         if visualize:
             import pyvista as pv
             import pyvistaqt as pvqt
@@ -95,6 +101,25 @@ def fit_FLAME_to_registered(flame : FLAME,
 
         stopping_condition = False
 
+        previous_loss = 99999999999999999
+        previous_params = previous_loss
+
+        # previous_verts = None
+        # previous_shape = None
+        # previous_expr = None
+        # previous_pose = None
+        # previous_neck = None
+        # previous_eye = None
+        # previous_transl = None
+        previous_verts = flame.v_template.detach().clone()
+        previous_shape = shape_params.detach()
+        previous_expr = expression_params.detach()
+        previous_pose = pose_params.detach()
+        previous_neck = neck_pose.detach()
+        previous_eye = eye_pose.detach()
+        previous_transl = transl.detach()
+
+
         for i in range(max_iters):
             optimizer.zero_grad()
             vertices, landmarks = flame.forward(shape_params=shape_params, expression_params=expression_params,
@@ -106,7 +131,8 @@ def fit_FLAME_to_registered(flame : FLAME,
                 text.SetText(2, "Iter: %5d" % (i+1))
 
             loss = criterion(vertices, target_vertices)
-            # print("Iter %.4d, loss=%.10f" % (i, loss))
+            if verbose:
+                print("Iter %.4d, loss=%.10f" % (i, loss))
             if loss < eps:
                 stopping_condition = True
                 break
@@ -114,8 +140,32 @@ def fit_FLAME_to_registered(flame : FLAME,
             loss.backward()
             optimizer.step()
 
+            #
+            if previous_loss > loss.item():
+                previous_verts[...] = vertices
+                previous_shape[...] = shape_params
+                previous_expr[...] = expression_params
+                previous_pose[...] = pose_params
+                previous_neck[...] = neck_pose
+                previous_eye[...] = eye_pose
+                previous_transl[...] = transl
+
+                previous_loss = loss.item()
+        #
+
         if not stopping_condition:
-            print("[WARNING] Mesh %d did not hit the stopping conditiong but ran ouf of iterations. Iter %.5d, loss=%.610" % (mesh_idx, i, loss))
+            print("[WARNING] Mesh %d did not hit the stopping conditiong but ran ouf of iterations. Iter %.5d, loss=%.10f" % (mesh_idx, i, loss))
+
+        # if verbose:
+        print("Mesh %.6d finished. Iter %.4d, loss=%.10f" % (mesh_idx, i, loss))
+
+        vertices = previous_verts
+        shape_params = previous_shape
+        expression_params = previous_expr
+        pose_params = previous_pose
+        neck_pose = previous_neck
+        eye_pose = previous_eye
+        transl = previous_transl
 
 
         final_verts += [np.copy(vertices[0].detach().numpy())]
@@ -126,10 +176,21 @@ def fit_FLAME_to_registered(flame : FLAME,
         eye += [eye_pose[0].detach().numpy()]
         trans += [transl[0].detach().numpy()]
 
+        if unpose:
+            # shape_params = None, expression_params = None, pose_params = None, neck_pose = None, eye_pose = None, transl = None):
+            unposed_vertices, _ = flame.forward(shape_params=shape_params,
+                                                expression_params=expression_params,
+                                                pose_params=torch.zeros_like(pose_params),
+                                                neck_pose=torch.zeros_like(neck_pose),
+                                                eye_pose=torch.zeros_like(eye_pose),
+                                                transl=torch.zeros_like(transl))
+
+            unposed_verts += [np.copy(unposed_vertices[0].detach().numpy())]
+
         if visualize:
             pl.close()
 
-    return final_verts, shape, expr, pose, neck, eye, trans
+    return final_verts, shape, expr, pose, neck, eye, trans, unposed_verts
 
 
 
@@ -141,7 +202,7 @@ def load_FLAME(gender : str,
                use_3d_trans= True,
                use_face_contour= False,
                batch_size=1,
-               v_template = None):
+               v_template = None) -> FLAME:
     gender = gender.lower()
     path_to_models = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "FLAME")
 
@@ -212,7 +273,7 @@ def main():
         verts = dm.vertex_array[frames, ...].reshape(frames.size, -1, 3)
         target_verts = np.split(verts, verts.shape[0], 0)
 
-        fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False)
+        fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False, verbose=False, visualize=True)
 
         # fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1, 3))
         # expr_array[frames, ...] = expr

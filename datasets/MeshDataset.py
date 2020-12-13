@@ -64,6 +64,11 @@ def sentenceID(s : str):
     return int(s[-2:])-1
 
 
+def memmap_mode(filename):
+    if os.path.isfile(filename):
+        return 'r+'
+    return 'w+'
+
 
 class EmoSpeechDataModule(pl.LightningDataModule):
 
@@ -127,6 +132,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         #flame arrays
         self.flame_expression_params = 100
         self.fitted_vertex_array = None
+        self.unposed_vertex_array = None
         self.expr_array = None
         self.pose_array = None
         self.neck_array = None
@@ -171,6 +177,10 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     @property
     def fitted_vertex_array_path(self):
         return os.path.join(self.output_dir, "verts_fitted.memmap")
+
+    @property
+    def unposed_vertex_array_path(self):
+        return os.path.join(self.output_dir, "verts_unposed.memmap")
 
     @property
     def expr_array_path(self):
@@ -219,6 +229,10 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         return len(self.all_mesh_paths)
 
     @property
+    def num_sequences(self):
+        return len(self.all_audio_paths)
+
+    @property
     def num_verts(self):
         return self.subjects_templates[0].number_of_points
 
@@ -248,9 +262,9 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._load_templates()
         # create data arrays
-        self.vertex_array = np.memmap(self.verts_array_path, dtype=np.float32, mode='r+',
+        self.vertex_array = np.memmap(self.verts_array_path, dtype=np.float32, mode=memmap_mode(self.verts_array_path),
                                       shape=(self.num_samples,3*self.num_verts))
-        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype=np.float32, mode='r+', shape=(self.num_samples, self.num_audio_samples_per_scan))
+        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype=np.float32, mode=memmap_mode(self.raw_audio_array_path), shape=(self.num_samples, self.num_audio_samples_per_scan))
 
         self.emotion_array = np.zeros(dtype=np.int32, shape=(self.num_samples, 1))
         self.sentence_array = np.zeros(dtype=np.int32, shape=(self.num_samples, 1))
@@ -468,36 +482,47 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
         self._fit_flame()
 
-    def _fit_flame(self, visualize=False, specify_indentity_indices=None):
+    def _fit_flame(self, visualize=False, specify_sequence_indices=None):
         from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
 
-        self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode='r+',
+        self.fitted_vertex_array = np.memmap(self.fitted_vertex_array_path, dtype=np.float32, mode=memmap_mode(self.fitted_vertex_array_path),
                                         shape=(self.num_samples, 3 * self.num_verts))
-        self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='r+',
+
+        self.unposed_vertex_array = np.memmap(self.unposed_vertex_array_path, dtype=np.float32, mode=memmap_mode(self.unposed_vertex_array_path),
+                                        shape=(self.num_samples, 3 * self.num_verts))
+
+        self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode=memmap_mode(self.expr_array_path),
                                     shape=(self.num_samples, self.flame_expression_params))
 
-        self.pose_array = np.memmap(self.pose_array_path, dtype=np.float32, mode='r+',
+        self.pose_array = np.memmap(self.pose_array_path, dtype=np.float32, mode=memmap_mode(self.pose_array_path),
                                shape=(self.num_samples, 6))
 
-        self.neck_array = np.memmap(self.neck_array_path, dtype=np.float32, mode='r+',
+        self.neck_array = np.memmap(self.neck_array_path, dtype=np.float32, mode=memmap_mode(self.neck_array_path),
                                shape=(self.num_samples, 3))
 
-        self.eye_array = np.memmap(self.eye_array_path, dtype=np.float32, mode='r+',
+        self.eye_array = np.memmap(self.eye_array_path, dtype=np.float32, mode=memmap_mode(self.eye_array_path),
                               shape=(self.num_samples, 6))
 
-        self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode='r+',
+        self.translation_array = np.memmap(self.translation_array_path, dtype=np.float32, mode=memmap_mode(self.translation_array_path),
                                       shape=(self.num_samples, 3))
 
-        if specify_indentity_indices is None:
-            specify_indentity_indices = list(range(len(self.subjects_templates)))
+        if specify_sequence_indices is None:
+            specify_sequence_indices = list(range(self.num_sequences))
 
         # for id, mesh in enumerate(self.subjects_templates):
-        for id in specify_indentity_indices:
-            # verts = torch.from_numpy(mesh.points)
-            mesh = self.subjects_templates[id]
 
-            print("Beginning to process mesh %d" % id)
-            frames = np.where(self.identity_array == id)[0]
+        for id in specify_sequence_indices:
+            identities = self.identity_array[np.where(self.sequence_array == id)[0]]
+            mesh_id = identities[0,0]
+            if (identities - mesh_id).sum() != 0:
+                print("Multiple identities in  sequence %d. This should never happen" % id)
+                raise RuntimeError("Multiple identities in  sequence %d. This should never happen" % id)
+
+            # verts = torch.from_numpy(mesh.points)
+            mesh = self.subjects_templates[mesh_id]
+
+            print("Beginning to process sequence %d" % id)
+            frames = np.where(self.sequence_array == id)[0]
             # frames = frames[:10]
 
             flame = load_FLAME('neutral', expression_params=self.flame_expression_params, v_template=mesh.points)
@@ -505,7 +530,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             verts = self.vertex_array[frames, ...].reshape(frames.size, -1, 3)
             target_verts = np.split(verts, verts.shape[0], 0)
 
-            fitted_verts, shape, expr, pose, neck, eye, trans = fit_FLAME_to_registered(flame, target_verts, fit_shape=False, visualize=visualize)
+            fitted_verts, shape, expr, pose, neck, eye, trans, unposed_verts = fit_FLAME_to_registered(flame, target_verts, fit_shape=False, visualize=visualize, unpose=True)
 
             self.fitted_vertex_array[frames, ...] = np.reshape(fitted_verts, newshape=(frames.size, -1))
             self.expr_array[frames, ...] = expr
@@ -513,8 +538,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             self.neck_array[frames, ...] = neck
             self.eye_array[frames, ...] = eye
             self.translation_array[frames, ...] = trans
-
-            print("Finished processing mesh %d" % id)
+            self.unposed_vertex_array[frames, ...] = np.reshape(unposed_verts, newshape=(frames.size, -1))
+            print("Finished processing sequence %d" % id)
 
         print("FLAME fitting finished")
 
@@ -522,7 +547,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
     def _raw_audio_to_deepspeech(self, audio_scaler=32500):
         from utils.DeepSpeechConverter import DeepSpeechConverter
         ah = DeepSpeechConverter('/home/rdanecek/Workspace/Repos/voca/ds_graph/output_graph.pb')
-        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode='r+',
+        self.ds_array = np.memmap(self.ds_array_path, dtype='float32', mode=memmap_mode(self.ds_array_path),
                                          shape=(self.num_samples, self.temporal_window, self.ds_alphabet))
         for si in tqdm(range(self.sequence_length_array.size)):
             idxs = np.where(self.sequence_array == si)[0]
@@ -578,6 +603,13 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                                             shape=(self.num_samples, 3 * self.num_verts))
         except Exception:
             pass
+
+        try:
+            self.unposed_vertex_array = np.memmap(self.unposed_vertex_array_path, dtype=np.float32, mode='r',
+                                            shape=(self.num_samples, 3 * self.num_verts))
+        except Exception:
+            pass
+
         try:
             self.expr_array = np.memmap(self.expr_array_path, dtype=np.float32, mode='r',
                                         shape=(self.num_samples, self.flame_expression_params))
@@ -863,16 +895,15 @@ def main2():
     # model.stt()
 
 def main3():
+    # sys.argv[0]
+    seq = int(sys.argv[1])
+    # sys.argv[2]
     root_dir = "/home/rdanecek/Workspace/mount/project/emotionalspeech/EmotionalSpeech/"
     processed_dir = "/home/rdanecek/Workspace/mount/scratch/rdanecek/EmotionalSpeech/"
     subfolder = "processed_2020_Dec_09_00-30-18"
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    # dm._fit_flame()
-    # print(dm.fitted_vertex_array[76334])
-    # print(dm.fitted_vertex_array[116798])
-    dm.create_dataset_video(use_flame_fits=True, num_samples=1000)
-    pass
+    dm._fit_flame(visualize=False, specify_sequence_indices=[seq])
 
 
 if __name__ == "__main__":
