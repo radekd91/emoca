@@ -73,12 +73,10 @@ def memmap_mode(filename):
 class EmoSpeechDataModule(pl.LightningDataModule):
 
     def __init__(self,
-                 # output_dir,
                  root_dir,
                  output_dir,
                  processed_subfolder = None,
-                 # root_mesh_dir,
-                 # root_audio_dir=None,
+                 consecutive_frames = 1,
                  mesh_fps=60,
                  sound_target_samplerate=22020,
                  sound_alignment=SoundAlignment.MID_AT,
@@ -88,6 +86,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
                  train_pattern="sentences?(0[0-9]|1[0-1])",
                  validation_pattern="sentences?(1[2-4])",
                  test_pattern="sentences?15",
+                 batch_size = 64,
                  dims=None
                  ):
         self.root_dir = root_dir
@@ -96,9 +95,12 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self.root_mesh_dir = os.path.join(self.root_dir, "EmotionalSpeech_alignments_new", "seq_align")
         self.root_audio_dir = os.path.join(self.root_dir, "EmotionalSpeech_data", "audio")
 
+        self.consecutive_frames = consecutive_frames
+
         self.train_pattern = train_pattern
         self.validation_pattern = validation_pattern
         self.test_pattern = test_pattern
+        self.batch_size = batch_size
 
         self.mesh_fps = mesh_fps
 
@@ -238,7 +240,15 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
     @property
     def num_sequences(self):
-        return len(self.all_audio_paths)
+        return self.sequence_length_array.size
+
+    @property
+    def num_training_subjects(self):
+        return np.unique(self.identity_array[self.training_indices, 0]).size
+
+    @property
+    def num_training_emotions(self):
+        return np.unique(self.emotion_array[self.training_indices, 0]).size
 
     @property
     def num_verts(self):
@@ -489,6 +499,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         self._raw_audio_to_deepspeech()
 
         self._fit_flame()
+        self._unpose_flame_fits(global_unpose=True,neck_unpose=True, jaw_unpose=False)
 
     def _fit_flame(self, visualize=False, specify_sequence_indices=None):
         from applications.FLAME.fit import load_FLAME, fit_FLAME_to_registered
@@ -659,6 +670,7 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         if self.ds_array is not None:
             del self.ds_array
             self.ds_array = None
+        #TODO: delete the other memmaps
 
     def __del__(self):
         self._cleanup_memmaps()
@@ -764,12 +776,6 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             raise ValueError("The validation set is empty.")
         if self.test_indices.size == 0:
             raise ValueError("The test set is empty.")
-        self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r',
-                                         shape=(self.num_samples, self.num_audio_samples_per_scan))
-        if len(set(self.training_indices.tolist()).intersection(set(self.val_indices.tolist()))) != 0 or \
-            len(set(self.training_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 or \
-            len(set(self.val_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 :
-            raise ValueError("The training, validation and test set are not disjoint!")
 
 
         if self.training_indices.size + self.val_indices.size + self.test_indices.size != self.num_samples:
@@ -778,9 +784,47 @@ class EmoSpeechDataModule(pl.LightningDataModule):
             raise ValueError("Train, test and vaiidation samples do not include all the samples in the dataset. "
                              "Some samples got forgotten. For instance '%s'" % forgotten_example)
 
-        print("The training set contains %d/%d samples, %.1f%% of the entire dataset " % (self.training_indices.size, self.num_samples, 100*self.training_indices.size/self.num_samples))
-        print("The validation set contains %d/%d samples, %.1f%% of the entire dataset " % (self.val_indices.size, self.num_samples, 100*self.val_indices.size/self.num_samples))
-        print("The test set contains %d/%d samples, %.1f%% of the entire dataset " % (self.test_indices.size, self.num_samples, 100*self.test_indices.size/self.num_samples))
+
+        print("The training set contains %d/%d samples, %.1f%% of the entire dataset " % (
+        self.training_indices.size, self.num_samples, 100 * self.training_indices.size / self.num_samples))
+        print("The validation set contains %d/%d samples, %.1f%% of the entire dataset " % (
+        self.val_indices.size, self.num_samples, 100 * self.val_indices.size / self.num_samples))
+        print("The test set contains %d/%d samples, %.1f%% of the entire dataset " % (
+        self.test_indices.size, self.num_samples, 100 * self.test_indices.size / self.num_samples))
+
+        if len(set(self.training_indices.tolist()).intersection(set(self.val_indices.tolist()))) != 0 or \
+            len(set(self.training_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 or \
+            len(set(self.val_indices.tolist()).intersection(set(self.test_indices.tolist()))) != 0 :
+            raise ValueError("The training, validation and test set are not disjoint!")
+
+        if self.consecutive_frames > 1:
+            max_sequence_id = self.num_sequences
+            dummy1 = np.zeros(shape=(self.sequence_array.size + self.consecutive_frames-1, 1)) + max_sequence_id
+            dummy2 = np.zeros(shape=(self.sequence_array.size + self.consecutive_frames-1, 1)) + max_sequence_id
+
+            dummy1[:self.sequence_array.size, :] = np.copy(self.sequence_array[...])
+            dummy2[:self.consecutive_frames] = 0
+            dummy2[self.consecutive_frames-1: self.consecutive_frames-1 + self.sequence_array.size, :] = np.copy(self.sequence_array[...])
+
+            diff = dummy2-dummy1
+            # diff = diff[:self.sequence_array.size]
+            invalid_indices = np.where(diff != 0)[0] -1
+
+            invalid_indices_set = set(invalid_indices.tolist())
+
+            self.training_indices = np.array(sorted(list(set(self.training_indices.tolist()).difference(invalid_indices_set))), dtype=np.int32)
+            self.val_indices = np.array(sorted(list(set(self.val_indices.tolist()).difference(invalid_indices_set))), dtype=np.int32)
+            self.test_indices = np.array(sorted(list(set(self.test_indices.tolist()).difference(invalid_indices_set))), dtype=np.int32)
+
+            # self.training_indices = np.reshape(self.training_indices, newshape=(-1, self.consecutive_frames))
+            # self.val_indices = np.reshape(self.val_indices, newshape=(-1, self.consecutive_frames))
+            # self.test_indices = np.reshape(self.test_indices, newshape=(-1, self.consecutive_frames))
+
+
+        # self.raw_audio_array = np.memmap(self.raw_audio_array_path, dtype='float32', mode='r',
+        #                                  shape=(self.num_samples, self.num_audio_samples_per_scan))
+
+
 
         self.dataset_train = EmoSpeechDataset(self, self.training_indices)
         self.dataset_val = EmoSpeechDataset(self, self.val_indices)
@@ -788,13 +832,13 @@ class EmoSpeechDataModule(pl.LightningDataModule):
 
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
-        return DataLoader(self.dataset_train, batch_size=64, shuffle=True)
+        return DataLoader(self.dataset_train, batch_size=self.batch_size, shuffle=True, num_workers=4)
 
     def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        return [DataLoader(self.dataset_val, batch_size=64), ]
+        return [DataLoader(self.dataset_val, batch_size=self.batch_size, num_workers=4), ]
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        return [DataLoader(self.dataset_test, batch_size=64), ]
+        return [DataLoader(self.dataset_test, batch_size=self.batch_size, num_workers=4), ]
 
     def create_dataset_video(self, filename=None, use_flame_fits=None, render_into_notebook=False, num_samples=None):
         import pyvistaqt as pvqt
@@ -903,8 +947,8 @@ class EmoSpeechDataModule(pl.LightningDataModule):
         torchaudio.save(audio_filename, audio_tensor.clamp(-1,1), self.sound_target_samplerate)
 
 
-    def combine_video_audio(self, filaneme=None, video=None, audio=None):
-        if filaneme is None:
+    def combine_video_audio(self, filename=None, video=None, audio=None):
+        if filename is None:
              filename = os.path.join(self.output_dir, "video_with_sound.mp4")
         if video is None:
             video = os.path.join(self.output_dir, "video.mp4")
@@ -934,21 +978,30 @@ class EmoSpeechDataset(Dataset):
         self.sentence_array = dm.sentence_array
         self.identity_array = dm.identity_array
         self.sequence_array = dm.sequence_array
+        self.ds_array = dm.ds_array
+        self.consecutive_frames = dm.consecutive_frames
 
         self.mesh_paths = dm.all_mesh_paths
 
         self.indices = indices
 
     def __getitem__(self, index):
+
+        print("getting item! %d" % index)
+
         i = self.indices[index]
+        i2 = i+self.consecutive_frames
+        identity_idx = self.identity_array[i,0]
         sample = {
-            "mesh_path": [str(self.mesh_paths[i]),],
-            "vertices" : torch.from_numpy(self.vertex_array[i,...]),
-            "faces": torch.from_numpy(self.subjects_templates[0].faces),
-            "emotion": torch.from_numpy(self.emotion_array[i]),
-            "identity": torch.from_numpy(self.identity_array[i]),
-            "sentence": torch.from_numpy(self.emotion_array[i]),
-            "sequence": torch.from_numpy(self.sequence_array[i])
+            "mesh_path":            [[str(mesh) for mesh in self.mesh_paths[i:i2]],],
+            "vertices" :            torch.from_numpy(np.copy(self.vertex_array[i:i2,...])),
+            "faces":                torch.Tensor([ np.copy(self.subjects_templates[0].faces)  for i in range(i,i2) ]),
+            "emotion":              torch.from_numpy(np.copy(self.emotion_array[i:i2])),
+            "identity":             torch.from_numpy(np.copy(self.identity_array[i:i2])),
+            "template_vertices":    torch.Tensor([ np.copy(self.subjects_templates[identity_idx].points)  for i in range(i,i2) ]),
+            "sentence":             torch.from_numpy(np.copy(self.emotion_array[i:i2])),
+            "sequence":             torch.from_numpy(np.copy(self.sequence_array[i:i2])),
+            "deep_speech":          torch.from_numpy(np.copy(self.ds_array[i:i2, ...]))
         }
         return sample
 
@@ -1058,12 +1111,13 @@ def main4():
 
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
-    dm.create_dataset_video()
-
+    # dm.create_dataset_video()
+    print("Out")
 
 if __name__ == "__main__":
     # main()
     # main2()
     # main3()
-    main4()
+    # main4()
+    pass
 
