@@ -76,9 +76,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # stream = ffmpeg.output(stream.video, "%06.png")
         # stream.run()
 
-        if len(out_folder.glob("*.png")) == self.video_meta[video_idx]['num_frames']:
+        n_frames = len(list(out_folder.glob("*.png")))
+        if n_frames == self.video_meta[video_idx]['num_frames']:
             print("Successfully unpacked the video into %d frames" % self.video_meta[video_idx]['num_frames'])
-
+        else:
+            print("Expected %d frames but got %d" % (self.video_meta[video_idx]['num_frames'], n_frames))
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
