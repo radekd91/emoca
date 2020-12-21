@@ -1111,6 +1111,9 @@ def main4():
 
     dm = EmoSpeechDataModule(root_dir, processed_dir, subfolder)
     dm.prepare_data()
+
+    dm.combine_video_audio()
+
     # dm.create_dataset_video()
     print("Out")
 

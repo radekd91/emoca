@@ -128,8 +128,8 @@ class Voca(LightningModule):
         ds = batch["deep_speech"]
         gt_verts = batch["vertices"]
         template_verts = batch["template_vertices"]
-        emo = None
 
+        emo = None
         if self.speech_encoder._with_emotions:
             emo = batch["emotion"]
         id = None
