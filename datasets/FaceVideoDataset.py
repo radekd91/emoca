@@ -57,7 +57,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             self._unpack_video(vi)
 
     def _unpack_video(self, video_idx):
-        video_file = self.video_list[video_idx]
+        video_file = Path(self.root_dir) / self.video_list[video_idx]
         suffix = Path(video_file.parts[-4]) / video_file.parts[-3] / video_file.parts[-2] / video_file.stem
         out_folder = Path(self.output_dir) / suffix
 
@@ -87,14 +87,17 @@ class FaceVideoDataModule(pl.LightningDataModule):
         print("Processing dataset")
         Path(self.output_dir).mkdir(parents=True, exist_ok=exist_ok)
 
-        self.video_list = sorted(Path(self.root_dir).rglob("*.mp4"))
-        self.annotation_list = sorted(Path(self.root_dir).rglob("*.txt"))
+        video_list = sorted(Path(self.root_dir).rglob("*.mp4"))
+        self.video_list = [path.relative_to(self.root_dir) for path in video_list]
+
+        annotation_list = sorted(Path(self.root_dir).rglob("*.txt"))
+        self.annotation_list = [path.relative_to(self.root_dir) for path in annotation_list]
 
         import ffmpeg
 
         self.video_metas = []
         for vi, vid_file in enumerate(tqdm(self.video_list)):
-            vid = ffmpeg.probe(str(vid_file))
+            vid = ffmpeg.probe(str( Path(self.root_dir) / vid_file))
             codec_idx = [idx for idx in range(len(vid)) if vid['streams'][idx]['codec_type'] == 'video']
             if len(codec_idx) > 1:
                 raise RuntimeError("Video file has two video streams! '%s'" % str(vid_file))
