@@ -32,6 +32,8 @@ def main(args):
 
     deca = DECA(config = deca_cfg, device=args.device)
 
+    video_writer = None
+
     for i, batch in enumerate(tqdm(testdata)):
         name = batch['image_name'][0]
         path = Path(batch['image_path'][0])
@@ -68,7 +70,15 @@ def main(args):
         if args.saveVis:
             vis_folder = save_folder / 'vis'
             vis_folder.mkdir(exist_ok=True, parents=True)
-            cv2.imwrite(str(vis_folder / (name + '.jpg')), deca.visualize(visdict))
+            vis_im = deca.visualize(visdict)
+            cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
+            if video_writer is None:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
+                #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
+                video_writer = cv2.VideoWriter(str(vis_folder / "video.mp4"), cv2.CAP_FFMPEG,
+                                               fourcc, int(dm.video_metas[sequence_id]['fps'].split('/')[0]), (vis_im.shape[0], vis_im.shape[1]), True)
+            video_writer.write(vis_im)
         if args.saveImages:
             ims_folder = save_folder / 'ims'
             ims_folder.mkdir(exist_ok=True, parents=True)
@@ -79,7 +89,8 @@ def main(args):
                 Path(ims_folder / vis_name).mkdir(exist_ok=True, parents=True)
                 cv2.imwrite(str(ims_folder / vis_name / (name +'.jpg')), util.tensor2image(visdict[vis_name][0]))
     print(f'-- please check the results in {str(save_folder)}')
-
+    if video_writer is not None:
+        video_writer.release()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='DECA: Detailed Expression Capture and Animation')
