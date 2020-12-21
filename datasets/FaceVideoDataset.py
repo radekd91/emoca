@@ -77,10 +77,10 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # stream.run()
 
         n_frames = len(list(out_folder.glob("*.png")))
-        if n_frames == self.video_meta[video_idx]['num_frames']:
-            print("Successfully unpacked the video into %d frames" % self.video_meta[video_idx]['num_frames'])
+        if n_frames == self.video_metas[video_idx]['num_frames']:
+            print("Successfully unpacked the video into %d frames" % self.video_metas[video_idx]['num_frames'])
         else:
-            print("Expected %d frames but got %d" % (self.video_meta[video_idx]['num_frames'], n_frames))
+            print("Expected %d frames but got %d" % (self.video_metas[video_idx]['num_frames'], n_frames))
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
@@ -91,7 +91,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         import ffmpeg
 
-        self.video_meta = []
+        self.video_metas = []
         for vi, vid_file in enumerate(tqdm(self.video_list)):
             vid = ffmpeg.probe(str(vid_file))
             codec_idx = [idx for idx in range(len(vid)) if vid['streams'][idx]['codec_type'] == 'video']
@@ -105,7 +105,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             vid_meta['height'] = vid_info['height']
             vid_meta['num_frames'] = vid_info['nb_frames']
 
-            self.video_meta += [self.video_meta]
+            self.video_metas += [vid_meta]
 
 
         print("Found %d video files." % len(self.video_list))
@@ -115,14 +115,14 @@ class FaceVideoDataModule(pl.LightningDataModule):
         with open(self.metadata_path, "rb") as f:
             version = pkl.load(f)
             self.video_list = pkl.load(f)
-            self.video_meta = pkl.load(f)
+            self.video_metas = pkl.load(f)
             self.annotation_list = pkl.load(f)
 
     def _saveMeta(self):
         with open(self.metadata_path, "wb") as f:
             pkl.dump(self.version, f)
             pkl.dump(self.video_list,f)
-            pkl.dump(self.video_meta,f)
+            pkl.dump(self.video_metas, f)
             pkl.dump(self.annotation_list,f)
 
 
