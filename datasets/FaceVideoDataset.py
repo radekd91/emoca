@@ -77,10 +77,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # stream.run()
 
         n_frames = len(list(out_folder.glob("*.png")))
-        if n_frames == self.video_metas[video_idx]['num_frames']:
-            print("Successfully unpacked the video into %d frames" % self.video_metas[video_idx]['num_frames'])
+        expected_frames = int(self.video_metas[video_idx]['num_frames'])
+        if n_frames == expected_frames:
+            print("Successfully unpacked the video into %d frames" % expected_frames)
         else:
-            print("Expected %d frames but got %d" % (self.video_metas[video_idx]['num_frames'], n_frames))
+            print("Expected %d frames but got %d" % (expected_frames, n_frames))
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
@@ -101,9 +102,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
             vid_info = vid['streams'][codec_idx]
             vid_meta = {}
             vid_meta['fps'] = vid_info['avg_frame_rate']
-            vid_meta['width'] = vid_info['width']
-            vid_meta['height'] = vid_info['height']
-            vid_meta['num_frames'] = vid_info['nb_frames']
+            vid_meta['width'] = int(vid_info['width'])
+            vid_meta['height'] = int(vid_info['height'])
+            vid_meta['num_frames'] = int(vid_info['nb_frames'])
 
             self.video_metas += [vid_meta]
 
