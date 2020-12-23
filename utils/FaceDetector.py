@@ -29,7 +29,7 @@ class FAN(FaceDetector):
         '''
         out = self.model.get_landmarks(image)
         if out is None:
-            return [0]
+            return [0], 'kpt68'
         else:
             boxes = []
             for i in range(len(out)):
@@ -58,7 +58,7 @@ class MTCNN(FaceDetector):
         '''
         out = self.model.detect(input[None,...])
         if out[0][0] is None:
-            return [0]
+            return [0], 'bbox'
         else:
             bboxes = []
             for i in range(out.shape[0]):

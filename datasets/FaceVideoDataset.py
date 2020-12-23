@@ -4,23 +4,23 @@ import pytorch_lightning as pl
 
 import glob, os, sys
 from pathlib import Path
-import pyvista as pv
+``# import pyvista as pv
 # from utils.mesh import load_mesh
 # from scipy.io import wavfile
 # import resampy
 import numpy as np
 import torch
-import torchaudio
-from enum import Enum
+# import torchaudio
+# from enum import Enum
 from typing import Optional, Union, List, Any
 import pickle as pkl
-from collections import OrderedDict
+# from collections import OrderedDict
 from tqdm import tqdm
-import subprocess
+# import subprocess
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
-from decalib.datasets import datasets
+# from decalib.datasets import datasets
 from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
 
