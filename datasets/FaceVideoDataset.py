@@ -257,7 +257,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # detections_fnames = sorted(self.detection_fnames[sequence_id])
         detections_fnames = sorted(list(out_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
-        loader = DataLoader(dataset, batch_size=64, num_workers=2, shuffle=False)
+        loader = DataLoader(dataset, batch_size=64, num_workers=4, shuffle=False)
         # loader = DataLoader(dataset, batch_size=2, num_workers=0, shuffle=False)
         all_embeddings = []
         for i, batch in enumerate(tqdm(loader)):
@@ -318,7 +318,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detections_fnames = sorted(list(in_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
         batch_size = 64
-        loader = DataLoader(dataset, batch_size=batch_size, num_workers=2, shuffle=False)
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
             images = fixed_image_standardization(batch['image'].to(device))
