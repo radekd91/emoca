@@ -21,11 +21,17 @@ import subprocess
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 from decalib.datasets import datasets
-
+from utils.FaceDetector import FAN, MTCNN
+from facenet_pytorch import InceptionResnetV1
 
 class FaceVideoDataModule(pl.LightningDataModule):
 
-    def __init__(self, root_dir, output_dir, processed_subfolder=None):
+    def __init__(self, root_dir, output_dir, processed_subfolder=None,
+                 face_detector='fan',
+                 image_size=224,
+                 scale=1.25,
+                 device=None
+                 ):
         super().__init__()
         self.root_dir = root_dir
         self.output_dir = output_dir
@@ -38,12 +44,27 @@ class FaceVideoDataModule(pl.LightningDataModule):
             processed_folder = os.path.join(output_dir, processed_subfolder)
         self.output_dir = processed_folder
 
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        if face_detector == 'fan':
+            self.face_detector = FAN(device)
+        elif face_detector == 'mtcnn':
+            self.face_detector = MTCNN(device)
+        else:
+            raise ValueError("Invalid face detector spicifier '%s'" % face_detector)
+
+        self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
+
+        self.image_size = image_size
+        self.scale = scale
+
         self.version = 0
 
         self.video_list = None
         self.video_metas = None
         self.annotation_list = None
         self.frame_lists = None
+        self.detection_lists = None
 
 
     @property
@@ -101,6 +122,102 @@ class FaceVideoDataModule(pl.LightningDataModule):
         else:
             print("[WARNING] Expected %d frames but got %d vor video '%s'"
                   % (expected_frames, n_frames, str(video_file)))
+
+
+    def _detect_faces(self):
+        for sid in range(self.num_sequences):
+            self._detect_faces_in_sequence(sid)
+
+    def _detect_faces_in_sequence(self, sequence_id):
+        # if self.detection_lists is None or len(self.detection_lists) == 0:
+        #     self.detection_lists = [ [] for i in range(self.num_sequences)]
+        video_file = self.video_list[sequence_id]
+        print("Detecting faces in sequence: '%s'" % video_file)
+        suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        out_folder.mkdir(exist_ok=True, parents=True)
+
+        centers_all = []
+        sizes_all = []
+        detection_fnames_all = []
+        # save_folder = frame_fname.parents[3] / 'detections'
+        for fid, frame_fname in enumerate(tqdm(self.frame_lists[sequence_id])):
+            # detect faces in each frames
+            detections, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
+            # self.detection_lists[sequence_id][fid] += [detections]
+            centers_all += [centers]
+            sizes_all += [sizes]
+
+            # save detections
+            detection_fnames = []
+            for di, detection in enumerate(detections):
+                out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
+                detection_fnames += [out_fname]
+                imsave(out_fname, detection)
+            detection_fnames_all += [detection_fnames]
+
+        FaceVideoDataModule.save_detections(out_folder / "bboxes.pkl",
+                                            detection_fnames_all, centers_all, sizes_all)
+        print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
+
+    @staticmethod
+    def save_detections(fname, detection_fnames, centers, sizes):
+        with open(fname, "wb" ) as f:
+            pkl.dump(detection_fnames, f)
+            pkl.dump(centers, f)
+            pkl.dump(sizes, f)
+
+    @staticmethod
+    def load_detections(fname):
+        with open(fname, "rb" ) as f:
+            detection_fnames = pkl.load(f)
+            centers = pkl.load(f)
+            sizes = pkl.load(f)
+        return detection_fnames, centers, sizes
+
+    def _detect_faces_in_image(self, image_path):
+        # imagepath = self.imagepath_list[index]
+        # imagename = imagepath.split('/')[-1].split('.')[0]
+
+        image = np.array(imread(image_path))
+        if len(image.shape) == 2:
+            image = image[:, :, None].repeat(1, 1, 3)
+        if len(image.shape) == 3 and image.shape[2] > 3:
+            image = image[:, :, :3]
+
+        h, w, _ = image.shape
+        bounding_boxes, bbox_type = self.face_detector.run(image)
+        image = image / 255.
+        detection_images = []
+        detection_centers = []
+        detection_sizes = []
+        # detection_embeddings = []
+        if len(bounding_boxes) == 0:
+            print('no face detected! run original image')
+            return detection_images
+            # left = 0
+            # right = h - 1
+            # top = 0
+            # bottom = w - 1
+            # bounding_boxes += [[left, right, top, bottom]]
+
+        for bi, bbox in enumerate(bounding_boxes):
+            left = bbox[0]
+            right = bbox[2]
+            top = bbox[1]
+            bottom = bbox[3]
+            old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
+            size = int(old_size * self.scale)
+
+            dst_image = bbpoint_warp(image, center, size, self.image_size)
+
+            # dst_image = dst_image.transpose(2, 0, 1)
+            #
+            detection_images += [(dst_image*255).astype(np.uint8)]
+            detection_centers += [center]
+            detection_sizes += [size]
+
+        return detection_images, detection_centers, detection_sizes
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
@@ -183,7 +300,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         test_frames = [str( Path(self.output_dir) / frame) for frame in test_frames]
         testdata = TestData(test_frames, iscrop=True, face_detector='fan')
         batch_size = 1
-        return DataLoader(testdata, batch_size=batch_size, num_workers=0)
+        return DataLoader(testdata, batch_size=batch_size, num_workers=1)
 
 
 
@@ -223,6 +340,42 @@ def video2sequence(video_path):
     return imagepath_list
 
 
+def bbox2point(left, right, top, bottom, type='bbox'):
+    ''' bbox from detector and landmarks are different
+    '''
+    if type == 'kpt68':
+        old_size = (right - left + bottom - top) / 2 * 1.1
+        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
+    elif type == 'bbox':
+        old_size = (right - left + bottom - top) / 2
+        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size * 0.12])
+    else:
+        raise NotImplementedError
+    return old_size, center
+
+
+def point2bbox(center, size):
+    size2 = size / 2
+
+    src_pts = np.array(
+        [[center[0] - size2, center[1] - size2], [center[0] - size2, center[1] + size2],
+         [center[0] + size2, center[1] - size2]])
+    return src_pts
+
+
+def point2transform(center, size, target_size):
+    src_pts = point2bbox(center, size)
+    dst_pts = np.array([[0, 0], [0, target_size - 1], [target_size - 1, 0]])
+    tform = estimate_transform('similarity', src_pts, dst_pts)
+    return tform
+
+
+def bbpoint_warp(image, center, size, target_size):
+    tform = point2transform(center, size, target_size)
+    dst_image = warp(image, tform.inverse, output_shape=(target_size, target_size),order=3)
+    return dst_image
+
+
 class TestData(Dataset):
     def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='mtcnn'):
         '''
@@ -256,19 +409,6 @@ class TestData(Dataset):
     def __len__(self):
         return len(self.imagepath_list)
 
-    def bbox2point(self, left, right, top, bottom, type='bbox'):
-        ''' bbox from detector and landmarks are different
-        '''
-        if type == 'kpt68':
-            old_size = (right - left + bottom - top) / 2 * 1.1
-            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
-        elif type == 'bbox':
-            old_size = (right - left + bottom - top) / 2
-            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size * 0.12])
-        else:
-            raise NotImplementedError
-        return old_size, center
-
     def __getitem__(self, index):
         imagepath = self.imagepath_list[index]
         imagename = imagepath.split('/')[-1].split('.')[0]
@@ -286,32 +426,32 @@ class TestData(Dataset):
             kpt_txtpath = imagepath.replace('.jpg', '.txt').replace('.png', '.txt')
             if os.path.exists(kpt_matpath):
                 kpt = scipy.io.loadmat(kpt_matpath)['pt3d_68'].T
-                left = np.min(kpt[:, 0]);
-                right = np.max(kpt[:, 0]);
-                top = np.min(kpt[:, 1]);
+                left = np.min(kpt[:, 0])
+                right = np.max(kpt[:, 0])
+                top = np.min(kpt[:, 1])
                 bottom = np.max(kpt[:, 1])
-                old_size, center = self.bbox2point(left, right, top, bottom, type='kpt68')
+                old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
             elif os.path.exists(kpt_txtpath):
                 kpt = np.loadtxt(kpt_txtpath)
-                left = np.min(kpt[:, 0]);
-                right = np.max(kpt[:, 0]);
-                top = np.min(kpt[:, 1]);
+                left = np.min(kpt[:, 0])
+                right = np.max(kpt[:, 0])
+                top = np.min(kpt[:, 1])
                 bottom = np.max(kpt[:, 1])
-                old_size, center = self.bbox2point(left, right, top, bottom, type='kpt68')
+                old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
             else:
                 bbox, bbox_type = self.face_detector.run(image)
                 if len(bbox) < 4:
                     print('no face detected! run original image')
-                    left = 0;
-                    right = h - 1;
-                    top = 0;
+                    left = 0
+                    right = h - 1
+                    top = 0
                     bottom = w - 1
                 else:
-                    left = bbox[0];
+                    left = bbox[0]
                     right = bbox[2]
-                    top = bbox[1];
+                    top = bbox[1]
                     bottom = bbox[3]
-                old_size, center = self.bbox2point(left, right, top, bottom, type=bbox_type)
+                old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
             size = int(old_size * self.scale)
             src_pts = np.array(
                 [[center[0] - size / 2, center[1] - size / 2], [center[0] - size / 2, center[1] + size / 2],
@@ -341,8 +481,8 @@ def main():
     subfolder = 'processed_2020_Dec_21_00-30-03'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
+    dm._detect_faces()
     print("Peace out")
-
 
 
 if __name__ == "__main__":

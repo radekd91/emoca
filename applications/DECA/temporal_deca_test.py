@@ -13,6 +13,7 @@ from decalib.utils.config import cfg as deca_cfg
 from decalib.utils import util
 from tqdm import tqdm
 import cv2
+import wandb
 
 
 def main(args):
