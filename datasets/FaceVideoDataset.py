@@ -135,6 +135,13 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    def _get_path_to_sequence_reconstructions(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        print("Detecting faces in sequence: '%s'" % video_file)
+        suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _detect_faces_in_sequence(self, sequence_id):
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
@@ -273,9 +280,96 @@ class FaceVideoDataModule(pl.LightningDataModule):
     @staticmethod
     def _load_face_embeddings(fname):
         with open(fname, "rb") as f:
-            embeddings = pkl.dump(f)
-            detections_fnames = pkl.dump(f)
+            embeddings = pkl.load(f)
+            detections_fnames = pkl.load(f)
         return embeddings, detections_fnames
+
+    def _get_reconstruction_net(self, device):
+        from decalib.deca import DECA
+        from decalib.utils.config import cfg as deca_cfg
+        # deca_cfg.model.use_tex = args.useTex
+        deca_cfg.model.use_tex = False
+        deca = DECA(config=deca_cfg, device=device)
+        return deca
+
+    def _reconstruct_faces(self, device = None):
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        reconstruction_net = self._get_reconstruction_net(device)
+        for sid in range(self.num_sequences):
+            self._reconstruct_faces_in_sequence(sid, reconstruction_net, device)
+
+    def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
+                                       save_obj=False, save_mat=True, save_vis=True, save_images=False,
+                                       save_video=True):
+        from decalib.utils import util
+        from scipy.io.matlab import savemat
+
+        def fixed_image_standardization(image):
+            return image / 255.
+
+        print("Running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
+        in_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_folder = self._get_path_to_sequence_reconstructions(sequence_id)
+
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        reconstruction_net = reconstruction_net or self._get_reconstruction_net(device)
+
+        video_writer = None
+        detections_fnames = sorted(list(in_folder.glob("*.png")))
+        dataset = UnsupervisedImageDataset(detections_fnames)
+        batch_size = 64
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=2, shuffle=False)
+
+        for i, batch in enumerate(tqdm(loader)):
+            images = fixed_image_standardization(batch['image'].to(device))
+            codedict = reconstruction_net.encode(images)
+            opdict, visdict = reconstruction_net.decode(codedict)
+            opdict = util.dict_tensor2npy(opdict)
+            #TODO: verify axis
+            # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
+            for j in range(images.shape[0]):
+                path = Path(batch['path'][j])
+                name = path.stem
+
+                if save_obj:
+                    if i*j == 0:
+                        mesh_folder = out_folder / 'meshes'
+                        mesh_folder.mkdir(exist_ok=True, parents=True)
+                    reconstruction_net.save_obj(str(mesh_folder / (name + '.obj')), opdict)
+                if save_mat:
+                    if i*j == 0:
+                        mat_folder = out_folder / 'mat'
+                        mat_folder.mkdir(exist_ok=True, parents=True)
+                    savemat(str(mat_folder / (name + '.mat')), opdict)
+                if save_vis or save_video:
+                    if i*j == 0:
+                        vis_folder = out_folder / 'vis'
+                        vis_folder.mkdir(exist_ok=True, parents=True)
+                    vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
+                    vis_im = reconstruction_net.visualize(vis_dict_j)
+                    if save_vis:
+                        cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
+                    if save_video and video_writer is None:
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
+                        #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
+                        video_writer = cv2.VideoWriter(str(vis_folder / "video.mp4"), cv2.CAP_FFMPEG,
+                                                       fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]), (vis_im.shape[1], vis_im.shape[0]), True)
+                    if save_video:
+                        video_writer.write(vis_im)
+                if save_images:
+                    if i*j == 0:
+                        ims_folder = out_folder / 'ims'
+                        ims_folder.mkdir(exist_ok=True, parents=True)
+                    for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images']:
+                        if vis_name not in visdict.keys():
+                            continue
+                        image = util.tensor2image(visdict[vis_name][j])
+                        Path(ims_folder / vis_name).mkdir(exist_ok=True, parents=True)
+                        cv2.imwrite(str(ims_folder / vis_name / (name +'.jpg')), image)
+        if video_writer is not None:
+            video_writer.release()
+        print("Done running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
@@ -560,7 +654,8 @@ def main():
     dm.prepare_data()
     # dm._detect_faces()
     # dm._detect_faces_in_sequence(400)
-    dm._recognize_faces_in_sequence(400)
+    # dm._recognize_faces_in_sequence(400)
+    dm._reconstruct_faces_in_sequence(400)
     print("Peace out")
 
 

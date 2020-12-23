@@ -78,7 +78,7 @@ def main(args):
                 # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
                 #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
                 video_writer = cv2.VideoWriter(str(vis_folder / "video.mp4"), cv2.CAP_FFMPEG,
-                                               fourcc, int(dm.video_metas[sequence_id]['fps'].split('/')[0]), (vis_im.shape[0], vis_im.shape[1]), True)
+                                               fourcc, int(dm.video_metas[sequence_id]['fps'].split('/')[0]), (vis_im.shape[1], vis_im.shape[0]), True)
             video_writer.write(vis_im)
         if args.saveImages:
             ims_folder = save_folder / 'ims'
@@ -88,7 +88,7 @@ def main(args):
                     continue
                 image = util.tensor2image(visdict[vis_name][0])
                 Path(ims_folder / vis_name).mkdir(exist_ok=True, parents=True)
-                cv2.imwrite(str(ims_folder / vis_name / (name +'.jpg')), util.tensor2image(visdict[vis_name][0]))
+                cv2.imwrite(str(ims_folder / vis_name / (name +'.jpg')), image)
     print(f'-- please check the results in {str(save_folder)}')
     if video_writer is not None:
         video_writer.release()
