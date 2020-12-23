@@ -481,7 +481,8 @@ def main():
     subfolder = 'processed_2020_Dec_21_00-30-03'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
-    dm._detect_faces()
+    # dm._detect_faces()
+    dm._detect_faces_in_sequence(400)
     print("Peace out")
 
 
