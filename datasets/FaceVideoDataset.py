@@ -128,13 +128,20 @@ class FaceVideoDataModule(pl.LightningDataModule):
         for sid in range(self.num_sequences):
             self._detect_faces_in_sequence(sid)
 
+    def _get_path_to_sequence_detections(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        print("Detecting faces in sequence: '%s'" % video_file)
+        suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _detect_faces_in_sequence(self, sequence_id):
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
         video_file = self.video_list[sequence_id]
         print("Detecting faces in sequence: '%s'" % video_file)
         suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
         out_folder.mkdir(exist_ok=True, parents=True)
 
         centers_all = []
@@ -218,6 +225,57 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_sizes += [size]
 
         return detection_images, detection_centers, detection_sizes
+
+    def _get_recognition_net(self, device):
+        resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
+        return resnet
+
+    def _recognize_faces(self, device = None):
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        recognition_net = self._get_recognition_net(device)
+        for sid in range(self.num_sequences):
+            self._recognize_faces_in_sequence(sid, recognition_net, device)
+
+    def _recognize_faces_in_sequence(self, sequence_id, recognition_net=None, device=None):
+
+        def fixed_image_standardization(image_tensor):
+            processed_tensor = (image_tensor - 127.5) / 128.0
+            return processed_tensor
+
+        print("Running face recognition in sequence '%s'" % self.video_list[sequence_id])
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        recognition_net = recognition_net or self._get_recognition_net(device)
+        recognition_net.requires_grad_(False)
+        # detections_fnames = sorted(self.detection_fnames[sequence_id])
+        detections_fnames = sorted(list(out_folder.glob("*.png")))
+        dataset = UnsupervisedImageDataset(detections_fnames)
+        loader = DataLoader(dataset, batch_size=64, num_workers=2, shuffle=False)
+        # loader = DataLoader(dataset, batch_size=2, num_workers=0, shuffle=False)
+        all_embeddings = []
+        for i, batch in enumerate(tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            images = fixed_image_standardization(batch['image'].to(device))
+            embeddings = recognition_net(images)
+            all_embeddings += [embeddings.detach().cpu().numpy()]
+
+        embedding_array = np.concatenate(all_embeddings, axis=0)
+        FaceVideoDataModule._save_face_embeddings(out_folder / "embeddings.pkl", embedding_array, detections_fnames)
+        print("Done running face recognition in sequence '%s'" % self.video_list[sequence_id])
+
+
+    @staticmethod
+    def _save_face_embeddings(fname, embeddings, detections_fnames):
+        with open(fname, "wb" ) as f:
+            pkl.dump(embeddings, f)
+            pkl.dump(detections_fnames, f)
+
+    @staticmethod
+    def _load_face_embeddings(fname):
+        with open(fname, "rb") as f:
+            embeddings = pkl.dump(f)
+            detections_fnames = pkl.dump(f)
+        return embeddings, detections_fnames
 
     def _gather_data(self, exist_ok=False):
         print("Processing dataset")
@@ -311,6 +369,25 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     # def transfer_batch_to_device(self, batch: Any, device: torch.device) -> Any:
     #     pass
+
+
+class UnsupervisedImageDataset(torch.utils.data.Dataset):
+    def __init__(self, image_list):
+        super().__init__()
+        self.image_list = image_list
+
+    def __getitem__(self, index):
+        # if index < len(self.image_list):
+        #     x = self.mnist_data[index]
+        # raise IndexError("Out of bounds")
+        img = imread(self.image_list[index])
+        img = img.transpose([2,0,1]).astype(np.float32)
+        return {"image" : torch.from_numpy(img) ,
+                "path" : str(self.image_list[index])}
+
+    def __len__(self):
+        return len(self.image_list)
+
 
 
 import cv2
@@ -482,7 +559,8 @@ def main():
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
     # dm._detect_faces()
-    dm._detect_faces_in_sequence(400)
+    # dm._detect_faces_in_sequence(400)
+    dm._recognize_faces_in_sequence(400)
     print("Peace out")
 
 
