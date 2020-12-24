@@ -130,14 +130,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def _get_path_to_sequence_detections(self, sequence_id):
         video_file = self.video_list[sequence_id]
-        print("Detecting faces in sequence: '%s'" % video_file)
         suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
     def _get_path_to_sequence_reconstructions(self, sequence_id):
         video_file = self.video_list[sequence_id]
-        print("Detecting faces in sequence: '%s'" % video_file)
         suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
         out_folder = Path(self.output_dir) / suffix
         return out_folder
