@@ -52,6 +52,7 @@ def create_detection_video(self, sequence_id, overwrite = False):
     print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
     if outfile.exists() and not overwrite:
         print("output file already exists")
+        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
         return
 
     writer = None #cv2.VideoWriter()
@@ -70,8 +71,13 @@ def create_detection_video(self, sequence_id, overwrite = False):
 
         frame_draw = ImageDraw.Draw(frame_pill_bb)
 
+        if did == len(vis_fnames):
+
+            break
+
         for nd in range(len(c)):
             detection_name = detection_fnames[fid][nd]
+
             vis_name = vis_fnames[did]
 
             if detection_name.stem != vis_name.stem:
@@ -163,8 +169,11 @@ def gather_detections(self):
         # sizes_all += [sizes]
 
 
-def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None):
-    output_video = output_video or str(Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
+def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None, overwrite=False):
+    output_video = output_video or (Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
+    if output_video.exists() and not overwrite:
+        return
+    output_video = str(output_video)
     cmd = "ffmpeg -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s"\
         % (input_video, input_video_with_audio, output_video)
     os.system(cmd)
@@ -181,9 +190,14 @@ def main():
 
     # gather_detections(dm)
 
-    seq = 10
-    for i in range(seq):
-        create_detection_video(dm, i)
+    # i = 0
+    # i = 1
+    i = 2
+    # i = 3
+    seq_star = i*10
+    seq_end = (i+1)*10
+    for seq in range(seq_star, seq_end):
+        create_detection_video(dm, seq)
     # input_video = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03/AU_Set/reconstructions/Test_Set/88-30-360x480/video.mp4"
     # input_video_with_audio = ""
     # attach_audio_to_reconstruction_video(input_video, dm.root_dir / dm.video_list[seq])
