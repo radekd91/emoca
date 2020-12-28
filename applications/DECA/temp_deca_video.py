@@ -41,13 +41,18 @@ def get_frames_for_sequence(self, sid):
     vid_frames = sorted(list(out_folder.glob("*.png")))
     return vid_frames
 
-def create_detection_video(self, sequence_id):
+def create_detection_video(self, sequence_id, overwrite = False):
     # fid = 0
     detection_fnames, centers, sizes, last_frame_id = get_detection_for_sequence(self, sequence_id)
     vis_fnames = get_reconstructions_for_sequence(self, sequence_id)
     vid_frames = get_frames_for_sequence(self, sequence_id)
 
+    outfile = vis_fnames[0].parents[1] / "video.mp4"
+
     print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
+    if outfile.exists() and not overwrite:
+        print("output file already exists")
+        return
 
     writer = None #cv2.VideoWriter()
 
@@ -117,14 +122,13 @@ def create_detection_video(self, sequence_id):
         if writer is None:
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             # outfile = str(vis_folder / "video.mp4")
-            outfile = str(vis_fnames[0].parents[1] / "video.mp4")
-            writer = cv2.VideoWriter(outfile, cv2.CAP_FFMPEG,
+            writer = cv2.VideoWriter(str(outfile), cv2.CAP_FFMPEG,
                                            fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]),
                                            (im.shape[1], im.shape[0]), True)
         im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
         writer.write(im_cv)
     writer.release()
-
+    attach_audio_to_reconstruction_video(outfile,  self.root_dir / self.video_list[sequence_id])
     # plt.figure()
     # plt.imshow(im)
     # plt.show()
@@ -159,8 +163,11 @@ def gather_detections(self):
         # sizes_all += [sizes]
 
 
-
-
+def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None):
+    output_video = output_video or str(Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
+    cmd = "ffmpeg -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s"\
+        % (input_video, input_video_with_audio, output_video)
+    os.system(cmd)
 
 
 def main():
@@ -175,10 +182,14 @@ def main():
     # gather_detections(dm)
 
     seq = 10
-    create_detection_video(dm, seq)
-
+    for i in range(seq):
+        create_detection_video(dm, i)
+    # input_video = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03/AU_Set/reconstructions/Test_Set/88-30-360x480/video.mp4"
+    # input_video_with_audio = ""
+    # attach_audio_to_reconstruction_video(input_video, dm.root_dir / dm.video_list[seq])
 
 
 
 if __name__ == "__main__":
     main()
+
