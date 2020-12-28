@@ -55,7 +55,7 @@ def create_detection_video(self, sequence_id, overwrite = False):
     print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
     if outfile.exists() and not overwrite:
         print("output file already exists")
-        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
+        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id], overwrite=overwrite)
         return
 
     writer = None #cv2.VideoWriter()
