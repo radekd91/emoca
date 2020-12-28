@@ -82,7 +82,7 @@ def create_detection_video(self, sequence_id, overwrite = False):
         for nd in range(len(c)):
             detection_name = detection_fnames[fid][nd]
 
-            if did > len(vis_fnames):
+            if did >= len(vis_fnames):
                 broken = True
                 break
 
