@@ -24,6 +24,7 @@ def get_detection_for_sequence(self, sid):
     out_file = out_folder / "bboxes.pkl"
     if not out_file.exists():
         print("Detections don't exist")
+        return [], [], [], 0
     detection_fnames, centers, sizes, last_frame_id = \
             FaceVideoDataModule.load_detections(out_file)
 
@@ -32,7 +33,9 @@ def get_detection_for_sequence(self, sid):
 
 def get_reconstructions_for_sequence(self, sid):
     out_folder = self._get_path_to_sequence_reconstructions(sid)
-    vis_fnames = sorted(list((out_folder / "vis" ).glob("*.jpg")))
+    vis_fnames = sorted(list((out_folder / "vis" ).glob("*.png")))
+    if len(vis_fnames) == 0:
+        vis_fnames = sorted(list((out_folder / "vis" ).glob("*.jpg")))
     return vis_fnames
 
 
