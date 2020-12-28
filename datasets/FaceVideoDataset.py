@@ -128,6 +128,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
         for sid in range(self.num_sequences):
             self._detect_faces_in_sequence(sid)
 
+    def _get_path_to_sequence_frames(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        suffix = Path(video_file.parts[-4]) / 'videos' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _get_path_to_sequence_detections(self, sequence_id):
         video_file = self.video_list[sequence_id]
         suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
@@ -148,12 +154,27 @@ class FaceVideoDataModule(pl.LightningDataModule):
         suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
         out_folder = self._get_path_to_sequence_detections(sequence_id)
         out_folder.mkdir(exist_ok=True, parents=True)
+        out_file = out_folder / "bboxes.pkl"
 
         centers_all = []
         sizes_all = []
         detection_fnames_all = []
         # save_folder = frame_fname.parents[3] / 'detections'
-        for fid, frame_fname in enumerate(tqdm(self.frame_lists[sequence_id])):
+
+        checkpoint_frequency = 100
+        resume = False
+        if resume and out_file.exists():
+            detection_fnames_all, centers_all, sizes_all, start_fid = \
+                FaceVideoDataModule.load_detections(out_file)
+        else:
+            start_fid = 0
+
+        frame_list = self.frame_lists[sequence_id]
+        fid = 0
+        if len(frame_list) == 0:
+            print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
+        for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
+            frame_fname = frame_list[fid]
             # detect faces in each frames
             detections, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
             # self.detection_lists[sequence_id][fid] += [detections]
@@ -164,20 +185,25 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_fnames = []
             for di, detection in enumerate(detections):
                 out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
-                detection_fnames += [out_fname]
+                detection_fnames += [out_fname.relative_to(self.output_dir)]
                 imsave(out_fname, detection)
             detection_fnames_all += [detection_fnames]
 
-        FaceVideoDataModule.save_detections(out_folder / "bboxes.pkl",
-                                            detection_fnames_all, centers_all, sizes_all)
+            if fid % checkpoint_frequency == 0:
+                FaceVideoDataModule.save_detections(out_file,
+                                                    detection_fnames_all, centers_all, sizes_all, fid)
+
+        FaceVideoDataModule.save_detections(out_file,
+                                            detection_fnames_all, centers_all, sizes_all, fid)
         print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
 
     @staticmethod
-    def save_detections(fname, detection_fnames, centers, sizes):
+    def save_detections(fname, detection_fnames, centers, sizes, last_frame_id):
         with open(fname, "wb" ) as f:
             pkl.dump(detection_fnames, f)
             pkl.dump(centers, f)
             pkl.dump(sizes, f)
+            pkl.dump(last_frame_id, f)
 
     @staticmethod
     def load_detections(fname):
@@ -185,7 +211,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_fnames = pkl.load(f)
             centers = pkl.load(f)
             sizes = pkl.load(f)
-        return detection_fnames, centers, sizes
+            try:
+                last_frame_id = pkl.load(f)
+            except:
+                last_frame_id = -1
+        return detection_fnames, centers, sizes, last_frame_id
 
     def _detect_faces_in_image(self, image_path):
         # imagepath = self.imagepath_list[index]
@@ -346,7 +376,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
                     vis_im = reconstruction_net.visualize(vis_dict_j)
                     if save_vis:
-                        cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
+                        # cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
+                        cv2.imwrite(str(vis_folder / (name + '.png')), vis_im)
                     if save_video and video_writer is None:
                         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                         # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
@@ -532,16 +563,20 @@ def point2bbox(center, size):
     return src_pts
 
 
-def point2transform(center, size, target_size):
+def point2transform(center, size, target_size_height, target_size_width):
+    target_size_width = target_size_width or target_size_height
     src_pts = point2bbox(center, size)
-    dst_pts = np.array([[0, 0], [0, target_size - 1], [target_size - 1, 0]])
+    dst_pts = np.array([[0, 0], [0, target_size_width - 1], [target_size_height - 1, 0]])
     tform = estimate_transform('similarity', src_pts, dst_pts)
     return tform
 
 
-def bbpoint_warp(image, center, size, target_size):
-    tform = point2transform(center, size, target_size)
-    dst_image = warp(image, tform.inverse, output_shape=(target_size, target_size),order=3)
+def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True):
+    target_size_width = target_size_width or target_size_height
+    tform = point2transform(center, size, target_size_height, target_size_width)
+    tf = tform.inverse if inv else tform
+    output_shape = output_shape or (target_size_height, target_size_width)
+    dst_image = warp(image, tf, output_shape=output_shape, order=3)
     return dst_image
 
 
@@ -651,9 +686,22 @@ def main():
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
     # dm._detect_faces()
-    # dm._detect_faces_in_sequence(400)
+    # dm._detect_faces_in_sequence(102)
+    # dm._detect_faces_in_sequence(5)
+    # dm._detect_faces_in_sequence(16)
+    # dm._detect_faces_in_sequence(21)
+
+    # failed_jobs = [48,  83, 102, 135, 152, 153, 154, 169, 390]
+    # failed_jobs = [48,  83, 102] #, 135, 152, 153, 154, 169, 390]
+    # failed_jobs = [135, 152, 153] #, 154, 169, 390]
+    failed_jobs = [154, 169, 390]
+    for fj in failed_jobs:
+        dm._detect_faces_in_sequence(fj)
+        dm._recognize_faces_in_sequence(fj)
+        dm._reconstruct_faces_in_sequence(fj)
+
     # dm._recognize_faces_in_sequence(400)
-    dm._reconstruct_faces_in_sequence(400)
+    # dm._reconstruct_faces_in_sequence(400)
     print("Peace out")
 
 
