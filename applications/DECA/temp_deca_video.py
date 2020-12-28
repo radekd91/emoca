@@ -186,7 +186,7 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     if output_video.exists() and not overwrite:
         return
     output_video = str(output_video)
-    cmd = "ffmpeg -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s"\
+    cmd = "ffmpeg -y -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s"\
         % (input_video, input_video_with_audio, output_video)
     os.system(cmd)
 
