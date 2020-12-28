@@ -56,9 +56,12 @@ def create_detection_video(self, sequence_id, overwrite = False):
         return
 
     writer = None #cv2.VideoWriter()
-
+    broken = False
     did = 0
     for fid in tqdm(range(len(vid_frames))):
+        if broken:
+            break
+
         frame_name = vid_frames[fid]
         c = centers[fid]
         s = sizes[fid]
@@ -71,12 +74,14 @@ def create_detection_video(self, sequence_id, overwrite = False):
 
         frame_draw = ImageDraw.Draw(frame_pill_bb)
 
-        if did == len(vis_fnames):
 
-            break
 
         for nd in range(len(c)):
             detection_name = detection_fnames[fid][nd]
+
+            if did > len(vis_fnames):
+                broken = True
+                break
 
             vis_name = vis_fnames[did]
 
@@ -85,7 +90,11 @@ def create_detection_video(self, sequence_id, overwrite = False):
                 raise RuntimeError("Detection and visualization filenames should match but they don't.")
 
             detection_im = imread(self.output_dir / detection_name.relative_to(detection_name.parents[4]))
-            vis_im = imread(vis_name)
+            try:
+                vis_im = imread(vis_name)
+            except ValueError as e:
+                continue
+
             vis_im = vis_im[:, -vis_im.shape[1]//5:, ...]
 
             # vis_mask = np.prod(vis_im, axis=2) == 0
