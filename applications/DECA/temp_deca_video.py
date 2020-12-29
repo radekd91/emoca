@@ -34,14 +34,15 @@ def main():
 
     # gather_detections(dm)
 
-    # i = 0
+    i = 0
+    dm.create_reconstruction_video(i)
     # i = 1
-    i = 2
+    # i = 2
     # i = 3
-    seq_star = i*10
-    seq_end = (i+1)*10
-    for seq in range(seq_star, seq_end):
-        dm.create_detection_video(seq)
+    # seq_star = i*10
+    # seq_end = (i+1)*10
+    # for seq in range(seq_star, seq_end):
+    #     dm.create_detection_video(seq)
     # input_video = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03/AU_Set/reconstructions/Test_Set/88-30-360x480/video.mp4"
     # input_video_with_audio = ""
     # attach_audio_to_reconstruction_video(input_video, dm.root_dir / dm.video_list[seq])
