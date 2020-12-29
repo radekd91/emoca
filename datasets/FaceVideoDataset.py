@@ -760,7 +760,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                          (im.shape[1], im.shape[0]), True)
             im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
             writer.write(im_cv)
-            imsave("ha_%.05d.png" % fid, im )
+            # imsave("test_%.05d.png" % fid, im )
             # import matplotlib.pyplot as plt
             # plt.figure()
             # plt.imshow(im)
