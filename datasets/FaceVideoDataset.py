@@ -64,7 +64,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.video_metas = None
         self.annotation_list = None
         self.frame_lists = None
-        self.detection_lists = None
+        # self.detection_lists = None
+
+        self.detection_fnames = []
+        self.detection_centers = []
+        self.detection_sizes = []
 
 
     @property
@@ -489,7 +493,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
     def num_sequences(self):
         return len(self.video_list)
 
-    def get_detection_for_sequence(self, sid):
+    def _get_detection_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_detections(sid)
         out_file = out_folder / "bboxes.pkl"
         if not out_file.exists():
@@ -500,24 +504,30 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return detection_fnames, centers, sizes, last_frame_id
 
-    def get_reconstructions_for_sequence(self, sid):
+    def _get_reconstructions_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_reconstructions(sid)
         vis_fnames = sorted(list((out_folder / "vis").glob("*.png")))
         if len(vis_fnames) == 0:
             vis_fnames = sorted(list((out_folder / "vis").glob("*.jpg")))
         return vis_fnames
 
-    def get_frames_for_sequence(self, sid):
+    def _get_frames_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_frames(sid)
         vid_frames = sorted(list(out_folder.glob("*.png")))
         return vid_frames
 
-    def create_detection_video(self, sequence_id, overwrite=False):
+    def _get_recognition_for_sequence(self, sid):
+        out_folder = self._get_path_to_sequence_detections(sid)
+        recognition_path = out_folder / "recognition.pkl"
+        indices, labels, mean, cov, fnames = FaceVideoDataModule._load_recognitions(recognition_path)
+        return indices, labels, mean, cov, fnames
+
+    def create_reconstruction_video(self, sequence_id, overwrite=False):
         from PIL import Image, ImageDraw
         # fid = 0
-        detection_fnames, centers, sizes, last_frame_id = self.get_detection_for_sequence(sequence_id)
-        vis_fnames = self.get_reconstructions_for_sequence(sequence_id)
-        vid_frames = self.get_frames_for_sequence(sequence_id)
+        detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
+        vid_frames = self._get_frames_for_sequence(sequence_id)
 
         outfile = vis_fnames[0].parents[1] / "video.mp4"
 
@@ -591,7 +601,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
                 bb = point2bbox(c[nd], s[nd])
 
-                frame_draw.rectangle(((bb[0, 0], bb[0, 1],), (bb[2, 0], bb[1, 1],)), outline='green')
+                frame_draw.rectangle(((bb[0, 0], bb[0, 1],), (bb[2, 0], bb[1, 1],)),
+                                     outline='green', width=5)
                 frame_deca_full.paste(vis_pil, (0, 0), mask_pil)
                 frame_deca_trans.paste(vis_pil, (0, 0), mask_pil_transparent)
                 # tform =
@@ -622,32 +633,282 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # plt.show()
         # dst_image = warp(vis_im, tform.inverse, output_shape=frame.shape[:2])
 
-    def gather_detections(self):
-        out_files = []
 
-        detection_fnames_all = []
-        centers_all = []
-        sizes_all = []
+    def create_reconstruction_video_with_recognition(self, sequence_id, overwrite=False):
+        from PIL import Image, ImageDraw, ImageFont
+        from collections import Counter
+        from matplotlib.colors import Colormap
+        from matplotlib.pyplot import  get_cmap
+        # fid = 0
+        detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
+        vid_frames = self._get_frames_for_sequence(sequence_id)
+        indices, labels, mean, cov, fnames = self._get_recognition_for_sequence(sequence_id)
+
+        classification = self._recognition_discriminator(indices, labels, mean, cov, fnames)
+        counter = Counter(indices)
+
+        legit_colors = [c for c in classification.keys() if classification[c] ]
+        num_colors = len(legit_colors)
+        cmap = get_cmap('gist_rainbow')
+
+        outfile = vis_fnames[0].parents[1] / "video_with_labels.mp4"
+
+        print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
+        if outfile.exists() and not overwrite:
+            print("output file already exists")
+            attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id],
+                                                 overwrite=overwrite)
+            return
+
+        writer = None  # cv2.VideoWriter()
+        broken = False
+        did = 0
+        for fid in tqdm(range(len(vid_frames))):
+            if broken:
+                break
+
+            frame_name = vid_frames[fid]
+            c = centers[fid]
+            s = sizes[fid]
+
+            frame = imread(frame_name)
+
+            frame_pill_bb = Image.fromarray(frame)
+            frame_deca_full = Image.fromarray(frame)
+            frame_deca_trans = Image.fromarray(frame)
+
+            frame_draw = ImageDraw.Draw(frame_pill_bb)
+
+            for nd in range(len(c)):
+                detection_name = detection_fnames[fid][nd]
+
+
+                if did >= len(vis_fnames):
+                    broken = True
+                    break
+
+                vis_name = vis_fnames[did]
+                label = indices[did]
+                valid_detection = classification[label]
+
+                if detection_name.stem != vis_name.stem:
+                    print("%s != %s" % (detection_name.stem, vis_name.stem))
+                    raise RuntimeError("Detection and visualization filenames should match but they don't.")
+
+                detection_im = imread(self.output_dir / detection_name.relative_to(detection_name.parents[4]))
+                try:
+                    vis_im = imread(vis_name)
+                except ValueError as e:
+                    continue
+
+                vis_im = vis_im[:, -vis_im.shape[1] // 5:, ...]
+
+                # vis_mask = np.prod(vis_im, axis=2) == 0
+                vis_mask = (np.prod(vis_im, axis=2) > 30).astype(np.uint8) * 255
+
+                # vis_im = np.concatenate([vis_im, vis_mask[..., np.newaxis]], axis=2)
+
+                warped_im = bbpoint_warp(vis_im, c[nd], s[nd], detection_im.shape[0],
+                                         output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+                # warped_im = bbpoint_warp(vis_im, c[nd], s[nd], frame.shape[0], frame.shape[1], False)
+                warped_mask = bbpoint_warp(vis_mask, c[nd], s[nd], detection_im.shape[0],
+                                           output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+                # warped_mask = bbpoint_warp(vis_mask, c[nd], s[nd], frame.shape[0], frame.shape[1], False)
+
+                # dst_image = bbpoint_warp(frame, c[nd], s[nd], warped_im.shape[0])
+                # frame2 = bbpoint_warp(dst_image, c[nd], s[nd], warped_im.shape[0], output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+
+                # frame_pil = Image.fromarray(frame)
+                # frame_pil2 = Image.fromarray(frame)
+                vis_pil = Image.fromarray((warped_im * 255).astype(np.uint8))
+                mask_pil = Image.fromarray((warped_mask * 255).astype(np.uint8))
+                mask_pil_transparent = Image.fromarray((warped_mask * 196).astype(np.uint8))
+
+                bb = point2bbox(c[nd], s[nd])
+
+                if valid_detection:
+                    color = cmap(legit_colors.index(label)/num_colors)[:3]
+                    color = tuple(int(c*255) for c in color)
+                else:
+                    color = 'black'
+
+                frame_draw.rectangle(((bb[0, 0], bb[0, 1],), (bb[2, 0], bb[1, 1],)),
+                                     outline=color, width=5)
+                fnt = ImageFont.truetype("Pillow/Tests/fonts/FreeMonoBold.ttf", 60)
+                frame_draw.text((bb[0, 0], bb[1, 1]+10,), str(label), font=fnt, fill=color)
+                frame_deca_full.paste(vis_pil, (0, 0), mask_pil)
+                frame_deca_trans.paste(vis_pil, (0, 0), mask_pil_transparent)
+                # tform =
+                did += 1
+
+            final_im = np.array(frame_pill_bb)
+            final_im2 = np.array(frame_deca_full)
+            final_im3 = np.array(frame_deca_trans)
+
+            if final_im.shape[0] > final_im.shape[1]:
+                cat_dim = 1
+            else:
+                cat_dim = 0
+            im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
+
+            if writer is None:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                # outfile = str(vis_folder / "video.mp4")
+                writer = cv2.VideoWriter(str(outfile), cv2.CAP_FFMPEG,
+                                         fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]),
+                                         (im.shape[1], im.shape[0]), True)
+            im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+            writer.write(im_cv)
+            imsave("ha_%.05d.png" % fid, im )
+            # import matplotlib.pyplot as plt
+            # plt.figure()
+            # plt.imshow(im)
+            # plt.show()
+        writer.release()
+        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
+
+    def _gather_detections_for_sequence(self, sequence_id, with_recognitions=True):
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_file_detections = out_folder / "bboxes.pkl"
+        if with_recognitions:
+            out_file_recognitions = out_folder / "embeddings.pkl"
+
+        if out_file_detections.exists() and (not with_recognitions or out_file_recognitions.exists()):
+            detection_fnames, centers, sizes, last_frame_id = \
+                FaceVideoDataModule.load_detections(out_file_detections)
+            if with_recognitions:
+                embeddings, recognized_detections_fnames = FaceVideoDataModule._load_face_embeddings(out_file_recognitions)
+            print("Face detections for video %d found" % sequence_id)
+        else:
+            print("Faces for video %d not detected" % sequence_id)
+            detection_fnames = []
+            centers = []
+            sizes = []
+        if with_recognitions:
+            return detection_fnames, centers, sizes, embeddings, recognized_detections_fnames
+        return detection_fnames, centers, sizes
+
+    @staticmethod
+    def _recognition_discriminator(indices, labels, means, cov, fnames):
+        from collections import Counter, OrderedDict
+        counter = Counter(indices)
+        min_occurences = 20
+        min_sequence_length = 20
+        classifications = OrderedDict()
+
+        for label in counter.keys():
+            classifications[label] = True
+            if label == -1:
+                classifications[label] = False
+                continue
+            if counter[label] < min_occurences:
+                classifications[label] = False
+                continue
+
+            # count sequence lengths
+
+            # add more conditions here
+
+        return classifications
+
+    def _identify_recognitions_for_sequence(self, sequence_id):
+        print("Identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
+
+        detection_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
+            self._gather_detections_for_sequence(sequence_id, with_recognitions=True)
+
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_file = out_folder / "recognition.pkl"
+
+        from collections import Counter, OrderedDict
+        from sklearn.cluster import DBSCAN, AgglomerativeClustering
+        distance_threshold = 0.5
+        clustering = DBSCAN(eps=distance_threshold)
+        labels = clustering.fit_predict(X=embeddings)
+        counter = Counter(labels)
+
+        recognition_indices = OrderedDict()
+        recognition_means = OrderedDict()
+        recognition_cov = OrderedDict()
+        recognition_fnames = OrderedDict()
+
+        for label in counter.keys():
+            # filter out outliers
+            # if label == -1:
+            #     continue
+            # if counter[label] < min_occurences:
+            #     continue
+            indices = np.where(labels == label)[0]
+            features = embeddings[indices]
+            mean = np.mean(features, axis=0, keepdims=True)
+            cov = np.cov(features, rowvar=False)
+            try:
+                recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
+                    self.output_dir) for i in indices.tolist()])
+            except ValueError:
+                recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
+                    recognized_detections_fnames[i].parents[4]) for i in indices.tolist()])
+
+            recognition_indices[label] = indices
+            recognition_means[label] = mean
+            recognition_cov[label] = cov
+            recognition_fnames[label] = recognized_filenames_label
+
+        FaceVideoDataModule._save_recognitions(out_file, labels, recognition_indices, recognition_means,
+                                               recognition_cov, recognition_fnames)
+        print("Done identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
+
+
+    @staticmethod
+    def _save_recognitions(file, labels, indices, mean, cov, fnames):
+        with open(file, "wb") as f:
+            pkl.dump(labels, f)
+            pkl.dump(indices, f)
+            pkl.dump(mean, f)
+            pkl.dump(cov, f)
+            pkl.dump(fnames, f)
+
+    @staticmethod
+    def _load_recognitions(file):
+        with open(file, "rb") as f:
+            indices = pkl.load(f)
+            labels = pkl.load(f)
+            mean = pkl.load(f)
+            cov = pkl.load(f)
+            fnames = pkl.load(f)
+        return indices, labels, mean, cov, fnames
+
+
+
+
+    def _gather_detections(self, with_recognitions=True):
+        # out_files_detections = []
+        # out_files_recognitions = []
+        self.detection_fnames = []
+        self.detection_centers = []
+        self.detection_sizes = []
+        self.detection_recognized_fnames = []
+        self.detection_embeddings = []
 
         for sid in range(self.num_sequences):
-            out_folder = self._get_path_to_sequence_detections(sid)
-            out_file = out_folder / "bboxes.pkl"
-            out_files += [out_file]
 
-            if out_file.exists():
-                # detection_fnames, centers, sizes, last_frame_id = \
-                #     FaceVideoDataModule.load_detections(out_file)
-                # print("Face detections for video %d found" % sid)
-                pass
+            if with_recognitions:
+                detection_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
+                    self._gather_detections_for_sequence(sid, with_recognitions=with_recognitions)
             else:
-                print("Faces for video %d not detected" % sid)
-                # detection_fnames = []
-                # centers = []
-                # sizes = []
-            #
-            # detection_fnames_all += [detection_fnames]
-            # centers_all += [centers]
-            # sizes_all += [sizes]
+                detection_fnames, centers, sizes = \
+                    self._gather_detections_for_sequence(sid, with_recognitions=with_recognitions)
+                embeddings = None
+                recognized_detections_fnames = None
+
+            self.detection_fnames += [detection_fnames]
+            self.detection_centers += [centers]
+            self.detection_sizes += [sizes]
+            self.detection_embeddings += [embeddings]
+            self.detection_recognized_fnames += [recognized_detections_fnames]
+
+
 
 def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None, overwrite=False):
     output_video = output_video or (Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
@@ -859,14 +1120,18 @@ def main():
     # dm._detect_faces_in_sequence(16)
     # dm._detect_faces_in_sequence(21)
 
+    # dm._identify_recognitions_for_sequence(0)
+    dm.create_reconstruction_video_with_recognition(0, overwrite=True)
+    # dm._gather_detections()
+
     # failed_jobs = [48,  83, 102, 135, 152, 153, 154, 169, 390]
     # failed_jobs = [48,  83, 102] #, 135, 152, 153, 154, 169, 390]
     # failed_jobs = [135, 152, 153] #, 154, 169, 390]
-    failed_jobs = [154, 169, 390]
-    for fj in failed_jobs:
-        dm._detect_faces_in_sequence(fj)
-        dm._recognize_faces_in_sequence(fj)
-        dm._reconstruct_faces_in_sequence(fj)
+    # failed_jobs = [154, 169, 390]
+    # for fj in failed_jobs:
+    #     dm._detect_faces_in_sequence(fj)
+    #     dm._recognize_faces_in_sequence(fj)
+    #     dm._reconstruct_faces_in_sequence(fj)
 
     # dm._recognize_faces_in_sequence(400)
     # dm._reconstruct_faces_in_sequence(400)
