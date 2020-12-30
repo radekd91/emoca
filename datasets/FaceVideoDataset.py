@@ -28,6 +28,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def __init__(self, root_dir, output_dir, processed_subfolder=None,
                  face_detector='fan',
+                 face_detector_threshold=0.5,
                  image_size=224,
                  scale=1.25,
                  device=None
@@ -47,11 +48,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         if face_detector == 'fan':
-            self.face_detector = FAN(device)
+            self.face_detector = FAN(device, threshold=face_detector_threshold)
         elif face_detector == 'mtcnn':
             self.face_detector = MTCNN(device)
         else:
-            raise ValueError("Invalid face detector spicifier '%s'" % face_detector)
+            raise ValueError("Invalid face detector specifier '%s'" % face_detector)
 
         self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
@@ -516,13 +517,14 @@ class FaceVideoDataModule(pl.LightningDataModule):
         vid_frames = sorted(list(out_folder.glob("*.png")))
         return vid_frames
 
-    def _get_recognition_for_sequence(self, sid):
-        out_folder = self._get_path_to_sequence_detections(sid)
-        recognition_path = out_folder / "recognition.pkl"
+    def _get_recognition_for_sequence(self, sid, distance_threshold=0.5):
+        # out_folder = self._get_path_to_sequence_detections(sid)
+        recognition_path = self._get_recognition_filename(sid, distance_threshold)
+        # recognition_path = out_folder / "recognition.pkl"
         indices, labels, mean, cov, fnames = FaceVideoDataModule._load_recognitions(recognition_path)
         return indices, labels, mean, cov, fnames
 
-    def create_reconstruction_video(self, sequence_id, overwrite=False):
+    def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5):
         from PIL import Image, ImageDraw
         # fid = 0
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
@@ -634,7 +636,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # dst_image = warp(vis_im, tform.inverse, output_shape=frame.shape[:2])
 
 
-    def create_reconstruction_video_with_recognition(self, sequence_id, overwrite=False):
+    def create_reconstruction_video_with_recognition(self, sequence_id, overwrite=False, distance_threshold=0.5):
         from PIL import Image, ImageDraw, ImageFont
         from collections import Counter
         from matplotlib.colors import Colormap
@@ -643,7 +645,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
         vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
         vid_frames = self._get_frames_for_sequence(sequence_id)
-        indices, labels, mean, cov, fnames = self._get_recognition_for_sequence(sequence_id)
+        indices, labels, mean, cov, fnames = self._get_recognition_for_sequence(sequence_id, distance_threshold=distance_threshold )
 
         classification = self._recognition_discriminator(indices, labels, mean, cov, fnames)
         counter = Counter(indices)
@@ -652,7 +654,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         num_colors = len(legit_colors)
         cmap = get_cmap('gist_rainbow')
 
-        outfile = vis_fnames[0].parents[1] / "video_with_labels.mp4"
+        if distance_threshold == 0.5:
+            baseoutfile = "video_with_labels.mp4"
+        else:
+            baseoutfile = "video_with_labels_thresh_%.03f.mp4" % distance_threshold
+        outfile = vis_fnames[0].parents[1] /baseoutfile
 
         print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
         if outfile.exists() and not overwrite:
@@ -812,18 +818,30 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return classifications
 
-    def _identify_recognitions_for_sequence(self, sequence_id):
+    def _get_recognition_filename(self, sequence_id, distance_threshold=0.5):
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        if distance_threshold != 0.5:
+            out_file = out_folder / ("recognition_dist_%.03f.pkl" % distance_threshold)
+        else:
+            out_file = out_folder / "recognition.pkl"
+        return out_file
+
+    def _identify_recognitions_for_sequence(self, sequence_id, distance_threshold = 0.5):
         print("Identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
 
         detection_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
             self._gather_detections_for_sequence(sequence_id, with_recognitions=True)
 
         out_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_file = out_folder / "recognition.pkl"
+        # if distance_threshold != 0.5:
+        #     out_file = out_folder / ("recognition_dist_%.03f.pkl" % distance_threshold)
+        # else:
+        #     out_file = out_folder / "recognition.pkl"
+        out_file = self._get_recognition_filename(sequence_id, distance_threshold)
 
         from collections import Counter, OrderedDict
         from sklearn.cluster import DBSCAN, AgglomerativeClustering
-        distance_threshold = 0.5
+
         clustering = DBSCAN(eps=distance_threshold)
         labels = clustering.fit_predict(X=embeddings)
         counter = Counter(labels)
@@ -1121,7 +1139,9 @@ def main():
     # dm._detect_faces_in_sequence(21)
 
     # dm._identify_recognitions_for_sequence(0)
-    dm.create_reconstruction_video_with_recognition(0, overwrite=True)
+    # dm.create_reconstruction_video_with_recognition(0, overwrite=True)
+    dm._identify_recognitions_for_sequence(0, distance_threshold=1.0)
+    dm.create_reconstruction_video_with_recognition(0, overwrite=True, distance_threshold=1.0)
     # dm._gather_detections()
 
     # failed_jobs = [48,  83, 102, 135, 152, 153, 154, 169, 390]

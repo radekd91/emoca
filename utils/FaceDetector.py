@@ -15,12 +15,17 @@ class FaceDetector(ABC):
 
 class FAN(FaceDetector):
 
-    def __init__(self, device = 'cuda'):
+    def __init__(self, device = 'cuda', threshold=0.5):
         import face_alignment
+        face_detector = 'sfd'
+        face_detector_kwargs = {
+            "filter_threshold": threshold
+        }
         self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
                                                   device=str(device),
-                                                  flip_input=False)
-
+                                                  flip_input=False,
+                                                  face_detector=face_detector,
+                                                  face_detector_kwargs=face_detector_kwargs)
 
     def run(self, image):
         '''
@@ -34,8 +39,10 @@ class FAN(FaceDetector):
             boxes = []
             for i in range(len(out)):
                 kpt = out[i].squeeze()
-                left = np.min(kpt[:,0]); right = np.max(kpt[:,0]);
-                top = np.min(kpt[:,1]); bottom = np.max(kpt[:,1])
+                left = np.min(kpt[:, 0])
+                right = np.max(kpt[:, 0])
+                top = np.min(kpt[:, 1])
+                bottom = np.max(kpt[:, 1])
                 bbox = [left, top, right, bottom]
                 boxes += [bbox]
             return boxes, 'kpt68'
