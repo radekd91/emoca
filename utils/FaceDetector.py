@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 import numpy as np
 import torch
+from memory_profiler import profile
 
 
 class FaceDetector(ABC):
@@ -27,6 +28,7 @@ class FAN(FaceDetector):
                                                   face_detector=face_detector,
                                                   face_detector_kwargs=face_detector_kwargs)
 
+    @profile
     def run(self, image):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]

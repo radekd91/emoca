@@ -245,7 +245,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detection_sizes = []
         # detection_embeddings = []
         if len(bounding_boxes) == 0:
-            print('no face detected! run original image')
+            # print('no face detected! run original image')
             return detection_images, detection_centers, detection_images
             # left = 0
             # right = h - 1
