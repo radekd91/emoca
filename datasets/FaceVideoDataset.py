@@ -24,6 +24,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
 
+from memory_profiler import profile
+
+
 class FaceVideoDataModule(pl.LightningDataModule):
 
     def __init__(self, root_dir, output_dir, processed_subfolder=None,
@@ -151,6 +154,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    @profile
     def _detect_faces_in_sequence(self, sequence_id):
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
@@ -222,6 +226,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 last_frame_id = -1
         return detection_fnames, centers, sizes, last_frame_id
 
+    @profile
     def _detect_faces_in_image(self, image_path):
         # imagepath = self.imagepath_list[index]
         # imagename = imagepath.split('/')[-1].split('.')[0]
@@ -658,7 +663,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             baseoutfile = "video_with_labels.mp4"
         else:
             baseoutfile = "video_with_labels_thresh_%.03f.mp4" % distance_threshold
-        outfile = vis_fnames[0].parents[1] /baseoutfile
+        outfile = vis_fnames[0].parents[1] / baseoutfile
 
         print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
         if outfile.exists() and not overwrite:
