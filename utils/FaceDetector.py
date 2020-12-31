@@ -18,15 +18,16 @@ class FAN(FaceDetector):
 
     def __init__(self, device = 'cuda', threshold=0.5):
         import face_alignment
-        face_detector = 'sfd'
-        face_detector_kwargs = {
+        self.face_detector = 'sfd'
+        self.face_detector_kwargs = {
             "filter_threshold": threshold
         }
-        self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
-                                                  device=str(device),
-                                                  flip_input=False,
-                                                  face_detector=face_detector,
-                                                  face_detector_kwargs=face_detector_kwargs)
+        self.device = str(device)
+        # self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
+        #                                           device=self.device,
+        #                                           flip_input=False,
+        #                                           face_detector=self.face_detector,
+        #                                           face_detector_kwargs=self.face_detector_kwargs)
 
     @profile
     def run(self, image):
@@ -34,7 +35,14 @@ class FAN(FaceDetector):
         image: 0-255, uint8, rgb, [h, w, 3]
         return: detected box list
         '''
+        import face_alignment
         out = self.model.get_landmarks(image)
+        self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
+                                                  device=self.device,
+                                                  flip_input=False,
+                                                  face_detector=self.face_detector,
+                                                  face_detector_kwargs=self.face_detector_kwargs)
+        del self.model
         if out is None:
             return [], 'kpt68'
         else:
