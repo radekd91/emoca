@@ -36,12 +36,12 @@ class FAN(FaceDetector):
         return: detected box list
         '''
         import face_alignment
-        out = self.model.get_landmarks(image)
         self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
                                                   device=self.device,
                                                   flip_input=False,
                                                   face_detector=self.face_detector,
                                                   face_detector_kwargs=self.face_detector_kwargs)
+        out = self.model.get_landmarks(image)
         del self.model
         if out is None:
             return [], 'kpt68'
