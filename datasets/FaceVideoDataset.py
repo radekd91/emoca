@@ -48,15 +48,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
             processed_folder = os.path.join(output_dir, processed_subfolder)
         self.output_dir = processed_folder
 
-        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        if face_detector == 'fan':
-            self.face_detector = FAN(device, threshold=face_detector_threshold)
-        elif face_detector == 'mtcnn':
-            self.face_detector = MTCNN(device)
-        else:
-            raise ValueError("Invalid face detector specifier '%s'" % face_detector)
+        self.face_detector_type = face_detector
+        self.face_detector_threshold = face_detector_threshold
 
+        # self._instantiate_detector()
         self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
         self.image_size = image_size
@@ -73,6 +70,17 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.detection_fnames = []
         self.detection_centers = []
         self.detection_sizes = []
+
+
+    def _instantiate_detector(self):
+        if hasattr(self, 'detector'):
+            del self.detector
+        if self.face_detector == 'fan':
+            self.face_detector = FAN(self.device, threshold=self.face_detector_threshold)
+        elif self.face_detector == 'mtcnn':
+            self.face_detector = MTCNN(self.device)
+        else:
+            raise ValueError("Invalid face detector specifier '%s'" % self.face_detector)
 
 
     @property
@@ -170,6 +178,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detection_fnames_all = []
         # save_folder = frame_fname.parents[3] / 'detections'
 
+        # TODO: resuming is not tested, probably doesn't work yet
         checkpoint_frequency = 100
         resume = False
         if resume and out_file.exists():
@@ -178,11 +187,18 @@ class FaceVideoDataModule(pl.LightningDataModule):
         else:
             start_fid = 0
 
+        # hack trying to circumvent memory leaks on the cluster
+        detector_instantion_frequency = 200
+
         frame_list = self.frame_lists[sequence_id]
         fid = 0
         if len(frame_list) == 0:
             print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
         for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
+
+            if fid % detector_instantion_frequency == 0:
+                self._instantiate_detector()
+
             frame_fname = frame_list[fid]
             # detect faces in each frames
             detections, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
