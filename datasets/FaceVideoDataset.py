@@ -73,11 +73,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
     def _instantiate_detector(self):
-        if hasattr(self, 'detector'):
-            del self.detector
-        if self.face_detector == 'fan':
+        if hasattr(self, 'face_detector'):
+            del self.face_detector
+        if self.face_detector_type == 'fan':
             self.face_detector = FAN(self.device, threshold=self.face_detector_threshold)
-        elif self.face_detector == 'mtcnn':
+        elif self.face_detector_type == 'mtcnn':
             self.face_detector = MTCNN(self.device)
         else:
             raise ValueError("Invalid face detector specifier '%s'" % self.face_detector)
