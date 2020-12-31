@@ -164,6 +164,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     @profile
     def _detect_faces_in_sequence(self, sequence_id):
+        import gc
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
         video_file = self.video_list[sequence_id]
@@ -201,18 +202,20 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             frame_fname = frame_list[fid]
             # detect faces in each frames
-            detections, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
+            detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
             # self.detection_lists[sequence_id][fid] += [detections]
             centers_all += [centers]
             sizes_all += [sizes]
 
             # save detections
             detection_fnames = []
-            for di, detection in enumerate(detections):
+            for di, detection in enumerate(detection_ims):
                 out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
                 detection_fnames += [out_fname.relative_to(self.output_dir)]
                 imsave(out_fname, detection)
             detection_fnames_all += [detection_fnames]
+            del detection_ims # attempt to prevent memory leaks
+            gc.collect() # attempt to prevent memory leaks
 
             if fid % checkpoint_frequency == 0:
                 FaceVideoDataModule.save_detections(out_file,
