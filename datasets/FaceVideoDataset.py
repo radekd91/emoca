@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
 
+import gc
 from memory_profiler import profile
 
 
@@ -53,7 +54,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.face_detector_type = face_detector
         self.face_detector_threshold = face_detector_threshold
 
-        # self._instantiate_detector()
+        self._instantiate_detector()
         self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
         self.image_size = image_size
@@ -72,6 +73,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.detection_sizes = []
 
 
+    @profile
     def _instantiate_detector(self):
         if hasattr(self, 'face_detector'):
             del self.face_detector
@@ -163,8 +165,32 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return out_folder
 
     @profile
+    def _detect_faces_in_image_wrapper(self, frame_list, fid, out_folder, out_file,
+                                       centers_all, sizes_all, detection_fnames_all):
+
+        frame_fname = frame_list[fid]
+        # detect faces in each frames
+        detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
+        # self.detection_lists[sequence_id][fid] += [detections]
+        centers_all += [centers]
+        sizes_all += [sizes]
+
+        # save detections
+        detection_fnames = []
+        for di, detection in enumerate(detection_ims):
+            out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
+            detection_fnames += [out_fname.relative_to(self.output_dir)]
+            imsave(out_fname, detection)
+        detection_fnames_all += [detection_fnames]
+        del detection_ims  # attempt to prevent memory leaks
+        gc.collect()  # attempt to prevent memory leaks
+        checkpoint_frequency = 100
+        if fid % checkpoint_frequency == 0:
+            FaceVideoDataModule.save_detections(out_file,
+                                                detection_fnames_all, centers_all, sizes_all, fid)
+
+    @profile
     def _detect_faces_in_sequence(self, sequence_id):
-        import gc
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
         video_file = self.video_list[sequence_id]
@@ -200,26 +226,29 @@ class FaceVideoDataModule(pl.LightningDataModule):
             if fid % detector_instantion_frequency == 0:
                 self._instantiate_detector()
 
-            frame_fname = frame_list[fid]
-            # detect faces in each frames
-            detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
-            # self.detection_lists[sequence_id][fid] += [detections]
-            centers_all += [centers]
-            sizes_all += [sizes]
+            self._detect_faces_in_image_wrapper(frame_list, fid, out_folder, out_file,
+                                           centers_all, sizes_all, detection_fnames_all)
 
-            # save detections
-            detection_fnames = []
-            for di, detection in enumerate(detection_ims):
-                out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
-                detection_fnames += [out_fname.relative_to(self.output_dir)]
-                imsave(out_fname, detection)
-            detection_fnames_all += [detection_fnames]
-            del detection_ims # attempt to prevent memory leaks
-            gc.collect() # attempt to prevent memory leaks
-
-            if fid % checkpoint_frequency == 0:
-                FaceVideoDataModule.save_detections(out_file,
-                                                    detection_fnames_all, centers_all, sizes_all, fid)
+            # frame_fname = frame_list[fid]
+            # # detect faces in each frames
+            # detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
+            # # self.detection_lists[sequence_id][fid] += [detections]
+            # centers_all += [centers]
+            # sizes_all += [sizes]
+            #
+            # # save detections
+            # detection_fnames = []
+            # for di, detection in enumerate(detection_ims):
+            #     out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
+            #     detection_fnames += [out_fname.relative_to(self.output_dir)]
+            #     imsave(out_fname, detection)
+            # detection_fnames_all += [detection_fnames]
+            # del detection_ims # attempt to prevent memory leaks
+            # gc.collect() # attempt to prevent memory leaks
+            #
+            # if fid % checkpoint_frequency == 0:
+            #     FaceVideoDataModule.save_detections(out_file,
+            #                                         detection_fnames_all, centers_all, sizes_all, fid)
 
         FaceVideoDataModule.save_detections(out_file,
                                             detection_fnames_all, centers_all, sizes_all, fid)
@@ -288,6 +317,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_centers += [center]
             detection_sizes += [size]
 
+        del image # hunting down the mem leak on cluster
         return detection_images, detection_centers, detection_sizes
 
     def _get_recognition_net(self, device):
@@ -1164,8 +1194,8 @@ def main():
 
     # dm._identify_recognitions_for_sequence(0)
     # dm.create_reconstruction_video_with_recognition(0, overwrite=True)
-    dm._identify_recognitions_for_sequence(0, distance_threshold=1.0)
-    dm.create_reconstruction_video_with_recognition(0, overwrite=True, distance_threshold=1.0)
+    # dm._identify_recognitions_for_sequence(0, distance_threshold=1.0)
+    # dm.create_reconstruction_video_with_recognition(0, overwrite=True, distance_threshold=1.0)
     # dm._gather_detections()
 
     # failed_jobs = [48,  83, 102, 135, 152, 153, 154, 169, 390]
@@ -1173,9 +1203,13 @@ def main():
     # failed_jobs = [135, 152, 153] #, 154, 169, 390]
     # failed_jobs = [154, 169, 390]
     # for fj in failed_jobs:
-    #     dm._detect_faces_in_sequence(fj)
-    #     dm._recognize_faces_in_sequence(fj)
-    #     dm._reconstruct_faces_in_sequence(fj)
+
+    # fj = 9
+    # dm._detect_faces_in_sequence(fj)
+    # dm._recognize_faces_in_sequence(fj)
+    # dm._reconstruct_faces_in_sequence(fj)
+    # dm._identify_recognitions_for_sequence(fj)
+    # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)
 
     # dm._recognize_faces_in_sequence(400)
     # dm._reconstruct_faces_in_sequence(400)
