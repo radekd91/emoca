@@ -35,6 +35,7 @@ class FAN(FaceDetector):
         return: detected box list
         '''
         out = self.model.get_landmarks(image)
+        torch.cuda.empty_cache()
         if out is None:
             # del out
             return [], 'kpt68'
