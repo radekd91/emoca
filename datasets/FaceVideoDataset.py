@@ -182,8 +182,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_fnames += [out_fname.relative_to(self.output_dir)]
             imsave(out_fname, detection)
         detection_fnames_all += [detection_fnames]
-        del detection_ims  # attempt to prevent memory leaks
-        gc.collect()  # attempt to prevent memory leaks
+        # del detection_ims  # attempt to prevent memory leaks
+        # gc.collect()  # attempt to prevent memory leaks
         torch.cuda.empty_cache()
         checkpoint_frequency = 100
         if fid % checkpoint_frequency == 0:
@@ -224,8 +224,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
         for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
 
-            if fid % detector_instantion_frequency == 0:
-                self._instantiate_detector()
+            # if fid % detector_instantion_frequency == 0:
+            #     self._instantiate_detector()
 
             self._detect_faces_in_image_wrapper(frame_list, fid, out_folder, out_file,
                                            centers_all, sizes_all, detection_fnames_all)
@@ -318,7 +318,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_centers += [center]
             detection_sizes += [size]
 
-        del image # hunting down the mem leak on cluster
+        # del image # hunting down the mem leak on cluster
         return detection_images, detection_centers, detection_sizes
 
     def _get_recognition_net(self, device):
