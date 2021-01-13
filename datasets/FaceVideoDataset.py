@@ -182,11 +182,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_fnames += [out_fname.relative_to(self.output_dir)]
             imsave(out_fname, detection)
         detection_fnames_all += [detection_fnames]
-        # del detection_ims  # attempt to prevent memory leaks
-        # gc.collect()  # attempt to prevent memory leaks
-        # cuda_cache_frequency = 50
-        # if fid % cuda_cache_frequency == 0:
-        #     torch.cuda.empty_cache()
 
         checkpoint_frequency = 100
         if fid % checkpoint_frequency == 0:
@@ -232,27 +227,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             self._detect_faces_in_image_wrapper(frame_list, fid, out_folder, out_file,
                                            centers_all, sizes_all, detection_fnames_all)
-
-            # frame_fname = frame_list[fid]
-            # # detect faces in each frames
-            # detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
-            # # self.detection_lists[sequence_id][fid] += [detections]
-            # centers_all += [centers]
-            # sizes_all += [sizes]
-            #
-            # # save detections
-            # detection_fnames = []
-            # for di, detection in enumerate(detection_ims):
-            #     out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
-            #     detection_fnames += [out_fname.relative_to(self.output_dir)]
-            #     imsave(out_fname, detection)
-            # detection_fnames_all += [detection_fnames]
-            # del detection_ims # attempt to prevent memory leaks
-            # gc.collect() # attempt to prevent memory leaks
-            #
-            # if fid % checkpoint_frequency == 0:
-            #     FaceVideoDataModule.save_detections(out_file,
-            #                                         detection_fnames_all, centers_all, sizes_all, fid)
 
         FaceVideoDataModule.save_detections(out_file,
                                             detection_fnames_all, centers_all, sizes_all, fid)
@@ -321,7 +295,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_centers += [center]
             detection_sizes += [size]
 
-        # del image # hunting down the mem leak on cluster
         return detection_images, detection_centers, detection_sizes
 
     def _get_recognition_net(self, device):
