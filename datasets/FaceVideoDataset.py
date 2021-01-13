@@ -25,7 +25,7 @@ from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
 
 import gc
-from memory_profiler import profile
+# from memory_profiler import profile
 
 
 class FaceVideoDataModule(pl.LightningDataModule):
@@ -73,7 +73,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.detection_sizes = []
 
 
-    @profile
+    # @profile
     def _instantiate_detector(self):
         if hasattr(self, 'face_detector'):
             del self.face_detector
@@ -164,7 +164,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
-    @profile
+    # @profile
     def _detect_faces_in_image_wrapper(self, frame_list, fid, out_folder, out_file,
                                        centers_all, sizes_all, detection_fnames_all):
 
@@ -190,7 +190,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             FaceVideoDataModule.save_detections(out_file,
                                                 detection_fnames_all, centers_all, sizes_all, fid)
 
-    @profile
+    # @profile
     def _detect_faces_in_sequence(self, sequence_id):
         # if self.detection_lists is None or len(self.detection_lists) == 0:
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
@@ -275,7 +275,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 last_frame_id = -1
         return detection_fnames, centers, sizes, last_frame_id
 
-    @profile
+    # @profile
     def _detect_faces_in_image(self, image_path):
         # imagepath = self.imagepath_list[index]
         # imagename = imagepath.split('/')[-1].split('.')[0]
