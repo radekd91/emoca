@@ -182,7 +182,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_fnames += [out_fname.relative_to(self.output_dir)]
             imsave(out_fname, detection)
         detection_fnames_all += [detection_fnames]
-
+        torch.cuda.empty_cache()
         checkpoint_frequency = 100
         if fid % checkpoint_frequency == 0:
             FaceVideoDataModule.save_detections(out_file,
@@ -294,6 +294,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_images += [(dst_image*255).astype(np.uint8)]
             detection_centers += [center]
             detection_sizes += [size]
+
+        del image
 
         return detection_images, detection_centers, detection_sizes
 

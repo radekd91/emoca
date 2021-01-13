@@ -37,6 +37,7 @@ class FAN(FaceDetector):
         out = self.model.get_landmarks(image)
         torch.cuda.empty_cache()
         if out is None:
+            del out
             return [], 'kpt68'
         else:
             boxes = []
@@ -48,6 +49,7 @@ class FAN(FaceDetector):
                 bottom = np.max(kpt[:, 1])
                 bbox = [left, top, right, bottom]
                 boxes += [bbox]
+            del out # attempt to prevent memory leaks
             return boxes, 'kpt68'
 
 
