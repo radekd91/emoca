@@ -184,7 +184,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detection_fnames_all += [detection_fnames]
         # del detection_ims  # attempt to prevent memory leaks
         # gc.collect()  # attempt to prevent memory leaks
-        cuda_cache_frequency = 200
+        cuda_cache_frequency = 50
         if fid % cuda_cache_frequency == 0:
             torch.cuda.empty_cache()
 
