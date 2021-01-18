@@ -299,6 +299,73 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return detection_images, detection_centers, detection_sizes
 
+    def _get_emonet(self, device):
+        path_to_emonet = Path("../../emonet")
+        if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
+            sys.path += [str(path_to_emonet)]
+
+        from emonet.models import EmoNet
+        # n_expression = 5
+        n_expression = 8
+
+        # Loading the model
+        import inspect
+        state_dict_path = Path(inspect.getfile(EmoNet)).parent.parent.parent /'pretrained' / f'emonet_{n_expression}.pth'
+
+        print(f'Loading the EmoNet model from {state_dict_path}.')
+        state_dict = torch.load(str(state_dict_path), map_location='cpu')
+        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+
+        net = EmoNet(n_expression=n_expression).to(device)
+        net.load_state_dict(state_dict, strict=False)
+        net.eval()
+        return net
+
+    def _recognize_emotion_in_faces(self, device = None):
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        emotion_net = self._get_emonet(device)
+        for sid in range(self.num_sequences):
+            self._recognize_emotion_in_sequence(sid, emotion_net, device)
+
+    def _recognize_emotion_in_sequence(self, sequence_id, emotion_net=None, device=None):
+        print("Running emotion recognition in sequence '%s'" % self.video_list[sequence_id])
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        in_folder = self._get_path_to_sequence_detections(sequence_id)
+        detections_fnames = sorted(list(in_folder.glob("*.png")))
+
+        emotion_net = emotion_net or self._get_emonet(self.device)
+
+        from torchvision.transforms import Resize
+        transforms = Resize((256,256))
+        dataset = UnsupervisedImageDataset(detections_fnames, image_transforms=transforms)
+        batch_size = 64
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+
+        all_emotions = []
+        all_valence = []
+        all_arousal = []
+
+        for i, batch in enumerate(tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            # images = fixed_image_standardization(batch['image'].to(device))
+            images = batch['image'].to(device)
+            out = emotion_net(images)
+            expr = out['expression']
+            expr = np.argmax(np.squeeze(expr.detach().cpu().numpy()), axis=1)
+            val = out['valence']
+            ar = out['arousal']
+
+            all_emotions += [expr]
+            all_valence += [val.detach().cpu().numpy()]
+            all_arousal += [ar.detach().cpu().numpy()]
+
+        emotion_array = np.concatenate(all_emotions, axis=0)
+        valence_array = np.concatenate(all_valence, axis=0)
+        arousal_array = np.concatenate(all_arousal, axis=0)
+        FaceVideoDataModule._save_face_emotions(out_folder / "emotions.pkl", emotion_array, valence_array, arousal_array, detections_fnames)
+        print("Done running emotion recognition in sequence '%s'" % self.video_list[sequence_id])
+
     def _get_recognition_net(self, device):
         resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
         return resnet
@@ -335,6 +402,24 @@ class FaceVideoDataModule(pl.LightningDataModule):
         embedding_array = np.concatenate(all_embeddings, axis=0)
         FaceVideoDataModule._save_face_embeddings(out_folder / "embeddings.pkl", embedding_array, detections_fnames)
         print("Done running face recognition in sequence '%s'" % self.video_list[sequence_id])
+
+
+    @staticmethod
+    def _save_face_emotions(fname, emotions, valence, arousal, detections_fnames):
+        with open(fname, "wb" ) as f:
+            pkl.dump(emotions, f)
+            pkl.dump(valence, f)
+            pkl.dump(arousal, f)
+            pkl.dump(detections_fnames, f)
+
+    @staticmethod
+    def _load_face_emotions(fname):
+        with open(fname, "rb") as f:
+            emotions = pkl.load(f)
+            valence = pkl.load(f)
+            arousal = pkl.load(f)
+            detections_fnames = pkl.load(f)
+        return emotions, valence, arousal, detections_fnames
 
 
     @staticmethod
@@ -975,9 +1060,10 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
 
 
 class UnsupervisedImageDataset(torch.utils.data.Dataset):
-    def __init__(self, image_list):
+    def __init__(self, image_list, image_transforms=None):
         super().__init__()
         self.image_list = image_list
+        self.image_transforms = image_transforms
 
     def __getitem__(self, index):
         # if index < len(self.image_list):
@@ -985,7 +1071,10 @@ class UnsupervisedImageDataset(torch.utils.data.Dataset):
         # raise IndexError("Out of bounds")
         img = imread(self.image_list[index])
         img = img.transpose([2,0,1]).astype(np.float32)
-        return {"image" : torch.from_numpy(img) ,
+        img_torch = torch.from_numpy(img)
+        if self.image_transforms is not None:
+            img_torch = self.image_transforms(img_torch)
+        return {"image" : img_torch ,
                 "path" : str(self.image_list[index])}
 
     def __len__(self):
@@ -1165,6 +1254,8 @@ def main():
     subfolder = 'processed_2020_Dec_21_00-30-03'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
+    dm._recognize_emotion_in_sequence(0)
+
     # dm._detect_faces()
     # dm._detect_faces_in_sequence(102)
     # dm._detect_faces_in_sequence(5)
