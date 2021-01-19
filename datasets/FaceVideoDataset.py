@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 # from decalib.datasets import datasets
 from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
+from collections import OrderedDict
 
 import gc
 # from memory_profiler import profile
@@ -108,6 +109,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
         for vi, video_file in enumerate(tqdm(self.video_list)):
             self._unpack_video(vi)
 
+    def get_frame_number_format(self):
+        return "%06d"
+
     def _unpack_video(self, video_idx, overwrite=False):
         video_file = Path(self.root_dir) / self.video_list[video_idx]
         suffix = Path(video_file.parts[-4]) / video_file.parts[-3] / video_file.parts[-2] / video_file.stem
@@ -116,9 +120,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
         if not out_folder.exists() or overwrite:
             print("Unpacking video to '%s'" % str(out_folder))
             out_folder.mkdir(exist_ok=True, parents=True)
-            # ffmpeg -r 1 -i file.mp4 -r 1 "$%06d.png"
 
-            out_format = out_folder / "%06d.png"
+            out_format = out_folder / (self.get_frame_number_format() + ".png")
             out_format = '-r 1 -i %s -r 1 ' % str(video_file) + ' "' + str(out_format) + '"'
             # out_format = ' -r 1 -i %s ' % str(video_file) + ' "' + "$frame.%03d.png" + '"'
             # subprocess.call(['ffmpeg', out_format])
@@ -606,8 +609,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
         batch_size = 1
         return DataLoader(testdata, batch_size=batch_size, num_workers=1)
 
-
-
     @property
     def num_sequences(self):
         return len(self.video_list)
@@ -621,7 +622,34 @@ class FaceVideoDataModule(pl.LightningDataModule):
         detection_fnames, centers, sizes, last_frame_id = \
             FaceVideoDataModule.load_detections(out_file)
 
-        return detection_fnames, centers, sizes, last_frame_id
+        # make the paths relative if their not, this should not be neccesary in once everythings is reprocessed
+        # stuf is now being saved with relative paths.
+        relative_detection_fnames = []
+        for fname_list in detection_fnames:
+            relative_fname_list = []
+            for fname in fname_list:
+                if fname.is_absolute():
+                    try:
+                        relative_fname_list += [fname.relative_to(self.output_dir)]
+                    except:
+                        #TODO: remove ugly hack once reprocessed
+                        relative_fname_list += [fname.relative_to(Path('/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03'))]
+                else:
+                    relative_fname_list += [fname]
+
+            relative_detection_fnames += [relative_fname_list]
+
+        return relative_detection_fnames, centers, sizes, last_frame_id
+
+    def _get_validated_annotations_for_sequence(self, sid):
+        out_folder = self._get_path_to_sequence_detections(sid)
+        out_file = out_folder / "annotations.pkl"
+        if not out_file.exists():
+            print("Detections don't exist")
+            return [], [], [], 0
+        detection_fnames, annotations = FaceVideoDataModule._load_annotations(out_file)
+
+        return detection_fnames, annotations
 
     def _get_reconstructions_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_reconstructions(sid)
@@ -635,7 +663,15 @@ class FaceVideoDataModule(pl.LightningDataModule):
         vid_frames = sorted(list(out_folder.glob("*.png")))
         return vid_frames
 
-    def _get_recognition_for_sequence(self, sid, distance_threshold=0.5):
+    def _get_annotations_for_sequence(self, sid):
+        video_file = self.video_list[sid]
+        suffix = Path(video_file.parts[-4]) / 'annotations' / video_file.parts[-2]
+        annotation_prefix = Path(self.root_dir / suffix)
+        annotation = sorted(annotation_prefix.glob(video_file.stem + "*.txt"))
+        return annotation
+
+    def _get_recognition_for_sequence(self, sid, distance_threshold=None):
+        distance_threshold = distance_threshold or self.get_default_recognition_threshold()
         # out_folder = self._get_path_to_sequence_detections(sid)
         recognition_path = self._get_recognition_filename(sid, distance_threshold)
         # recognition_path = out_folder / "recognition.pkl"
@@ -936,15 +972,20 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return classifications
 
-    def _get_recognition_filename(self, sequence_id, distance_threshold=0.5):
+    def _get_recognition_filename(self, sequence_id, distance_threshold=None):
+        if distance_threshold is None:
+            distance_threshold = self.get_default_recognition_threshold()
+
         out_folder = self._get_path_to_sequence_detections(sequence_id)
-        if distance_threshold != 0.5:
+        if distance_threshold != self.get_default_recognition_threshold():
             out_file = out_folder / ("recognition_dist_%.03f.pkl" % distance_threshold)
         else:
             out_file = out_folder / "recognition.pkl"
         return out_file
 
-    def _identify_recognitions_for_sequence(self, sequence_id, distance_threshold = 0.5):
+    def _identify_recognitions_for_sequence(self, sequence_id, distance_threshold = None):
+        if distance_threshold is None:
+            distance_threshold = self.get_default_recognition_threshold()
         print("Identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
 
         detection_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
@@ -1016,7 +1057,25 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return indices, labels, mean, cov, fnames
 
 
+    @staticmethod
+    def _save_annotations(file, detection_fnames, annotations, recognition_labels,
+                          discarded_annotations, detection_not_found ):
+        with open(file, "wb") as f:
+            pkl.dump(detection_fnames, f)
+            pkl.dump(annotations, f)
+            pkl.dump(recognition_labels, f)
+            pkl.dump(discarded_annotations, f)
+            pkl.dump(detection_not_found, f)
 
+    @staticmethod
+    def _load_annotations(file):
+        with open(file, "rb") as f:
+            detection_fnames = pkl.load(f)
+            annotations = pkl.load(f)
+            recognition_labels = pkl.load(f)
+            discarded_annotations = pkl.load(f)
+            detection_not_found = pkl.load(f)
+        return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
     def _gather_detections(self, with_recognitions=True):
         # out_files_detections = []
@@ -1044,7 +1103,391 @@ class FaceVideoDataModule(pl.LightningDataModule):
             self.detection_embeddings += [embeddings]
             self.detection_recognized_fnames += [recognized_detections_fnames]
 
+    def _assign_gt_to_detections(self):
+        for sid in range(self.num_sequences):
+            self.assign_gt_to_detections_sequence(sid)
 
+    def get_default_recognition_threshold(self):
+        #TODO: bump up to 0.6 for the next processing
+        return 0.5
+
+    def _map_detections_to_gt(self, detection_filenames : list, annotation_file,
+                              annotation_type,
+                              # specifier = ''
+                              ):
+
+        def find_correspondng_detections(frame_number):
+            pattern = self.get_frame_number_format() % frame_number
+            pattern += "_"
+            res = [fname for fname in detection_filenames if pattern in str(fname)]
+            return res
+
+        def unlabeled_frame(type, annotation):
+            # disregarding rules are taken from the AFF2-WILD website:
+            # https://ibug.doc.ic.ac.uk/resources/aff-wild2/
+            if type == 'va':
+                return annotation[0] == -5 and annotation[1] == -5
+            if type == 'expr7':
+                return annotation == - 1
+            if type == 'au8':
+                return -1 in annotation
+            raise ValueError(f"Invalid annotation type '{type}'")
+
+        if annotation_type == 'va':
+            dtype = np.float64
+        elif annotation_type == 'expr7':
+            dtype = np.int32
+        elif annotation_type == 'au8':
+            dtype = np.int32
+        else:
+            raise ValueError(f"Invalid annotation type '{annotation_type}'")
+        annotation = np.loadtxt(annotation_file, skiprows=1, delimiter=',', dtype=dtype)
+
+        valid_detection_list = []
+        annotation_list = []
+        discarded_list = []
+        detection_not_found_list = []
+        for i in range(annotation.shape[0]):
+            frame_idx = i+1 # frame indices are 1-based
+            if unlabeled_frame(annotation_type, annotation[i]):
+                print(f"Frame {frame_idx} is not labeled. Skipping")
+                discarded_list += [i]
+                continue
+
+            detections = find_correspondng_detections(frame_idx)
+            if len(detections) == 0:
+                print(f"Frame {frame_idx} has no corresponding detection for that identity")
+                #TODO: a possible extension - check if there is any other detection at all and if it is assinged?
+                detection_not_found_list += [i]
+                continue
+            if len(detections) > 1:
+                # if specifier == '':
+                print(f"Frame {frame_idx} has {len(detections)} detections of the equally "
+                      f"classified identity. Only one will be taken")
+                # elif specifier == '_left':
+                #     other_center = get_bb_center_from_fname(
+                #         other_detection_file_names[0], detection_fnames, detection_centers)
+                #     main_center = get_bb_center_from_fname(
+                #         main_detection_file_names[0], detection_fnames, detection_centers)
+                #     print(
+                #         f"Frame {frame_idx} has {len(detections)} detections of the equally "
+                #         f"classified identity. Specifier is {specifier}.")
+                # elif specifier == "_right":
+                #     print(
+                #         f"Frame {frame_idx} has {len(detections)} detections of the equally "
+                #         f"classified identity. Specifier is {specifier}.")
+                # else:
+                #     raise ValueError(f"Invalid specifier to solve ambiguity: '{specifier}'")
+
+                #TODO: what to do if there's more?
+
+
+            valid_detection_list += [detections[0]]
+            annotation_list += [annotation[i:i+1, ...]]
+
+
+        annotation_array = np.concatenate(annotation_list, axis=0)
+        annotation_dict = OrderedDict()
+        annotation_dict[annotation_type] = annotation_array
+
+        total_annotated_frames = annotation.shape[0] - len(discarded_list)
+        total_annotated_detections = len(valid_detection_list)
+        print(f"For {total_annotated_frames} annotations, "
+              f"{total_annotated_detections} were found. Didn't catch "
+              f"{total_annotated_frames - total_annotated_detections}")
+        return valid_detection_list, annotation_dict, discarded_list, detection_not_found_list
+
+    def _get_bb_from_fname(self, fname, detection_fname_list):
+        # i1 = None
+        # i2 = None
+        # for i, fname_list in enumerate(detection_fname_list):
+        # detection_fname_list contains per every frame a list of detections
+        frame_num = int(fname.stem.split('_')[0])
+        fname_list = detection_fname_list[frame_num-1]
+        if fname in fname_list:
+            # i1 = i
+            i1 = frame_num-1 # careful, the frame numbers in filenames are 1-based (ffmpeg starts at 1)
+            i2 = fname_list.index(fname)
+            return i1, i2
+        # This should never happen. It means the cached detections are out of sync and should be reprocessed.
+        raise RuntimeError(f"The specified {fname} is not in the detection fname list.")
+
+    def _get_bb_center_from_fname(self, fname, detection_fname_list, center_list):
+        i1, i2 = self._get_bb_from_fname(fname, detection_fname_list)
+        return center_list[i1][i2]
+
+    def assign_gt_to_detections_sequence(self, sequence_id):
+
+        def second_most_frequent_label():
+            if len(most_frequent_labels) == 2:
+                second_label = most_frequent_labels[1]
+            elif len(most_frequent_labels) > 2:
+                raise RuntimeError(f"Too many labels occurred with the same frequency. Unclear which one to pick.")
+            else:
+                most_frequent_count2 = list(counts2labels.keys())[1]
+                most_frequent_labels2 = counts2labels[most_frequent_count2]
+                if len(most_frequent_labels2) != 1:
+                    raise RuntimeError(
+                        f"Too many labels occurred with the same frequency. Unclear which one to pick.")
+                second_label = most_frequent_labels2[0]
+            return second_label
+
+        def correct_left_right_order(left_center, right_center):
+            left_right_dim = 0 # TODO: verify if this is correct
+            if left_center[left_right_dim] < right_center[left_right_dim]:
+                # left is on the left
+                return 1
+            elif left_center[left_right_dim] == right_center[left_right_dim]:
+                # same place
+                return 0
+            # left is on the right
+            return -1
+
+        # detection_fnames = self._get_path_to_sequence_detections(sequence_id)
+        # full_frames = self._get_frames_for_sequence(sequence_id)
+        annotations = self._get_annotations_for_sequence(sequence_id)
+        if len(annotations) == 0:
+            print(f"No GT available for video '{self.video_list[sequence_id]}'")
+            return
+        annotation_type = annotations[0].parent.parent.parent.stem
+        if annotation_type == 'AU_Set':
+            anno_type = 'au8' # AU1,AU2,AU4,AU6,AU12,AU15,AU20,AU25
+        elif annotation_type == 'Expression_Set':
+            anno_type = 'expr7' # Neutral,Anger,Disgust,Fear,Happiness,Sadness,Surprise
+        elif annotation_type == 'VA_Set':
+            anno_type = 'va' # valence arousal -1 to 1
+        else:
+            raise ValueError(f"Unsupported annotation type: '{annotation_type}'")
+
+        # load the recognitions:
+        # recognition_file = self._get_recognition_filename(
+        #     sequence_id, self.get_default_recognition_threshold())
+        # indices, labels, mean, cov, recognition_fnames = FaceVideoDataModule._load_recognitions(
+        #     recognition_file)
+        indices, labels, mean, cov, recognition_fnames = self._get_recognition_for_sequence(sequence_id)
+        counts2labels = OrderedDict()
+        for key, val in labels.items():
+            if key == -1: # skip invalid outliers
+                continue
+            count = len(val)
+            if count not in counts2labels.keys():
+                counts2labels[count] = []
+            counts2labels[count] += [key]
+
+        recognition_label_dict = OrderedDict()
+        annotated_detection_fnames = OrderedDict()
+        validated_annotations = OrderedDict()
+        discarded_annotations = OrderedDict()
+        detection_not_found = OrderedDict()
+
+        # suffs = [str(Path(str(anno)[len(str(anno.parent / self.video_list[sequence_id].stem)):]).stem) for anno in
+        #      annotations]
+        suffs = [str(anno.stem)[len(str(self.video_list[sequence_id].stem)):] for anno in
+             annotations]
+
+        ### WARNING: HORRIBLE THINGS FOLLOW, PUT ON YOUR PROTECTIVE GOGGLES BEFORE YOU PROCEED
+        # this next section is a ugly rule-based approach to assign annotation files to detected and recognized
+        # faces. This assignment is not provided by the authors of aff-wild2 and therefore it's approximated
+        # using these rules that are taken from the readme.
+
+        # THERE IS ONLY ONE DOMINANT DETECTION AND ONE ANNOTATION FILE:
+        if len(annotations) == 1 and suffs[0] == '':
+            most_frequent_count = list(counts2labels.keys())[0]
+            most_frequent_labels = counts2labels[most_frequent_count]
+
+            if len(most_frequent_labels) != 1:
+                raise ValueError("There seem to be two people at the same time in all pictures but we only "
+                                 "have annotation for one")
+
+            main_label = most_frequent_labels[0]
+            main_detection_file_names = recognition_fnames[main_label]
+            main_annotation_file = annotations[0]
+            main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list \
+                = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
+
+            recognition_label_dict[main_annotation_file.stem] = main_label
+            annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
+            validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
+            discarded_annotations[main_annotation_file.stem] = main_discarded_list
+            detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
+
+
+            # THERE ARE TWO DOMINANT DETECTIONS BUT ONLY ONE IS ANNOTATED
+        elif len(annotations) == 1 and (suffs[0] == '_left' or suffs[0] == '_right'):
+
+            most_frequent_count = list(counts2labels.keys())[0]
+            most_frequent_labels = counts2labels[most_frequent_count]
+
+            detection_fnames, detection_centers, detection_sizes, _ = \
+                self._get_detection_for_sequence(sequence_id)
+
+            if len(most_frequent_labels) != 1:
+                raise ValueError("There seem to be two people at the same time in all pictures but we only "
+                                 "have annotation for one")
+
+            main_label = most_frequent_labels[0]
+            main_detection_file_names = recognition_fnames[main_label]
+            main_annotation_file = annotations[0]
+            main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list  \
+                = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
+
+            other_label = second_most_frequent_label()
+            other_detection_file_names = recognition_fnames[other_label]
+            other_annotation_file = annotations[0] # use the same annotation, which one will be used is figured out next
+            other_valid_detection_list, other_valid_annotation_list, other_discarded_list, other_detection_not_found_list\
+                = self._map_detections_to_gt(other_detection_file_names, other_annotation_file, anno_type)
+
+            other_center = self._get_bb_center_from_fname(other_detection_file_names[0], detection_fnames,
+                                                          detection_centers)
+            main_center = self._get_bb_center_from_fname(main_detection_file_names[0], detection_fnames,
+                                                         detection_centers)
+            if correct_left_right_order(other_center, main_center) == 1:
+                pass # do nothing, order correct
+            elif correct_left_right_order(other_center, main_center) == -1:
+                # swap main and other
+                print("Swapping left and right")
+                other_label, main_label = main_label, other_label
+                # other_valid_detection_list, main_valid_detection_list = main_valid_detection_list, other_valid_detection_list
+                # other_valid_annotation_list, main_valid_annotation_list = main_valid_annotation_list, other_valid_annotation_list
+            else:
+                raise ValueError("Detections are in the same place. No way to tell left from right")
+
+            # now other is on the left, and main is on the right, decide which one is annotated based on the suffix
+            if suffs[0] == '_left':
+                print("Choosing left")
+                recognition_label_dict[other_annotation_file.stem] = other_label
+                annotated_detection_fnames[other_annotation_file.stem] = other_valid_detection_list
+                validated_annotations[other_annotation_file.stem] = other_valid_annotation_list
+                discarded_annotations[other_annotation_file.stem] = other_discarded_list
+                detection_not_found[other_annotation_file.stem] = other_detection_not_found_list
+            else: # suffs[0] == '_right':
+                print("Choosing right")
+                recognition_label_dict[main_annotation_file.stem] = main_label
+                annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
+                validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
+                discarded_annotations[main_annotation_file.stem] = main_discarded_list
+                detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
+        else:
+            if len(suffs) > 2:
+                print(f"Unexpected number of suffixes found {len(suffs)}")
+                print(suffs)
+                raise RuntimeError(f"Unexpected number of suffixes found {len(suffs)}")
+
+            most_frequent_count = list(counts2labels.keys())[0]
+            most_frequent_labels = counts2labels[most_frequent_count]
+
+            detection_fnames, detection_centers, detection_sizes, _ = \
+                self._get_detection_for_sequence(sequence_id)
+
+            # THE CASE OF ONE DOMINANT DETECTION AND ONE SMALLER ONE (NO SUFFIX vs LEFT/RIGHT)
+            if suffs[0] == '' and (suffs[1] == '_left' or suffs[1] == '_right'):
+                if len(most_frequent_labels) != 1:
+                    raise ValueError("There seem to be two people at the same time in all pictures but we only "
+                                     "have annotation for one")
+
+                main_label = most_frequent_labels[0]
+                main_detection_file_names = recognition_fnames[main_label]
+                main_annotation_file = annotations[0]
+                main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list\
+                    = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
+
+                recognition_label_dict[main_annotation_file.stem] = main_label
+                annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
+                validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
+                discarded_annotations[main_annotation_file.stem] = main_discarded_list
+                detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
+
+
+                other_label = most_frequent_labels[1]
+                other_detection_file_names = recognition_fnames[other_label]
+                other_annotation_file = annotations[1]
+                other_valid_detection_list, other_valid_annotation_list, other_discarded_list, other_detection_not_found_list \
+                    = self._map_detections_to_gt(other_detection_file_names, other_annotation_file, anno_type)
+
+                recognition_label_dict[other_annotation_file.stem] = other_label
+                annotated_detection_fnames[other_annotation_file.stem] = other_valid_detection_list
+                validated_annotations[other_annotation_file.stem] = other_valid_annotation_list
+                discarded_annotations[other_annotation_file.stem] = other_discarded_list
+                detection_not_found[other_annotation_file.stem] = other_detection_not_found_list
+
+                other_center = self._get_bb_center_from_fname(other_detection_file_names[0], detection_fnames,
+                                                        detection_centers)
+                main_center = self._get_bb_center_from_fname(main_detection_file_names[0], detection_fnames,
+                                                       detection_centers)
+                if suffs[1] == '_left':
+                    if correct_left_right_order(other_center, main_center) != 1:
+                        raise RuntimeError("The main detection should be on the right and the other on the left but this is not the case")
+                elif suffs[1] == '_right':
+                    if correct_left_right_order(main_center, other_center) != 1:
+                        raise RuntimeError(
+                            "The main detection should be on the left and the other on the right but this is not the case")
+
+            # THE CASE OF TWO ROUGHLY EQUALY DOMINANT DETECTIONS (LEFT and RIGHT)
+            elif suffs[0] == '_left' and suffs[1] == '_right':
+                #TODO: figure out which one is left and which one is right by loading the bboxes and comparing
+                counts2labels.keys()
+                left_label = most_frequent_labels[0]
+                # if len(most_frequent_labels) == 2:
+                #     right_label = most_frequent_labels[1]
+                # elif len(most_frequent_labels) > 2:
+                #     raise RuntimeError(f"Too many labels occurred with the same frequency. Unclear which one to pick.")
+                # else:
+                #     most_frequent_count2 = list(counts2labels.keys())[1]
+                #     most_frequent_labels2 = counts2labels[most_frequent_count2]
+                #     if len(most_frequent_labels2) != 1:
+                #         raise RuntimeError(
+                #             f"Too many labels occurred with the same frequency. Unclear which one to pick.")
+                #     right_label = most_frequent_labels2[0]
+                right_label = second_most_frequent_label()
+
+                left_filename = recognition_fnames[left_label][0]
+                left_center = self._get_bb_center_from_fname(left_filename, detection_fnames, detection_centers)
+
+                right_filename = recognition_fnames[right_label][0]
+                right_center = self._get_bb_center_from_fname(right_filename, detection_fnames, detection_centers)
+
+                order = correct_left_right_order(left_center, right_center)
+                # if left is not left, swap
+                if order == -1:
+                    left_label, right_label = right_label, left_label
+                    left_filename, right_filename = right_filename, left_filename
+                elif order == 0:
+                    raise RuntimeError("Left and right detections have centers in the same place. "
+                                       "No way to tell left from right")
+
+                left_detection_file_names = recognition_fnames[left_label]
+                left_annotation_file = annotations[0]
+                left_valid_detection_list, left_annotation_list, left_discarded_list, left_detection_not_found_list \
+                    = self._map_detections_to_gt(left_detection_file_names, left_annotation_file, anno_type)
+                recognition_label_dict[left_annotation_file.stem] = left_label
+                annotated_detection_fnames[left_annotation_file.stem] = left_valid_detection_list
+                validated_annotations[left_annotation_file.stem] = left_annotation_list
+                discarded_annotations[left_annotation_file.stem] = left_discarded_list
+                detection_not_found[left_annotation_file.stem] = left_detection_not_found_list
+
+
+
+                right_detection_file_names = recognition_fnames[right_label]
+                right_annotation_file = annotations[1]
+
+                right_valid_detection_list, right_valid_annotation_list, right_discarded_list, right_detection_not_found_list \
+                    = self._map_detections_to_gt(right_detection_file_names, right_annotation_file, anno_type)
+                recognition_label_dict[right_annotation_file.stem] = right_label
+                annotated_detection_fnames[right_annotation_file.stem] = right_valid_detection_list
+                validated_annotations[right_annotation_file.stem] = right_valid_annotation_list
+                discarded_annotations[right_annotation_file.stem] = right_discarded_list
+                detection_not_found[right_annotation_file.stem] = right_detection_not_found_list
+
+                # THE FOLLOWING CASE SHOULD NEVER HAPPEN
+            else:
+                print(f"Unexpected annotation case found.")
+                print(suffs)
+                raise RuntimeError(f"Unexpected annotation case found: {str(suffs)}")
+
+        out_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_file = out_folder / "valid_annotations.pkl"
+        FaceVideoDataModule._save_annotations(out_file, annotated_detection_fnames, validated_annotations,
+                                              recognition_label_dict, discarded_annotations, detection_not_found)
 
 def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None, overwrite=False):
     output_video = output_video or (Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
@@ -1069,7 +1512,11 @@ class UnsupervisedImageDataset(torch.utils.data.Dataset):
         # if index < len(self.image_list):
         #     x = self.mnist_data[index]
         # raise IndexError("Out of bounds")
-        img = imread(self.image_list[index])
+        try:
+            img = imread(self.image_list[index])
+        except Exception as e:
+            print(f"Failed to read '{self.image_list[index]}'. File is probably corrupted. Rerun data processing")
+            raise e
         img = img.transpose([2,0,1]).astype(np.float32)
         img_torch = torch.from_numpy(img)
         if self.image_transforms is not None:
@@ -1254,8 +1701,18 @@ def main():
     subfolder = 'processed_2020_Dec_21_00-30-03'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
-    dm._recognize_emotion_in_sequence(0)
-
+    # dm._recognize_emotion_in_sequence(0)
+    # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/130-25-1280x720.mp4'))
+    # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/52-30-1280x720.mp4'))
+    # i = dm.video_list.index(Path('Expression_Set/videos/Train_Set/46-30-484x360.mp4'))
+    # i = dm.video_list.index(Path('Expression_Set/videos/Train_Set/135-24-1920x1080.mp4'))
+    # i = dm.video_list.index(Path('VA_Set/videos/Train_Set/30-30-1920x1080.mp4'))
+    # dm._recognize_faces_in_sequence(i)
+    # dm._identify_recognitions_for_sequence(i)
+    # for i in range(len(dm.video_list)):
+    #     print("----------------------------------")
+    #     print(f"Assigning GT to detections for seq: {i}")
+    #     dm.assign_gt_to_detections_sequence(i)
     # dm._detect_faces()
     # dm._detect_faces_in_sequence(102)
     # dm._detect_faces_in_sequence(5)
