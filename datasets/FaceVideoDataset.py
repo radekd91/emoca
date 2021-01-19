@@ -33,7 +33,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def __init__(self, root_dir, output_dir, processed_subfolder=None,
                  face_detector='fan',
-                 face_detector_threshold=0.5,
+                 face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
                  device=None
@@ -61,7 +61,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.image_size = image_size
         self.scale = scale
 
-        self.version = 0
+        self.version = 1
 
         self.video_list = None
         self.video_metas = None
@@ -94,7 +94,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
         outdir = Path(self.output_dir)
 
         # is dataset already processed?
-        if outdir.is_dir():
+        # if outdir.is_dir():
+        if Path(self.metadata_path).is_file():
             print("The dataset is already processed. Loading")
             self._loadMeta()
             return
@@ -553,8 +554,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             vid_meta['num_frames'] = int(vid_info['nb_frames'])
 
             self.video_metas += [vid_meta]
-
-
         print("Found %d video files." % len(self.video_list))
 
 
@@ -808,7 +807,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         num_colors = len(legit_colors)
         cmap = get_cmap('gist_rainbow')
 
-        if distance_threshold == 0.5:
+        if distance_threshold == self.get_default_recognition_threshold():
             baseoutfile = "video_with_labels.mp4"
         else:
             baseoutfile = "video_with_labels_thresh_%.03f.mp4" % distance_threshold
@@ -1108,8 +1107,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             self.assign_gt_to_detections_sequence(sid)
 
     def get_default_recognition_threshold(self):
-        #TODO: bump up to 0.6 for the next processing
-        return 0.5
+        #TODO: ensure that 0.6 is good for the most part
+        return 0.6
 
     def _map_detections_to_gt(self, detection_filenames : list, annotation_file,
                               annotation_type,
@@ -1698,9 +1697,11 @@ def main():
     root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
     root_path = root / "Aff-Wild2_ready"
     output_path = root / "processed"
-    subfolder = 'processed_2020_Dec_21_00-30-03'
+    # subfolder = 'processed_2020_Dec_21_00-30-03'
+    subfolder = 'processed_2021_Jan_19_20-25-10'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
+
     # dm._recognize_emotion_in_sequence(0)
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/130-25-1280x720.mp4'))
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/52-30-1280x720.mp4'))
