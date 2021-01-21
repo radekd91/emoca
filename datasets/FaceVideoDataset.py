@@ -12,7 +12,7 @@ import numpy as np
 import torch
 # import torchaudio
 # from enum import Enum
-from typing import Optional, Union, List, Any
+from typing import Optional, Union, List, Any, overload
 import pickle as pkl
 # from collections import OrderedDict
 from tqdm import tqdm
@@ -27,6 +27,30 @@ from collections import OrderedDict
 
 import gc
 # from memory_profiler import profile
+
+from enum import Enum
+
+class Expression7(Enum):
+    Neutral = 0
+    Anger = 1
+    Disgust = 2
+    Fear = 3
+    Happiness = 4
+    Sadness = 5
+    Surprise = 6
+
+class AU8(Enum):
+    AU1 = 0
+    AU2 = 1
+    AU4 = 2
+    AU6 = 3
+    AU12 = 4
+    AU15 = 5
+    AU20 = 6
+    AU25 = 7
+    # AU1,AU2,AU4,AU6,AU12,AU15,AU20,AU25
+
+
 
 
 class FaceVideoDataModule(pl.LightningDataModule):
@@ -380,7 +404,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         for sid in range(self.num_sequences):
             self._recognize_faces_in_sequence(sid, recognition_net, device)
 
-    def _recognize_faces_in_sequence(self, sequence_id, recognition_net=None, device=None):
+    def _recognize_faces_in_sequence(self, sequence_id, recognition_net=None, device=None, num_workers = 4):
 
         def fixed_image_standardization(image_tensor):
             processed_tensor = (image_tensor - 127.5) / 128.0
@@ -394,7 +418,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         # detections_fnames = sorted(self.detection_fnames[sequence_id])
         detections_fnames = sorted(list(out_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
-        loader = DataLoader(dataset, batch_size=64, num_workers=4, shuffle=False)
+        loader = DataLoader(dataset, batch_size=64, num_workers=num_workers, shuffle=False)
         # loader = DataLoader(dataset, batch_size=2, num_workers=0, shuffle=False)
         all_embeddings = []
         for i, batch in enumerate(tqdm(loader)):
@@ -642,13 +666,13 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def _get_validated_annotations_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_detections(sid)
-        out_file = out_folder / "annotations.pkl"
+        out_file = out_folder / "valid_annotations.pkl"
         if not out_file.exists():
-            print("Detections don't exist")
-            return [], [], [], 0
-        detection_fnames, annotations = FaceVideoDataModule._load_annotations(out_file)
+            print(f"Annotations in file {out_file} don't exist")
+            raise RuntimeError
+        detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found = FaceVideoDataModule._load_annotations(out_file)
 
-        return detection_fnames, annotations
+        return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
     def _get_reconstructions_for_sequence(self, sid):
         out_folder = self._get_path_to_sequence_reconstructions(sid)
@@ -668,6 +692,13 @@ class FaceVideoDataModule(pl.LightningDataModule):
         annotation_prefix = Path(self.root_dir / suffix)
         annotation = sorted(annotation_prefix.glob(video_file.stem + "*.txt"))
         return annotation
+
+    def _get_processed_annotations_for_sequence(self, sid):
+        video_file = self.video_list[sid]
+        suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2]
+        annotation = Path(self.root_dir / suffix) / "valid_annotations.pkl"
+        emotions, valence, arousal, detections_fnames = FaceVideoDataModule._load_face_emotions(annotation)
+        return emotions, valence, arousal, detections_fnames
 
     def _get_recognition_for_sequence(self, sid, distance_threshold=None):
         distance_threshold = distance_threshold or self.get_default_recognition_threshold()
@@ -910,6 +941,195 @@ class FaceVideoDataModule(pl.LightningDataModule):
             else:
                 cat_dim = 0
             im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
+
+            if writer is None:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                # outfile = str(vis_folder / "video.mp4")
+                writer = cv2.VideoWriter(str(outfile), cv2.CAP_FFMPEG,
+                                         fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]),
+                                         (im.shape[1], im.shape[0]), True)
+            im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+            writer.write(im_cv)
+            # imsave("test_%.05d.png" % fid, im )
+            # import matplotlib.pyplot as plt
+            # plt.figure()
+            # plt.imshow(im)
+            # plt.show()
+        writer.release()
+        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
+
+    def create_reconstruction_video_with_recognition_and_annotations(
+            self,
+            sequence_id,
+            overwrite=False,
+            distance_threshold=None):
+
+        from PIL import Image, ImageDraw, ImageFont
+        from collections import Counter
+        from matplotlib.colors import Colormap
+        from matplotlib.pyplot import get_cmap
+
+        distance_threshold = distance_threshold or self.get_default_recognition_threshold()
+
+        detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
+        vid_frames = self._get_frames_for_sequence(sequence_id)
+        indices, labels, mean, cov, fnames = self._get_recognition_for_sequence(sequence_id, distance_threshold=distance_threshold )
+
+        validated_detection_fnames, validated_annotations, validated_recognition_labels, discarded_annotations, detection_not_found \
+            = self._get_validated_annotations_for_sequence(sequence_id)
+
+        classification = self._recognition_discriminator(indices, labels, mean, cov, fnames)
+        counter = Counter(indices)
+
+        legit_colors = [c for c in classification.keys() if classification[c] ]
+        num_colors = len(legit_colors)
+        cmap = get_cmap('gist_rainbow')
+        if distance_threshold == self.get_default_recognition_threshold():
+            baseoutfile = "gt_video_with_labels.mp4"
+        else:
+            baseoutfile = "gt_video_with_labels_thresh_%.03f.mp4" % distance_threshold
+
+        outfolder = self._get_path_to_sequence_detections(sequence_id) / "visualizations"
+        outfolder.mkdir(exist_ok=True)
+
+        outfile = outfolder / baseoutfile
+
+        print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
+        if outfile.exists() and not overwrite:
+            print("output file already exists")
+            attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id],
+                                                 overwrite=overwrite)
+            return
+
+        writer = None  # cv2.VideoWriter()
+        broken = False
+        did = 0
+        video_name = outfolder.parent.stem
+        for fid in tqdm(range(len(vid_frames))):
+            if broken:
+                break
+
+            frame_name = vid_frames[fid]
+            c = centers[fid]
+            s = sizes[fid]
+
+            frame = imread(frame_name)
+
+            frame_pill_bb = Image.fromarray(frame)
+            frame_deca_full = Image.fromarray(frame)
+            # frame_deca_trans = Image.fromarray(frame)
+
+            frame_draw = ImageDraw.Draw(frame_pill_bb)
+
+            for nd in range(len(c)):
+                detection_name = detection_fnames[fid][nd]
+
+                found = False
+                for annotation_name in validated_detection_fnames.keys():
+                    if detection_name in validated_detection_fnames[annotation_name]:
+                        found = True
+                        annotation_key = annotation_name
+                        break
+
+                if not found:
+                    did += 1
+                    continue
+                else:
+                    validated_detection_index = validated_detection_fnames[annotation_key].index(detection_name)
+                    val_gt = OrderedDict()
+                    for key, value in validated_annotations[annotation_key].items():
+                        val_gt[key] = value[validated_detection_index]
+
+
+                if did >= len(vis_fnames):
+                    broken = True
+                    break
+
+                vis_name = vis_fnames[did]
+                label = indices[did]
+                valid_detection = classification[label]
+
+                if detection_name.stem != vis_name.stem:
+                    print("%s != %s" % (detection_name.stem, vis_name.stem))
+                    raise RuntimeError("Detection and visualization filenames should match but they don't.")
+
+                detection_im = imread(self.output_dir / detection_name.relative_to(detection_name.parents[4]))
+                try:
+                    vis_im = imread(vis_name)
+                except ValueError as e:
+                    continue
+
+                vis_im = vis_im[:, -vis_im.shape[1] // 5:, ...]
+
+                # vis_mask = np.prod(vis_im, axis=2) == 0
+                vis_mask = (np.prod(vis_im, axis=2) > 30).astype(np.uint8) * 255
+
+                # vis_im = np.concatenate([vis_im, vis_mask[..., np.newaxis]], axis=2)
+
+                warped_im = bbpoint_warp(vis_im, c[nd], s[nd], detection_im.shape[0],
+                                         output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+                # warped_im = bbpoint_warp(vis_im, c[nd], s[nd], frame.shape[0], frame.shape[1], False)
+                warped_mask = bbpoint_warp(vis_mask, c[nd], s[nd], detection_im.shape[0],
+                                           output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+                # warped_mask = bbpoint_warp(vis_mask, c[nd], s[nd], frame.shape[0], frame.shape[1], False)
+
+                # dst_image = bbpoint_warp(frame, c[nd], s[nd], warped_im.shape[0])
+                # frame2 = bbpoint_warp(dst_image, c[nd], s[nd], warped_im.shape[0], output_shape=(frame.shape[0], frame.shape[1]), inv=False)
+
+                # frame_pil = Image.fromarray(frame)
+                # frame_pil2 = Image.fromarray(frame)
+                vis_pil = Image.fromarray((warped_im * 255).astype(np.uint8))
+                mask_pil = Image.fromarray((warped_mask * 255).astype(np.uint8))
+                # mask_pil_transparent = Image.fromarray((warped_mask * 196).astype(np.uint8))
+
+                bb = point2bbox(c[nd], s[nd])
+
+                if valid_detection:
+                    color = cmap(legit_colors.index(label)/num_colors)[:3]
+                    color = tuple(int(c*255) for c in color)
+                else:
+                    color = 'black'
+
+                frame_draw.rectangle(((bb[0, 0], bb[0, 1],), (bb[2, 0], bb[1, 1],)),
+                                     outline=color, width=5)
+                fnt = ImageFont.truetype("Pillow/Tests/fonts/FreeMonoBold.ttf", 30)
+                # all_str = str(label)
+                frame_draw.text((bb[0, 0]-40, bb[1, 1]-40,), str(label), font=fnt, fill=color)
+                all_str = ''
+                for gt_type, val in val_gt.items():
+                    if gt_type == 'va':
+                        va_str = "V: %.02f  A: %.02f" % (val[0], val[1])
+                        all_str += "\n" + va_str
+                        # frame_draw.text((bb[1, 0] - 60, bb[0, 1] - 30,), va_str, font=fnt, fill=color)
+                    elif gt_type == 'expr7':
+                        frame_draw.text((bb[0, 0], bb[0, 1] - 30,), Expression7(val).name, font=fnt, fill=color)
+                    elif gt_type == 'au8':
+                        au_str = ''
+                        for li, label in enumerate(val):
+                            if label:
+                                au_str += AU8(li).name + ' '
+                        all_str += "\n" + au_str
+                        # frame_draw.text((bb[0, 0], bb[1, 1] + 30,), au_str, font=fnt, fill=color)
+                    else:
+                        raise ValueError(f"Unable to visualize this gt_type: '{gt_type}")
+                    frame_draw.text((bb[0, 0], bb[1, 1] + 10,), str(all_str), font=fnt, fill=color)
+
+                frame_deca_full.paste(vis_pil, (0, 0), mask_pil)
+                # frame_deca_trans.paste(vis_pil, (0, 0), mask_pil_transparent)
+                # tform =
+                did += 1
+
+            final_im = np.array(frame_pill_bb)
+            final_im2 = np.array(frame_deca_full)
+            # final_im3 = np.array(frame_deca_trans)
+
+            if final_im.shape[0] > final_im.shape[1]:
+                cat_dim = 1
+            else:
+                cat_dim = 0
+            im = np.concatenate([final_im, final_im2], axis=cat_dim)
+            # im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
 
             if writer is None:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -1216,6 +1436,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return center_list[i1][i2]
 
     def assign_gt_to_detections_sequence(self, sequence_id):
+        print(f"Assigning GT to sequence {sequence_id}")
 
         def second_most_frequent_label():
             if len(most_frequent_labels) == 2:
@@ -1710,16 +1931,19 @@ def main():
     # i = dm.video_list.index(Path('VA_Set/videos/Train_Set/30-30-1920x1080.mp4'))
     # dm._recognize_faces_in_sequence(i)
     # dm._identify_recognitions_for_sequence(i)
-    # for i in range(len(dm.video_list)):
+    # for i in range(7,8):
+    # for i in range(8, 30):
+    #     dm._recognize_faces_in_sequence(i, num_workers=8)
+    #     dm._identify_recognitions_for_sequence(i)
     #     print("----------------------------------")
     #     print(f"Assigning GT to detections for seq: {i}")
     #     dm.assign_gt_to_detections_sequence(i)
     # dm._detect_faces()
-    # dm._detect_faces_in_sequence(102)
-    # dm._detect_faces_in_sequence(5)
-    # dm._detect_faces_in_sequence(16)
+    # dm._detect_faces_in_sequence(30)
+    # dm._detect_faces_in_sequence(107)
+    # dm._detect_faces_in_sequence(399)
     # dm._detect_faces_in_sequence(21)
-
+    dm.create_reconstruction_video_with_recognition_and_annotations(100, overwrite=True)
     # dm._identify_recognitions_for_sequence(0)
     # dm.create_reconstruction_video_with_recognition(0, overwrite=True)
     # dm._identify_recognitions_for_sequence(0, distance_threshold=1.0)
