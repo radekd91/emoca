@@ -10,7 +10,7 @@ from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.loggers import WandbLogger
 import wandb
-
+import datetime
 
 class EmotionModule(LightningModule):
 
@@ -116,18 +116,8 @@ class EmotionModule(LightningModule):
         pass
 
 
-def main():
-    import datetime
-    if len(sys.argv) >= 2:
-        annotation_list = [sys.argv[1]]
-    if len(sys.argv) >= 3:
-        index = int(sys.argv[2])
+def test(root_path, output_path, subfolder, annotation_list, index):
 
-    root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
-    root_path = root / "Aff-Wild2_ready"
-    output_path = root / "processed"
-    # subfolder = 'processed_2020_Dec_21_00-30-03'
-    subfolder = 'processed_2021_Jan_19_20-25-10'
     fvdm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm = EmotionDataModule(fvdm)
     dm.prepare_data()
@@ -155,6 +145,21 @@ def main():
     data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=4)
     trainer = Trainer(gpus=1, logger=wandb_logger)
     trainer.test(em, data_loader)
+
+
+def main():
+    import datetime
+    if len(sys.argv) >= 2:
+        annotation_list = [sys.argv[1]]
+    if len(sys.argv) >= 3:
+        index = int(sys.argv[2])
+
+    root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
+    root_path = root / "Aff-Wild2_ready"
+    output_path = root / "processed"
+    # subfolder = 'processed_2020_Dec_21_00-30-03'
+    subfolder = 'processed_2021_Jan_19_20-25-10'
+    test(root_path, output_path, subfolder, annotation_list, index)
 
 
 if __name__ == "__main__":
