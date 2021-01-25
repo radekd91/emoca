@@ -96,10 +96,10 @@ class EmotionModule(LightningModule):
             # print(path)
             cap = path + "\n"
             if 'va' in batch:
-                cap += f" Val_gt = {val_gt[i]}\n"
-                cap += f" Ar_gt = {ar_gt[i]}\n"
-            cap += f" Val_pred = {val[i]}\n"
-            cap += f" Ar_pred = {ar[i]}\n"
+                cap += f" Val_gt = {val_gt[i]:.3f}\n"
+                cap += f" Ar_gt = {ar_gt[i]:.3f}\n"
+            cap += f" Val_pred = {val[i]:.3f}\n"
+            cap += f" Ar_pred = {ar[i]:.3f}\n"
 
             if 'expr7' in batch:
                 cap += f" Expr_gt = { AffectNetExpressions(expr_gt[i]).name}\n"
@@ -127,24 +127,32 @@ def test(root_path, output_path, subfolder, annotation_list, index):
 
     # index = 220
     # index = 120
-    sequence_name = str(fvdm.video_list[index])
-    if annotation_list[0] == 'va' and 'VA_Set' not in sequence_name:
-        print("No GT for valence and arousal. Skipping")
-        sys.exit(0)
-    if annotation_list[0] == 'expr7' and 'Expression_Set' not in sequence_name:
-        print("No GT for expressions. Skipping")
-        sys.exit(0)
+    if index == -1:
+        sequence_name = annotation_list[0]
+        if annotation_list[0] == 'va':
+            filter_pattern = 'VA_Set'
+        elif annotation_list[0] == 'expr7':
+            filter_pattern = 'Expression_Set'
+    else:
+        sequence_name = str(fvdm.video_list[index])
+        filter_pattern = sequence_name
+        if annotation_list[0] == 'va' and 'VA_Set' not in sequence_name:
+            print("No GT for valence and arousal. Skipping")
+            sys.exit(0)
+        if annotation_list[0] == 'expr7' and 'Expression_Set' not in sequence_name:
+            print("No GT for expressions. Skipping")
+            sys.exit(0)
 
-    filter_pattern = sequence_name
+
     project_name = 'EmoNetOnAffWild2Test'
     name = subfolder + "_" + str(filter_pattern) + "_" + \
-           datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S") + "_"
+           datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
     # wandb.init(project_name)
     wandb_logger = WandbLogger(name=name, project=project_name)
     # wandb_logger = None
     # annotation_list = ['va']
     # annotation_list = ['expr7']
-    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=4)
+    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=64, num_workers=4)
     trainer = Trainer(gpus=1, logger=wandb_logger)
     trainer.test(em, data_loader)
 
@@ -155,6 +163,8 @@ def main():
         annotation_list = [sys.argv[1]]
     if len(sys.argv) >= 3:
         index = int(sys.argv[2])
+    else:
+        index = -1
 
     root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
     root_path = root / "Aff-Wild2_ready"
