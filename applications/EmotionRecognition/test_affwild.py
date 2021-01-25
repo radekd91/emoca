@@ -9,7 +9,7 @@ from datasets.FaceVideoDataset import FaceVideoDataModule, \
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.loggers import WandbLogger
-import wandb
+# import wandb
 import datetime
 
 class EmotionModule(LightningModule):
@@ -38,6 +38,7 @@ class EmotionModule(LightningModule):
         expr = pred['expression']
         # expr = np.argmax(np.squeeze(expr.detach().cpu().numpy()), axis=1)
         expr = expr.detach().cpu().numpy()
+        expr = np.argmax(expr, axis=1)
 
         images_to_log = set()
 
@@ -47,7 +48,6 @@ class EmotionModule(LightningModule):
             for i in range(len(expr_gt)):
                 expr_gt_ += [expr7_to_affect_net(int(expr_gt[i])).value]
             expr_gt = np.array(expr_gt_)
-            expr = np.argmax(expr, axis=1)
             class_match = (expr_gt == expr).astype(int)
             self.log('expr_match', class_match.mean(), on_step=True, on_epoch=True)
             self.log('expr_gt', expr_gt.mean(), on_step=True, on_epoch=True)
@@ -103,11 +103,11 @@ class EmotionModule(LightningModule):
 
             if 'expr7' in batch:
                 cap += f" Expr_gt = { AffectNetExpressions(expr_gt[i]).name}\n"
-            cap += f" Epr_pred = {AffectNetExpressions(expr[i]).name}\n"
+            cap += f" Expr_pred = {AffectNetExpressions(expr[i]).name}\n"
 
-            to_log["fails"] += [wandb.Image(im, caption=cap)]
-
-        self.logger.experiment.log(to_log)
+            # to_log["fails"] += [wandb.Image(im, caption=cap)]
+        if len(to_log) > 1:
+            self.logger.experiment.log(to_log)
 
     def test_step_end(self, *args, **kwargs):
         pass
@@ -138,11 +138,11 @@ def test(root_path, output_path, subfolder, annotation_list, index):
     name = subfolder + "_" + str(filter_pattern) + "_" + \
            datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S") + "_"
     # wandb.init(project_name)
-    wandb_logger = WandbLogger(name=name, project=project_name)
-    # wandb_logger = None
+    # wandb_logger = WandbLogger(name=name, project=project_name)
+    wandb_logger = None
     # annotation_list = ['va']
     # annotation_list = ['expr7']
-    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=4)
+    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=0)
     trainer = Trainer(gpus=1, logger=wandb_logger)
     trainer.test(em, data_loader)
 
