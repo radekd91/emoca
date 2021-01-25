@@ -72,15 +72,15 @@ class EmotionModule(LightningModule):
             self.log('valence', val.mean(), on_step=True, on_epoch=True)
             self.log('arousal', ar.mean(), on_step=True, on_epoch=True)
 
-            for i in range(len(val_err)):
+            for i in range(val_err.size()[0]):
                 thresh = 0.4
                 if val_err[i] > thresh:
-                    # images_to_log.add(batch["path"][i])
                     images_to_log.add(i)
+                    # print("Image will be saved")
 
                 if ar_err[i] > thresh:
-                    # images_to_log.add(batch["path"][i])
                     images_to_log.add(i)
+                    # print("Image will be saved")
 
         if 'au8' in batch.keys():
             pass
@@ -106,7 +106,7 @@ class EmotionModule(LightningModule):
             cap += f" Expr_pred = {AffectNetExpressions(expr[i]).name}\n"
             to_log["fails"] += [wandb.Image(im, caption=cap)]
 
-        if len(to_log) > 1:
+        if len(to_log) > 0:
             self.logger.experiment.log(to_log)
 
     def test_step_end(self, *args, **kwargs):
