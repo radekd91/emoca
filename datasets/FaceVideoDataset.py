@@ -30,6 +30,7 @@ import gc
 
 from enum import Enum
 
+
 class Expression7(Enum):
     Neutral = 0
     Anger = 1
@@ -38,6 +39,41 @@ class Expression7(Enum):
     Happiness = 4
     Sadness = 5
     Surprise = 6
+
+class AffectNetExpressions(Enum):
+    Neutral = 0
+    Happy = 1
+    Sad = 2
+    Surprise = 3
+    Fear = 4
+    Disgust = 5
+    Anger = 6
+    Contempt = 7
+    None_ = 8
+
+    @staticmethod
+    def from_str(string : str):
+        string = string[0].upper() + string[1:]
+        return AffectNetExpressions[string]
+
+    # _expressions = {0: 'neutral', 1:'happy', 2:'sad', 3:'surprise', 4:'fear', 5:'disgust', 6:'anger', 7:'contempt', 8:'none'}
+
+
+def affect_net_to_expr7(aff : AffectNetExpressions) -> Expression7:
+    try:
+        Expression7[aff.name]
+    except KeyError as e:
+        return None
+
+
+def expr7_to_affect_net(expr : Expression7) -> AffectNetExpressions:
+    try:
+        if isinstance(expr, int) or isinstance(expr, np.int32) or isinstance(expr, np.int64):
+            expr = Expression7(expr)
+        return AffectNetExpressions[expr.name]
+    except KeyError as e:
+        return None
+
 
 class AU8(Enum):
     AU1 = 0
@@ -48,9 +84,6 @@ class AU8(Enum):
     AU15 = 5
     AU20 = 6
     AU25 = 7
-    # AU1,AU2,AU4,AU6,AU12,AU15,AU20,AU25
-
-
 
 
 class FaceVideoDataModule(pl.LightningDataModule):
@@ -327,8 +360,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return detection_images, detection_centers, detection_sizes
 
-    def _get_emonet(self, device):
-        path_to_emonet = Path("../../emonet")
+    def _get_emonet(self, device=None):
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        path_to_emonet = Path(__file__).parent.parent.parent / "emonet"
         if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
             sys.path += [str(path_to_emonet)]
 
@@ -664,13 +698,18 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return relative_detection_fnames, centers, sizes, last_frame_id
 
-    def _get_validated_annotations_for_sequence(self, sid):
+    def _get_validated_annotations_for_sequence(self, sid, crash_on_failure=True):
         out_folder = self._get_path_to_sequence_detections(sid)
         out_file = out_folder / "valid_annotations.pkl"
         if not out_file.exists():
             print(f"Annotations in file {out_file} don't exist")
-            raise RuntimeError
-        detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found = FaceVideoDataModule._load_annotations(out_file)
+            if crash_on_failure:
+                raise RuntimeError(f"Annotations in file {out_file} don't exist")
+            else:
+                return None, None, None, None, None
+        detection_fnames, annotations, recognition_labels, \
+        discarded_annotations, detection_not_found \
+            = FaceVideoDataModule._load_annotations(out_file)
 
         return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
@@ -1435,6 +1474,83 @@ class FaceVideoDataModule(pl.LightningDataModule):
         i1, i2 = self._get_bb_from_fname(fname, detection_fname_list)
         return center_list[i1][i2]
 
+    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None):
+        annotation_list = annotation_list or ['va', 'expr7', 'au8']
+        annotations = OrderedDict()
+        detections = []
+        # annotations_all = []
+        annotations_all = OrderedDict()
+        for a in annotation_list:
+            annotations_all[a] = []
+        recognition_labels_all = []
+        discared_all = []
+        non_detected_all = []
+
+        annotation_list += []
+
+        import re
+        if filter_pattern is not None:
+            # p = re.compile(filter_pattern)
+            p = re.compile(filter_pattern, re.IGNORECASE)
+
+        for si in range(self.num_sequences):
+            sequence_name = self.video_list[si]
+
+            if filter_pattern is not None:
+                res = p.match(str(sequence_name))
+                if res is None:
+                    continue
+
+            detection_fnames, annotations, recognition_labels, discarded_annotations, \
+            detection_not_found = self._get_validated_annotations_for_sequence(si, crash_on_failure=False)
+
+            if detection_fnames is None:
+                continue
+
+            current_list = annotation_list.copy()
+            for annotation_name, value in detection_fnames.items():
+                detections += value
+                # annotations_all += [annotations[key]]
+                for annotation_key in annotations[annotation_name].keys():
+                    if annotation_key in current_list:
+                        current_list.remove(annotation_key)
+                    array = annotations[annotation_name][annotation_key]
+                    if annotation_key not in annotations_all.keys():
+                        annotations_all[annotation_key] = []
+                    annotations_all[annotation_key] += array.tolist()
+                    n = array.shape[0]
+
+                recognition_labels_all += [annotation_name + "_" + str(recognition_labels[annotation_name])]
+                if len(current_list) == len(annotation_list):
+                    print("No desired GT is found. Skipping sequence %d" % si)
+
+                for annotation_name in current_list:
+                    annotations_all[annotation_name] = [None] * n
+
+        print("Data gathered")
+        print(f"Found {len(detections)} detections with annotations "
+              f"of {len(recognition_labels_all)} identities")
+
+        return detections, annotations_all, recognition_labels_all
+
+
+    def get_annotated_emotion_dataset(self, annotation_list = None,
+                                      filter_pattern=None,
+                                      image_transforms=None):
+        detections, annotations, recognition_labels = \
+            self._create_emotional_image_dataset(annotation_list, filter_pattern)
+        dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir)
+        return dataset
+
+
+    def test_annotations(self, net=None, annotation_list = None, filter_pattern=None):
+        net = net or self._get_emonet(self.device)
+
+        dataset = self.get_annotated_emotion_dataset(annotation_list, filter_pattern)
+
+
+
+
     def assign_gt_to_detections_sequence(self, sequence_id):
         print(f"Assigning GT to sequence {sequence_id}")
 
@@ -1722,7 +1838,47 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     #     pass
 
 
+class EmotionalImageDataset(torch.utils.data.Dataset):
+
+    def __init__(self, image_list, annotations, labels, image_transforms, path_prefix=None):
+        self.image_list = image_list
+        self.annotations = annotations
+        self.labels = labels
+        self.image_transforms = image_transforms
+        self.path_prefix = path_prefix
+
+    def __len__(self):
+        return len(self.image_list)
+
+    def __getitem__(self, index):
+        try:
+            path = self.image_list[index]
+            if self.path_prefix is not None:
+                path = self.path_prefix / path
+            img = imread(path)
+        except Exception as e:
+            print(f"Failed to read '{path}'. "
+                  f"File is probably corrupted. Rerun data processing")
+            # return None
+            raise e
+        img = img.transpose([2, 0, 1]).astype(np.float32)
+        img_torch = torch.from_numpy(img)
+        if self.image_transforms is not None:
+            img_torch = self.image_transforms(img_torch)
+
+        sample = {
+            "image": img_torch,
+            "path": str(self.image_list[index])
+        }
+
+        for key in self.annotations.keys():
+            sample[key] = self.annotations[key][index]
+        return sample
+
+
+
 class UnsupervisedImageDataset(torch.utils.data.Dataset):
+
     def __init__(self, image_list, image_transforms=None):
         super().__init__()
         self.image_list = image_list
@@ -1922,7 +2078,7 @@ def main():
     subfolder = 'processed_2021_Jan_19_20-25-10'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
-
+    dm._create_emotional_image_dataset(['va'], "VA_Set")
     # dm._recognize_emotion_in_sequence(0)
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/130-25-1280x720.mp4'))
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/52-30-1280x720.mp4'))
@@ -1943,7 +2099,7 @@ def main():
     # dm._detect_faces_in_sequence(107)
     # dm._detect_faces_in_sequence(399)
     # dm._detect_faces_in_sequence(21)
-    dm.create_reconstruction_video_with_recognition_and_annotations(100, overwrite=True)
+    # dm.create_reconstruction_video_with_recognition_and_annotations(100, overwrite=True)
     # dm._identify_recognitions_for_sequence(0)
     # dm.create_reconstruction_video_with_recognition(0, overwrite=True)
     # dm._identify_recognitions_for_sequence(0, distance_threshold=1.0)
