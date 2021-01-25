@@ -49,9 +49,9 @@ class EmotionModule(LightningModule):
                 expr_gt_ += [expr7_to_affect_net(int(expr_gt[i])).value]
             expr_gt = np.array(expr_gt_)
             class_match = (expr_gt == expr).astype(int)
-            self.log('expr_match', class_match.mean(), on_step=True, on_epoch=True)
-            self.log('expr_gt', expr_gt.mean(), on_step=True, on_epoch=True)
-            self.log('expr_pred', expr.mean(), on_step=True, on_epoch=True)
+            self.log('expr_match', class_match.mean(), on_step=True)
+            self.log('expr_gt', expr_gt.mean(), on_step=True)
+            self.log('expr_pred', expr.mean(), on_step=True)
 
             for i in range(len(class_match)):
                 if not class_match[i]:
@@ -65,12 +65,12 @@ class EmotionModule(LightningModule):
             val_err = (val - val_gt).abs()
             ar_err = (ar - ar_gt).abs()
 
-            self.log('valence_error', val_err.mean(), on_step=True, on_epoch=True)
-            self.log('arousal_error', ar_err.mean(), on_step=True, on_epoch=True)
-            self.log('valence_gt', val_gt.mean(), on_step=True, on_epoch=True)
-            self.log('arousal_gt', ar_gt.mean(), on_step=True, on_epoch=True)
-            self.log('valence', val.mean(), on_step=True, on_epoch=True)
-            self.log('arousal', ar.mean(), on_step=True, on_epoch=True)
+            self.log('valence_error', val_err.mean(), on_step=True)
+            self.log('arousal_error', ar_err.mean(), on_step=True)
+            self.log('valence_gt', val_gt.mean(), on_step=True)
+            self.log('arousal_gt', ar_gt.mean(), on_step=True)
+            self.log('valence', val.mean(), on_step=True)
+            self.log('arousal', ar.mean(), on_step=True)
 
             for i in range(val_err.size()[0]):
                 thresh = 0.4
@@ -107,7 +107,9 @@ class EmotionModule(LightningModule):
             to_log["fails"] += [wandb.Image(im, caption=cap)]
 
         if len(to_log) > 0:
-            self.logger.experiment.log(to_log)
+            to_log["epoch"] = batch_idx
+            # self.log_dict(to_log)
+            self.logger.experiment.log(to_log, step=batch_idx)
 
     def test_step_end(self, *args, **kwargs):
         pass
