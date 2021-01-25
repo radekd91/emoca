@@ -9,7 +9,7 @@ from datasets.FaceVideoDataset import FaceVideoDataModule, \
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.loggers import WandbLogger
-# import wandb
+import wandb
 import datetime
 
 class EmotionModule(LightningModule):
@@ -104,8 +104,8 @@ class EmotionModule(LightningModule):
             if 'expr7' in batch:
                 cap += f" Expr_gt = { AffectNetExpressions(expr_gt[i]).name}\n"
             cap += f" Expr_pred = {AffectNetExpressions(expr[i]).name}\n"
+            to_log["fails"] += [wandb.Image(im, caption=cap)]
 
-            # to_log["fails"] += [wandb.Image(im, caption=cap)]
         if len(to_log) > 1:
             self.logger.experiment.log(to_log)
 
@@ -138,11 +138,11 @@ def test(root_path, output_path, subfolder, annotation_list, index):
     name = subfolder + "_" + str(filter_pattern) + "_" + \
            datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S") + "_"
     # wandb.init(project_name)
-    # wandb_logger = WandbLogger(name=name, project=project_name)
-    wandb_logger = None
+    wandb_logger = WandbLogger(name=name, project=project_name)
+    # wandb_logger = None
     # annotation_list = ['va']
     # annotation_list = ['expr7']
-    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=0)
+    data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=1, num_workers=4)
     trainer = Trainer(gpus=1, logger=wandb_logger)
     trainer.test(em, data_loader)
 
