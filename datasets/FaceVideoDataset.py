@@ -39,6 +39,7 @@ class Expression7(Enum):
     Happiness = 4
     Sadness = 5
     Surprise = 6
+    None_ = 7
 
 class AffectNetExpressions(Enum):
     Neutral = 0
@@ -61,9 +62,9 @@ class AffectNetExpressions(Enum):
 
 def affect_net_to_expr7(aff : AffectNetExpressions) -> Expression7:
     try:
-        Expression7[aff.name]
+        return Expression7[aff.name]
     except KeyError as e:
-        return None
+        return Expression7.None_
 
 
 def expr7_to_affect_net(expr : Expression7) -> AffectNetExpressions:
@@ -72,7 +73,7 @@ def expr7_to_affect_net(expr : Expression7) -> AffectNetExpressions:
             expr = Expression7(expr)
         return AffectNetExpressions[expr.name]
     except KeyError as e:
-        return None
+        return AffectNetExpressions.None_
 
 
 class AU8(Enum):
