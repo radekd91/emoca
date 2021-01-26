@@ -61,19 +61,29 @@ class AffectNetExpressions(Enum):
 
 
 def affect_net_to_expr7(aff : AffectNetExpressions) -> Expression7:
-    try:
-        return Expression7[aff.name]
-    except KeyError as e:
+    # try:
+    if aff == AffectNetExpressions.Happy:
+        return Expression7.Happiness
+    if aff == AffectNetExpressions.Sad:
+        return Expression7.Sadness
+    if aff == AffectNetExpressions.Contempt:
         return Expression7.None_
+    return Expression7[aff.name]
+    # except KeyError as e:
+    #     return Expression7.None_
 
 
 def expr7_to_affect_net(expr : Expression7) -> AffectNetExpressions:
-    try:
-        if isinstance(expr, int) or isinstance(expr, np.int32) or isinstance(expr, np.int64):
-            expr = Expression7(expr)
-        return AffectNetExpressions[expr.name]
-    except KeyError as e:
-        return AffectNetExpressions.None_
+    # try:
+    if isinstance(expr, int) or isinstance(expr, np.int32) or isinstance(expr, np.int64):
+        expr = Expression7(expr)
+    if expr == Expression7.Happiness:
+        return AffectNetExpressions.Happy
+    if expr == Expression7.Sadness:
+        return AffectNetExpressions.Sad
+    return AffectNetExpressions[expr.name]
+    # except KeyError as e:
+    #     return AffectNetExpressions.None_
 
 
 class AU8(Enum):
