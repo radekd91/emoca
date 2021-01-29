@@ -18,10 +18,9 @@ import pickle as pkl
 from tqdm import tqdm
 # import subprocess
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
-from utils.FaceDetector import FAN, MTCNN
+from utils.FaceDetector import FAN, MTCNN, load_landmark, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 
@@ -29,6 +28,12 @@ import gc
 # from memory_profiler import profile
 
 from enum import Enum
+
+
+def add_pretrained_deca_to_path():
+    deca_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA'))
+    if deca_path not in sys.path:
+        sys.path.insert(0, deca_path)
 
 
 class Expression7(Enum):
@@ -104,8 +109,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
-                 device=None
-                 ):
+                 device=None):
         super().__init__()
         self.root_dir = root_dir
         self.output_dir = output_dir
@@ -129,7 +133,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.image_size = image_size
         self.scale = scale
 
-        self.version = 1
+        self.version = 2
 
         self.video_list = None
         self.video_metas = None
@@ -152,7 +156,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             self.face_detector = MTCNN(self.device)
         else:
             raise ValueError("Invalid face detector specifier '%s'" % self.face_detector)
-
 
     @property
     def metadata_path(self):
@@ -230,6 +233,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    def _get_path_to_sequence_landmarks(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        suffix = Path(video_file.parts[-4]) / 'landmarks' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _get_path_to_sequence_reconstructions(self, sequence_id):
         video_file = self.video_list[sequence_id]
         suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
@@ -237,28 +246,39 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return out_folder
 
     # @profile
-    def _detect_faces_in_image_wrapper(self, frame_list, fid, out_folder, out_file,
-                                       centers_all, sizes_all, detection_fnames_all):
+    def _detect_faces_in_image_wrapper(self, frame_list, fid, out_detection_folder, out_landmark_folder, bb_outfile,
+                                       centers_all, sizes_all, detection_fnames_all, landmark_fnames_all):
 
         frame_fname = frame_list[fid]
         # detect faces in each frames
-        detection_ims, centers, sizes = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
+        detection_ims, centers, sizes, bbox_type, landmarks = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
         # self.detection_lists[sequence_id][fid] += [detections]
         centers_all += [centers]
         sizes_all += [sizes]
 
         # save detections
         detection_fnames = []
+        landmark_fnames = []
         for di, detection in enumerate(detection_ims):
-            out_fname = out_folder / (frame_fname.stem + "_%.03d.png" % di)
-            detection_fnames += [out_fname.relative_to(self.output_dir)]
-            imsave(out_fname, detection)
+            # save detection
+            stem = frame_fname.stem + "_%.03d" % di
+            out_detection_fname = out_detection_folder / (stem + ".png")
+            detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
+            imsave(out_detection_fname, detection)
+
+            # save landmarks
+            out_landmark_fname = out_landmark_folder / (stem + ".pkl")
+            landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
+            save_landmark(out_landmark_fname, landmarks[di], bbox_type)
+
         detection_fnames_all += [detection_fnames]
+        landmark_fnames_all += [landmark_fnames]
+
         torch.cuda.empty_cache()
         checkpoint_frequency = 100
         if fid % checkpoint_frequency == 0:
-            FaceVideoDataModule.save_detections(out_file,
-                                                detection_fnames_all, centers_all, sizes_all, fid)
+            FaceVideoDataModule.save_detections(bb_outfile, detection_fnames_all, landmark_fnames_all,
+                                                centers_all, sizes_all, fid)
 
     # @profile
     def _detect_faces_in_sequence(self, sequence_id):
@@ -267,26 +287,31 @@ class FaceVideoDataModule(pl.LightningDataModule):
         video_file = self.video_list[sequence_id]
         print("Detecting faces in sequence: '%s'" % video_file)
         suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
-        out_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_folder.mkdir(exist_ok=True, parents=True)
-        out_file = out_folder / "bboxes.pkl"
+        out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_detection_folder.mkdir(exist_ok=True, parents=True)
+        out_file = out_detection_folder / "bboxes.pkl"
+
+        out_landmark_folder = self._get_path_to_sequence_landmarks(sequence_id)
+        out_landmark_folder.mkdir(exist_ok=True, parents=True)
 
         centers_all = []
         sizes_all = []
         detection_fnames_all = []
+        landmark_fnames_all = []
         # save_folder = frame_fname.parents[3] / 'detections'
 
-        # TODO: resuming is not tested, probably doesn't work yet
-        checkpoint_frequency = 100
-        resume = False
-        if resume and out_file.exists():
-            detection_fnames_all, centers_all, sizes_all, start_fid = \
-                FaceVideoDataModule.load_detections(out_file)
-        else:
-            start_fid = 0
-
-        # hack trying to circumvent memory leaks on the cluster
-        detector_instantion_frequency = 200
+        # # TODO: resuming is not tested, probably doesn't work yet
+        # checkpoint_frequency = 100
+        # resume = False
+        # if resume and out_file.exists():
+        #     detection_fnames_all, landmark_fnames_all, centers_all, sizes_all, start_fid = \
+        #         FaceVideoDataModule.load_detections(out_file)
+        # else:
+        #     start_fid = 0
+        #
+        # # hack trying to circumvent memory leaks on the cluster
+        # detector_instantion_frequency = 200
+        start_fid = 0
 
         frame_list = self.frame_lists[sequence_id]
         fid = 0
@@ -297,20 +322,21 @@ class FaceVideoDataModule(pl.LightningDataModule):
             # if fid % detector_instantion_frequency == 0:
             #     self._instantiate_detector()
 
-            self._detect_faces_in_image_wrapper(frame_list, fid, out_folder, out_file,
-                                           centers_all, sizes_all, detection_fnames_all)
+            self._detect_faces_in_image_wrapper(frame_list, fid, out_detection_folder, out_landmark_folder, out_file,
+                                           centers_all, sizes_all, detection_fnames_all, landmark_fnames_all)
 
         FaceVideoDataModule.save_detections(out_file,
-                                            detection_fnames_all, centers_all, sizes_all, fid)
+                                            detection_fnames_all, landmark_fnames_all, centers_all, sizes_all, fid)
         print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
 
     @staticmethod
-    def save_detections(fname, detection_fnames, centers, sizes, last_frame_id):
+    def save_detections(fname, detection_fnames, landmark_fnames, centers, sizes, last_frame_id):
         with open(fname, "wb" ) as f:
             pkl.dump(detection_fnames, f)
             pkl.dump(centers, f)
             pkl.dump(sizes, f)
             pkl.dump(last_frame_id, f)
+            pkl.dump(landmark_fnames, f)
 
     @staticmethod
     def load_detections(fname):
@@ -322,7 +348,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 last_frame_id = pkl.load(f)
             except:
                 last_frame_id = -1
-        return detection_fnames, centers, sizes, last_frame_id
+            try:
+                landmark_fnames = pkl.load(f)
+            except:
+                landmark_fnames = [None]*len(detection_fnames)
+
+        return detection_fnames, landmark_fnames, centers, sizes, last_frame_id
 
     # @profile
     def _detect_faces_in_image(self, image_path):
@@ -336,15 +367,17 @@ class FaceVideoDataModule(pl.LightningDataModule):
             image = image[:, :, :3]
 
         h, w, _ = image.shape
-        bounding_boxes, bbox_type = self.face_detector.run(image)
+        bounding_boxes, bbox_type, landmarks = self.face_detector.run(image, with_landmarks=True)
         image = image / 255.
         detection_images = []
         detection_centers = []
         detection_sizes = []
+        detection_landmarks = []
         # detection_embeddings = []
         if len(bounding_boxes) == 0:
             # print('no face detected! run original image')
-            return detection_images, detection_centers, detection_images
+            return detection_images, detection_centers, detection_images, \
+                   bbox_type, detection_landmarks
             # left = 0
             # right = h - 1
             # top = 0
@@ -359,7 +392,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
             size = int(old_size * self.scale)
 
-            dst_image = bbpoint_warp(image, center, size, self.image_size)
+            dst_image, dts_landmark = bbpoint_warp(image, center, size, self.image_size, landmarks=landmarks[bi])
 
             # dst_image = dst_image.transpose(2, 0, 1)
             #
@@ -367,9 +400,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
             detection_centers += [center]
             detection_sizes += [size]
 
-        del image
+            # to be checked
+            detection_landmarks += [dts_landmark]
 
-        return detection_images, detection_centers, detection_sizes
+        del image
+        return detection_images, detection_centers, detection_sizes, bbox_type, detection_landmarks
 
     def _get_emonet(self, device=None):
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -477,6 +512,14 @@ class FaceVideoDataModule(pl.LightningDataModule):
         print("Done running face recognition in sequence '%s'" % self.video_list[sequence_id])
 
 
+    def _process_everything_for_sequence(self, si, reconstruct=False):
+        # self._detect_faces_in_sequence(si)
+        # self._recognize_faces_in_sequence(si)
+        self._identify_recognitions_for_sequence(si)
+        if reconstruct:
+            self._reconstruct_faces_in_sequence(si)
+
+
     @staticmethod
     def _save_face_emotions(fname, emotions, valence, arousal, detections_fnames):
         with open(fname, "wb" ) as f:
@@ -509,6 +552,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return embeddings, detections_fnames
 
     def _get_reconstruction_net(self, device):
+        add_pretrained_deca_to_path()
         from decalib.deca import DECA
         from decalib.utils.config import cfg as deca_cfg
         # deca_cfg.model.use_tex = args.useTex
@@ -525,6 +569,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
     def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
                                        save_video=True):
+        add_pretrained_deca_to_path()
         from decalib.utils import util
         from scipy.io.matlab import savemat
 
@@ -687,25 +732,29 @@ class FaceVideoDataModule(pl.LightningDataModule):
         if not out_file.exists():
             print("Detections don't exist")
             return [], [], [], 0
-        detection_fnames, centers, sizes, last_frame_id = \
+        detection_fnames, landmark_fnames, centers, sizes, last_frame_id = \
             FaceVideoDataModule.load_detections(out_file)
 
         # make the paths relative if their not, this should not be neccesary in once everythings is reprocessed
         # stuf is now being saved with relative paths.
         relative_detection_fnames = []
+        relative_landmark_fnames = []
+
         for fname_list in detection_fnames:
-            relative_fname_list = []
+            relative_detection_list = []
             for fname in fname_list:
                 if fname.is_absolute():
                     try:
-                        relative_fname_list += [fname.relative_to(self.output_dir)]
+                        relative_detection_list += [fname.relative_to(self.output_dir)]
                     except:
                         #TODO: remove ugly hack once reprocessed
-                        relative_fname_list += [fname.relative_to(Path('/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03'))]
+                        relative_detection_list += [fname.relative_to(Path('/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2020_Dec_21_00-30-03'))]
                 else:
-                    relative_fname_list += [fname]
+                    relative_detection_list += [fname]
+            #TODO: this hack should not be necessary anymore
+            #TODO: landmark fnames should not need this
 
-            relative_detection_fnames += [relative_fname_list]
+            relative_detection_fnames += [relative_detection_list]
 
         return relative_detection_fnames, centers, sizes, last_frame_id
 
@@ -1204,7 +1253,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             out_file_recognitions = out_folder / "embeddings.pkl"
 
         if out_file_detections.exists() and (not with_recognitions or out_file_recognitions.exists()):
-            detection_fnames, centers, sizes, last_frame_id = \
+            detection_fnames, landmark_fnames, centers, sizes, last_frame_id = \
                 FaceVideoDataModule.load_detections(out_file_detections)
             if with_recognitions:
                 embeddings, recognized_detections_fnames = FaceVideoDataModule._load_face_embeddings(out_file_recognitions)
@@ -1215,8 +1264,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             centers = []
             sizes = []
         if with_recognitions:
-            return detection_fnames, centers, sizes, embeddings, recognized_detections_fnames
-        return detection_fnames, centers, sizes
+            return detection_fnames, landmark_fnames, centers, sizes, embeddings, recognized_detections_fnames
+        return detection_fnames, landmark_fnames, centers, sizes
 
     @staticmethod
     def _recognition_discriminator(indices, labels, means, cov, fnames):
@@ -1257,7 +1306,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             distance_threshold = self.get_default_recognition_threshold()
         print("Identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
 
-        detection_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
+        detection_fnames, landmark_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
             self._gather_detections_for_sequence(sequence_id, with_recognitions=True)
 
         out_folder = self._get_path_to_sequence_detections(sequence_id)
@@ -1395,7 +1444,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             # disregarding rules are taken from the AFF2-WILD website:
             # https://ibug.doc.ic.ac.uk/resources/aff-wild2/
             if type == 'va':
-                return annotation[0] == -5 and annotation[1] == -5
+                # return annotation[0] == -5 and annotation[1] == -5
+                return annotation[0] == -5 or annotation[1] == -5
             if type == 'expr7':
                 return annotation == - 1
             if type == 'au8':
@@ -1547,9 +1597,48 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def get_annotated_emotion_dataset(self, annotation_list = None,
                                       filter_pattern=None,
-                                      image_transforms=None):
+                                      image_transforms=None,
+                                      split_ratio=None,
+                                      split_style=None):
         detections, annotations, recognition_labels = \
             self._create_emotional_image_dataset(annotation_list, filter_pattern)
+
+        if split_ratio is not None and split_style is not None:
+            idxs = np.arange(len(detections), dtype=np.int32)
+            if split_style == 'random':
+                np.random.shuffle(idxs)
+            elif split_style == 'sequential':
+                pass
+            else:
+                raise ValueError(f"Invalid split style {split_style}")
+
+            if split_ratio < 0 or split_ratio > 1:
+                raise ValueError(f"Invalid split ratio {split_ratio}")
+
+            split_idx = int(idxs.size*split_ratio)
+            idx_train = idxs[split_idx:]
+            idx_val = idxs[:split_idx]
+
+            def index_list_by_list(l, idxs):
+                return [l[i] for i in idxs]
+
+            detection_train = index_list_by_list(detections, idx_train)
+            annotations_train = index_list_by_list(annotations, idx_train)
+            recognition_labels_train = index_list_by_list(recognition_labels, idx_train)
+
+            detection_val = index_list_by_list(detections, idx_val)
+            annotations_val = index_list_by_list(annotations, idx_val)
+            recognition_labels_val = index_list_by_list(recognition_labels, idx_val)
+
+            dataset_train = EmotionalImageDataset(
+                detection_train, annotations_train, recognition_labels_train,
+                                  image_transforms, self.output_dir)
+
+            dataset_val = EmotionalImageDataset(detection_val, annotations_val, recognition_labels_val,
+                                  image_transforms, self.output_dir)
+
+            return dataset_train, dataset_val, idx_train, idx_val
+
         dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir)
         return dataset
 
@@ -1923,7 +2012,7 @@ from skimage.transform import estimate_transform, warp, resize, rescale
 from glob import glob
 import scipy.io
 
-from decalib.datasets import detectors
+# from decalib.datasets import detectors
 
 def video2sequence(video_path):
     videofolder = video_path.split('.')[0]
@@ -1974,13 +2063,18 @@ def point2transform(center, size, target_size_height, target_size_width):
     return tform
 
 
-def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True):
+def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True, landmarks=None):
     target_size_width = target_size_width or target_size_height
     tform = point2transform(center, size, target_size_height, target_size_width)
     tf = tform.inverse if inv else tform
     output_shape = output_shape or (target_size_height, target_size_width)
     dst_image = warp(image, tf, output_shape=output_shape, order=3)
-    return dst_image
+    if landmarks is None:
+        return dst_image
+    # points need the matrix
+    tf_lmk = tform if inv else tform.inverse
+    dst_landmarks = tf_lmk(landmarks)
+    return dst_image, dst_landmarks
 
 
 class TestData(Dataset):
@@ -2005,6 +2099,8 @@ class TestData(Dataset):
         self.scale = scale
         self.iscrop = iscrop
         self.resolution_inp = crop_size
+        add_pretrained_deca_to_path()
+        from decalib.datasets import detectors
         if face_detector == 'fan':
             self.face_detector = detectors.FAN()
         # elif face_detector == 'mtcnn':
@@ -2046,7 +2142,7 @@ class TestData(Dataset):
                 bottom = np.max(kpt[:, 1])
                 old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
             else:
-                bbox, bbox_type = self.face_detector.run(image)
+                bbox, bbox_type, landmarks = self.face_detector.run(image)
                 if len(bbox) < 4:
                     print('no face detected! run original image')
                     left = 0
@@ -2089,7 +2185,11 @@ def main():
     subfolder = 'processed_2021_Jan_19_20-25-10'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
-    dm._create_emotional_image_dataset(['va'], "VA_Set")
+
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    dm._process_everything_for_sequence(i)
+
+    # dm._create_emotional_image_dataset(['va'], "VA_Set")
     # dm._recognize_emotion_in_sequence(0)
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/130-25-1280x720.mp4'))
     # i = dm.video_list.index(Path('AU_Set/videos/Train_Set/52-30-1280x720.mp4'))

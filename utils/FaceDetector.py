@@ -1,13 +1,28 @@
 from abc import abstractmethod, ABC
 import numpy as np
 import torch
+import pickle as pkl
+
 # from memory_profiler import profile
+
+
+def save_landmark(fname, landmark, landmark_type):
+    with open(fname, "wb") as f:
+        pkl.dump(landmark_type, f)
+        pkl.dump(landmark, f)
+
+
+def load_landmark(fname):
+    with open(fname, "rb") as f:
+        landmark_type = pkl.load(f)
+        landmark = pkl.load(f)
+    return landmark_type, landmark
 
 
 class FaceDetector(ABC):
 
     @abstractmethod
-    def run(self, image):
+    def run(self, image, **kwargs):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
@@ -29,7 +44,7 @@ class FAN(FaceDetector):
                                                   face_detector_kwargs=self.face_detector_kwargs)
 
     # @profile
-    def run(self, image):
+    def run(self, image, with_landmarks=False):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]
         return: detected box list
@@ -38,9 +53,13 @@ class FAN(FaceDetector):
         torch.cuda.empty_cache()
         if out is None:
             del out
-            return [], 'kpt68'
+            if with_landmarks:
+                return [], 'kpt68', []
+            else:
+                return [], 'kpt68'
         else:
             boxes = []
+            kpts = []
             for i in range(len(out)):
                 kpt = out[i].squeeze()
                 left = np.min(kpt[:, 0])
@@ -49,8 +68,12 @@ class FAN(FaceDetector):
                 bottom = np.max(kpt[:, 1])
                 bbox = [left, top, right, bottom]
                 boxes += [bbox]
+                kpts += [kpt]
             del out # attempt to prevent memory leaks
-            return boxes, 'kpt68'
+            if with_landmarks:
+                return boxes, 'kpt68', kpts
+            else:
+                return boxes, 'kpt68'
 
 
 class MTCNN(FaceDetector):
@@ -63,7 +86,7 @@ class MTCNN(FaceDetector):
         self.device = device
         self.model = mtcnn(keep_all=True, device=device)
 
-    def run(self, input):
+    def run(self, input, **kwargs):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]
         return: detected box
