@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 import pytorch_lightning as pl
-
+from PIL import Image
 import glob, os, sys
 from pathlib import Path
 # import pyvista as pv
@@ -17,7 +17,7 @@ import pickle as pkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
-
+from torchvision.transforms import Resize, Compose, Normalize, ToTensor
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
 from utils.FaceDetector import FAN, MTCNN, load_landmark, save_landmark
@@ -239,6 +239,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    def _get_path_to_sequence_segmentations(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        suffix = Path(video_file.parts[-4]) / 'segmentations' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _get_path_to_sequence_reconstructions(self, sequence_id):
         video_file = self.video_list[sequence_id]
         suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
@@ -354,6 +360,213 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 landmark_fnames = [None]*len(detection_fnames)
 
         return detection_fnames, landmark_fnames, centers, sizes, last_frame_id
+
+
+    def _get_segmentation_net(self):
+
+        path_to_segnet = Path(__file__).parent.parent.parent / "face-parsing.PyTorch"
+        if not(str(path_to_segnet) in sys.path  or str(path_to_segnet.absolute()) in sys.path):
+            sys.path += [str(path_to_segnet)]
+
+        from model import BiSeNet
+        n_classes = 19
+        net = BiSeNet(n_classes=n_classes)
+        net.cuda()
+        save_pth = path_to_segnet / 'res' / 'cp' / '79999_iter.pth'
+        net.load_state_dict(torch.load(save_pth))
+        net.eval()
+
+        # labels = {
+        #     0: 'background',
+        #     1: 'skin',
+        #     2: 'nose',
+        #     3: 'eye_g',
+        #     4: 'l_eye',
+        #     5: 'r_eye',
+        #     6: 'l_brow',
+        #     7: 'r_brow',
+        #     8: 'l_ear',
+        #     9: 'r_ear',
+        #     10: 'mouth',
+        #     11: 'u_lip',
+        #     12: 'l_lip',
+        #     13: 'hair',
+        #     14: 'hat',
+        #     15: 'ear_r',
+        #     16: 'neck_l',
+        #     17: 'neck',
+        #     18: 'cloth'
+        # }
+
+        return net, "face_parsing"
+
+    def _segment_faces_in_sequence(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        print("Detecting faces in sequence: '%s'" % video_file)
+        # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+
+        out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_segmentation_folder = self._get_path_to_sequence_segmentations(sequence_id)
+        out_segmentation_folder.mkdir(exist_ok=True, parents=True)
+
+        net, seg_type = self._get_segmentation_net()
+
+        detection_fnames = sorted(list(out_detection_folder.glob("*.png")))
+
+
+        ref_im = imread(detection_fnames[0])
+        ref_size = Resize((ref_im.shape[0], ref_im.shape[1]), interpolation=Image.NEAREST)
+
+        transforms = Compose([
+            Resize((512, 512)),
+            Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+        batch_size = 64
+
+        dataset = UnsupervisedImageDataset(detection_fnames, image_transforms=transforms,
+                                           im_read='pil')
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+
+        # import matplotlib.pyplot as plt
+
+        for i, batch in enumerate(tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            # images = fixed_image_standardization(batch['image'].to(device))
+            images = batch['image'].cuda()
+            with torch.no_grad():
+                out = net(images)[0]
+            segmentation = out.cpu().argmax(1)
+            segmentation = ref_size(segmentation)
+            segmentation = segmentation.numpy()
+            images = ref_size(images.cpu())
+            images = images.numpy()
+
+            for j in range(out.size()[0]):
+                image_path = batch['path'][j]
+                segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
+                im = images[j]
+                im = im.transpose([1,2,0])
+                # seg = FaceVideoDataModule._process_segmentation(segmentation[j], seg_type)
+                # imsave("seg.png", seg)
+                # imsave("im.png", im)
+                FaceVideoDataModule.vis_parsing_maps(im, segmentation[j], stride=1, save_im=True,
+                                 save_path='overlay.png')
+                # plt.figure()
+                # plt.imshow(im)
+                # plt.show()
+                # plt.figure()
+                # plt.imshow(seg)
+                # plt.show()
+                FaceVideoDataModule._save_segmentation(segmentation_path,
+                                                       segmentation[j],
+                                                       seg_type)
+
+    @staticmethod
+    def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='overlay.png'):
+        # Colors for all 20 parts
+        part_colors = [
+            [255, 0, 0], #0
+            [255, 85, 0], #1
+            [255, 170, 0],#2
+            [255, 0, 85], #3
+            [255, 0, 170], #4
+            [0, 255, 0],  #5
+            [85, 255, 0], #6
+            [170, 255, 0],# 7
+            [0, 255, 85], # 8
+            [0, 255, 170],# 9
+            [0, 0, 255], # 10
+            [85, 0, 255], # 11
+            [170, 0, 255], # 12
+            [0, 85, 255], # 13
+            [0, 170, 255], # 14
+            [255, 255, 0], # 15
+            [255, 255, 85], #16
+            [255, 255, 170], #17
+            [255, 0, 255], #18
+            [255, 85, 255], #19
+            [255, 170, 255], #20
+            [0, 255, 255],# 21
+            [85, 255, 255], #22
+            [170, 255, 255] #23
+                       ]
+
+        im = np.array(im)
+        vis_im = im.copy().astype(np.uint8)
+        vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
+        vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
+        vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
+
+        num_of_class = np.max(vis_parsing_anno)
+
+        for pi in range(1, num_of_class + 1):
+            index = np.where(vis_parsing_anno == pi)
+            vis_parsing_anno_color[index[0], index[1], :] = part_colors[pi]
+
+        vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
+        # print(vis_parsing_anno_color.shape, vis_im.shape)
+        vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
+        # vis_parsing_anno_color = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.0, vis_parsing_anno_color, 1.0, 0)
+
+        # Save result or not
+        if save_im:
+            cv2.imwrite(save_path[:-4] + 'seg_vis.png', vis_parsing_anno)
+            cv2.imwrite(save_path[:-4] + 'seg_vis_color.png', vis_parsing_anno_color)
+            cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+
+    @staticmethod
+    def _process_segmentation(segmentation, seg_type):
+        if seg_type == "face_parsing":
+            labels = {
+                0: 'background', # no
+                1: 'skin',
+                2: 'nose',
+                3: 'eye_g',
+                4: 'l_eye',
+                5: 'r_eye',
+                6: 'l_brow',
+                7: 'r_brow',
+                8: 'l_ear', #no?
+                9: 'r_ear', # no?
+                10: 'mouth',
+                11: 'u_lip',
+                12: 'l_lip',
+                13: 'hair', # no
+                14: 'hat', # no
+                15: 'ear_r',
+                16: 'neck_l', # no?
+                17: 'neck', # no?
+                18: 'cloth' # no
+            }
+            inv_labels = {v: k for k, v in labels.items()}
+            discared_labels = [
+                inv_labels['background'],
+                inv_labels['l_ear'],
+                inv_labels['r_ear'],
+                # inv_labels['hair'],
+                inv_labels['hat'],
+                inv_labels['neck'],
+                inv_labels['neck_l']
+            ]
+            segmentation_proc = np.logical_not(np.isin(segmentation, discared_labels))
+
+            return segmentation_proc
+        else:
+            raise ValueError(f"Invalid segmentation type '{seg_type}'")
+
+
+    @staticmethod
+    def _save_segmentation(filename, seg_image, seg_type):
+        with open(filename, "wb") as f:
+            pkl.dump(seg_type, f)
+            pkl.dump(seg_image, f)
+
+    @staticmethod
+    def _load_segmentation(filename, seg_image, seg_type):
+        with open(filename, "rb") as f:
+            seg_type = pkl.load(f)
+            seg_image = pkl.load(f)
+        return seg_image, seg_type
 
     # @profile
     def _detect_faces_in_image(self, image_path):
@@ -513,7 +726,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
     def _process_everything_for_sequence(self, si, reconstruct=False):
-        # self._detect_faces_in_sequence(si)
+        self._detect_faces_in_sequence(si)
         # self._recognize_faces_in_sequence(si)
         self._identify_recognitions_for_sequence(si)
         if reconstruct:
@@ -1592,7 +1805,16 @@ class FaceVideoDataModule(pl.LightningDataModule):
         print(f"Found {len(detections)} detections with annotations "
               f"of {len(recognition_labels_all)} identities")
 
-        return detections, annotations_all, recognition_labels_all
+        landmarks = []
+        for det in detections:
+            lmk = det.parents[3]
+            lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
+            lmk = lmk.parent / (lmk.stem + ".pkl")
+            if not (self.output_dir / lmk).is_file():
+                raise RuntimeError(f"Landmark does not exist {lmk}")
+            landmarks += [lmk]
+
+        return detections, landmarks, annotations_all, recognition_labels_all
 
 
     def get_annotated_emotion_dataset(self, annotation_list = None,
@@ -1600,7 +1822,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       image_transforms=None,
                                       split_ratio=None,
                                       split_style=None):
-        detections, annotations, recognition_labels = \
+        detections, landmarks, annotations, recognition_labels = \
             self._create_emotional_image_dataset(annotation_list, filter_pattern)
 
         if split_ratio is not None and split_style is not None:
@@ -1622,24 +1844,31 @@ class FaceVideoDataModule(pl.LightningDataModule):
             def index_list_by_list(l, idxs):
                 return [l[i] for i in idxs]
 
+            def index_dict_by_list(d, idxs):
+                res =  d.__class__()
+                for key in d.keys():
+                    res[key] = [d[key][i] for i in idxs]
+                return res
+
             detection_train = index_list_by_list(detections, idx_train)
-            annotations_train = index_list_by_list(annotations, idx_train)
-            recognition_labels_train = index_list_by_list(recognition_labels, idx_train)
+            annotations_train = index_dict_by_list(annotations, idx_train)
+            landmarks_train = index_list_by_list(landmarks, idx_train)
 
             detection_val = index_list_by_list(detections, idx_val)
-            annotations_val = index_list_by_list(annotations, idx_val)
-            recognition_labels_val = index_list_by_list(recognition_labels, idx_val)
+            annotations_val = index_dict_by_list(annotations, idx_val)
+            landmarks_val = index_list_by_list(landmarks, idx_val)
 
             dataset_train = EmotionalImageDataset(
-                detection_train, annotations_train, recognition_labels_train,
-                                  image_transforms, self.output_dir)
+                detection_train, annotations_train, recognition_labels,
+                                  image_transforms, self.output_dir, landmark_list=landmarks_train)
 
-            dataset_val = EmotionalImageDataset(detection_val, annotations_val, recognition_labels_val,
-                                  image_transforms, self.output_dir)
+            dataset_val = EmotionalImageDataset(detection_val, annotations_val, recognition_labels,
+                                  image_transforms, self.output_dir, landmark_list=landmarks_val)
 
             return dataset_train, dataset_val, idx_train, idx_val
 
-        dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir)
+        dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir,
+                                        landmark_list=landmarks)
         return dataset
 
 
@@ -1940,12 +2169,17 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
 
 class EmotionalImageDataset(torch.utils.data.Dataset):
 
-    def __init__(self, image_list, annotations, labels, image_transforms, path_prefix=None):
+    def __init__(self, image_list, annotations, labels, image_transforms,
+                 path_prefix=None,
+                 landmark_list=None):
         self.image_list = image_list
         self.annotations = annotations
         self.labels = labels
         self.image_transforms = image_transforms
         self.path_prefix = path_prefix
+        if landmark_list is not None and len(landmark_list) != len(image_list):
+            raise RuntimeError("There must be a landmark for every image")
+        self.landmark_list = landmark_list
 
     def __len__(self):
         return len(self.image_list)
@@ -1973,32 +2207,66 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         for key in self.annotations.keys():
             sample[key] = self.annotations[key][index]
+
+        if self.landmark_list is not None:
+            landmark_type, landmark = load_landmark(self.path_prefix / self.landmark_list[index])
+            landmark_torch = torch.from_numpy(landmark)
+
+            if self.image_transforms is not None:
+                landmark_torch = self.image_transforms(landmark_torch)
+
+            sample["landmark"] = landmark_torch
+
+
         return sample
 
 
 
 class UnsupervisedImageDataset(torch.utils.data.Dataset):
 
-    def __init__(self, image_list, image_transforms=None):
+    def __init__(self, image_list, landmark_list=None, image_transforms=None, im_read=None):
         super().__init__()
         self.image_list = image_list
+        self.landmark_list = landmark_list
+        if landmark_list is not None and len(landmark_list) != len(image_list):
+            raise RuntimeError("There must be a landmark for every image")
         self.image_transforms = image_transforms
+        self.im_read = im_read or 'skio'
 
     def __getitem__(self, index):
         # if index < len(self.image_list):
         #     x = self.mnist_data[index]
         # raise IndexError("Out of bounds")
         try:
-            img = imread(self.image_list[index])
+            if self.im_read == 'skio':
+                img = imread(self.image_list[index])
+                img = img.transpose([2, 0, 1]).astype(np.float32)
+                img_torch = torch.from_numpy(img)
+            elif self.im_read == 'pil':
+                img = Image.open(self.image_list[index])
+                img_torch = ToTensor()(img)
+            else:
+                raise ValueError(f"Invalid image reading method {self.im_read}")
         except Exception as e:
             print(f"Failed to read '{self.image_list[index]}'. File is probably corrupted. Rerun data processing")
             raise e
-        img = img.transpose([2,0,1]).astype(np.float32)
-        img_torch = torch.from_numpy(img)
+
         if self.image_transforms is not None:
             img_torch = self.image_transforms(img_torch)
-        return {"image" : img_torch ,
+
+        batch = {"image" : img_torch,
                 "path" : str(self.image_list[index])}
+
+        if self.landmark_list is not None:
+            landmark_type, landmark = load_landmark(self.landmark_list[index])
+            landmark_torch = torch.from_numpy(landmark)
+
+            if self.image_transforms is not None:
+                landmark_torch = self.image_transforms(landmark_torch)
+
+            batch["landmark"] = landmark_torch
+
+        return batch
 
     def __len__(self):
         return len(self.image_list)
@@ -2187,7 +2455,8 @@ def main():
     dm.prepare_data()
 
     i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
-    dm._process_everything_for_sequence(i)
+    # dm._process_everything_for_sequence(i)
+    dm._segment_faces_in_sequence(i)
 
     # dm._create_emotional_image_dataset(['va'], "VA_Set")
     # dm._recognize_emotion_in_sequence(0)

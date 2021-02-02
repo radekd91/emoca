@@ -12,6 +12,7 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 import datetime
 
+
 class EmotionModule(LightningModule):
 
     def __init__(self, net):
@@ -87,7 +88,10 @@ class EmotionModule(LightningModule):
 
         to_log = {}
         to_log["fails"] = []
+        max_images_to_log = 1
         for i in images_to_log:
+            if i >= max_images_to_log:
+                break
             im = images[i, ...].detach().cpu().numpy()
             im = np.transpose(im, [1,2,0])
             # print("Logging image:")
@@ -148,11 +152,12 @@ def test(root_path, output_path, subfolder, annotation_list, index):
     name = subfolder + "_" + str(filter_pattern) + "_" + \
            datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
     # wandb.init(project_name)
-    wandb_logger = WandbLogger(name=name, project=project_name)
-    # wandb_logger = None
+    # wandb_logger = WandbLogger(name=name, project=project_name)
+    wandb_logger = None
     # annotation_list = ['va']
     # annotation_list = ['expr7']
     data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=64, num_workers=4)
+    # data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=64, num_workers=0)
     trainer = Trainer(gpus=1, logger=wandb_logger)
     trainer.test(em, data_loader)
 
