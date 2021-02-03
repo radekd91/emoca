@@ -1748,7 +1748,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         i1, i2 = self._get_bb_from_fname(fname, detection_fname_list)
         return center_list[i1][i2]
 
-    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None):
+    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None, with_landmarks=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
         annotations = OrderedDict()
         detections = []
@@ -1805,6 +1805,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
         print(f"Found {len(detections)} detections with annotations "
               f"of {len(recognition_labels_all)} identities")
 
+        if not with_landmarks:
+            return detections, None, annotations_all, recognition_labels_all
+
         landmarks = []
         for det in detections:
             lmk = det.parents[3]
@@ -1821,9 +1824,10 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       filter_pattern=None,
                                       image_transforms=None,
                                       split_ratio=None,
-                                      split_style=None):
+                                      split_style=None,
+                                      with_landmarks=False):
         detections, landmarks, annotations, recognition_labels = \
-            self._create_emotional_image_dataset(annotation_list, filter_pattern)
+            self._create_emotional_image_dataset(annotation_list, filter_pattern, with_landmarks)
 
         if split_ratio is not None and split_style is not None:
             idxs = np.arange(len(detections), dtype=np.int32)
@@ -1852,11 +1856,17 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             detection_train = index_list_by_list(detections, idx_train)
             annotations_train = index_dict_by_list(annotations, idx_train)
-            landmarks_train = index_list_by_list(landmarks, idx_train)
+            if with_landmarks:
+                landmarks_train = index_list_by_list(landmarks, idx_train)
+            else:
+                landmarks_train = None
 
             detection_val = index_list_by_list(detections, idx_val)
             annotations_val = index_dict_by_list(annotations, idx_val)
-            landmarks_val = index_list_by_list(landmarks, idx_val)
+            if with_landmarks:
+                landmarks_val = index_list_by_list(landmarks, idx_val)
+            else:
+                landmarks_val = None
 
             dataset_train = EmotionalImageDataset(
                 detection_train, annotations_train, recognition_labels,

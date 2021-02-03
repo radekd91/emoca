@@ -125,7 +125,7 @@ class EmotionModule(LightningModule):
 def test(root_path, output_path, subfolder, annotation_list, index):
 
     fvdm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
-    dm = EmotionDataModule(fvdm)
+    dm = EmotionDataModule(fvdm, with_landmarks=False)
     dm.prepare_data()
     em = EmotionModule(fvdm._get_emonet())
 
@@ -152,8 +152,8 @@ def test(root_path, output_path, subfolder, annotation_list, index):
     name = subfolder + "_" + str(filter_pattern) + "_" + \
            datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
     # wandb.init(project_name)
-    # wandb_logger = WandbLogger(name=name, project=project_name)
-    wandb_logger = None
+    wandb_logger = WandbLogger(name=name, project=project_name)
+    # wandb_logger = None
     # annotation_list = ['va']
     # annotation_list = ['expr7']
     data_loader = dm.test_dataloader(annotation_list, filter_pattern, batch_size=64, num_workers=4)

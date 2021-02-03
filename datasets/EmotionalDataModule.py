@@ -33,10 +33,14 @@ from enum import Enum
 
 class EmotionDataModule(pl.LightningDataModule):
 
-    def __init__(self, dm, image_size = 256):
+    def __init__(self, dm, image_size=256, with_landmarks=False):
         super().__init__()
         self.dm = dm
-        self.image_size=image_size
+        self.image_size = image_size
+        self.training_set = None
+        self.validation_set = None
+        self.testing_set = None
+        self.with_landmarks = with_landmarks
 
     def prepare_data(self, *args, **kwargs):
         self.dm.prepare_data()
@@ -44,22 +48,38 @@ class EmotionDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         pass
 
-    def train_dataloader(self, *args, **kwargs) -> DataLoader:
-        pass
+    def train_dataloader(self,
+                         annotation_list = None,
+                         filter_pattern=None,
+                         split_ratio=None,
+                         split_style=None,
+                         with_landmarks=False,
+                         **dl_kwargs) -> DataLoader:
+        from torchvision.transforms import Resize
+        transforms = Resize((self.image_size, self.image_size))
+        dataset = self.dm.get_annotated_emotion_dataset(
+            annotation_list, filter_pattern, transforms,
+            split_style=split_style, split_ratio=split_ratio, with_landmarks=self.with_landmarks)
+        if not (isinstance(dataset, list) or isinstance(dataset, tuple)):
+            dataset = [dataset,]
+        self.training_set = dataset[0]
 
-    def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        pass
+        if len(dataset) > 1:
+            self.validation_set = dataset[1]
+            self.indices_train = dataset[2]
+            self.indices_val = dataset[3]
+
+        dl = DataLoader(self.training_set, shuffle=True, **dl_kwargs)
+        return dl
+
+    def val_dataloader(self, annotation_list = None, filter_pattern=None, **dl_kwargs) \
+            -> Union[DataLoader, List[DataLoader]]:
+        return DataLoader(self.validation_set, shuffle=False, **dl_kwargs)
 
     def test_dataloader(self, annotation_list = None, filter_pattern=None, **dl_kwargs) \
             -> Union[DataLoader, List[DataLoader]]:
         from torchvision.transforms import Resize
         transforms = Resize((self.image_size, self.image_size))
-        dataset = self.dm.get_annotated_emotion_dataset(annotation_list, filter_pattern, transforms)
+        dataset = self.dm.get_annotated_emotion_dataset(annotation_list, filter_pattern, transforms, with_landmarks = self.with_landmarks)
         dl = DataLoader(dataset,  shuffle=False, **dl_kwargs)
         return dl
-
-    # def transfer_batch_to_device(self, batch: Any, device: torch.device) -> Any:
-    #     pass
-
-
-
