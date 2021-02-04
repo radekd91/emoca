@@ -403,6 +403,10 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return net, "face_parsing"
 
     def _segment_faces_in_sequence(self, sequence_id):
+        import time
+
+
+
         video_file = self.video_list[sequence_id]
         print("Segmenting faces in sequence: '%s'" % video_file)
         # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
@@ -412,6 +416,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_segmentation_folder.mkdir(exist_ok=True, parents=True)
 
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print(device)
         net, seg_type = self._get_segmentation_net(device)
 
         detection_fnames = sorted(list(out_detection_folder.glob("*.png")))
@@ -426,6 +431,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         ])
         batch_size = 64
 
+
         dataset = UnsupervisedImageDataset(detection_fnames, image_transforms=transforms,
                                            im_read='pil')
         loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
@@ -436,24 +442,28 @@ class FaceVideoDataModule(pl.LightningDataModule):
             # facenet_pytorch expects this stanadrization for the input to the net
             # images = fixed_image_standardization(batch['image'].to(device))
             images = batch['image'].cuda()
+            start = time.time()
             with torch.no_grad():
                 out = net(images)[0]
+            end = time.time()
+            print(f" Inference batch {i} took : {end - start}")
             segmentation = out.cpu().argmax(1)
             segmentation = ref_size(segmentation)
             segmentation = segmentation.numpy()
-            images = ref_size(images.cpu())
-            images = images.numpy()
+            # images = ref_size(images.cpu())
+            # images = images.numpy()
 
+            start = time.time()
             for j in range(out.size()[0]):
                 image_path = batch['path'][j]
                 segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
-                im = images[j]
-                im = im.transpose([1,2,0])
+                # im = images[j]
+                # im = im.transpose([1,2,0])
                 # seg = FaceVideoDataModule._process_segmentation(segmentation[j], seg_type)
                 # imsave("seg.png", seg)
                 # imsave("im.png", im)
-                FaceVideoDataModule.vis_parsing_maps(im, segmentation[j], stride=1, save_im=True,
-                                 save_path='overlay.png')
+                # FaceVideoDataModule.vis_parsing_maps(im, segmentation[j], stride=1, save_im=True,
+                #                  save_path='overlay.png')
                 # plt.figure()
                 # plt.imshow(im)
                 # plt.show()
@@ -463,6 +473,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 FaceVideoDataModule._save_segmentation(segmentation_path,
                                                        segmentation[j],
                                                        seg_type)
+            end = time.time()
+            print(f" Saving batch {i} took: {end - start}")
 
     @staticmethod
     def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='overlay.png'):
