@@ -362,7 +362,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return detection_fnames, landmark_fnames, centers, sizes, last_frame_id
 
 
-    def _get_segmentation_net(self):
+    def _get_segmentation_net(self, device):
 
         path_to_segnet = Path(__file__).parent.parent.parent / "face-parsing.PyTorch"
         if not(str(path_to_segnet) in sys.path  or str(path_to_segnet.absolute()) in sys.path):
@@ -371,10 +371,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         from model import BiSeNet
         n_classes = 19
         net = BiSeNet(n_classes=n_classes)
-        net.cuda()
+        # net.cuda()
         save_pth = path_to_segnet / 'res' / 'cp' / '79999_iter.pth'
         net.load_state_dict(torch.load(save_pth))
-        net.eval()
+        # net.eval()
+        net.eval().to(device)
 
         # labels = {
         #     0: 'background',
@@ -402,14 +403,15 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
     def _segment_faces_in_sequence(self, sequence_id):
         video_file = self.video_list[sequence_id]
-        print("Detecting faces in sequence: '%s'" % video_file)
+        print("Segmenting faces in sequence: '%s'" % video_file)
         # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
 
         out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
         out_segmentation_folder = self._get_path_to_sequence_segmentations(sequence_id)
         out_segmentation_folder.mkdir(exist_ok=True, parents=True)
 
-        net, seg_type = self._get_segmentation_net()
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        net, seg_type = self._get_segmentation_net(device)
 
         detection_fnames = sorted(list(out_detection_folder.glob("*.png")))
 
@@ -2464,8 +2466,10 @@ def main():
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
 
-    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    # i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('Expression_Set/videos/Train_Set/1-30-1280x720.mp4')) # black lady with at Oscars
     # dm._process_everything_for_sequence(i)
+    # dm._detect_faces_in_sequence(i)
     dm._segment_faces_in_sequence(i)
 
     # dm._create_emotional_image_dataset(['va'], "VA_Set")
