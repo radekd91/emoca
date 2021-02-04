@@ -14,6 +14,7 @@ import torch
 # from enum import Enum
 from typing import Optional, Union, List, Any, overload
 import pickle as pkl
+import compress_pickle as cpkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
@@ -560,14 +561,18 @@ class FaceVideoDataModule(pl.LightningDataModule):
     @staticmethod
     def _save_segmentation(filename, seg_image, seg_type):
         with open(filename, "wb") as f:
-            pkl.dump(seg_type, f)
-            pkl.dump(seg_image, f)
+            # pkl.dump(seg_type, f)
+            cpkl.dump(seg_type, f, compression='gzip')
+            # pkl.dump(seg_image, f)
+            cpkl.dump(seg_image, f, compression='gzip')
 
     @staticmethod
     def _load_segmentation(filename, seg_image, seg_type):
         with open(filename, "rb") as f:
-            seg_type = pkl.load(f)
-            seg_image = pkl.load(f)
+            seg_type = cpkl.load(f, compression='gzip')
+            # seg_type = pkl.load(f)
+            seg_image = cpkl.load(f, compression='gzip')
+            # seg_image = pkl.load(f)
         return seg_image, seg_type
 
     # @profile
