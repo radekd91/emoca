@@ -530,7 +530,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
     @staticmethod
-    def _process_segmentation(segmentation, seg_type):
+    def _process_segmentation(segmentation, seg_type, discarded_labels):
         if seg_type == "face_parsing":
             labels = {
                 0: 'background', # no
@@ -554,16 +554,16 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 18: 'cloth' # no
             }
             inv_labels = {v: k for k, v in labels.items()}
-            discared_labels = [
+            discarded_labels = discarded_labels or [
                 inv_labels['background'],
                 inv_labels['l_ear'],
                 inv_labels['r_ear'],
-                # inv_labels['hair'],
+                inv_labels['hair'],
                 inv_labels['hat'],
                 inv_labels['neck'],
                 inv_labels['neck_l']
             ]
-            segmentation_proc = np.logical_not(np.isin(segmentation, discared_labels))
+            segmentation_proc = np.logical_not(np.isin(segmentation, discarded_labels))
 
             return segmentation_proc
         else:
@@ -573,17 +573,19 @@ class FaceVideoDataModule(pl.LightningDataModule):
     @staticmethod
     def _save_segmentation(filename, seg_image, seg_type):
         with open(filename, "wb") as f:
+            # for some reason compressed pickle can only load one object (EOF bug)
+            # so put it in the list
+            cpkl.dump([seg_type, seg_image], f, compression='gzip')
             # pkl.dump(seg_type, f)
-            cpkl.dump(seg_type, f, compression='gzip')
             # pkl.dump(seg_image, f)
-            cpkl.dump(seg_image, f, compression='gzip')
 
     @staticmethod
-    def _load_segmentation(filename, seg_image, seg_type):
+    def _load_segmentation(filename):
         with open(filename, "rb") as f:
-            seg_type = cpkl.load(f, compression='gzip')
+            seg = cpkl.load(f, compression='gzip')
+            seg_type = seg[0]
+            seg_image = seg[1]
             # seg_type = pkl.load(f)
-            seg_image = cpkl.load(f, compression='gzip')
             # seg_image = pkl.load(f)
         return seg_image, seg_type
 
@@ -1767,7 +1769,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
         i1, i2 = self._get_bb_from_fname(fname, detection_fname_list)
         return center_list[i1][i2]
 
-    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None, with_landmarks=False):
+    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None,
+                                        with_landmarks=False, with_segmentation=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
         annotations = OrderedDict()
         detections = []
@@ -1825,18 +1828,30 @@ class FaceVideoDataModule(pl.LightningDataModule):
               f"of {len(recognition_labels_all)} identities")
 
         if not with_landmarks:
-            return detections, None, annotations_all, recognition_labels_all
+            landmarks = None
+        else:
+            landmarks = []
+            for det in detections:
+                lmk = det.parents[3]
+                lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
+                lmk = lmk.parent / (lmk.stem + ".pkl")
+                if not (self.output_dir / lmk).is_file():
+                    raise RuntimeError(f"Landmark does not exist {lmk}")
+                landmarks += [lmk]
 
-        landmarks = []
-        for det in detections:
-            lmk = det.parents[3]
-            lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
-            lmk = lmk.parent / (lmk.stem + ".pkl")
-            if not (self.output_dir / lmk).is_file():
-                raise RuntimeError(f"Landmark does not exist {lmk}")
-            landmarks += [lmk]
+        if not with_segmentation:
+            segmentations = None
+        else:
+            segmentations = []
+            for det in detections:
+                seg = det.parents[3]
+                seg = seg / "segmentations" / (det.relative_to(seg / "detections"))
+                seg = seg.parent / (seg.stem + ".pkl")
+                if not (self.output_dir / seg).is_file():
+                    raise RuntimeError(f"Landmark does not exist {seg}")
+                segmentations += [seg]
 
-        return detections, landmarks, annotations_all, recognition_labels_all
+        return detections, landmarks, segmentations, annotations_all, recognition_labels_all
 
 
     def get_annotated_emotion_dataset(self, annotation_list = None,
@@ -1844,9 +1859,13 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       image_transforms=None,
                                       split_ratio=None,
                                       split_style=None,
-                                      with_landmarks=False):
-        detections, landmarks, annotations, recognition_labels = \
-            self._create_emotional_image_dataset(annotation_list, filter_pattern, with_landmarks)
+                                      with_landmarks=False,
+                                      landmark_transform=None,
+                                      with_segmentations=False,
+                                      segmentation_transform=None):
+        detections, landmarks, segmentations, annotations, recognition_labels = \
+            self._create_emotional_image_dataset(
+                annotation_list, filter_pattern, with_landmarks, with_segmentations)
 
         if split_ratio is not None and split_style is not None:
             idxs = np.arange(len(detections), dtype=np.int32)
@@ -1880,6 +1899,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
             else:
                 landmarks_train = None
 
+            if with_segmentations:
+                segmentations_train = index_list_by_list(segmentations, idx_train)
+            else:
+                segmentations_train = None
+
             detection_val = index_list_by_list(detections, idx_val)
             annotations_val = index_dict_by_list(annotations, idx_val)
             if with_landmarks:
@@ -1887,17 +1911,34 @@ class FaceVideoDataModule(pl.LightningDataModule):
             else:
                 landmarks_val = None
 
+            if with_segmentations:
+                segmentations_val = index_list_by_list(segmentations, idx_val)
+            else:
+                segmentations_val = None
+
             dataset_train = EmotionalImageDataset(
                 detection_train, annotations_train, recognition_labels,
-                                  image_transforms, self.output_dir, landmark_list=landmarks_train)
+                image_transforms, self.output_dir,
+                landmark_list=landmarks_train,
+                segmentation_list=segmentations_train,
+                landmark_transform=landmark_transform,
+                segmentation_transform=segmentation_transform)
 
-            dataset_val = EmotionalImageDataset(detection_val, annotations_val, recognition_labels,
-                                  image_transforms, self.output_dir, landmark_list=landmarks_val)
+            dataset_val = EmotionalImageDataset(
+                detection_val, annotations_val, recognition_labels,
+                image_transforms, self.output_dir,
+                landmark_list=landmarks_val,
+                segmentation_list=segmentations_val,
+                landmark_transform=landmark_transform,
+                segmentation_transform=segmentation_transform)
 
             return dataset_train, dataset_val, idx_train, idx_val
 
         dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir,
-                                        landmark_list=landmarks)
+                                        landmark_list=landmarks,
+                                        landmark_transform=landmark_transform,
+                                        segmentation_list=segmentations,
+                                        segmentation_transform=segmentation_transform)
         return dataset
 
 
@@ -2200,7 +2241,12 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
     def __init__(self, image_list, annotations, labels, image_transforms,
                  path_prefix=None,
-                 landmark_list=None):
+                 landmark_list=None,
+                 landmark_transform=None,
+                 segmentation_list=None,
+                 segmentation_transform=None,
+                 segmentation_discarded_lables=None):
+
         self.image_list = image_list
         self.annotations = annotations
         self.labels = labels
@@ -2209,6 +2255,12 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         if landmark_list is not None and len(landmark_list) != len(image_list):
             raise RuntimeError("There must be a landmark for every image")
         self.landmark_list = landmark_list
+        self.landmark_transform = landmark_transform
+        if segmentation_list is not None and len(segmentation_list) != len(segmentation_list):
+            raise RuntimeError("There must be a segmentation for every image")
+        self.segmentation_list = segmentation_list
+        self.segmentation_transform = segmentation_transform
+        self.segmentation_discarded_labels = segmentation_discarded_lables
 
     def __len__(self):
         return len(self.image_list)
@@ -2238,14 +2290,38 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             sample[key] = self.annotations[key][index]
 
         if self.landmark_list is not None:
-            landmark_type, landmark = load_landmark(self.path_prefix / self.landmark_list[index])
+            landmark_type, landmark = load_landmark(
+                self.path_prefix / self.landmark_list[index])
             landmark_torch = torch.from_numpy(landmark)
 
             if self.image_transforms is not None:
-                landmark_torch = self.image_transforms(landmark_torch)
+                self.landmark_transform.set_scale(
+                    img_torch.shape[1] / img.shape[1],
+                    img_torch.shape[2] / img.shape[2])
+                landmark_torch = self.landmark_transform(landmark_torch)
+                # raise NotImplementedError("Image transforms for landmarks are not yet implemented")
+                # TODO: replace with a landmark transform
+                # landmark_torch = self.image_transforms(landmark_torch)
 
             sample["landmark"] = landmark_torch
 
+
+        if self.segmentation_list is not None:
+            if self.segmentation_list[index].stem != self.image_list[index].stem:
+                raise RuntimeError(f"Name mismatch {self.segmentation_list[index].stem}"
+                                   f" vs {self.image_list[index.stem]}")
+            seg_image, seg_type = FaceVideoDataModule._load_segmentation(
+                self.path_prefix / self.segmentation_list[index])
+
+            seg_image = FaceVideoDataModule._process_segmentation(
+                seg_image, seg_type, self.segmentation_list)
+
+            seg_image_torch = torch.from_numpy(seg_image)
+
+            if self.image_transforms is not None:
+                seg_image_torch = self.image_transforms(seg_image_torch)
+
+            sample["mask"] = seg_image_torch
 
         return sample
 
@@ -2487,7 +2563,12 @@ def main():
     i = dm.video_list.index(Path('Expression_Set/videos/Train_Set/1-30-1280x720.mp4')) # black lady with at Oscars
     # dm._process_everything_for_sequence(i)
     # dm._detect_faces_in_sequence(i)
-    dm._segment_faces_in_sequence(i)
+    # dm._segment_faces_in_sequence(i)
+
+    # rpoblematic indices
+    # dm._segment_faces_in_sequence(30)
+    # dm._segment_faces_in_sequence(156)
+    # dm._segment_faces_in_sequence(399)
 
     # dm._create_emotional_image_dataset(['va'], "VA_Set")
     # dm._recognize_emotion_in_sequence(0)

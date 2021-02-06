@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from utils.FaceDetector import FAN, MTCNN
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
-
+from PIL import Image
 import gc
 # from memory_profiler import profile
 
@@ -33,7 +33,7 @@ from enum import Enum
 
 class EmotionDataModule(pl.LightningDataModule):
 
-    def __init__(self, dm, image_size=256, with_landmarks=False):
+    def __init__(self, dm, image_size=256, with_landmarks=False, with_segmentations=False):
         super().__init__()
         self.dm = dm
         self.image_size = image_size
@@ -41,6 +41,7 @@ class EmotionDataModule(pl.LightningDataModule):
         self.validation_set = None
         self.testing_set = None
         self.with_landmarks = with_landmarks
+        self.with_segmentations = with_segmentations
 
     def prepare_data(self, *args, **kwargs):
         self.dm.prepare_data()
@@ -56,10 +57,17 @@ class EmotionDataModule(pl.LightningDataModule):
                          with_landmarks=False,
                          **dl_kwargs) -> DataLoader:
         from torchvision.transforms import Resize
-        transforms = Resize((self.image_size, self.image_size))
+        from transforms.keypoints import KeypointScale
+        im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
+        lmk_transforms = KeypointScale()
+        seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
-            annotation_list, filter_pattern, transforms,
-            split_style=split_style, split_ratio=split_ratio, with_landmarks=self.with_landmarks)
+            annotation_list, filter_pattern, image_transforms=im_transforms,
+            split_style=split_style, split_ratio=split_ratio,
+            with_landmarks=self.with_landmarks,
+            landmark_transform=lmk_transforms,
+            with_segmentations=self.with_segmentations,
+            segmentation_transform=seg_transforms)
         if not (isinstance(dataset, list) or isinstance(dataset, tuple)):
             dataset = [dataset,]
         self.training_set = dataset[0]
