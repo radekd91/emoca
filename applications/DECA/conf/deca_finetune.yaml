@@ -1,0 +1,9 @@
+defaults:
+  - data: data
+#  - model: deca
+  - model/paths : desktop
+  - model/settings : default
+  - model/sizes : default
+  - model/flame_tex: bfm_desktop
+  - learning: sgd
+  - inout: desktop

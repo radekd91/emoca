@@ -109,8 +109,8 @@ if __name__ == '__main__':
                         help='detector for cropping face, check decalib/detectors.py for details')
     # save
     parser.add_argument('--useTex', default=False, type=lambda x: x.lower() in ['true', '1'],
-                        help='whether to use FLAME texture model to generate uv texture map, \
-                            set it to True only if you downloaded texture model')
+                        help='whether to use FLAME flame_tex model to generate uv flame_tex map, \
+                            set it to True only if you downloaded flame_tex model')
     parser.add_argument('--saveVis', default=True, type=lambda x: x.lower() in ['true', '1'],
                         help='whether to save visualization of output')
     parser.add_argument('--saveKpt', default=False, type=lambda x: x.lower() in ['true', '1'],

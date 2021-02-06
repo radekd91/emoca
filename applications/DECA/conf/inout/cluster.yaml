@@ -1,0 +1,3 @@
+# @package _group_
+output_dir: /ps/scratch/rdanecek/emoca/finetune_deca
+name: coding
