@@ -57,9 +57,10 @@ class EmotionDataModule(pl.LightningDataModule):
                          with_landmarks=False,
                          **dl_kwargs) -> DataLoader:
         from torchvision.transforms import Resize
-        from transforms.keypoints import KeypointScale
+        from transforms.keypoints import KeypointScale, KeypointNormalization
         im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
-        lmk_transforms = KeypointScale()
+        # lmk_transforms = KeypointScale()
+        lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
             annotation_list, filter_pattern, image_transforms=im_transforms,

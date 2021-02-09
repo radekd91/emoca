@@ -1,12 +1,17 @@
 # @package model
 
 # settings
-use_flip: false
-num_worker: 1
-n_train: 1000
+#use_flip: false # not used
+#num_worker: 1 # to remove
+#n_train: 1000 # to remove
+
 train_coarse: 0
 useSeg: false
 #useSeg: true
+detail_constrain_type: exchange
+mode: detail
+
+resume_training: True # this loads a pretrained model
 
 lmk_weight: 1
 useWlmk: true
@@ -28,12 +33,4 @@ sfsw:
 - 0
 - 0
 
-resume_training: False
 
-# training related (to remove)
-e_lr: 0.0001
-multi_gpu: false
-n_epoch: 500
-
-# data related
-training_data: vox1  #to remove

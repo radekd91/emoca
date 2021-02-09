@@ -564,7 +564,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 inv_labels['neck_l']
             ]
             segmentation_proc = np.logical_not(np.isin(segmentation, discarded_labels))
-
+            segmentation_proc = segmentation_proc.astype(np.float32)
             return segmentation_proc
         else:
             raise ValueError(f"Invalid segmentation type '{seg_type}'")
@@ -2237,6 +2237,9 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     #     pass
 
 
+from transforms.keypoints import KeypointScale, KeypointNormalization
+
+
 class EmotionalImageDataset(torch.utils.data.Dataset):
 
     def __init__(self, image_list, annotations, labels, image_transforms,
@@ -2276,7 +2279,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
                   f"File is probably corrupted. Rerun data processing")
             # return None
             raise e
-        img = img.transpose([2, 0, 1]).astype(np.float32)
+        img = img.transpose([2, 0, 1]).astype(np.float32)/255.
         img_torch = torch.from_numpy(img)
         if self.image_transforms is not None:
             img_torch = self.image_transforms(img_torch)
@@ -2295,13 +2298,16 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             landmark_torch = torch.from_numpy(landmark)
 
             if self.image_transforms is not None:
-                self.landmark_transform.set_scale(
-                    img_torch.shape[1] / img.shape[1],
-                    img_torch.shape[2] / img.shape[2])
+                if isinstance(self.landmark_transform, KeypointScale):
+                    self.landmark_transform.set_scale(
+                        img_torch.shape[1] / img.shape[1],
+                        img_torch.shape[2] / img.shape[2])
+                elif isinstance(self.landmark_transform, KeypointNormalization):
+                    self.landmark_transform.set_scale(img.shape[1], img.shape[2])
+                else:
+                    raise ValueError(f"This transform is not supported for landmarks: "
+                                     f"{type(self.landmark_transform)}")
                 landmark_torch = self.landmark_transform(landmark_torch)
-                # raise NotImplementedError("Image transforms for landmarks are not yet implemented")
-                # TODO: replace with a landmark transform
-                # landmark_torch = self.image_transforms(landmark_torch)
 
             sample["landmark"] = landmark_torch
 
@@ -2317,9 +2323,10 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
                 seg_image, seg_type, self.segmentation_list)
 
             seg_image_torch = torch.from_numpy(seg_image)
+            seg_image_torch = seg_image_torch.view(1, seg_image_torch.shape[0], seg_image_torch.shape[0])
 
             if self.image_transforms is not None:
-                seg_image_torch = self.image_transforms(seg_image_torch)
+                seg_image_torch = self.segmentation_transform(seg_image_torch)
 
             sample["mask"] = seg_image_torch
 
@@ -2566,8 +2573,8 @@ def main():
     # dm._segment_faces_in_sequence(i)
 
     # rpoblematic indices
-    # dm._segment_faces_in_sequence(30)
-    # dm._segment_faces_in_sequence(156)
+    dm._segment_faces_in_sequence(30)
+    dm._segment_faces_in_sequence(156)
     # dm._segment_faces_in_sequence(399)
 
     # dm._create_emotional_image_dataset(['va'], "VA_Set")
