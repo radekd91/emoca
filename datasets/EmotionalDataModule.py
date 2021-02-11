@@ -55,6 +55,8 @@ class EmotionDataModule(pl.LightningDataModule):
                          split_ratio=None,
                          split_style=None,
                          with_landmarks=False,
+                         K=None,
+                         K_policy=None,
                          **dl_kwargs) -> DataLoader:
         from torchvision.transforms import Resize
         from transforms.keypoints import KeypointScale, KeypointNormalization
@@ -68,7 +70,9 @@ class EmotionDataModule(pl.LightningDataModule):
             with_landmarks=self.with_landmarks,
             landmark_transform=lmk_transforms,
             with_segmentations=self.with_segmentations,
-            segmentation_transform=seg_transforms)
+            segmentation_transform=seg_transforms,
+            K=K,
+            K_policy=K_policy)
         if not (isinstance(dataset, list) or isinstance(dataset, tuple)):
             dataset = [dataset,]
         self.training_set = dataset[0]

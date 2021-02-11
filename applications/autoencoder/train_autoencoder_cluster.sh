@@ -105,7 +105,7 @@ echo -e "Name of the run: $RUN_NAME\n"
 
 CFG_FNAME="~/configs/config_$(date '+%Y-%m-%d-%H-%M-%S').yaml"
 echo -e "Copying default.yaml to $CFG_FNAME"
-scp default.yaml $USERNAME@$CHOSTNAME:$CFG_FNAME
+scp default_detailed.yaml $USERNAME@$CHOSTNAME:$CFG_FNAME
 
 WAND_AUTH=$(cat hash.wandb_auth)
 

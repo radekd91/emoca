@@ -2,8 +2,8 @@ defaults:
   - data: data
 #  - model: deca
   - model/paths : desktop
-  - model/settings : default_coarse
-#  - model/settings : default_detailed
+#  - model/settings : default_coarse
+  - model/settings : default_detailed
   - model/sizes : default
   - model/flame_tex: bfm_desktop
   - learning: sgd

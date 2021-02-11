@@ -22,8 +22,8 @@ class KeypointScale(KeypointTransform):
 
     def forward(self, points):
         points_ = points.clone()
-        points_[:, :, 0] *= self.scale_x
-        points_[:, :, 1] *= self.scale_y
+        points_[..., 0] *= self.scale_x
+        points_[..., 1] *= self.scale_y
         return points_
 
 class KeypointNormalization(KeypointTransform):
@@ -37,8 +37,8 @@ class KeypointNormalization(KeypointTransform):
         # the keypoints are not used in image space but in normalized space
         # for loss computation
         # the normalization is as follows:
-        points_[:, :, 0] -= self.scale_x/2
-        points_[:, :, 0] /= self.scale_x/2
-        points_[:, :, 1] -= self.scale_y/2
-        points_[:, :, 1] /= self.scale_y/2
+        points_[..., 0] -= self.scale_x/2
+        points_[..., 0] /= self.scale_x/2
+        points_[..., 1] -= self.scale_y/2
+        points_[..., 1] /= self.scale_y/2
         return points_

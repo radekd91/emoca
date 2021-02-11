@@ -33,4 +33,5 @@ sfsw:
 - 0
 - 0
 
-
+# to remove
+e_lr: 0.0001

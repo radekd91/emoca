@@ -1769,8 +1769,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
         i1, i2 = self._get_bb_from_fname(fname, detection_fname_list)
         return center_list[i1][i2]
 
-    def _create_emotional_image_dataset(self, annotation_list = None, filter_pattern=None,
-                                        with_landmarks=False, with_segmentation=False):
+    def _create_emotional_image_dataset(self,
+                                        annotation_list=None,
+                                        filter_pattern=None,
+                                        with_landmarks=False,
+                                        with_segmentation=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
         annotations = OrderedDict()
         detections = []
@@ -1816,7 +1819,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     annotations_all[annotation_key] += array.tolist()
                     n = array.shape[0]
 
-                recognition_labels_all += [annotation_name + "_" + str(recognition_labels[annotation_name])]
+                recognition_labels_all += len(detections)*[annotation_name + "_" + str(recognition_labels[annotation_name])]
                 if len(current_list) == len(annotation_list):
                     print("No desired GT is found. Skipping sequence %d" % si)
 
@@ -1825,7 +1828,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         print("Data gathered")
         print(f"Found {len(detections)} detections with annotations "
-              f"of {len(recognition_labels_all)} identities")
+              f"of {len(set(recognition_labels_all))} identities")
 
         if not with_landmarks:
             landmarks = None
@@ -1862,7 +1865,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       with_landmarks=False,
                                       landmark_transform=None,
                                       with_segmentations=False,
-                                      segmentation_transform=None):
+                                      segmentation_transform=None,
+                                      K=None,
+                                      K_policy=None):
         detections, landmarks, segmentations, annotations, recognition_labels = \
             self._create_emotional_image_dataset(
                 annotation_list, filter_pattern, with_landmarks, with_segmentations)
@@ -1880,8 +1885,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 raise ValueError(f"Invalid split ratio {split_ratio}")
 
             split_idx = int(idxs.size*split_ratio)
-            idx_train = idxs[split_idx:]
-            idx_val = idxs[:split_idx]
+            idx_train = idxs[:split_idx]
+            idx_val = idxs[split_idx:]
 
             def index_list_by_list(l, idxs):
                 return [l[i] for i in idxs]
@@ -1894,6 +1899,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             detection_train = index_list_by_list(detections, idx_train)
             annotations_train = index_dict_by_list(annotations, idx_train)
+            recognition_labels_train = index_list_by_list(recognition_labels, idx_train)
             if with_landmarks:
                 landmarks_train = index_list_by_list(landmarks, idx_train)
             else:
@@ -1906,6 +1912,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             detection_val = index_list_by_list(detections, idx_val)
             annotations_val = index_dict_by_list(annotations, idx_val)
+            recognition_labels_val = index_list_by_list(recognition_labels, idx_val)
+
             if with_landmarks:
                 landmarks_val = index_list_by_list(landmarks, idx_val)
             else:
@@ -1917,28 +1925,40 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 segmentations_val = None
 
             dataset_train = EmotionalImageDataset(
-                detection_train, annotations_train, recognition_labels,
+                detection_train, annotations_train, recognition_labels_train,
                 image_transforms, self.output_dir,
                 landmark_list=landmarks_train,
                 segmentation_list=segmentations_train,
                 landmark_transform=landmark_transform,
-                segmentation_transform=segmentation_transform)
+                segmentation_transform=segmentation_transform,
+                K=K,
+                K_policy=K_policy)
 
             dataset_val = EmotionalImageDataset(
-                detection_val, annotations_val, recognition_labels,
+                detection_val, annotations_val, recognition_labels_val,
                 image_transforms, self.output_dir,
                 landmark_list=landmarks_val,
                 segmentation_list=segmentations_val,
                 landmark_transform=landmark_transform,
-                segmentation_transform=segmentation_transform)
+                segmentation_transform=segmentation_transform,
+                # K=K,
+                K=1,
+                # K=None,
+                # K_policy=K_policy)
+                K_policy='sequential')
+                # K_policy=None)
 
             return dataset_train, dataset_val, idx_train, idx_val
 
-        dataset = EmotionalImageDataset(detections, annotations, recognition_labels, image_transforms, self.output_dir,
+        dataset = EmotionalImageDataset(detections, annotations,
+                                        recognition_labels, image_transforms,
+                                        self.output_dir,
                                         landmark_list=landmarks,
                                         landmark_transform=landmark_transform,
                                         segmentation_list=segmentations,
-                                        segmentation_transform=segmentation_transform)
+                                        segmentation_transform=segmentation_transform,
+                                        K=K,
+                                        K_policy=K_policy)
         return dataset
 
 
@@ -1946,8 +1966,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
         net = net or self._get_emonet(self.device)
 
         dataset = self.get_annotated_emotion_dataset(annotation_list, filter_pattern)
-
-
 
 
     def assign_gt_to_detections_sequence(self, sequence_id):
@@ -2238,6 +2256,7 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
 
 
 from transforms.keypoints import KeypointScale, KeypointNormalization
+from torch.utils.data._utils.collate import default_collate
 
 
 class EmotionalImageDataset(torch.utils.data.Dataset):
@@ -2248,10 +2267,13 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
                  landmark_transform=None,
                  segmentation_list=None,
                  segmentation_transform=None,
-                 segmentation_discarded_lables=None):
-
+                 segmentation_discarded_lables=None,
+                 K=None,
+                 K_policy=None):
         self.image_list = image_list
         self.annotations = annotations
+        if len(labels) != len(image_list):
+            raise RuntimeError("There must be a label for every image")
         self.labels = labels
         self.image_transforms = image_transforms
         self.path_prefix = path_prefix
@@ -2264,11 +2286,25 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         self.segmentation_list = segmentation_list
         self.segmentation_transform = segmentation_transform
         self.segmentation_discarded_labels = segmentation_discarded_lables
+        self.K = K # how many samples of one identity to get?
+        self.K_policy = K_policy
+        if self.K_policy is not None:
+            if self.K_policy not in ['random', 'sequential']:
+                raise ValueError(f"Invalid K policy {self.K_policy}")
+
+        self.labels_set = set(self.labels)
+        self.label2index = {}
+
+        for label in self.labels_set:
+            self.label2index[label] = [i for i in range(len(self.labels))
+                                       if self.labels[i] == label]
+
 
     def __len__(self):
         return len(self.image_list)
 
-    def __getitem__(self, index):
+
+    def _get_sample(self, index):
         try:
             path = self.image_list[index]
             if self.path_prefix is not None:
@@ -2332,6 +2368,46 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         return sample
 
+
+    def __getitem__(self, index):
+        if self.K is None:
+            return self._get_sample(index)
+        # multiple identity samples in a single batch
+
+        # retrieve indices of the same identity
+        label = self.labels[index]
+        label_indices = self.label2index[label]
+
+        if self.K_policy == 'random':
+            indices = np.arange(len(label_indices), dtype=np.int32)
+            np.random.shuffle(indices)
+            indices = indices[:self.K-1]
+        elif self.K_policy == 'sequential':
+            indices = []
+            idx = label_indices.index(index) + 1
+            while len(indices) != self.K-1:
+                # if self.labels[idx] == label:
+                indices += [label_indices[idx]]
+                idx += 1
+                idx = idx % len(label_indices)
+        else:
+            raise ValueError(f"Invalid K policy {self.K_policy}")
+
+        batches = []
+        batches += [self._get_sample(index)]
+        for i in range(self.K-1):
+            idx = indices[i]
+            batches += [self._get_sample(idx)]
+
+        # combined_batch = {}
+        # for batch in batches:
+        #     for key, value in batch.items():
+        #         if key not in combined_batch.keys():
+        #             combined_batch[key] = []
+        #         combined_batch[key] += [value]
+
+        combined_batch = default_collate(batches)
+        return combined_batch
 
 
 class UnsupervisedImageDataset(torch.utils.data.Dataset):
