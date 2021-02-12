@@ -26,7 +26,7 @@ def finetune_deca(data_params, learning_params, model_params, inout_params):
     from test_and_finetune_deca import DecaModule
     deca = DecaModule(model_params, learning_params, inout_params)
     deca.cuda()
-    deca._check_device_for_extra_params()
+    deca._move_extra_params_to_correct_device()
     batch_idx = 1
     with open(Path(__file__).parent / f"batch_{batch_idx}.pkl", "rb") as f:
         batch_idx = pkl.load(f)
@@ -42,7 +42,7 @@ def finetune_deca(data_params, learning_params, model_params, inout_params):
 
 
 
-@hydra.main(config_path="conf", config_name="deca_finetune")
+@hydra.main(config_path="deca_conf", config_name="deca_finetune")
 def main(cfg : DictConfig):
     print(OmegaConf.to_yaml(cfg))
     root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")

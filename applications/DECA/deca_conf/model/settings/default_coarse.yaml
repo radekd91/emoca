@@ -1,10 +1,8 @@
 # @package model
-
 mode: coarse
 resume_training: True # this loads a pretrained model
 useSeg: false
 #useSeg: true
-
 
 useWlmk: True
 #useWlmk: False
@@ -21,9 +19,8 @@ photow: 2
 shape_constrain_type: 'exchange' # None
 
 # training related (to remove)
-e_lr: 0.0001
-multi_gpu: false
-n_epoch: 500
+#multi_gpu: false
+#n_epoch: 500
 
 # data related
-training_data: vox1  #to remove
+#training_data: vox1  #to remove

@@ -1,0 +1,34 @@
+
+stages:
+       - coarse:
+                name:
+                     deca_finetune_coarse
+       - detail:
+                name:
+                     deca_finetune_detail
+
+
+defaults:
+#  - coarse:
+#    - stage:
+       - stage/${stages.coarse.name}
+       - stage/${stages.detail.name}
+#    - stage:
+#        deca_finetune_detail
+#    - stage/deca_finetune_detail
+#    - data: data
+#    - model/paths : desktop
+#    - model/settings : default_coarse
+#    - model/sizes : default
+#    - model/flame_tex: bfm_desktop
+#    - learning: sgd
+#    - inout: desktop
+#  - detail:
+#    - deca_finetune_detail
+#    - data: data
+#    - model/paths: desktop
+#    - model/settings: default_detailed
+#    - model/sizes: default
+#    - model/flame_tex: bfm_desktop
+#    - learning: sgd
+#    - inout: desktop

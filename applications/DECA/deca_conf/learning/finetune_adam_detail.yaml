@@ -1,0 +1,9 @@
+# @package _group_
+#eval: false
+batch_size: 1
+learning_rate: 0.0001
+learning_rate_decay: 0.99
+weight_decay: 0.0005
+max_epochs: 2
+optimizer: Adam
+num_gpus: 1

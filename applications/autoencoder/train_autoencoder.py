@@ -458,7 +458,7 @@ if __name__ == '__main__':
     # logger = WandbLogger("Coma", 'a', os.path.join('a', 'logs'), id='aa')
     # print("yo")
     parser = argparse.ArgumentParser(description='Pytorch Trainer for Convolutional Mesh Autoencoders')
-    parser.add_argument('-c', '--conf', help='path of config file')
+    parser.add_argument('-c', '--deca_conf', help='path of config file')
     parser.add_argument('-s', '--split', default='sliced', help='split can be sliced, expression or identity ')
     parser.add_argument('-st', '--split_term', default='sliced', help='split term can be sliced, expression name '
                                                                'or identity name')

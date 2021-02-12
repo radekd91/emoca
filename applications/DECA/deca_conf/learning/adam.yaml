@@ -4,5 +4,6 @@ batch_size: 1
 learning_rate: 0.008
 learning_rate_decay: 0.99
 weight_decay: 0.0005
-num_epochs: 300
+max_epochs: 300
 optimizer: Adam
+num_gpus: 1

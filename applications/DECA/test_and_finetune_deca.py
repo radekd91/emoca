@@ -57,47 +57,58 @@ class DecaModule(LightningModule):
         self.lossfunc = lossfunc
         self.learning_params = learning_params
         self.inout_params = inout_params
-        self.deca = DECA(config=model_params, device=self.device)
+        self.deca = DECA(config=model_params)
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.dict_tensor2npy = dict_tensor2npy
-        self.landmark_detector = None
 
-    def _check_device_for_extra_params(self):
+    def reconfigure(self, model_params):
+        self.deca._reconfigure(model_params)
+        self.mode = DecaMode[str(model_params.mode).upper()]
+        print(f"DECA MODE RECONFIGURED TO: {self.mode}")
+
+    def _move_extra_params_to_correct_device(self):
         if self.deca.uv_face_eye_mask.device != self.device:
             self.deca.uv_face_eye_mask = self.deca.uv_face_eye_mask.to(self.device)
         if self.deca.fixed_uv_dis.device != self.device:
             self.deca.fixed_uv_dis = self.deca.fixed_uv_dis.to(self.device)
 
-    # def to(self, device, *args, **kwargs):
-    #     self.deca.uv_face_eye_mask = self.deca.uv_face_eye_mask.to(device)
-    #     self.deca.fixed_uv_dis = self.deca.fixed_uv_dis.to(device)
-    #     return super().to(*args, device=device, **kwargs)
+    def train(self, mode: bool = True):
+        super().train(mode)
+        if mode:
+            if self.mode == DecaMode.COARSE:
+                self.deca.E_flame.train()
+                self.deca.E_detail.eval()
+                self.deca.D_detail.eval()
+            if self.mode == DecaMode.DETAIL:
+                if self.deca.config.train_coarse:
+                    self.deca.E_flame.train()
+                else:
+                    self.deca.E_flame.eval()
+                self.deca.E_detail.train()
+                self.deca.D_detail.train()
+        return self
 
-    # def to(self, *args, **kwargs):
-    #     self.deca.E_flame.to(*args, **kwargs)
-    #     self.deca.E_detail.to(*args, **kwargs)
-    #     self.deca.D_detail.to(*args, **kwargs)
-    #     return self
-    #
-    # def cuda(self, device):
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        # if 'device' in kwargs.keys():
+        self._move_extra_params_to_correct_device()
+        return self
 
-    # def _instantiate_landmark_detector(self):
-    #     if self.landmark_detector is None:
-    #         self.landmark_detector = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
-    #                                                   device=self.device,
-    #                                                   flip_input=False,
-    #                                                   face_detector=self.face_detector,
-    #                                                   face_detector_kwargs=self.face_detector_kwargs)
+    def cuda(self, device=None):
+        super().cuda(device)
+        self._move_extra_params_to_correct_device()
+        return self
 
-    def forward(self, image):
-        codedict = self.deca.encode(image)
-        opdict, visdict = self.deca.decode(codedict)
-        opdict = self.dict_tensor2npy(opdict)
+    def cpu(self):
+        super().cpu()
+        self._move_extra_params_to_correct_device()
+        return self
 
-    def on_train_epoch_start(self) -> None:
-        self.deca.E_flame.eval()
-        self.deca.E_detail.train()
-        self.deca.D_detail.train()
+    # def forward(self, image):
+    #     codedict = self.deca.encode(image)
+    #     opdict, visdict = self.deca.decode(codedict)
+    #     opdict = self.dict_tensor2npy(opdict)
+
 
     def _encode(self, batch, training=True) -> dict:
         codedict = {}
@@ -430,10 +441,26 @@ class DecaModule(LightningModule):
             values = self._encode(batch, training=False)
             values = self._decode(values, training=False)
             losses_and_metrics = self.compute_loss(values, training=False)
+        self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
+        suffix = str(self.mode.name).lower()
+        losses_and_metrics_to_log = {suffix + '_val_' + key: value for key, value in losses_and_metrics.items()}
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
         return losses_and_metrics
 
-    def on_train_start(self) -> None:
-        self._check_device_for_extra_params()
+    def test_step(self, batch, batch_idx):
+        with torch.no_grad():
+            values = self._encode(batch, training=False)
+            values = self._decode(values, training=False)
+            if 'mask' in batch.keys():
+                losses_and_metrics = self.compute_loss(values, training=False)
+                suffix = str(self.mode.name).lower()
+                losses_and_metrics_to_log = {suffix + '_test_' + key: value for key, value in losses_and_metrics.items()}
+                self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False)
+            else:
+                losses_and_metric = None
+
+        return losses_and_metrics
+
 
     def training_step(self, batch, batch_idx): #, debug=True):
         values = self._encode(batch, training=True)
@@ -444,268 +471,16 @@ class DecaModule(LightningModule):
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        if batch_idx % 200 == 0:
+        # if batch_idx % 200 == 0:
+        if self.global_step % 200 == 0:
             self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
+        suffix = str(self.mode.name).lower()
+        losses_and_metrics_to_log = {suffix + '_train_' + key: value for key, value in losses_and_metrics.items()}
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
         return losses_and_metrics
 
-
-    # def training_step(self, batch, batch_idx): #, debug=True):
-    #     self._check_device_for_extra_params()
-    #     # if debug:
-    #     #     with open(Path(__file__).parent / f"batch_{batch_idx}.pkl", "wb") as f:
-    #     #         pkl.dump(batch_idx, f)
-    #     #         pkl.dump(batch, f)
-    #
-    #
-    #     original_batch_size = batch['image'].shape[0]
-    #
-    #     # [B, K, 3, size, size] ==> [BxK, 3, size, size]
-    #     images = batch['image']
-    #     images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-    #
-    #     lmk = batch['landmark']
-    #     lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
-    #     masks = batch['mask']
-    #     masks = masks.view(-1, images.shape[-2], images.shape[-1])
-    #
-    #     # 1) ENCODE
-    #     if self.mode == DecaMode.DETAIL:
-    #         with torch.no_grad():
-    #             parameters = self.deca.E_flame(images)
-    #     elif self.mode == DecaMode.COARSE:
-    #         parameters = self.deca.E_flame(images)
-    #     else:
-    #         raise ValueError(f"Invalid DECA Mode {self.mode}")
-    #
-    #     code_list = self.deca.decompose_code(parameters)
-    #     shapecode, texcode, expcode, posecode, cam, lightcode = code_list
-    #
-    #     # #TODO: figure out if we want to keep this code block:
-    #     # if self.config.model.jaw_type == 'euler':
-    #     #     # if use euler angle
-    #     #     euler_jaw_pose = posecode[:, 3:].clone()  # x for yaw (open mouth), y for pitch (left ang right), z for roll
-    #     #     # euler_jaw_pose[:,0] = 0.
-    #     #     # euler_jaw_pose[:,1] = 0.
-    #     #     # euler_jaw_pose[:,2] = 30.
-    #     #     posecode[:, 3:] = batch_euler2axis(euler_jaw_pose)
-    #
-    #     if self.mode == DecaMode.COARSE:
-    #         ### shape constraints
-    #         if self.deca.config.shape_constrain_type == 'same':
-    #             # reshape shapecode => [B, K, n_shape]
-    #             shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
-    #             # get mean id
-    #             shapecode_mean = torch.mean(shapecode_idK, dim=[1])
-    #             shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
-    #             shapecode = shapecode_new.view(-1, self.deca.config.model.n_shape)
-    #         elif self.deca.config.shape_constrain_type == 'exchange':
-    #             '''
-    #             make sure s0, s1 is something to make shape close
-    #             the difference from ||so - s1|| is
-    #             the later encourage s0, s1 is cloase in l2 space, but not really ensure shape will be close
-    #             '''
-    #             # new_order = np.array([np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(self.deca.config.batch_size_train)])
-    #             new_order = np.array([np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
-    #             new_order = new_order.flatten()
-    #             shapecode_new = shapecode[new_order]
-    #             # import ipdb; ipdb.set_trace()
-    #             ## append new shape code data
-    #             shapecode = torch.cat([shapecode, shapecode_new], dim=0)
-    #             texcode = torch.cat([texcode, texcode], dim=0)
-    #             expcode = torch.cat([expcode, expcode], dim=0)
-    #             posecode = torch.cat([posecode, posecode], dim=0)
-    #             cam = torch.cat([cam, cam], dim=0)
-    #             lightcode = torch.cat([lightcode, lightcode], dim=0)
-    #             ## append gt
-    #             images = torch.cat([images, images],
-    #                                dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-    #             lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
-    #             masks = torch.cat([masks, masks], dim=0)
-    #             # import ipdb; ipdb.set_trace()
-    #
-    #     # -- detail
-    #     if self.mode == DecaMode.DETAIL:
-    #         detailcode = self.deca.E_detail(images)
-    #
-    #         if self.deca.config.detail_constrain_type == 'exchange':
-    #             '''
-    #             make sure s0, s1 is something to make shape close
-    #             the difference from ||so - s1|| is
-    #             the later encourage s0, s1 is cloase in l2 space, but not really ensure shape will be close
-    #             '''
-    #             # new_order = np.array(
-    #             #     [np.random.permutation(self.deca.config.K) + i * self.deca.config.K for i in range(self.deca.config.effective_batch_size)])
-    #             new_order = np.array(
-    #                 [np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
-    #             new_order = new_order.flatten()
-    #             detailcode_new = detailcode[new_order]
-    #             # import ipdb; ipdb.set_trace()
-    #             detailcode = torch.cat([detailcode, detailcode_new], dim=0)
-    #             ## append new shape code data
-    #             shapecode = torch.cat([shapecode, shapecode], dim=0)
-    #             texcode = torch.cat([texcode, texcode], dim=0)
-    #             expcode = torch.cat([expcode, expcode], dim=0)
-    #             posecode = torch.cat([posecode, posecode], dim=0)
-    #             cam = torch.cat([cam, cam], dim=0)
-    #             lightcode = torch.cat([lightcode, lightcode], dim=0)
-    #             ## append gt
-    #             images = torch.cat([images, images],
-    #                                dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-    #             lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
-    #             masks = torch.cat([masks, masks], dim=0)
-    #
-    #
-    #     effective_batch_size = images.shape[0] # this is the current batch size after all the modifications
-    #     # 2) DECODE
-    #     # FLAME - world space
-    #     verts, landmarks2d, landmarks3d = self.deca.flame(shape_params=shapecode, expression_params=expcode,
-    #                                                  pose_params=posecode)
-    #     # world to camera
-    #     trans_verts = self.util.batch_orth_proj(verts, cam)
-    #     predicted_landmarks = self.util.batch_orth_proj(landmarks2d, cam)[:, :, :2]
-    #     # camera to image space
-    #     trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
-    #     predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
-    #
-    #     albedo = self.deca.flametex(texcode)
-    #
-    #     # ------ rendering
-    #     ops = self.deca.render(verts, trans_verts, albedo, lightcode)
-    #     # mask
-    #     mask_face_eye = F.grid_sample(self.deca.uv_face_eye_mask.expand(effective_batch_size, -1, -1, -1), ops['grid'].detach(),
-    #                                   align_corners=False)
-    #     # images
-    #     predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
-    #
-    #     if self.deca.config.useSeg:
-    #         masks = masks[:, None, :, :]
-    #     else:
-    #         masks = mask_face_eye * ops['alpha_images']
-    #
-    #     if self.mode == DecaMode.DETAIL:
-    #         uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
-    #         # render detail
-    #         uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'])
-    #         uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
-    #         uv_texture = albedo.detach() * uv_shading
-    #         predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
-    #
-    #         # --- extract texture
-    #         uv_pverts = self.deca.render.world2uv(trans_verts).detach()
-    #         uv_gt = F.grid_sample(torch.cat([images, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
-    #                               mode='bilinear')
-    #         uv_texture_gt = uv_gt[:, :3, :, :].detach()
-    #         uv_mask_gt = uv_gt[:, 3:, :, :].detach()
-    #         # self-occlusion
-    #         normals = self.util.vertex_normals(trans_verts, self.deca.render.faces.expand(effective_batch_size, -1, -1))
-    #         uv_pnorm = self.deca.render.world2uv(normals)
-    #
-    #         uv_mask = (uv_pnorm[:, -1, :, :] < -0.05).float().detach()
-    #         uv_mask = uv_mask[:, None, :, :]
-    #         ## combine masks
-    #         uv_vis_mask = uv_mask_gt * uv_mask * self.deca.uv_face_eye_mask
-    #     else:
-    #         uv_detail_normals = None
-    #         predicted_detailed_image = None
-    #
-    #     #### ----------------------- Losses
-    #     losses = {}
-    #
-    #     ############################# base shape
-    #     if self.mode == DecaMode.COARSE or (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
-    #
-    #         # landmark losses (only useful if coarse model is being trained
-    #         if self.deca.config.useWlmk:
-    #             losses['landmark'] = self.lossfunc.weighted_landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
-    #         else:
-    #             losses['landmark'] = self.lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
-    #         # losses['eye_distance'] = self.lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
-    #         losses['eye_distance'] = self.lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
-    #         losses['lip_distance'] = self.lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
-    #
-    #         # photometric loss
-    #         losses['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
-    #
-    #         if self.deca.config.idw > 1e-3:
-    #             shading_images = self.deca.render.add_SHlight(ops['normal_images'], lightcode.detach())
-    #             albedo_images = F.grid_sample(albedo.detach(), ops['grid'], align_corners=False)
-    #             overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
-    #             losses['identity'] = self.deca.id_loss(overlay, images) * self.deca.config.idw
-    #
-    #         losses['shape_reg'] = (torch.sum(shapecode ** 2) / 2) * self.deca.config.shape_reg
-    #         losses['expression_reg'] = (torch.sum(expcode ** 2) / 2) * self.deca.config.exp_reg
-    #         losses['tex_reg'] = (torch.sum(texcode ** 2) / 2) * self.deca.config.tex_reg
-    #         losses['light_reg'] = ((torch.mean(lightcode, dim=2)[:, :,
-    #                                 None] - lightcode) ** 2).mean() * self.deca.config.light_reg
-    #
-    #     ############################### details
-    #     if self.mode == DecaMode.DETAIL:
-    #         for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
-    #             # if pi==0:
-    #             new_size = 256
-    #             # else:
-    #             #     new_size = 128
-    #             # if self.deca.config.uv_size != 256:
-    #             #     new_size = 128
-    #             uv_texture_patch = F.interpolate(uv_texture[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-    #                                              self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
-    #                                              [new_size, new_size], mode='bilinear')
-    #             uv_texture_gt_patch = F.interpolate(
-    #                 uv_texture_gt[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-    #                 self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]], [new_size, new_size], mode='bilinear')
-    #             uv_vis_mask_patch = F.interpolate(uv_vis_mask[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-    #                                               self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
-    #                                               [new_size, new_size], mode='bilinear')
-    #
-    #             losses['detail_l1_{}'.format(pi)] = (
-    #                                                             uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
-    #                                                 self.deca.config.sfsw[pi]
-    #             losses['detail_mrf_{}'.format(pi)] = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
-    #                                                                       uv_texture_gt_patch * uv_vis_mask_patch) * \
-    #                                                  self.deca.config.sfsw[pi] * self.deca.config.mrfwr
-    #             losses['photometric_detailed_texture'] = (masks * (
-    #                         predicted_detailed_image - images).abs()).mean() * self.deca.config.photow
-    #
-    #             if pi == 2:
-    #                 uv_texture_gt_patch_ = uv_texture_gt_patch
-    #                 uv_texture_patch_ = uv_texture_patch
-    #                 uv_vis_mask_patch_ = uv_vis_mask_patch
-    #
-    #         losses['z_reg'] = torch.mean(uv_z.abs()) * self.deca.config.zregw
-    #         losses['z_diff'] = self.lossfunc.shading_smooth_loss(uv_shading) * self.deca.config.zdiffw
-    #         nonvis_mask = (1 - self.util.binary_erosion(uv_vis_mask))
-    #         losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
-    #
-    #     else:
-    #         uv_texture_gt_patch_ = None
-    #         uv_texture_patch_ = None
-    #         uv_vis_mask_patch_ = None
-    #
-    #
-    #     all_loss = 0.
-    #     losses_key = losses.keys()
-    #     for key in losses_key:
-    #         all_loss = all_loss + losses[key]
-    #     # losses['all_loss'] = all_loss
-    #     losses['loss'] = all_loss
-    #
-    #     if batch_idx % 200:
-    #         self._visualization_checkpoint_old(
-    #             verts, trans_verts, ops,
-    #             images, lmk, predicted_images, predicted_landmarks, masks, albedo,
-    #             predicted_detailed_image, uv_detail_normals, batch_idx,
-    #             uv_texture_patch_, uv_texture_gt_patch_, uv_vis_mask_patch_)
-    #
-    #     # done by lightning
-    #     # self.opt.zero_grad()
-    #     # all_loss.backward()
-    #     # self.opt.step()
-    #
-    #     return losses
-
-    def _visualization_checkpoint(self,
-                                  verts, trans_verts, ops, uv_detail_normals, additional, batch_idx):
+    def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx):
         # visualize
         # if iter % 200 == 1:
         # visind = np.arange(8)  # self.config.batch_size )
@@ -741,7 +516,7 @@ class DecaModule(LightningModule):
         if 'albedo' in additional.keys():
             visdict['albedo'] = additional['albedo'][visind]
 
-        if 'predicted_detailed_image' in additional.keys():
+        if 'predicted_detailed_image' in additional.keys() and additional['predicted_detailed_image'] is not None:
             visdict['detailed_images'] = additional['predicted_detailed_image'][visind]
 
         if 'shape_detail_images' in additional.keys():
@@ -846,21 +621,16 @@ class DecaModule(LightningModule):
         #             os.path.join(self.deca.config.savefolder, 'model' + '.tar')
         #         )
 
-    def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
-        pass
-        checkpoint['epoch'] = self.current_epoch
-        checkpoint['iter'] = -1 # to be deprecated
-        checkpoint['all_iter'] = -1 # to be deprecated
-        checkpoint['batch_size'] = self.deca.config.batch_size_train
-
-    # def load_state_dict(self, state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
-    #                     strict: bool = True):
-
-
+    # def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+    #     pass
+    #     checkpoint['epoch'] = self.current_epoch
+    #     checkpoint['iter'] = -1 # to be deprecated
+    #     checkpoint['all_iter'] = -1 # to be deprecated
+    #     checkpoint['batch_size'] = self.deca.config.batch_size_train
+    #
 
     def configure_optimizers(self):
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-
         trainable_params = []
         if self.mode == DecaMode.COARSE:
             trainable_params += list(self.deca.E_flame.parameters())
@@ -951,7 +721,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 
-@hydra.main(config_path="conf", config_name="deca_finetune")
+@hydra.main(config_path="deca_conf", config_name="deca_finetune")
 def main(cfg : DictConfig):
     print(OmegaConf.to_yaml(cfg))
     root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")

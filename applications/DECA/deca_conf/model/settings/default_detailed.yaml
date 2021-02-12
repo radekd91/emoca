@@ -2,8 +2,6 @@
 
 # settings
 #use_flip: false # not used
-#num_worker: 1 # to remove
-#n_train: 1000 # to remove
 
 train_coarse: 0
 useSeg: false
@@ -33,5 +31,3 @@ sfsw:
 - 0
 - 0
 
-# to remove
-e_lr: 0.0001
