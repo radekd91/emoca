@@ -31,3 +31,6 @@ sfsw:
 - 0
 - 0
 
+
+use_emonet_loss: False
+emonet_reg: 0.15

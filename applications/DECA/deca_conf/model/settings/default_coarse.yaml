@@ -18,6 +18,10 @@ light_reg: 12
 photow: 2
 shape_constrain_type: 'exchange' # None
 
+use_emonet_loss: False
+emonet_reg: 0.15
+
+
 # training related (to remove)
 #multi_gpu: false
 #n_epoch: 500

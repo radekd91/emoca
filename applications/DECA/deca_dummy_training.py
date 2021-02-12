@@ -20,10 +20,10 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import pickle as pkl
 from transforms.keypoints import KeypointScale, KeypointNormalization
+from models.DECA import DecaModule
 
 
 def finetune_deca(cfg_coarse, cfg_detail):
-    from test_and_finetune_deca import DecaModule
     deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
     # deca.cuda()
     # deca._move_extra_params_to_correct_device()
