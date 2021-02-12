@@ -6,5 +6,5 @@ flame_model_path: /ps/scratch/yfeng/Data/FLAME/geometry/generic_model.pkl
 flame_lmk_embedding_path: /ps/scratch/yfeng/Data/FLAME/geometry/landmark_embedding.npy
 face_mask_path: /ps/scratch/yfeng/Data/FLAME/mask/uv_face_mask.png
 face_eye_mask_path: /ps/scratch/yfeng/Data/FLAME/mask/uv_face_eye_mask.png
-pretrained_modelpath: /ps/scratch/rdanecek/workspace/repos/DECA/data/deca_model.tar
+pretrained_modelpath: /lustre/home/rdanecek/workspace/repos/DECA/data/deca_model.tar
 pretrained_vgg_face_path: /ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl
