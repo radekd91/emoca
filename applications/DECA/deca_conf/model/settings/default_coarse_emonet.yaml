@@ -1,0 +1,30 @@
+# @package model
+mode: coarse
+resume_training: True # this loads a pretrained model
+useSeg: false
+#useSeg: true
+
+useWlmk: True
+#useWlmk: False
+lmk_weight: 1
+eyed: 1.0
+lipd: 0.1
+photo: 2.
+idw: 0.15
+exp_reg: 1e-4
+shape_reg: 1e-4
+tex_reg: 1e-5
+light_reg: 12
+photow: 2
+shape_constrain_type: 'exchange' # None
+
+use_emonet_loss: True
+emonet_reg: 0.15
+
+
+# training related (to remove)
+#multi_gpu: false
+#n_epoch: 500
+
+# data related
+#training_data: vox1  #to remove

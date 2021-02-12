@@ -1,0 +1,36 @@
+# @package model
+
+# settings
+#use_flip: false # not used
+
+train_coarse: 0
+useSeg: false
+#useSeg: true
+detail_constrain_type: exchange
+mode: detail
+
+resume_training: True # this loads a pretrained model
+
+lmk_weight: 1
+useWlmk: true
+shape_reg: 0.0001
+exp_reg: 0.0001
+tex_reg: 0.0001
+light_reg: 12
+photow: 2
+idw: 0.12
+useConstraint: true
+mrfwr: 0.01
+zregw: 0.005
+zdiffw: 0.005
+zsymw: 0.005
+consr: 1
+sfsw:
+- 5
+- 0
+- 0
+- 0
+
+
+use_emonet_loss: True
+emonet_reg: 0.15
