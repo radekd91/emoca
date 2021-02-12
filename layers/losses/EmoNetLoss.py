@@ -29,40 +29,63 @@ def get_emonet(device=None):
     return net
 
 
-class EmoNetLoss(torch.nn.Module):
+# class EmoNetLoss(torch.nn.Module):
+class EmoNetLoss(object):
 
     def __init__(self, device):
         super().__init__()
-        self.emonet = get_emonet(device)
-        self.emonet.eval()
-        self.transforms = Resize((256, 256))
+        self.emonet = get_emonet(device).eval()
+        # self.emonet.eval()
+        # self.emonet = self.emonet.requires_grad_(False)
+        # self.transforms = Resize((256, 256))
+        self.size = (256, 256)
         self.emo_feat_loss = F.l1_loss
         self.valence_loss = F.l1_loss
         self.arousal_loss = F.l1_loss
         self.expression_loss = F.kl_div
 
+    def to(self, *args, **kwargs):
+        self.emonet = self.emonet.to(*args, **kwargs)
+        # self.emonet = self.emonet.requires_grad_(False)
+        # for p in self.emonet.parameters():
+        #     p.requires_grad = False
+
+    def eval(self):
+        self.emonet = self.emonet.eval()
+        # self.emonet = self.emonet.requires_grad_(False)
+        # for p in self.emonet.parameters():
+        #     p.requires_grad = False
+
     def train(self, mode: bool = True):
         # super().train(mode)
-        self.emonet.eval() # evaluation mode no matter what, it's just a loss function
+        if hasattr(self, 'emonet'):
+            self.emonet = self.emonet.eval() # evaluation mode no matter what, it's just a loss function
+            # self.emonet = self.emonet.requires_grad_(False)
+            # for p in self.emonet.parameters():
+            #     p.requires_grad = False
 
     def emonet_out(self, images):
-        return self.emonet(self.transforms(images), intermediate_features=True)
+        images = F.interpolate(images, self.size, mode='bilinear')
+        # images = self.transform(images)
+        return self.emonet(images, intermediate_features=True)
 
     def compute_loss(self, input_images, output_images):
-        self.input_emotion = self.emonet_out(input_images)
-        self.output_emotion = self.emonet_out(output_images)
+        # input_emotion = None
+        # self.output_emotion = None
+        input_emotion = self.emonet_out(input_images)
+        output_emotion = self.emonet_out(output_images)
 
-        emo_feat_loss_1 = self.emo_feat_loss(self.input_emotion['emo_feat'], self.output_emotion['emo_feat'])
-        emo_feat_loss_2 = self.emo_feat_loss(self.input_emotion['emo_feat_2'], self.output_emotion['emo_feat_2'])
-        valence_loss = self.valence_loss(self.input_emotion['valence'], self.output_emotion['valence'])
-        arousal_loss = self.arousal_loss(self.input_emotion['arousal'], self.output_emotion['arousal'])
-        expression_loss = self.expression_loss(self.input_emotion['expression'], self.output_emotion['expression'])
+        emo_feat_loss_1 = self.emo_feat_loss(input_emotion['emo_feat'], output_emotion['emo_feat'])
+        emo_feat_loss_2 = self.emo_feat_loss(input_emotion['emo_feat_2'], output_emotion['emo_feat_2'])
+        valence_loss = self.valence_loss(input_emotion['valence'], output_emotion['valence'])
+        arousal_loss = self.arousal_loss(input_emotion['arousal'], output_emotion['arousal'])
+        expression_loss = self.expression_loss(input_emotion['expression'], output_emotion['expression'])
         return emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss
 
-    @property
-    def input_emo(self):
-        return self.input_emotion
-
-    @property
-    def output_emo(self):
-        return self.output_emotion
+    # @property
+    # def input_emo(self):
+    #     return self.input_emotion
+    #
+    # @property
+    # def output_emo(self):
+    #     return self.output_emotion

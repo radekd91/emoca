@@ -308,12 +308,16 @@ class DecaModule(LightningModule):
         return codedict
 
     def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix):
-        emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
-            self.emonet_loss.compute_loss(images, predicted_images)
         if self.deca.config.use_emonet_loss:
             d = loss_dict
+            with torch.no_grad():
+                emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
+                    self.emonet_loss.compute_loss(images, predicted_images)
         else:
             d = metric_dict
+            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
+                self.emonet_loss.compute_loss(images, predicted_images)
+
         d[prefix + '_emo_feat_1_L1'] = emo_feat_loss_1 * self.deca.config.emonet_reg
         d[prefix + '_emo_feat_2_L1'] = emo_feat_loss_2 * self.deca.config.emonet_reg
         d[prefix + '_valence_L1'] = valence_loss * self.deca.config.emonet_reg
@@ -372,7 +376,8 @@ class DecaModule(LightningModule):
                                     None] - lightcode) ** 2).mean() * self.deca.config.light_reg
 
             if self.emonet_loss is not None:
-                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse")
+                with torch.no_grad():
+                    self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse")
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -454,9 +459,10 @@ class DecaModule(LightningModule):
             losses_and_metrics = self.compute_loss(values, training=False)
         self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         suffix = str(self.mode.name).lower()
-        losses_and_metrics_to_log = {suffix + '_val_' + key: value for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {suffix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
-        return losses_and_metrics
+        # return losses_and_metrics
+        return None
 
 
     def test_step(self, batch, batch_idx):
@@ -466,12 +472,13 @@ class DecaModule(LightningModule):
             if 'mask' in batch.keys():
                 losses_and_metrics = self.compute_loss(values, training=False)
                 suffix = str(self.mode.name).lower()
-                losses_and_metrics_to_log = {suffix + '_test_' + key: value for key, value in losses_and_metrics.items()}
+                losses_and_metrics_to_log = {suffix + '_test_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
                 self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False)
             else:
                 losses_and_metric = None
 
-        return losses_and_metrics
+        # return losses_and_metrics
+        return None
 
 
     def training_step(self, batch, batch_idx): #, debug=True):
@@ -488,9 +495,10 @@ class DecaModule(LightningModule):
             self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
         suffix = str(self.mode.name).lower()
-        losses_and_metrics_to_log = {suffix + '_train_' + key: value for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {suffix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
-        return losses_and_metrics
+        # return losses_and_metrics
+        return losses_and_metrics['loss']
 
     ### STEP ENDS ARE PROBABLY NOT NECESSARY BUT KEEP AN EYE ON THEM IF MULI-GPU TRAINING DOESN'T WORKs
     # def training_step_end(self, batch_parts):
@@ -683,6 +691,9 @@ class DecaModule(LightningModule):
             self.deca.opt = torch.optim.SGD(
                 trainable_params,
                 lr=self.learning_params.learning_rate)
+        else:
+            raise ValueError(f"Unsupported optimizer: '{self.learning_params.optimizer}'")
+
         return self.deca.opt
 
 
