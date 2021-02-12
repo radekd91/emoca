@@ -73,8 +73,11 @@ def finetune_deca(cfg_coarse, cfg_detail):
         #     # b["mask"]
         #     # b["landmark"]
 
+        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
         trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
-                          default_root_dir=cfg.inout.full_run_dir, logger=wandb_logger)
+                          default_root_dir=cfg.inout.full_run_dir,
+                          logger=wandb_logger,
+                          accelerator=accelerator)
         trainer.fit(deca, train_dataloader=training_set_dl, val_dataloaders=[val_set_dl, ])
         trainer.test(deca, test_dataloaders=[val_set_dl], ckpt_path='best')
 
@@ -87,19 +90,18 @@ from hydra.experimental import compose, initialize
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune_all")
 # def main(cfg : DictConfig):
 def main():
-
+    # override = ['learning.num_gpus=2', 'model/paths=cluster']
+    override = []
     initialize(config_path="deca_conf", job_name="finetune_deca")
-    cfg_coarse = compose(config_name="deca_finetune_coarse")
-    cfg_detail = compose(config_name="deca_finetune_detail")
-
-
+    cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
+    cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
 
     # print(OmegaConf.to_yaml(cfg))
     # root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
     # root_path = root / "Aff-Wild2_ready"
     # root_path = root
     # processed_data_path = root / "processed"
-    subfolder = 'processed_2021_Jan_19_20-25-10'
+    # subfolder = 'processed_2021_Jan_19_20-25-10'
 
     # run_dir = cfg.inout.output_dir + "_" + datetime.datetime.now().strftime("%Y_%b_%d_%H-%M-%S")
     #
