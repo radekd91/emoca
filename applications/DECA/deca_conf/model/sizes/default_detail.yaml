@@ -1,7 +1,7 @@
 # @package model
 batch_size_train: 6
 batch_size_test: 64
-batch_size_val: 1
+batch_size_val: 6
 train_K: 3 # num pictures of an identity per batch
 val_K: 1 # num pictures of an identity per batch
 test_K: 1 # num pictures of an identity per batch
