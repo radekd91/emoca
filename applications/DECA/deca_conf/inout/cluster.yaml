@@ -1,4 +1,5 @@
 # @package _group_
 output_dir: /ps/scratch/rdanecek/emoca/finetune_deca
 full_run_dir: /ps/scratch/rdanecek/emoca/finetune_deca
+checkpoint_dir: /ps/scratch/rdanecek/emoca/finetune_deca
 name: coding

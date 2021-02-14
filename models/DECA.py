@@ -493,48 +493,15 @@ class DecaModule(LightningModule):
                 uv_detail_normals = values['uv_detail_normals']
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-            vis_dict = self._log_visualizations('val', visualizations, values, self.global_step)
-            image = Image(grid_image, caption="full visualization")
-            vis_dict[suffix + '_val_' + "visualization"] = image
+            vis_dict = self._log_visualizations('val', visualizations, values, self.global_step, indices=0)
+            # image = Image(grid_image, caption="full visualization")
+            # vis_dict[suffix + '_val_' + "visualization"] = image
+            self.logger.log_metrics(vis_dict)
+            # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
-            # if on_step:
-            #     step = self.global_step
-            # if on_epoch:`
-            #     step = self.current_epoch
-            self.logger.experiment.log(vis_dict) #, step=self.global_step)
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
         # return losses_and_metrics
         return None
-
-    # def _log_dict(self, dict):
-    #     accumulated_dict = {}
-    #     if len(dict) > 0:
-    #         d = dict[0]
-    #         for key in d.keys():
-    #             accumulated_dict[key] = 0
-    #             for i in range(len(dict)):
-    #                 accumulated_dict[key] += dict[i][key]
-    #             accumulated_dict[key] /= len(dict)
-    #     # self.logger.experiment.log(accumulated_dict, step=self.logger)
-    #     self.logger.log_metrics(accumulated_dict)
-    #
-    # def validation_epoch_end(
-    #     self, outputs
-    # ):
-    #     if not hasattr(self, 'val_dict_list'):
-    #         self.val_dict_list = []
-    #         return
-    #     self._log_dict(self.val_dict_list)
-    #     self.val_dict_list = []
-    #     # return super().validation_epoch_end()
-    #
-    # def training_epoch_end(self, outputs):
-    #     if not hasattr(self, 'train_dict_list'):
-    #         self.train_dict_list = []
-    #         return
-    #     self._log_dict(self.train_dict_list)
-    #     self.train_dict_list = []
-    #     # return super().training_epoch_end()
 
     def test_step(self, batch, batch_idx):
         prefix = str(self.mode.name).lower()
@@ -558,16 +525,11 @@ class DecaModule(LightningModule):
 
         visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                        uv_detail_normals, values, self.global_step)
-        visdict = self._log_visualizations('test', visualizations, values, self.global_step)
-        image = Image(grid_image, caption="full visualization")
-        visdict[ prefix + '_test_' + "visualization"] = image
-        # self.logger.experiment.log(visdict)#, step=self.global_step)
+        visdict = self._log_visualizations('test', visualizations, values, self.global_step, indices=0)
+        # image = Image(grid_image, caption="full visualization")
+        # visdict[ prefix + '_test_' + "visualization"] = image
         self.logger.log_metrics(visdict)#, step=self.global_step)
-        # losses_and_metrics_to_log[prefix + '_test_' + "visualization"] = image
-        # self.logger.experiment.log(losses_and_metrics_to_log)
-        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False)
         self.logger.log_metrics(losses_and_metrics_to_log)
-        # return losses_and_metrics
         return None
 
     def training_step(self, batch, batch_idx): #, debug=True):
@@ -587,15 +549,13 @@ class DecaModule(LightningModule):
         if self.global_step % 100 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-            image = Image(grid_image, caption="full visualization")
-            # self.logger.experiment.log({prefix + '_train_' + "visualization" : image}, step=self.global_step)
-            # losses_and_metrics_to_log[prefix + '_train_' + "visualization"] = image
-            visdict = self._log_visualizations('train', visualizations, values, self.global_step)
-            visdict[prefix + '_test_' + "visualization"] = image
+            visdict = self._log_visualizations('train', visualizations, values, self.global_step, indices=0)
+            # image = Image(grid_image, caption="full visualization")
+            # visdict[prefix + '_test_' + "visualization"] = image
+            self.logger.log_metrics(visdict)#, step=self.global_step)
 
 
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
-        # self._train_to_be_logged(losses_and_metrics_to_log)
         # return losses_and_metrics
         return losses_and_metrics['loss']
 
@@ -645,6 +605,8 @@ class DecaModule(LightningModule):
                 images = np.clip(images, 0, 1)
             if indices is None:
                 indices = np.arange(images.shape[0])
+            if isinstance(indices, int):
+                indices = [indices,]
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
                 wandb_image = Image(image, caption=key)
@@ -738,7 +700,7 @@ class DecaModule(LightningModule):
         if 'uv_vis_mask_patch' in additional.keys():
             visdict['uv_vis_mask_patch'] = additional['uv_vis_mask_patch'][visind]
 
-        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.full_run_dir, 'train_images',
+        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir, 'train_images',
                                             self.current_epoch, batch_idx)
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
         visualization_image = self.deca.visualize(visdict, savepath)
@@ -784,54 +746,11 @@ class DecaModule(LightningModule):
             visdict['uv_texture_gt'] = uv_texture_gt[visind]
             visdict['uv_vis_mask_patch'] = uv_vis_mask_patch[visind]
 
-        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.full_run_dir, 'train_images',
+        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir, 'train_images',
                                             self.current_epoch, batch_idx)
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
         self.deca.visualize(visdict, savepath)
 
-    # def training_step_end(self, *args, **kwargs):
-        # iteration update
-        # if iter > all_iter - self.start_iter - 1:
-        #     self.start_iter = 0
-        #     continue
-
-        # if iter % 500 == 0:
-        #     if self.deca.config.multi_gpu:
-        #         torch.save(
-        #             {
-        #                 'E_flame': self.E_flame.module.state_dict(),
-        #                 'E_detail': self.E_detail.module.state_dict(),
-        #                 'D_detail': self.D_detail.module.state_dict(),
-        #                 'opt': self.opt.state_dict(),
-        #                 'epoch': epoch,
-        #                 'iter': iter,
-        #                 'all_iter': all_iter,
-        #                 'batch_size': self.config.batch_size
-        #             },
-        #             os.path.join(self.config.savefolder, 'model' + '.tar')
-        #         )
-        #     else:
-        #         torch.save(
-        #             {
-        #                 'E_flame': self.deca.E_flame.state_dict(),
-        #                 'E_detail': self.deca.E_detail.state_dict(),
-        #                 'D_detail': self.deca.D_detail.state_dict(),
-        #                 'opt': self.opt.state_dict(),
-        #                 'epoch': self.current_epoch,
-        #                 # 'iter': iter,
-        #                 'all_iter': all_iter,
-        #                 'batch_size': self.deca.config.batch_size
-        #             },
-        #             os.path.join(self.deca.config.savefolder, 'model' + '.tar')
-        #         )
-
-    # def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
-    #     pass
-    #     checkpoint['epoch'] = self.current_epoch
-    #     checkpoint['iter'] = -1 # to be deprecated
-    #     checkpoint['all_iter'] = -1 # to be deprecated
-    #     checkpoint['batch_size'] = self.deca.config.batch_size_train
-    #
 
     def configure_optimizers(self):
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -858,8 +777,6 @@ class DecaModule(LightningModule):
             raise ValueError(f"Unsupported optimizer: '{self.learning_params.optimizer}'")
 
         return self.deca.opt
-
-
 
 
 class DECA(torch.nn.Module):

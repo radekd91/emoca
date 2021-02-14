@@ -21,15 +21,15 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
-from utils.FaceDetector import FAN, MTCNN
-from facenet_pytorch import InceptionResnetV1
-from collections import OrderedDict
+# from utils.FaceDetector import FAN, MTCNN
+# from facenet_pytorch import InceptionResnetV1
+# from collections import OrderedDict
 from PIL import Image
-import gc
+# import gc
 # from memory_profiler import profile
 
-from enum import Enum
-
+from torchvision.transforms import Resize
+from transforms.keypoints import KeypointScale, KeypointNormalization
 
 class EmotionDataModule(pl.LightningDataModule):
 
@@ -58,8 +58,6 @@ class EmotionDataModule(pl.LightningDataModule):
                          K=None,
                          K_policy=None,
                          **dl_kwargs) -> DataLoader:
-        from torchvision.transforms import Resize
-        from transforms.keypoints import KeypointScale, KeypointNormalization
         im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
         # lmk_transforms = KeypointScale()
         lmk_transforms = KeypointNormalization()
@@ -89,10 +87,22 @@ class EmotionDataModule(pl.LightningDataModule):
             -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(self.validation_set, shuffle=False, **dl_kwargs)
 
-    def test_dataloader(self, annotation_list = None, filter_pattern=None, **dl_kwargs) \
+    def test_dataloader(self, annotation_list = None, filter_pattern=None,
+                        K=None,
+                        K_policy=None,
+                        **dl_kwargs) \
             -> Union[DataLoader, List[DataLoader]]:
         from torchvision.transforms import Resize
-        transforms = Resize((self.image_size, self.image_size))
-        dataset = self.dm.get_annotated_emotion_dataset(annotation_list, filter_pattern, transforms, with_landmarks = self.with_landmarks)
+        im_transforms = Resize((self.image_size, self.image_size))
+        lmk_transforms = KeypointNormalization()
+        seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
+        dataset = self.dm.get_annotated_emotion_dataset(annotation_list, filter_pattern,
+                                                        image_transforms=im_transforms,
+                                                        with_landmarks = self.with_landmarks,
+                                                        landmark_transform=lmk_transforms,
+                                                        with_segmentations=self.with_segmentations,
+                                                        segmentation_transform=seg_transforms,
+                                                        K=K,
+                                                        K_policy=K_policy)
         dl = DataLoader(dataset,  shuffle=False, **dl_kwargs)
         return dl

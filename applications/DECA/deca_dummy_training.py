@@ -42,21 +42,35 @@ def finetune_deca(cfg_coarse, cfg_detail):
 
     time = datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
     experiment_name = "test_" + time
+
+    full_run_dir = Path(cfg_coarse.inout.output_dir) / experiment_name
+    full_run_dir.mkdir(parents=True)
+
+    coarse_checkpoint_dir = full_run_dir / "coarse"
+    coarse_checkpoint_dir.mkdir(parents=True)
+
+    detail_checkpoint_dir = full_run_dir / "detail"
+    detail_checkpoint_dir.mkdir(parents=True)
+
+    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
+    cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
+    cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
+    cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
+
+    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
+        OmegaConf.save(config=conf, f=outfile)
+
     wandb_logger = WandbLogger(name=experiment_name,
                                project="EmotionalDeca",
                                config=dict(conf),
-                               version=time)
+                               version=time,
+                               save_dir=full_run_dir)
 
     configs = [cfg_coarse, cfg_detail]
     # configs = [cfg_detail]
     for i, cfg in enumerate(configs):
         if i > 0:
             deca.reconfigure(cfg.model)
-
-        # wandb_logger = WandbLogger(name=experiment_name,
-        #                            project="EmotionalDeca",
-        #                            config=dict(conf),
-        #                            version=time)
 
         # from tqdm import tqdm
         # for i, b in enumerate(tqdm(training_set_dl)):
@@ -77,7 +91,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
 
         accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
         trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
-                          default_root_dir=cfg.inout.full_run_dir,
+                          default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)
 
@@ -90,55 +104,26 @@ def finetune_deca(cfg_coarse, cfg_detail):
                                 num_workers=cfg.data.num_workers)
         trainer.fit(deca, train_dataloader=training_set_dl, val_dataloaders=[val_set_dl, ])
 
-        # wandb_logger = WandbLogger(name=experiment_name,
-        #                            project="EmotionalDeca",
-        #                            config=dict(conf),
-        #                            version=time)
-        # trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
-        #                   default_root_dir=cfg.inout.full_run_dir,
-        #                   logger=wandb_logger,
-        #                   accelerator=accelerator)
         test_set_dl = DataLoader(val_set, shuffle=False,
                                 batch_size=cfg.model.batch_size_train,
                                 num_workers=cfg.data.num_workers)
         wandb_logger.finalize("")
-        trainer.test(deca, test_dataloaders=[test_set_dl], ckpt_path='best')
+        trainer.test(deca, test_dataloaders=[test_set_dl], ckpt_path=None)
         # to make sure WANDB has the correct step
         wandb_logger.finalize("")
-
-    # deca.training_step(batch, batch_idx, False)
-
-from hydra.experimental import compose, initialize
 
 
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune_coarse")
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune_all")
 # def main(cfg : DictConfig):
 def main():
+    from hydra.experimental import compose, initialize
     # override = ['learning.num_gpus=2', 'model/paths=cluster']
     override = []
     initialize(config_path="deca_conf", job_name="finetune_deca")
     cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
     cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
 
-    # print(OmegaConf.to_yaml(cfg))
-    # root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
-    # root_path = root / "Aff-Wild2_ready"
-    # root_path = root
-    # processed_data_path = root / "processed"
-    # subfolder = 'processed_2021_Jan_19_20-25-10'
-
-    # run_dir = cfg.inout.output_dir + "_" + datetime.datetime.now().strftime("%Y_%b_%d_%H-%M-%S")
-    #
-    # full_run_dir = Path(cfg.inout.output_dir) / run_dir
-    # full_run_dir.mkdir(parents=True)
-
-    # cfg["inout"]['full_run_dir'] = str(full_run_dir)
-
-    # with open(full_run_dir / "cfg.yaml", 'w') as outfile:
-    #     OmegaConf.save(config=cfg, f=outfile)
-
-    # finetune_deca(cfg['data'], cfg['learning'], cfg['model'], cfg['inout'])
     finetune_deca(cfg_coarse, cfg_detail)
 
 

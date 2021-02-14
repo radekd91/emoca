@@ -13,21 +13,22 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 import datetime
 # import hydra
+from omegaconf import DictConfig, OmegaConf
 
 
-def finetune_deca(data_params, learning_params, model_params, inout_params):
+def finetune_deca(cfg_coarse, cfg_detail):
 
-    fvdm = FaceVideoDataModule(Path(data_params.data_root), Path(data_params.data_root) / "processed",
-                               data_params.processed_subfolder)
-    dm = EmotionDataModule(fvdm, image_size=model_params.image_size,
+    fvdm = FaceVideoDataModule(Path(cfg_coarse.data.data_root), Path(cfg_coarse.data.data_root) / "processed",
+                               cfg_coarse.data.processed_subfolder)
+    dm = EmotionDataModule(fvdm, image_size=cfg_coarse.model.image_size,
                            with_landmarks=True, with_segmentations=True)
     dm.prepare_data()
 
-
     # index = 220
     # index = 120
-    index = data_params.sequence_index
-    annotation_list = data_params.annotation_list
+    index = cfg_coarse.data.sequence_index
+    annotation_list = cfg_coarse.data.annotation_list
+
     if index == -1:
         sequence_name = annotation_list[0]
         if annotation_list[0] == 'va':
@@ -44,66 +45,89 @@ def finetune_deca(data_params, learning_params, model_params, inout_params):
             print("No GT for expressions. Skipping")
             # sys.exit(0)
 
-    deca = DecaModule(model_params, learning_params, inout_params)
+    deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
+    conf = DictConfig({})
+    conf.coarse = cfg_coarse
+    conf.detail = cfg_detail
 
-    project_name = 'EMOCA_finetune'
-    name = inout_params.name + '_' + str(filter_pattern) + "_" + \
-           datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
+    project_name = 'EmotionalDeca'
+    time = datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
+    experiment_name = time+ "_" + sequence_name
 
-    train_data_loader = dm.train_dataloader(annotation_list, filter_pattern,
-                                    # TODO: find a better! way to incorporate the K and the batch size
-                                    batch_size=model_params.batch_size_train,
-                                    num_workers=data_params.num_workers,
-                                    split_ratio=data_params.split_ratio,
-                                    split_style=data_params.split_style,
-                                    K=model_params.train_K,
-                                    K_policy=model_params.K_policy)
-
-    val_data_loader = dm.val_dataloader(annotation_list, filter_pattern,
-                                        # TODO: find a better! way to incorporate the K and the batch size
-                                        batch_size=model_params.batch_size_val,
-                                        num_workers=data_params.num_workers)
-
-    # out_folder = Path(inout_params.output_dir) / name
-    # out_folder.mkdir(parents=True)
-
-    # wandb.init(project_name)
-    # wandb_logger = WandbLogger(name=name, project=project_name)
-    wandb_logger = None
-    trainer = Trainer(gpus=1)
-    # trainer = Trainer(gpus=1, logger=wandb_logger)
-    # trainer.fit(deca, datamodule=dm)
-    print("The training begins")
-    trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader,])
-
-
-
-
-import hydra
-from omegaconf import DictConfig, OmegaConf
-
-
-@hydra.main(config_path="deca_conf", config_name="deca_finetune")
-def main(cfg : DictConfig):
-    print(OmegaConf.to_yaml(cfg))
-    root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
-    # root_path = root / "Aff-Wild2_ready"
-    root_path = root
-    processed_data_path = root / "processed"
-    # subfolder = 'processed_2020_Dec_21_00-30-03'
-    subfolder = 'processed_2021_Jan_19_20-25-10'
-
-    run_dir = cfg.inout.output_dir + "_" + datetime.datetime.now().strftime("%Y_%b_%d_%H-%M-%S")
-
-    full_run_dir = Path(cfg.inout.output_dir) / run_dir
+    full_run_dir = Path(cfg_coarse.inout.output_dir) / experiment_name
     full_run_dir.mkdir(parents=True)
 
-    cfg["inout"]['full_run_dir'] = str(full_run_dir)
+    coarse_checkpoint_dir = full_run_dir / "coarse"
+    coarse_checkpoint_dir.mkdir(parents=True)
 
-    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
-        OmegaConf.save(config=cfg, f=outfile)
+    detail_checkpoint_dir = full_run_dir / "detail"
+    detail_checkpoint_dir.mkdir(parents=True)
 
-    finetune_deca(cfg['data'], cfg['learning'], cfg['model'], cfg['inout'])
+    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
+    cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
+    cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
+    cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
+
+    # name = cfg_coarse.inout.name + '_' + str(filter_pattern) + "_" + \
+    #        datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
+
+    #
+    # train_data_loader = dm.train_dataloader(annotation_list, filter_pattern,
+    #                                         batch_size=cfg_coarse.model.batch_size_train,
+    #                                         num_workers=cfg_coarse.data.num_workers,
+    #                                         split_ratio=cfg_coarse.data.split_ratio,
+    #                                         split_style=cfg_coarse.data.split_style,
+    #                                         K=cfg_coarse.model.train_K,
+    #                                         K_policy=cfg_coarse.model.K_policy)
+    #
+    # val_data_loader = dm.val_dataloader(annotation_list, filter_pattern,
+    #                                     batch_size=cfg_coarse.model.batch_size_val,
+    #                                     num_workers=cfg_coarse.data.num_workers)
+
+    test_data_loader = dm.test_dataloader(annotation_list, filter_pattern,
+                                         batch_size=cfg_coarse.model.batch_size_val,
+                                         num_workers=cfg_coarse.data.num_workers,
+                                         K=cfg_coarse.model.test_K,
+                                         K_policy=cfg_coarse.model.K_policy)
+
+    wandb_logger = WandbLogger(name=experiment_name,
+                               project=project_name,
+                               config=dict(conf),
+                               version=time,
+                               save_dir=full_run_dir)
+
+    configs = [cfg_coarse, cfg_detail]
+    # configs = [cfg_detail]
+    for i, cfg in enumerate(configs):
+        if i > 0:
+            deca.reconfigure(cfg.model)
+
+        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
+        trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
+                          default_root_dir=cfg.inout.checkpoint_dir,
+                          logger=wandb_logger,
+                          accelerator=accelerator)
+
+        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+
+        wandb_logger.finalize("")
+        trainer.test(deca,
+                     test_dataloaders=[test_data_loader],
+                     ckpt_path=None)
+        # to make sure WANDB has the correct step
+        wandb_logger.finalize("")
+
+
+# @hydra.main(config_path="deca_conf", config_name="deca_finetune")
+# def main(cfg : DictConfig):
+def main():
+    from hydra.experimental import compose, initialize
+    # override = ['learning.num_gpus=2', 'model/paths=cluster']
+    override = sys.argv[1:]
+    initialize(config_path="deca_conf", job_name="finetune_deca")
+    cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
+    cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
+    finetune_deca(cfg_coarse, cfg_detail)
 
 
 if __name__ == "__main__":
