@@ -43,6 +43,8 @@ class EmoNetLoss(object):
         self.valence_loss = F.l1_loss
         self.arousal_loss = F.l1_loss
         self.expression_loss = F.kl_div
+        self.input_emotion = None
+        self.output_emotion = None
 
     def to(self, *args, **kwargs):
         self.emonet = self.emonet.to(*args, **kwargs)
@@ -74,6 +76,8 @@ class EmoNetLoss(object):
         # self.output_emotion = None
         input_emotion = self.emonet_out(input_images)
         output_emotion = self.emonet_out(output_images)
+        self.input_emotion = input_emotion
+        self.output_emotion = output_emotion
 
         emo_feat_loss_1 = self.emo_feat_loss(input_emotion['emo_feat'], output_emotion['emo_feat'])
         emo_feat_loss_2 = self.emo_feat_loss(input_emotion['emo_feat_2'], output_emotion['emo_feat_2'])

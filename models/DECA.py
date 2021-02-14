@@ -21,8 +21,8 @@ from lib.utils import lossfunc, util
 from lib.datasets.datasets import VoxelDataset, TestData
 import lib.utils.util as util
 import lib.utils.lossfunc as lossfunc
-
-
+from wandb import Image
+from datasets.FaceVideoDataset import AffectNetExpressions
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 
@@ -169,7 +169,6 @@ class DecaModule(LightningModule):
                                        dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
                     lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
                     masks = torch.cat([masks, masks], dim=0)
-                # import ipdb; ipdb.set_trace()
 
         # -- detail
         if self.mode == DecaMode.DETAIL:
@@ -251,6 +250,7 @@ class DecaModule(LightningModule):
                                       align_corners=False)
         # images
         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
+        predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
 
         if self.deca.config.useSeg:
             masks = masks[:, None, :, :]
@@ -376,8 +376,14 @@ class DecaModule(LightningModule):
                                     None] - lightcode) ** 2).mean() * self.deca.config.light_reg
 
             if self.emonet_loss is not None:
-                with torch.no_grad():
-                    self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse")
+                # with torch.no_grad():
+                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse")
+                codedict["coarse_input_valence"] = self.emonet_loss.input_emotion['valence']
+                codedict["coarse_input_arousal"] = self.emonet_loss.input_emotion['arousal']
+                codedict["coarse_input_expression"] = self.emonet_loss.input_emotion['expression']
+                codedict["coarse_output_valence"] = self.emonet_loss.output_emotion['valence']
+                codedict["coarse_output_arousal"] = self.emonet_loss.output_emotion['arousal']
+                codedict["coarse_output_expression"] = self.emonet_loss.output_emotion['expression']
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -391,6 +397,12 @@ class DecaModule(LightningModule):
 
             if self.emonet_loss is not None:
                 self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail")
+                codedict["detail_input_valence"] = self.emonet_loss.input_emotion['valence']
+                codedict["detail_input_arousal"] = self.emonet_loss.input_emotion['arousal']
+                codedict["detail_input_expression"] = self.emonet_loss.input_emotion['expression']
+                codedict["detail_output_valence"] = self.emonet_loss.output_emotion['valence']
+                codedict["detail_output_arousal"] = self.emonet_loss.output_emotion['arousal']
+                codedict["detail_output_expression"] = self.emonet_loss.output_emotion['expression']
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 # if pi==0:
@@ -445,6 +457,7 @@ class DecaModule(LightningModule):
         for key in losses_key:
             all_loss = all_loss + losses[key]
         # losses['all_loss'] = all_loss
+        losses = {'loss_' + key : value for key, value in losses.items()} # add prefix loss for better logging
         losses['loss'] = all_loss
 
         # add metrics that do not effect the loss function (if any)
@@ -452,34 +465,110 @@ class DecaModule(LightningModule):
             losses['metric_' + key] = metrics[key]
         return losses
 
+    def _val_to_be_logged(self, d):
+        if not hasattr(self, 'val_dict_list'):
+            self.val_dict_list = []
+        self.val_dict_list += [d]
+
+    def _train_to_be_logged(self, d):
+        if not hasattr(self, 'train_dict_list'):
+            self.train_dict_list = []
+        self.train_dict_list += [d]
+
     def validation_step(self, batch, batch_idx):
         with torch.no_grad():
             values = self._encode(batch, training=False)
             values = self._decode(values, training=False)
             losses_and_metrics = self.compute_loss(values, training=False)
-        self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
+        #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         suffix = str(self.mode.name).lower()
         losses_and_metrics_to_log = {suffix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log[suffix + '_val_' + 'epoch'] = self.current_epoch
+        # losses_and_metrics_to_log[suffix + '_val_' + 'step'] = self.global_step
+        # losses_and_metrics_to_log[suffix + '_val_' + 'batch_idx'] = batch_idx
+        # self._val_to_be_logged(losses_and_metrics_to_log)
+        if self.global_step % 200 == 0:
+            uv_detail_normals = None
+            if 'uv_detail_normals' in values.keys():
+                uv_detail_normals = values['uv_detail_normals']
+            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                           uv_detail_normals, values, batch_idx)
+            vis_dict = self._log_visualizations('val', visualizations, values, self.global_step)
+            image = Image(grid_image, caption="full visualization")
+            vis_dict[suffix + '_val_' + "visualization"] = image
+
+            # if on_step:
+            #     step = self.global_step
+            # if on_epoch:`
+            #     step = self.current_epoch
+            self.logger.experiment.log(vis_dict) #, step=self.global_step)
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
         # return losses_and_metrics
         return None
 
+    # def _log_dict(self, dict):
+    #     accumulated_dict = {}
+    #     if len(dict) > 0:
+    #         d = dict[0]
+    #         for key in d.keys():
+    #             accumulated_dict[key] = 0
+    #             for i in range(len(dict)):
+    #                 accumulated_dict[key] += dict[i][key]
+    #             accumulated_dict[key] /= len(dict)
+    #     # self.logger.experiment.log(accumulated_dict, step=self.logger)
+    #     self.logger.log_metrics(accumulated_dict)
+    #
+    # def validation_epoch_end(
+    #     self, outputs
+    # ):
+    #     if not hasattr(self, 'val_dict_list'):
+    #         self.val_dict_list = []
+    #         return
+    #     self._log_dict(self.val_dict_list)
+    #     self.val_dict_list = []
+    #     # return super().validation_epoch_end()
+    #
+    # def training_epoch_end(self, outputs):
+    #     if not hasattr(self, 'train_dict_list'):
+    #         self.train_dict_list = []
+    #         return
+    #     self._log_dict(self.train_dict_list)
+    #     self.train_dict_list = []
+    #     # return super().training_epoch_end()
 
     def test_step(self, batch, batch_idx):
+        prefix = str(self.mode.name).lower()
+        losses_and_metrics_to_log = {}
         with torch.no_grad():
             values = self._encode(batch, training=False)
             values = self._decode(values, training=False)
             if 'mask' in batch.keys():
                 losses_and_metrics = self.compute_loss(values, training=False)
-                suffix = str(self.mode.name).lower()
-                losses_and_metrics_to_log = {suffix + '_test_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
-                self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False)
+                losses_and_metrics_to_log = {prefix + '_test_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
             else:
                 losses_and_metric = None
 
+        losses_and_metrics_to_log[prefix + '_test_' + 'epoch'] = self.current_epoch
+        losses_and_metrics_to_log[prefix + '_test_' + 'step'] = self.global_step
+        losses_and_metrics_to_log[prefix + '_test_' + 'batch_idx'] = batch_idx
+        # if self.global_step % 200 == 0:
+        uv_detail_normals = None
+        if 'uv_detail_normals' in values.keys():
+            uv_detail_normals = values['uv_detail_normals']
+
+        visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                       uv_detail_normals, values, self.global_step)
+        visdict = self._log_visualizations('test', visualizations, values, self.global_step)
+        image = Image(grid_image, caption="full visualization")
+        visdict[ prefix + '_test_' + "visualization"] = image
+        # self.logger.experiment.log(visdict)#, step=self.global_step)
+        self.logger.log_metrics(visdict)#, step=self.global_step)
+        # losses_and_metrics_to_log[prefix + '_test_' + "visualization"] = image
+        # self.logger.experiment.log(losses_and_metrics_to_log)
+        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False)
+        self.logger.log_metrics(losses_and_metrics_to_log)
         # return losses_and_metrics
         return None
-
 
     def training_step(self, batch, batch_idx): #, debug=True):
         values = self._encode(batch, training=True)
@@ -490,13 +579,23 @@ class DecaModule(LightningModule):
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        # if batch_idx % 200 == 0:
-        if self.global_step % 200 == 0:
-            self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+        prefix = str(self.mode.name).lower()
+        losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = self.current_epoch
+        # losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
+
+        if self.global_step % 100 == 0:
+            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-        suffix = str(self.mode.name).lower()
-        losses_and_metrics_to_log = {suffix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+            image = Image(grid_image, caption="full visualization")
+            # self.logger.experiment.log({prefix + '_train_' + "visualization" : image}, step=self.global_step)
+            # losses_and_metrics_to_log[prefix + '_train_' + "visualization"] = image
+            visdict = self._log_visualizations('train', visualizations, values, self.global_step)
+            visdict[prefix + '_test_' + "visualization"] = image
+
+
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
+        # self._train_to_be_logged(losses_and_metrics_to_log)
         # return losses_and_metrics
         return losses_and_metrics['loss']
 
@@ -521,6 +620,65 @@ class DecaModule(LightningModule):
     #         loss_dict[key] = loss_dict[key] / N
     #     return loss_dict
 
+
+    def _torch_image2np(self, torch_image):
+        image = torch_image.detach().cpu().numpy()
+        if len(image.shape) == 4:
+            image = image.transpose([0, 2, 3, 1])
+        elif len(image.shape) == 3:
+            image = image.transpose([1, 2, 0])
+        return image
+
+
+    def vae_2_str(self, valence, arousal, expression):
+        caption = "valence= %.03f\n" % valence
+        caption += "arousal= %.03f\n" % arousal
+        caption += "expression= %s \n" % AffectNetExpressions(expression).name
+        return caption
+
+    def _log_visualizations(self, stage, visdict, values, step, indices=None):
+        prefix = str(self.mode.name).lower()
+        log_dict = {}
+        for key in visdict.keys():
+            images = self._torch_image2np(visdict[key])
+            if images.dtype == np.float32 or images.dtype == np.float64 or images.dtype == np.float16:
+                images = np.clip(images, 0, 1)
+            if indices is None:
+                indices = np.arange(images.shape[0])
+            if isinstance(indices, str) and indices == 'all':
+                image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
+                wandb_image = Image(image, caption=key)
+                log_dict[prefix + "_" + stage + "_" + key] = wandb_image
+            else:
+                for i in indices:
+                    caption = key + f" index_in_batch={i}"
+                    if self.emonet_loss is not None:
+                        if key == 'inputs':
+                            caption += "\n" + self.vae_2_str(values[prefix + "_input_valence"][i].detach().cpu().item(),
+                                                             values[prefix + "_input_valence"][i].detach().cpu().item(),
+                                                             np.argmax(values[prefix + "_input_expression"][i].detach().cpu().numpy()))
+                        elif key == 'output_images_' + prefix:
+                            caption += "\n" + self.vae_2_str(values[prefix + "_output_valence"][i].detach().cpu().item(),
+                                                             values[prefix + "_output_valence"][i].detach().cpu().item(),
+                                                             np.argmax(values[prefix + "_output_expression"][i].detach().cpu().numpy()))
+                        # elif key == 'output_images_detail':
+                        #     caption += "\n" + self.vae_2_str(values["detail_output_valence"][i].detach().cpu().item(),
+                        #                                  values["detail_output_valence"][i].detach().cpu().item(),
+                        #                                  np.argmax(values["detail_output_expression"][
+                        #                                                i].detach().cpu().numpy()))
+
+                    image = images[i]
+                    wandb_image = Image(image, caption=caption)
+                    log_dict[prefix + "_" + stage + "_" + key] = wandb_image
+        # self.log_dict(log_dict, on_step=on_step, on_epoch=on_epoch)
+        # if on_step:
+        #     step = self.global_step
+        # if on_epoch:
+        #     step = self.current_epoch
+        # self.logger.experiment.log(log_dict, step=step)
+        # self.logger.experiment.log(log_dict)#, step=step)
+        return log_dict
+
     def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx):
         # visualize
         # if iter % 200 == 1:
@@ -544,10 +702,15 @@ class DecaModule(LightningModule):
             visdict['landmarks_gt'] = util.tensor_vis_landmarks(additional['images'][visind], additional['lmk'][visind])
 
         if 'images' in additional.keys() and 'predicted_landmarks' in additional.keys():
-            visdict['landmarks_gt'] = util.tensor_vis_landmarks(additional['images'][visind],
+            visdict['landmarks_predicted'] = util.tensor_vis_landmarks(additional['images'][visind],
                                                                      additional['predicted_landmarks'][visind])
+
         if 'predicted_images' in additional.keys():
-            visdict['predicted_images'] = additional['predicted_images'][visind]
+            visdict['output_images_coarse'] = additional['predicted_images'][visind]
+
+        visdict['geometry_coarse'] = shape_images[visind]
+        if shape_detail_images is not None:
+            visdict['geometry_detail'] = shape_detail_images[visind]
 
         if 'albedo_images' in additional.keys():
             visdict['albedo_images'] = additional['albedo_images'][visind]
@@ -558,7 +721,7 @@ class DecaModule(LightningModule):
             visdict['albedo'] = additional['albedo'][visind]
 
         if 'predicted_detailed_image' in additional.keys() and additional['predicted_detailed_image'] is not None:
-            visdict['detailed_images'] = additional['predicted_detailed_image'][visind]
+            visdict['output_images_detail'] = additional['predicted_detailed_image'][visind]
 
         if 'shape_detail_images' in additional.keys():
             visdict['shape_detail_images'] = additional['shape_detail_images'][visind]
@@ -578,9 +741,9 @@ class DecaModule(LightningModule):
         savepath = '{}/{}/{}_{}.png'.format(self.inout_params.full_run_dir, 'train_images',
                                             self.current_epoch, batch_idx)
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
-        self.deca.visualize(visdict, savepath)
+        visualization_image = self.deca.visualize(visdict, savepath)
 
-        return visdict
+        return visdict, visualization_image[..., [2,1,0]]
 
     def _visualization_checkpoint_old(self,  verts, trans_verts, ops, images, lmk, predicted_images,
                                   predicted_landmarks, masks,
@@ -808,6 +971,7 @@ class DECA(torch.nn.Module):
         grid_image = (grid.numpy().transpose(1, 2, 0).copy() * 255)[:, :, [2, 1, 0]]
         grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
         cv2.imwrite(savepath, grid_image)
+        return grid_image
 
     # deprecate
     def test(self, n_person=None, testpath=None, scale=None, iscrop=None, return_params=False, vispath=None,

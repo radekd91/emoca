@@ -40,23 +40,25 @@ def finetune_deca(cfg_coarse, cfg_detail):
     conf.coarse = cfg_coarse
     conf.detail = cfg_detail
 
-    wandb_logger = WandbLogger(name="test_" + datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S"),
+    time = datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
+    experiment_name = "test_" + time
+    wandb_logger = WandbLogger(name=experiment_name,
                                project="EmotionalDeca",
-                               config=dict(conf))
+                               config=dict(conf),
+                               version=time)
 
     configs = [cfg_coarse, cfg_detail]
+    # configs = [cfg_detail]
     for i, cfg in enumerate(configs):
         if i > 0:
             deca.reconfigure(cfg.model)
 
-        training_set_dl = DataLoader(training_set, shuffle=True,
-                                     batch_size=cfg.model.batch_size_train,
-                                     num_workers=cfg.data.num_workers)
-        val_set_dl = DataLoader(val_set, shuffle=False,
-                                     batch_size=cfg.model.batch_size_train,
-                                     num_workers=cfg.data.num_workers)
+        # wandb_logger = WandbLogger(name=experiment_name,
+        #                            project="EmotionalDeca",
+        #                            config=dict(conf),
+        #                            version=time)
 
-        from tqdm import tqdm
+        # from tqdm import tqdm
         # for i, b in enumerate(tqdm(training_set_dl)):
         # for i, b in enumerate(tqdm(val_set_dl)):
         #     print(f"batch {i}")
@@ -73,13 +75,36 @@ def finetune_deca(cfg_coarse, cfg_detail):
         #     # b["mask"]
         #     # b["landmark"]
 
-        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
+        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
         trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
                           default_root_dir=cfg.inout.full_run_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)
+
+        training_set_dl = DataLoader(training_set, shuffle=True,
+                                     batch_size=cfg.model.batch_size_train,
+                                     num_workers=cfg.data.num_workers)
+
+        val_set_dl = DataLoader(val_set, shuffle=False,
+                                batch_size=cfg.model.batch_size_train,
+                                num_workers=cfg.data.num_workers)
         trainer.fit(deca, train_dataloader=training_set_dl, val_dataloaders=[val_set_dl, ])
-        trainer.test(deca, test_dataloaders=[val_set_dl], ckpt_path='best')
+
+        # wandb_logger = WandbLogger(name=experiment_name,
+        #                            project="EmotionalDeca",
+        #                            config=dict(conf),
+        #                            version=time)
+        # trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
+        #                   default_root_dir=cfg.inout.full_run_dir,
+        #                   logger=wandb_logger,
+        #                   accelerator=accelerator)
+        test_set_dl = DataLoader(val_set, shuffle=False,
+                                batch_size=cfg.model.batch_size_train,
+                                num_workers=cfg.data.num_workers)
+        wandb_logger.finalize("")
+        trainer.test(deca, test_dataloaders=[test_set_dl], ckpt_path='best')
+        # to make sure WANDB has the correct step
+        wandb_logger.finalize("")
 
     # deca.training_step(batch, batch_idx, False)
 
