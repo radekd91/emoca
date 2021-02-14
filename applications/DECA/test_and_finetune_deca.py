@@ -29,6 +29,8 @@ def finetune_deca(cfg_coarse, cfg_detail):
     index = cfg_coarse.data.sequence_index
     annotation_list = cfg_coarse.data.annotation_list
 
+    print(f"Looking for video {index} in {len(fvdm.video_list)}")
+
     if index == -1:
         sequence_name = annotation_list[0]
         if annotation_list[0] == 'va':
@@ -71,18 +73,18 @@ def finetune_deca(cfg_coarse, cfg_detail):
     # name = cfg_coarse.inout.name + '_' + str(filter_pattern) + "_" + \
     #        datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
 
-    #
-    # train_data_loader = dm.train_dataloader(annotation_list, filter_pattern,
-    #                                         batch_size=cfg_coarse.model.batch_size_train,
-    #                                         num_workers=cfg_coarse.data.num_workers,
-    #                                         split_ratio=cfg_coarse.data.split_ratio,
-    #                                         split_style=cfg_coarse.data.split_style,
-    #                                         K=cfg_coarse.model.train_K,
-    #                                         K_policy=cfg_coarse.model.K_policy)
-    #
-    # val_data_loader = dm.val_dataloader(annotation_list, filter_pattern,
-    #                                     batch_size=cfg_coarse.model.batch_size_val,
-    #                                     num_workers=cfg_coarse.data.num_workers)
+
+    train_data_loader = dm.train_dataloader(annotation_list, filter_pattern,
+                                            batch_size=cfg_coarse.model.batch_size_train,
+                                            num_workers=cfg_coarse.data.num_workers,
+                                            split_ratio=cfg_coarse.data.split_ratio,
+                                            split_style=cfg_coarse.data.split_style,
+                                            K=cfg_coarse.model.train_K,
+                                            K_policy=cfg_coarse.model.K_policy)
+
+    val_data_loader = dm.val_dataloader(annotation_list, filter_pattern,
+                                        batch_size=cfg_coarse.model.batch_size_val,
+                                        num_workers=cfg_coarse.data.num_workers)
 
     test_data_loader = dm.test_dataloader(annotation_list, filter_pattern,
                                          batch_size=cfg_coarse.model.batch_size_val,
@@ -108,7 +110,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
                           logger=wandb_logger,
                           accelerator=accelerator)
 
-        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
 
         wandb_logger.finalize("")
         trainer.test(deca,
