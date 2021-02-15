@@ -14,6 +14,7 @@ import wandb
 import datetime
 # import hydra
 from omegaconf import DictConfig, OmegaConf
+import copy
 
 
 def finetune_deca(cfg_coarse, cfg_detail):
@@ -27,7 +28,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
     # index = 220
     # index = 120
     index = cfg_coarse.data.sequence_index
-    annotation_list = cfg_coarse.data.annotation_list
+    annotation_list = copy.deepcopy(cfg_coarse.data.annotation_list) # sth weird is modifying the list, that's why deep copy
 
     print(f"Looking for video {index} in {len(fvdm.video_list)}")
 
@@ -73,8 +74,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
     # name = cfg_coarse.inout.name + '_' + str(filter_pattern) + "_" + \
     #        datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
 
-
-    train_data_loader = dm.train_dataloader(annotation_list, filter_pattern,
+    train_data_loader = dm.train_dataloader(copy.deepcopy(annotation_list), filter_pattern,
                                             batch_size=cfg_coarse.model.batch_size_train,
                                             num_workers=cfg_coarse.data.num_workers,
                                             split_ratio=cfg_coarse.data.split_ratio,
@@ -82,11 +82,11 @@ def finetune_deca(cfg_coarse, cfg_detail):
                                             K=cfg_coarse.model.train_K,
                                             K_policy=cfg_coarse.model.K_policy)
 
-    val_data_loader = dm.val_dataloader(annotation_list, filter_pattern,
+    val_data_loader = dm.val_dataloader(copy.deepcopy(annotation_list), filter_pattern,
                                         batch_size=cfg_coarse.model.batch_size_val,
                                         num_workers=cfg_coarse.data.num_workers)
 
-    test_data_loader = dm.test_dataloader(annotation_list, filter_pattern,
+    test_data_loader = dm.test_dataloader(copy.deepcopy(annotation_list), filter_pattern,
                                          batch_size=cfg_coarse.model.batch_size_val,
                                          num_workers=cfg_coarse.data.num_workers,
                                          K=cfg_coarse.model.test_K,
@@ -105,12 +105,14 @@ def finetune_deca(cfg_coarse, cfg_detail):
             deca.reconfigure(cfg.model)
 
         accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
+        if accelerator is not None:
+            os.environ['LOCAL_RANK'] = '0'
         trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
                           default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)
 
-        trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
 
         wandb_logger.finalize("")
         trainer.test(deca,

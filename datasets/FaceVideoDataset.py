@@ -1785,7 +1785,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         discared_all = []
         non_detected_all = []
 
-        annotation_list += []
+        # annotation_list += []
 
         import re
         if filter_pattern is not None:
