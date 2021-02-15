@@ -126,7 +126,8 @@ def finetune_deca(cfg_coarse, cfg_detail):
         if i > 0:
             deca.reconfigure(cfg.model)
 
-        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
+        # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
+        accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
         if accelerator is not None and 'LOCAL_RANK' not in os.environ.keys():
             print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
             os.environ['LOCAL_RANK'] = '0'
