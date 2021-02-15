@@ -22,6 +22,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
     fvdm = FaceVideoDataModule(Path(cfg_coarse.data.data_root), Path(cfg_coarse.data.data_root) / "processed",
                                cfg_coarse.data.processed_subfolder)
     fvdm.prepare_data()
+    fvdm.setup()
 
     # index = 220
     # index = 120
