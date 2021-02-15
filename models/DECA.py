@@ -40,16 +40,19 @@ class DecaModule(LightningModule):
         self.inout_params = inout_params
         self.deca = DECA(config=model_params)
         self.mode = DecaMode[str(model_params.mode).upper()]
-
+        self.stage_name = ""
         if 'emonet_reg' in self.deca.config.keys():
             self.emonet_loss = EmoNetLoss(self.device)
         else:
             self.emonet_loss = None
 
-    def reconfigure(self, model_params):
-        if self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL:
+    def reconfigure(self, model_params, stage_name="", downgrade_ok=False):
+        if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
         self.deca._reconfigure(model_params)
+        self.stage_name = stage_name
+        if len(self.stage_name) > 0:
+            self.stage_name += "_"
         self.mode = DecaMode[str(model_params.mode).upper()]
         print(f"DECA MODE RECONFIGURED TO: {self.mode}")
 
@@ -322,7 +325,8 @@ class DecaModule(LightningModule):
         d[prefix + '_emo_feat_2_L1'] = emo_feat_loss_2 * self.deca.config.emonet_reg
         d[prefix + '_valence_L1'] = valence_loss * self.deca.config.emonet_reg
         d[prefix + '_arousal_L1'] = arousal_loss * self.deca.config.emonet_reg
-        d[prefix + '_expression_KL'] = expression_loss * self.deca.config.emonet_reg
+        # d[prefix + '_expression_KL'] = expression_loss * self.deca.config.emonet_reg # KL seems to be causing NaN's
+        d[prefix + '_expression_L1'] = expression_loss * self.deca.config.emonet_reg
         d[prefix + '_emotion_combined'] = (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_reg
 
     def _compute_loss(self, codedict, training=True) -> (dict, dict):
@@ -481,11 +485,12 @@ class DecaModule(LightningModule):
             values = self._decode(values, training=False)
             losses_and_metrics = self.compute_loss(values, training=False)
         #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
-        suffix = str(self.mode.name).lower()
-        losses_and_metrics_to_log = {suffix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
-        losses_and_metrics_to_log[suffix + '_val_' + 'epoch'] = self.current_epoch
-        # losses_and_metrics_to_log[suffix + '_val_' + 'step'] = self.global_step
-        # losses_and_metrics_to_log[suffix + '_val_' + 'batch_idx'] = batch_idx
+        # prefix = str(self.mode.name).lower()
+        prefix = self._get_logging_prefix()
+        losses_and_metrics_to_log = {prefix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log[prefix + '_val_' + 'epoch'] = self.current_epoch
+        # losses_and_metrics_to_log[prefix + '_val_' + 'step'] = self.global_step
+        # losses_and_metrics_to_log[prefix + '_val_' + 'batch_idx'] = batch_idx
         # self._val_to_be_logged(losses_and_metrics_to_log)
         if self.global_step % 200 == 0:
             uv_detail_normals = None
@@ -495,16 +500,22 @@ class DecaModule(LightningModule):
                                            uv_detail_normals, values, batch_idx)
             vis_dict = self._log_visualizations('val', visualizations, values, self.global_step, indices=0)
             # image = Image(grid_image, caption="full visualization")
-            # vis_dict[suffix + '_val_' + "visualization"] = image
+            # vis_dict[prefix + '_val_' + "visualization"] = image
             self.logger.log_metrics(vis_dict)
             # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True) # log per epoch # recommended
+        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
+        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics
         return None
 
+    def _get_logging_prefix(self):
+        prefix = self.stage_name + str(self.mode.name).lower()
+        return prefix
+
     def test_step(self, batch, batch_idx):
-        prefix = str(self.mode.name).lower()
+        prefix = self._get_logging_prefix()
         losses_and_metrics_to_log = {}
         with torch.no_grad():
             values = self._encode(batch, training=False)
@@ -541,7 +552,8 @@ class DecaModule(LightningModule):
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        prefix = str(self.mode.name).lower()
+        # prefix = str(self.mode.name).lower()
+        prefix = self._get_logging_prefix()
         losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = self.current_epoch
         # losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
@@ -555,7 +567,9 @@ class DecaModule(LightningModule):
             self.logger.log_metrics(visdict)#, step=self.global_step)
 
 
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True)
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True) # log per epoch, # recommended
+        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
+        # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics
         return losses_and_metrics['loss']
 
@@ -597,7 +611,9 @@ class DecaModule(LightningModule):
         return caption
 
     def _log_visualizations(self, stage, visdict, values, step, indices=None):
-        prefix = str(self.mode.name).lower()
+        mode_ = str(self.mode.name).lower()
+        prefix = self._get_logging_prefix()
+
         log_dict = {}
         for key in visdict.keys():
             images = self._torch_image2np(visdict[key])
@@ -616,13 +632,13 @@ class DecaModule(LightningModule):
                     caption = key + f" index_in_batch={i}"
                     if self.emonet_loss is not None:
                         if key == 'inputs':
-                            caption += "\n" + self.vae_2_str(values[prefix + "_input_valence"][i].detach().cpu().item(),
-                                                             values[prefix + "_input_valence"][i].detach().cpu().item(),
-                                                             np.argmax(values[prefix + "_input_expression"][i].detach().cpu().numpy()))
-                        elif key == 'output_images_' + prefix:
-                            caption += "\n" + self.vae_2_str(values[prefix + "_output_valence"][i].detach().cpu().item(),
-                                                             values[prefix + "_output_valence"][i].detach().cpu().item(),
-                                                             np.argmax(values[prefix + "_output_expression"][i].detach().cpu().numpy()))
+                            caption += "\n" + self.vae_2_str(values[mode_ + "_input_valence"][i].detach().cpu().item(),
+                                                             values[mode_ + "_input_valence"][i].detach().cpu().item(),
+                                                             np.argmax(values[mode_ + "_input_expression"][i].detach().cpu().numpy()))
+                        elif key == 'output_images_' + mode_:
+                            caption += "\n" + self.vae_2_str(values[mode_ + "_output_valence"][i].detach().cpu().item(),
+                                                             values[mode_ + "_output_valence"][i].detach().cpu().item(),
+                                                             np.argmax(values[mode_ + "_output_expression"][i].detach().cpu().numpy()))
                         # elif key == 'output_images_detail':
                         #     caption += "\n" + self.vae_2_str(values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),

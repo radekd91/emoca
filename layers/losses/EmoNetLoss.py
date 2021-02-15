@@ -42,7 +42,8 @@ class EmoNetLoss(object):
         self.emo_feat_loss = F.l1_loss
         self.valence_loss = F.l1_loss
         self.arousal_loss = F.l1_loss
-        self.expression_loss = F.kl_div
+        # self.expression_loss = F.kl_div
+        self.expression_loss = F.l1_loss
         self.input_emotion = None
         self.output_emotion = None
 

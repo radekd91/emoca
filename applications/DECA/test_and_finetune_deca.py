@@ -111,8 +111,16 @@ def finetune_deca(cfg_coarse, cfg_detail):
                           default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)
+        if i == 0:
+            deca.reconfigure(cfg_detail.model, stage_name="start")
+            trainer.test(deca,
+                         test_dataloaders=[test_data_loader],
+                         ckpt_path=None)
+            # to make sure WANDB has the correct step
+            wandb_logger.finalize("")
+            deca.reconfigure(cfg.model, stage_name="", downgrade_ok=True)
 
-        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
 
         wandb_logger.finalize("")
         trainer.test(deca,
