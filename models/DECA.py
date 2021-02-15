@@ -504,7 +504,7 @@ class DecaModule(LightningModule):
             self.logger.log_metrics(vis_dict)
             # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True) # log per epoch # recommended
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics
@@ -567,7 +567,7 @@ class DecaModule(LightningModule):
             self.logger.log_metrics(visdict)#, step=self.global_step)
 
 
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True) # log per epoch, # recommended
+        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch, # recommended
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics

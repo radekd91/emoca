@@ -17,7 +17,7 @@ import pickle as pkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
-
+import copy
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
@@ -33,7 +33,17 @@ from transforms.keypoints import KeypointScale, KeypointNormalization
 
 class EmotionDataModule(pl.LightningDataModule):
 
-    def __init__(self, dm, image_size=256, with_landmarks=False, with_segmentations=False):
+    def __init__(self, dm, image_size=256, with_landmarks=False, with_segmentations=False,
+                 train_K=None,
+                 test_K=None,
+                 train_K_policy = None,
+                 test_K_policy = None,
+                 annotation_list = None,
+                 filter_pattern = None,
+                 split_ratio = None,
+                 split_style = None,
+                 num_workers = 0
+                 ):
         super().__init__()
         self.dm = dm
         self.image_size = image_size
@@ -42,35 +52,43 @@ class EmotionDataModule(pl.LightningDataModule):
         self.testing_set = None
         self.with_landmarks = with_landmarks
         self.with_segmentations = with_segmentations
+        self.train_K = train_K
+        self.val_K = 1
+        self.test_K = test_K
+        self.train_K_policy = train_K_policy
+        # self.val_K_policy = val_K_policy
+        self.test_K_policy = test_K_policy
+        self.annotation_list = annotation_list
+        self.filter_pattern = filter_pattern
+        self.split_ratio = split_ratio
+        self.split_style = split_style
+        self.num_workers = num_workers
+        self.training_set = None
+        self.test_set = None
+        self.validation_set = None
 
     def prepare_data(self, *args, **kwargs):
-        self.dm.prepare_data()
-
-    def setup(self, stage: Optional[str] = None):
         pass
 
-    def train_dataloader(self,
-                         annotation_list = None,
-                         filter_pattern=None,
-                         split_ratio=None,
-                         split_style=None,
-                         with_landmarks=False,
-                         K=None,
-                         K_policy=None,
-                         **dl_kwargs) -> DataLoader:
+    def setup(self, stage: Optional[str] = None):
+        self.dm.prepare_data()
+        self.dm.setup()
+        if self.training_set is not None:
+            return
+        from torchvision.transforms import Resize
         im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
         # lmk_transforms = KeypointScale()
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
-            annotation_list, filter_pattern, image_transforms=im_transforms,
-            split_style=split_style, split_ratio=split_ratio,
+            copy.deepcopy(self.annotation_list), self.filter_pattern, image_transforms=im_transforms,
+            split_style=self.split_style, split_ratio=self.split_ratio,
             with_landmarks=self.with_landmarks,
             landmark_transform=lmk_transforms,
             with_segmentations=self.with_segmentations,
             segmentation_transform=seg_transforms,
-            K=K,
-            K_policy=K_policy)
+            K=self.train_K,
+            K_policy=self.train_K_policy)
         if not (isinstance(dataset, list) or isinstance(dataset, tuple)):
             dataset = [dataset,]
         self.training_set = dataset[0]
@@ -80,29 +98,43 @@ class EmotionDataModule(pl.LightningDataModule):
             self.indices_train = dataset[2]
             self.indices_val = dataset[3]
 
-        dl = DataLoader(self.training_set, shuffle=True, **dl_kwargs)
-        return dl
-
-    def val_dataloader(self, annotation_list = None, filter_pattern=None, **dl_kwargs) \
-            -> Union[DataLoader, List[DataLoader]]:
-        return DataLoader(self.validation_set, shuffle=False, **dl_kwargs)
-
-    def test_dataloader(self, annotation_list = None, filter_pattern=None,
-                        K=None,
-                        K_policy=None,
-                        **dl_kwargs) \
-            -> Union[DataLoader, List[DataLoader]]:
-        from torchvision.transforms import Resize
         im_transforms = Resize((self.image_size, self.image_size))
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
-        dataset = self.dm.get_annotated_emotion_dataset(annotation_list, filter_pattern,
+        self.test_set = self.dm.get_annotated_emotion_dataset(copy.deepcopy(self.annotation_list), self.filter_pattern,
                                                         image_transforms=im_transforms,
                                                         with_landmarks = self.with_landmarks,
                                                         landmark_transform=lmk_transforms,
                                                         with_segmentations=self.with_segmentations,
                                                         segmentation_transform=seg_transforms,
-                                                        K=K,
-                                                        K_policy=K_policy)
-        dl = DataLoader(dataset,  shuffle=False, **dl_kwargs)
+                                                        K=self.test_K,
+                                                        K_policy=self.test_K_policy)
+
+
+    def train_dataloader(self,
+                         # annotation_list = None,
+                         # filter_pattern=None,
+                         # split_ratio=None,
+                         # split_style=None,
+                         # with_landmarks=False,
+                         # K=None,
+                         # K_policy=None,
+                         **dl_kwargs) -> DataLoader:
+        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers)
+        return dl
+
+    def val_dataloader(self,
+                       # annotation_list = None, filter_pattern=None,
+                       **dl_kwargs) \
+            -> Union[DataLoader, List[DataLoader]]:
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers)
+
+    def test_dataloader(self,
+                        # annotation_list = None, filter_pattern=None,
+                        # K=None,
+                        # K_policy=None,
+                        **dl_kwargs) \
+            -> Union[DataLoader, List[DataLoader]]:
+
+        dl = DataLoader(self.test_set,  shuffle=False, num_workers=self.num_workers)
         return dl

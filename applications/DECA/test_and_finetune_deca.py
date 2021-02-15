@@ -21,9 +21,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
 
     fvdm = FaceVideoDataModule(Path(cfg_coarse.data.data_root), Path(cfg_coarse.data.data_root) / "processed",
                                cfg_coarse.data.processed_subfolder)
-    dm = EmotionDataModule(fvdm, image_size=cfg_coarse.model.image_size,
-                           with_landmarks=True, with_segmentations=True)
-    dm.prepare_data()
+    fvdm.prepare_data()
 
     # index = 220
     # index = 120
@@ -47,6 +45,23 @@ def finetune_deca(cfg_coarse, cfg_detail):
         if annotation_list[0] == 'expr7' and 'Expression_Set' not in sequence_name:
             print("No GT for expressions. Skipping")
             # sys.exit(0)
+
+    dm = EmotionDataModule(fvdm,
+                           image_size=cfg_coarse.model.image_size,
+                           with_landmarks=True,
+                           with_segmentations=True,
+                           split_ratio=cfg_coarse.data.split_ratio,
+                           split_style=cfg_coarse.data.split_style,
+                           train_K=cfg_coarse.model.train_K,
+                           train_K_policy=cfg_coarse.model.K_policy,
+                           test_K=cfg_coarse.model.train_K,
+                           test_K_policy=cfg_coarse.model.K_policy,
+                           annotation_list = annotation_list,
+                           filter_pattern = filter_pattern, 
+                           num_workers = cfg_coarse.data.num_workers
+                           )
+    # dm.prepare_data()
+    # dm.setup()
 
     deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
     conf = DictConfig({})
@@ -74,23 +89,26 @@ def finetune_deca(cfg_coarse, cfg_detail):
     # name = cfg_coarse.inout.name + '_' + str(filter_pattern) + "_" + \
     #        datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
 
-    train_data_loader = dm.train_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-                                            batch_size=cfg_coarse.model.batch_size_train,
-                                            num_workers=cfg_coarse.data.num_workers,
-                                            split_ratio=cfg_coarse.data.split_ratio,
-                                            split_style=cfg_coarse.data.split_style,
-                                            K=cfg_coarse.model.train_K,
-                                            K_policy=cfg_coarse.model.K_policy)
-
-    val_data_loader = dm.val_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-                                        batch_size=cfg_coarse.model.batch_size_val,
-                                        num_workers=cfg_coarse.data.num_workers)
-
-    test_data_loader = dm.test_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-                                         batch_size=cfg_coarse.model.batch_size_val,
-                                         num_workers=cfg_coarse.data.num_workers,
-                                         K=cfg_coarse.model.test_K,
-                                         K_policy=cfg_coarse.model.K_policy)
+    # train_data_loader = dm.train_dataloader(copy.deepcopy(annotation_list), filter_pattern,
+    #                                         batch_size=cfg_coarse.model.batch_size_train,
+    #                                         num_workers=cfg_coarse.data.num_workers,
+    #                                         split_ratio=cfg_coarse.data.split_ratio,
+    #                                         split_style=cfg_coarse.data.split_style,
+    #                                         K=cfg_coarse.model.train_K,
+    #                                         K_policy=cfg_coarse.model.K_policy)
+    #
+    # val_data_loader = dm.val_dataloader(copy.deepcopy(annotation_list), filter_pattern,
+    #                                     batch_size=cfg_coarse.model.batch_size_val,
+    #                                     num_workers=cfg_coarse.data.num_workers)
+    #
+    # test_data_loader = dm.test_dataloader(copy.deepcopy(annotation_list), filter_pattern,
+    #                                      batch_size=cfg_coarse.model.batch_size_val,
+    #                                      num_workers=cfg_coarse.data.num_workers,
+    #                                      K=cfg_coarse.model.test_K,
+    #                                      K_policy=cfg_coarse.model.K_policy)
+    train_data_loader = dm.train_dataloader()
+    val_data_loader = dm.val_dataloader()
+    test_data_loader = dm.test_dataloader()
 
     wandb_logger = WandbLogger(name=experiment_name,
                                project=project_name,
@@ -116,16 +134,23 @@ def finetune_deca(cfg_coarse, cfg_detail):
             trainer.test(deca,
                          test_dataloaders=[test_data_loader],
                          ckpt_path=None)
+            # trainer.test(deca,
+            #              datamodule=dm,
+            #              ckpt_path=None)
             # to make sure WANDB has the correct step
             wandb_logger.finalize("")
             deca.reconfigure(cfg.model, stage_name="", downgrade_ok=True)
 
         trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        # trainer.fit(deca, datamodule=dm)
 
         wandb_logger.finalize("")
         trainer.test(deca,
                      test_dataloaders=[test_data_loader],
                      ckpt_path=None)
+        # trainer.test(deca,
+        #              datamodule=dm,
+        #              ckpt_path=None)
         # to make sure WANDB has the correct step
         wandb_logger.finalize("")
 

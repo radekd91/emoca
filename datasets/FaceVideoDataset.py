@@ -1875,6 +1875,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         if split_ratio is not None and split_style is not None:
             idxs = np.arange(len(detections), dtype=np.int32)
             if split_style == 'random':
+                np.random.seed(0)
                 np.random.shuffle(idxs)
             elif split_style == 'sequential':
                 pass
