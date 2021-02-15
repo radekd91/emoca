@@ -42,7 +42,10 @@ class EmotionDataModule(pl.LightningDataModule):
                  filter_pattern = None,
                  split_ratio = None,
                  split_style = None,
-                 num_workers = 0
+                 num_workers=0,
+                 train_batch_size=1,
+                 val_batch_size=1,
+                 test_batch_size=1
                  ):
         super().__init__()
         self.dm = dm
@@ -66,6 +69,9 @@ class EmotionDataModule(pl.LightningDataModule):
         self.training_set = None
         self.test_set = None
         self.validation_set = None
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
+        self.test_batch_size = test_batch_size
 
     def prepare_data(self, *args, **kwargs):
         pass
@@ -110,31 +116,13 @@ class EmotionDataModule(pl.LightningDataModule):
                                                         K=self.test_K,
                                                         K_policy=self.test_K_policy)
 
-
-    def train_dataloader(self,
-                         # annotation_list = None,
-                         # filter_pattern=None,
-                         # split_ratio=None,
-                         # split_style=None,
-                         # with_landmarks=False,
-                         # K=None,
-                         # K_policy=None,
-                         **dl_kwargs) -> DataLoader:
-        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers)
+    def train_dataloader(self,*args, **kwargs) -> DataLoader:
+        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers, batch_size=self.train_batch_size)
         return dl
 
-    def val_dataloader(self,
-                       # annotation_list = None, filter_pattern=None,
-                       **dl_kwargs) \
-            -> Union[DataLoader, List[DataLoader]]:
-        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers)
+    def val_dataloader(self,*args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers, batch_size=self.val_batch_size)
 
-    def test_dataloader(self,
-                        # annotation_list = None, filter_pattern=None,
-                        # K=None,
-                        # K_policy=None,
-                        **dl_kwargs) \
-            -> Union[DataLoader, List[DataLoader]]:
-
-        dl = DataLoader(self.test_set,  shuffle=False, num_workers=self.num_workers)
+    def test_dataloader(self, *args, **dl_kwargs)  -> Union[DataLoader, List[DataLoader]]:
+        dl = DataLoader(self.test_set,  shuffle=False, num_workers=self.num_workers, batch_size=self.test_batch_size)
         return dl

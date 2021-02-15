@@ -59,7 +59,10 @@ def finetune_deca(cfg_coarse, cfg_detail):
                            test_K_policy=cfg_coarse.model.K_policy,
                            annotation_list = annotation_list,
                            filter_pattern = filter_pattern, 
-                           num_workers = cfg_coarse.data.num_workers
+                           num_workers = cfg_coarse.data.num_workers,
+                           train_batch_size= cfg_coarse.model.batch_size_train,
+                           val_batch_size= cfg_coarse.model.batch_size_val,
+                           test_batch_size= cfg_coarse.model.batch_size_test
                            )
     # dm.prepare_data()
     # dm.setup()
