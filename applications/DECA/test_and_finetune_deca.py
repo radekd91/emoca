@@ -106,9 +106,9 @@ def finetune_deca(cfg_coarse, cfg_detail):
     #                                      num_workers=cfg_coarse.data.num_workers,
     #                                      K=cfg_coarse.model.test_K,
     #                                      K_policy=cfg_coarse.model.K_policy)
-    train_data_loader = dm.train_dataloader()
-    val_data_loader = dm.val_dataloader()
-    test_data_loader = dm.test_dataloader()
+    # train_data_loader = dm.train_dataloader()
+    # val_data_loader = dm.val_dataloader()
+    # test_data_loader = dm.test_dataloader()
 
     wandb_logger = WandbLogger(name=experiment_name,
                                project=project_name,
@@ -131,26 +131,26 @@ def finetune_deca(cfg_coarse, cfg_detail):
                           accelerator=accelerator)
         if i == 0:
             deca.reconfigure(cfg_detail.model, stage_name="start")
-            trainer.test(deca,
-                         test_dataloaders=[test_data_loader],
-                         ckpt_path=None)
             # trainer.test(deca,
-            #              datamodule=dm,
+            #              test_dataloaders=[test_data_loader],
             #              ckpt_path=None)
+            trainer.test(deca,
+                         datamodule=dm,
+                         ckpt_path=None)
             # to make sure WANDB has the correct step
             wandb_logger.finalize("")
             deca.reconfigure(cfg.model, stage_name="", downgrade_ok=True)
 
-        trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
-        # trainer.fit(deca, datamodule=dm)
+        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        trainer.fit(deca, datamodule=dm)
 
-        wandb_logger.finalize("")
-        trainer.test(deca,
-                     test_dataloaders=[test_data_loader],
-                     ckpt_path=None)
+        # wandb_logger.finalize("")
         # trainer.test(deca,
-        #              datamodule=dm,
+        #              test_dataloaders=[test_data_loader],
         #              ckpt_path=None)
+        trainer.test(deca,
+                     datamodule=dm,
+                     ckpt_path=None)
         # to make sure WANDB has the correct step
         wandb_logger.finalize("")
 
