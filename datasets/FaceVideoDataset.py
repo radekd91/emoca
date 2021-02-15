@@ -2301,8 +2301,8 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
 
     def __len__(self):
-        return 10 #TODO: REMOVE TESTING HACK
-        # return len(self.image_list)
+        # return 10 #TODO: REMOVE TESTING HACK
+        return len(self.image_list)
 
 
     def _get_sample(self, index):
