@@ -124,8 +124,9 @@ def finetune_deca(cfg_coarse, cfg_detail):
             deca.reconfigure(cfg.model)
 
         accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
-        # if accelerator is not None:
-        #     os.environ['LOCAL_RANK'] = '0'
+        if accelerator is not None and 'LOCAL_RANK' not in os.environ.keys():
+            print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
+            os.environ['LOCAL_RANK'] = '0'
         trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
                           default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
