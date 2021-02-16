@@ -827,8 +827,8 @@ class DECA(torch.nn.Module):
         self._create_model()
         self._setup_renderer()
 
-        self.perceptual_loss = lossfunc.IDMRFLoss()
-        self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path)
+        self.perceptual_loss = lossfunc.IDMRFLoss().eval()
+        self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
         self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
 
     def _setup_renderer(self):
