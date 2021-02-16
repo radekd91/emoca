@@ -29,8 +29,8 @@ def get_emonet(device=None):
     return net
 
 
-# class EmoNetLoss(torch.nn.Module):
-class EmoNetLoss(object):
+class EmoNetLoss(torch.nn.Module):
+# class EmoNetLoss(object):
 
     def __init__(self, device):
         super().__init__()

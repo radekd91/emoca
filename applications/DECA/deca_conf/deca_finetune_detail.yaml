@@ -2,8 +2,8 @@ defaults:
   - data: data_desktop
   - model/paths : desktop
   - model/settings : default_detailed
-#  - model/sizes : default
-  - model/sizes : default_detail
+  - model/sizes : default
+#  - model/sizes : default_detail
   - model/flame_tex: bfm_desktop
   - learning: finetune_adam_detail
   - inout: desktop

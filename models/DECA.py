@@ -11,16 +11,24 @@ import cv2
 from pathlib import Path
 
 # add DECA's repo
-sys.path += [str(Path(__file__).parent.parent.parent.absolute() / 'DECA-training')]
-from lib.utils.renderer import SRenderY
-from lib.models.encoders import ResnetEncoder
-from lib.models.decoders import Generator
-from lib.models.FLAME import FLAME, FLAMETex
-from lib.utils import lossfunc, util
+# sys.path += [str(Path(__file__).parent.parent.parent.absolute() / 'DECA-training')]
+# from lib.utils.renderer import SRenderY
+# from lib.models.encoders import ResnetEncoder
+# from lib.models.decoders import Generator
+# from lib.models.FLAME import FLAME, FLAMETex
+from .Renderer import SRenderY
+from .DecaEncoder import ResnetEncoder
+from .DecaDecoder import Generator
+from .DecaFLAME import FLAME, FLAMETex
+
+# from lib.utils import lossfunc, util
 # from . import datasets
-from lib.datasets.datasets import VoxelDataset, TestData
-import lib.utils.util as util
-import lib.utils.lossfunc as lossfunc
+# from lib.datasets.datasets import VoxelDataset, TestData
+# import lib.utils.util as util
+# import lib.utils.lossfunc as lossfunc
+
+import layers.losses.DecaLosses as lossfunc
+import utils.DecaUtils as util
 from wandb import Image
 from datasets.FaceVideoDataset import AffectNetExpressions
 torch.backends.cudnn.benchmark = True
@@ -56,13 +64,14 @@ class DecaModule(LightningModule):
         self.mode = DecaMode[str(model_params.mode).upper()]
         print(f"DECA MODE RECONFIGURED TO: {self.mode}")
 
-    def _move_extra_params_to_correct_device(self):
-        if self.deca.uv_face_eye_mask.device != self.device:
-            self.deca.uv_face_eye_mask = self.deca.uv_face_eye_mask.to(self.device)
-        if self.deca.fixed_uv_dis.device != self.device:
-            self.deca.fixed_uv_dis = self.deca.fixed_uv_dis.to(self.device)
-        if self.emonet_loss is not None:
-            self.emonet_loss.to(device=self.device)
+    # should not be necessary now that the the buffers are registered
+    # def _move_extra_params_to_correct_device(self):
+    #     if self.deca.uv_face_eye_mask.device != self.device:
+    #         self.deca.uv_face_eye_mask = self.deca.uv_face_eye_mask.to(self.device)
+    #     if self.deca.fixed_uv_dis.device != self.device:
+    #         self.deca.fixed_uv_dis = self.deca.fixed_uv_dis.to(self.device)
+    #     if self.emonet_loss is not None:
+    #         self.emonet_loss.to(device=self.device)
 
     def train(self, mode: bool = True):
         super().train(mode)
@@ -80,22 +89,29 @@ class DecaModule(LightningModule):
                 self.deca.D_detail.train()
             if self.emonet_loss is not None:
                 self.emonet_loss.eval()
+
+            self.deca.flame.eval()
+            self.deca.flametex.eval()
+
+            self.deca.perceptual_loss.eval()
+            self.deca.id_loss.eval()
+
         return self
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
         # if 'device' in kwargs.keys():
-        self._move_extra_params_to_correct_device()
+        # self._move_extra_params_to_correct_device()
         return self
 
     def cuda(self, device=None):
         super().cuda(device)
-        self._move_extra_params_to_correct_device()
+        # self._move_extra_params_to_correct_device()
         return self
 
     def cpu(self):
         super().cpu()
-        self._move_extra_params_to_correct_device()
+        # self._move_extra_params_to_correct_device()
         return self
 
     # def forward(self, image):
@@ -824,13 +840,18 @@ class DECA(torch.nn.Module):
         self.uv_face_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         mask = imread(self.config.face_eye_mask_path).astype(np.float32) / 255.;
         mask = torch.from_numpy(mask[:, :, 0])[None, None, :, :].contiguous()
-        self.uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
+        # self.uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
+        uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
+        self.register_buffer('uv_face_eye_mask', uv_face_eye_mask)
+
         ## displacement correct
         if os.path.isfile(self.config.fixed_displacement_path):
             fixed_dis = np.load(self.config.fixed_displacement_path)
-            self.fixed_uv_dis = torch.tensor(fixed_dis).float()
+            # self.fixed_uv_dis = torch.tensor(fixed_dis).float()
+            fixed_uv_dis = torch.tensor(fixed_dis).float()
         else:
-            self.fixed_uv_dis = torch.zeros([512, 512]).float()
+            fixed_uv_dis = torch.zeros([512, 512]).float()
+        self.register_buffer('fixed_uv_dis', fixed_uv_dis)
 
     def _create_model(self):
         # coarse shape
