@@ -82,6 +82,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
 
         from tqdm import tqdm
         for i, b in enumerate(tqdm(training_set_dl)):
+        # for i, b in enumerate(tqdm(training_set)):
         # for i, b in enumerate(tqdm(val_set_dl)):
             print(f"batch {i}")
             print(f" image batch \t\t {b['image'].shape}")

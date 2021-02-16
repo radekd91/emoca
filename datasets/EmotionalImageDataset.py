@@ -56,11 +56,15 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         return len(self.image_list)
 
     def _get_sample(self, index):
+        # sample_start = timer()
         try:
             path = self.image_list[index]
             if self.path_prefix is not None:
                 path = self.path_prefix / path
+            # start = timer()
             img = imread(path)
+            # end = timer()
+            # print(f"Image reading took {end-start} s.")
         except Exception as e:
             print(f"Failed to read '{path}'. "
                   f"File is probably corrupted. Rerun data processing")
@@ -80,8 +84,12 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             sample[key] = self.annotations[key][index]
 
         if self.landmark_list is not None:
+            # start = timer()
             landmark_type, landmark = load_landmark(
                 self.path_prefix / self.landmark_list[index])
+            # end = timer()
+            # print(f"Landmark reading took {end - start} s.")
+
             landmark_torch = torch.from_numpy(landmark)
 
             if self.image_transforms is not None:
@@ -103,12 +111,18 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             if self.segmentation_list[index].stem != self.image_list[index].stem:
                 raise RuntimeError(f"Name mismatch {self.segmentation_list[index].stem}"
                                    f" vs {self.image_list[index.stem]}")
+
+            # start = timer()
             seg_image, seg_type = load_segmentation(
                 self.path_prefix / self.segmentation_list[index])
+            # end = timer()
+            # print(f"Segmentation reading took {end - start} s.")
 
+            # start = timer()
             seg_image = process_segmentation(
-                seg_image, seg_type, self.segmentation_list)
-
+                seg_image, seg_type)
+            # end = timer()
+            # print(f"Segmentation processing took {end - start} s.")
             seg_image_torch = torch.from_numpy(seg_image)
             seg_image_torch = seg_image_torch.view(1, seg_image_torch.shape[0], seg_image_torch.shape[0])
 
@@ -117,11 +131,13 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
             sample["mask"] = seg_image_torch
 
+        # sample_end = timer()
+        # print(f"Reading and processing a single sample took {sample_end-sample_start}s.")
         return sample
 
 
     def __getitem__(self, index):
-        start = timer()
+        # start = timer()
 
         if self.K is None:
             return self._get_sample(index)
@@ -161,6 +177,6 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         combined_batch = default_collate(batches)
 
-        end = timer()
-        print(f"Reading sample {index} took {end - start}s")
+        # end = timer()
+        # print(f"Reading sample {index} took {end - start}s")
         return combined_batch
