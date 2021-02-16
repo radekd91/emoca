@@ -26,6 +26,7 @@ from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
+from .IO import load_segmentation, save_segmentation
 
 # from memory_profiler import profile
 
@@ -460,7 +461,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
                 # im = images[j]
                 # im = im.transpose([1,2,0])
-                # seg = FaceVideoDataModule._process_segmentation(segmentation[j], seg_type)
+                # seg = process_segmentation(segmentation[j], seg_type)
                 # imsave("seg.png", seg)
                 # imsave("im.png", im)
                 # FaceVideoDataModule.vis_parsing_maps(im, segmentation[j], stride=1, save_im=True,
@@ -471,9 +472,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 # plt.figure()
                 # plt.imshow(seg)
                 # plt.show()
-                FaceVideoDataModule._save_segmentation(segmentation_path,
-                                                       segmentation[j],
-                                                       seg_type)
+                save_segmentation(segmentation_path, segmentation[j], seg_type)
             end = time.time()
             print(f" Saving batch {i} took: {end - start}")
 
@@ -530,65 +529,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
             cv2.imwrite(save_path[:-4] + 'seg_vis_color.png', vis_parsing_anno_color)
             cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
-    @staticmethod
-    def _process_segmentation(segmentation, seg_type, discarded_labels):
-        if seg_type == "face_parsing":
-            labels = {
-                0: 'background', # no
-                1: 'skin',
-                2: 'nose',
-                3: 'eye_g',
-                4: 'l_eye',
-                5: 'r_eye',
-                6: 'l_brow',
-                7: 'r_brow',
-                8: 'l_ear', #no?
-                9: 'r_ear', # no?
-                10: 'mouth',
-                11: 'u_lip',
-                12: 'l_lip',
-                13: 'hair', # no
-                14: 'hat', # no
-                15: 'ear_r',
-                16: 'neck_l', # no?
-                17: 'neck', # no?
-                18: 'cloth' # no
-            }
-            inv_labels = {v: k for k, v in labels.items()}
-            discarded_labels = discarded_labels or [
-                inv_labels['background'],
-                inv_labels['l_ear'],
-                inv_labels['r_ear'],
-                inv_labels['hair'],
-                inv_labels['hat'],
-                inv_labels['neck'],
-                inv_labels['neck_l']
-            ]
-            segmentation_proc = np.logical_not(np.isin(segmentation, discarded_labels))
-            segmentation_proc = segmentation_proc.astype(np.float32)
-            return segmentation_proc
-        else:
-            raise ValueError(f"Invalid segmentation type '{seg_type}'")
 
 
-    @staticmethod
-    def _save_segmentation(filename, seg_image, seg_type):
-        with open(filename, "wb") as f:
-            # for some reason compressed pickle can only load one object (EOF bug)
-            # so put it in the list
-            cpkl.dump([seg_type, seg_image], f, compression='gzip')
-            # pkl.dump(seg_type, f)
-            # pkl.dump(seg_image, f)
-
-    @staticmethod
-    def _load_segmentation(filename):
-        with open(filename, "rb") as f:
-            seg = cpkl.load(f, compression='gzip')
-            seg_type = seg[0]
-            seg_image = seg[1]
-            # seg_type = pkl.load(f)
-            # seg_image = pkl.load(f)
-        return seg_image, seg_type
 
     # @profile
     def _detect_faces_in_image(self, image_path):

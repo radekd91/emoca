@@ -3,9 +3,10 @@ import torch
 from skimage.io import imread
 from torch.utils.data._utils.collate import default_collate
 
-from datasets.FaceVideoDataset import FaceVideoDataModule
+# from datasets.FaceVideoDataset import FaceVideoDataModule
 from transforms.keypoints import KeypointScale, KeypointNormalization
 from utils.FaceDetector import load_landmark
+from .IO import load_segmentation, process_segmentation
 
 from timeit import default_timer as timer
 
@@ -102,10 +103,10 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             if self.segmentation_list[index].stem != self.image_list[index].stem:
                 raise RuntimeError(f"Name mismatch {self.segmentation_list[index].stem}"
                                    f" vs {self.image_list[index.stem]}")
-            seg_image, seg_type = FaceVideoDataModule._load_segmentation(
+            seg_image, seg_type = load_segmentation(
                 self.path_prefix / self.segmentation_list[index])
 
-            seg_image = FaceVideoDataModule._process_segmentation(
+            seg_image = process_segmentation(
                 seg_image, seg_type, self.segmentation_list)
 
             seg_image_torch = torch.from_numpy(seg_image)
