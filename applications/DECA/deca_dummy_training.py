@@ -66,28 +66,36 @@ def finetune_deca(cfg_coarse, cfg_detail):
                                version=time,
                                save_dir=full_run_dir)
 
+    training_set_dl = DataLoader(training_set, shuffle=True,
+                                 # batch_size=cfg_coarse.model.batch_size_train,
+                                 batch_size=4,
+                                 num_workers=cfg_coarse.data.num_workers)
+
+    val_set_dl = DataLoader(val_set, shuffle=False,
+                            batch_size=cfg_coarse.model.batch_size_train,
+                            num_workers=cfg_coarse.data.num_workers)
     configs = [cfg_coarse, cfg_detail]
     # configs = [cfg_detail]
     for i, cfg in enumerate(configs):
         if i > 0:
             deca.reconfigure(cfg.model)
 
-        # from tqdm import tqdm
-        # for i, b in enumerate(tqdm(training_set_dl)):
+        from tqdm import tqdm
+        for i, b in enumerate(tqdm(training_set_dl)):
         # for i, b in enumerate(tqdm(val_set_dl)):
-        #     print(f"batch {i}")
-        #     print(f" image batch \t\t {b['image'].shape}")
-        #     print(f" mask batch \t\t {b['mask'].shape}")
-        #     print(f" landmark batch \t {b['landmark'].shape}")
-        #     # if b['image'].shape[0] != 2 or b['mask'].shape[0] != 2 or b['landmark'].shape[0] != 2:
-        #     #     print("ha!")
-        #     b['image'] = b['image'][...].cuda()
-        #     b['mask'] = b['mask'][...].cuda()
-        #     b['landmark'] = b['landmark'][...].cuda()
-        #     deca.training_step(b, i)
-        #     deca.validation_step(b, i)
-        #     # b["mask"]
-        #     # b["landmark"]
+            print(f"batch {i}")
+            print(f" image batch \t\t {b['image'].shape}")
+            print(f" mask batch \t\t {b['mask'].shape}")
+            print(f" landmark batch \t {b['landmark'].shape}")
+            # if b['image'].shape[0] != 2 or b['mask'].shape[0] != 2 or b['landmark'].shape[0] != 2:
+            #     print("ha!")
+            # b['image'] = b['image'][...].cuda()
+            # b['mask'] = b['mask'][...].cuda()
+            # b['landmark'] = b['landmark'][...].cuda()
+            # deca.training_step(b, i)
+            # deca.validation_step(b, i)
+            # b["mask"]
+            # b["landmark"]
 
         accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
         # if accelerator is not None:
@@ -97,13 +105,6 @@ def finetune_deca(cfg_coarse, cfg_detail):
                           logger=wandb_logger,
                           accelerator=accelerator)
 
-        training_set_dl = DataLoader(training_set, shuffle=True,
-                                     batch_size=cfg.model.batch_size_train,
-                                     num_workers=cfg.data.num_workers)
-
-        val_set_dl = DataLoader(val_set, shuffle=False,
-                                batch_size=cfg.model.batch_size_train,
-                                num_workers=cfg.data.num_workers)
         trainer.fit(deca, train_dataloader=training_set_dl, val_dataloaders=[val_set_dl, ])
 
         test_set_dl = DataLoader(val_set, shuffle=False,

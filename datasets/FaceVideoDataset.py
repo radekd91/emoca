@@ -12,20 +12,21 @@ import numpy as np
 import torch
 # import torchaudio
 # from enum import Enum
-from typing import Optional, Union, List, Any, overload
+from typing import Optional, Union, List
 import pickle as pkl
 import compress_pickle as cpkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
-from torchvision.transforms import Resize, Compose, Normalize, ToTensor
+from torchvision.transforms import Resize, Compose, Normalize
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
-from utils.FaceDetector import FAN, MTCNN, load_landmark, save_landmark
+from datasets.EmotionalImageDataset import EmotionalImageDataset
+from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
+from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 
-import gc
 # from memory_profiler import profile
 
 from enum import Enum
@@ -1156,7 +1157,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
     def create_reconstruction_video_with_recognition(self, sequence_id, overwrite=False, distance_threshold=0.5):
         from PIL import Image, ImageDraw, ImageFont
         from collections import Counter
-        from matplotlib.colors import Colormap
         from matplotlib.pyplot import  get_cmap
         # fid = 0
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
@@ -1299,7 +1299,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         from PIL import Image, ImageDraw, ImageFont
         from collections import Counter
-        from matplotlib.colors import Colormap
         from matplotlib.pyplot import get_cmap
 
         distance_threshold = distance_threshold or self.get_default_recognition_threshold()
@@ -1551,7 +1550,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_file = self._get_recognition_filename(sequence_id, distance_threshold)
 
         from collections import Counter, OrderedDict
-        from sklearn.cluster import DBSCAN, AgglomerativeClustering
+        from sklearn.cluster import DBSCAN
 
         clustering = DBSCAN(eps=distance_threshold)
         labels = clustering.fit_predict(X=embeddings)
@@ -2256,217 +2255,10 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     #     pass
 
 
-from transforms.keypoints import KeypointScale, KeypointNormalization
-from torch.utils.data._utils.collate import default_collate
-
-
-class EmotionalImageDataset(torch.utils.data.Dataset):
-
-    def __init__(self, image_list, annotations, labels, image_transforms,
-                 path_prefix=None,
-                 landmark_list=None,
-                 landmark_transform=None,
-                 segmentation_list=None,
-                 segmentation_transform=None,
-                 segmentation_discarded_lables=None,
-                 K=None,
-                 K_policy=None):
-        self.image_list = image_list
-        self.annotations = annotations
-        if len(labels) != len(image_list):
-            raise RuntimeError("There must be a label for every image")
-        self.labels = labels
-        self.image_transforms = image_transforms
-        self.path_prefix = path_prefix
-        if landmark_list is not None and len(landmark_list) != len(image_list):
-            raise RuntimeError("There must be a landmark for every image")
-        self.landmark_list = landmark_list
-        self.landmark_transform = landmark_transform
-        if segmentation_list is not None and len(segmentation_list) != len(segmentation_list):
-            raise RuntimeError("There must be a segmentation for every image")
-        self.segmentation_list = segmentation_list
-        self.segmentation_transform = segmentation_transform
-        self.segmentation_discarded_labels = segmentation_discarded_lables
-        self.K = K # how many samples of one identity to get?
-        self.K_policy = K_policy
-        if self.K_policy is not None:
-            if self.K_policy not in ['random', 'sequential']:
-                raise ValueError(f"Invalid K policy {self.K_policy}")
-
-        self.labels_set = set(self.labels)
-        self.label2index = {}
-
-        for label in self.labels_set:
-            self.label2index[label] = [i for i in range(len(self.labels))
-                                       if self.labels[i] == label]
-
-
-    def __len__(self):
-        # return 10 #TODO: REMOVE TESTING HACK
-        return len(self.image_list)
-
-
-    def _get_sample(self, index):
-        try:
-            path = self.image_list[index]
-            if self.path_prefix is not None:
-                path = self.path_prefix / path
-            img = imread(path)
-        except Exception as e:
-            print(f"Failed to read '{path}'. "
-                  f"File is probably corrupted. Rerun data processing")
-            # return None
-            raise e
-        img = img.transpose([2, 0, 1]).astype(np.float32)/255.
-        img_torch = torch.from_numpy(img)
-        if self.image_transforms is not None:
-            img_torch = self.image_transforms(img_torch)
-
-        sample = {
-            "image": img_torch,
-            "path": str(self.image_list[index])
-        }
-
-        for key in self.annotations.keys():
-            sample[key] = self.annotations[key][index]
-
-        if self.landmark_list is not None:
-            landmark_type, landmark = load_landmark(
-                self.path_prefix / self.landmark_list[index])
-            landmark_torch = torch.from_numpy(landmark)
-
-            if self.image_transforms is not None:
-                if isinstance(self.landmark_transform, KeypointScale):
-                    self.landmark_transform.set_scale(
-                        img_torch.shape[1] / img.shape[1],
-                        img_torch.shape[2] / img.shape[2])
-                elif isinstance(self.landmark_transform, KeypointNormalization):
-                    self.landmark_transform.set_scale(img.shape[1], img.shape[2])
-                else:
-                    raise ValueError(f"This transform is not supported for landmarks: "
-                                     f"{type(self.landmark_transform)}")
-                landmark_torch = self.landmark_transform(landmark_torch)
-
-            sample["landmark"] = landmark_torch
-
-
-        if self.segmentation_list is not None:
-            if self.segmentation_list[index].stem != self.image_list[index].stem:
-                raise RuntimeError(f"Name mismatch {self.segmentation_list[index].stem}"
-                                   f" vs {self.image_list[index.stem]}")
-            seg_image, seg_type = FaceVideoDataModule._load_segmentation(
-                self.path_prefix / self.segmentation_list[index])
-
-            seg_image = FaceVideoDataModule._process_segmentation(
-                seg_image, seg_type, self.segmentation_list)
-
-            seg_image_torch = torch.from_numpy(seg_image)
-            seg_image_torch = seg_image_torch.view(1, seg_image_torch.shape[0], seg_image_torch.shape[0])
-
-            if self.image_transforms is not None:
-                seg_image_torch = self.segmentation_transform(seg_image_torch)
-
-            sample["mask"] = seg_image_torch
-
-        return sample
-
-
-    def __getitem__(self, index):
-        if self.K is None:
-            return self._get_sample(index)
-        # multiple identity samples in a single batch
-
-        # retrieve indices of the same identity
-        label = self.labels[index]
-        label_indices = self.label2index[label]
-
-        if self.K_policy == 'random':
-            indices = np.arange(len(label_indices), dtype=np.int32)
-            np.random.shuffle(indices)
-            indices = indices[:self.K-1]
-        elif self.K_policy == 'sequential':
-            indices = []
-            idx = label_indices.index(index) + 1
-            while len(indices) != self.K-1:
-                # if self.labels[idx] == label:
-                indices += [label_indices[idx]]
-                idx += 1
-                idx = idx % len(label_indices)
-        else:
-            raise ValueError(f"Invalid K policy {self.K_policy}")
-
-        batches = []
-        batches += [self._get_sample(index)]
-        for i in range(self.K-1):
-            idx = indices[i]
-            batches += [self._get_sample(idx)]
-
-        # combined_batch = {}
-        # for batch in batches:
-        #     for key, value in batch.items():
-        #         if key not in combined_batch.keys():
-        #             combined_batch[key] = []
-        #         combined_batch[key] += [value]
-
-        combined_batch = default_collate(batches)
-        return combined_batch
-
-
-class UnsupervisedImageDataset(torch.utils.data.Dataset):
-
-    def __init__(self, image_list, landmark_list=None, image_transforms=None, im_read=None):
-        super().__init__()
-        self.image_list = image_list
-        self.landmark_list = landmark_list
-        if landmark_list is not None and len(landmark_list) != len(image_list):
-            raise RuntimeError("There must be a landmark for every image")
-        self.image_transforms = image_transforms
-        self.im_read = im_read or 'skio'
-
-    def __getitem__(self, index):
-        # if index < len(self.image_list):
-        #     x = self.mnist_data[index]
-        # raise IndexError("Out of bounds")
-        try:
-            if self.im_read == 'skio':
-                img = imread(self.image_list[index])
-                img = img.transpose([2, 0, 1]).astype(np.float32)
-                img_torch = torch.from_numpy(img)
-            elif self.im_read == 'pil':
-                img = Image.open(self.image_list[index])
-                img_torch = ToTensor()(img)
-            else:
-                raise ValueError(f"Invalid image reading method {self.im_read}")
-        except Exception as e:
-            print(f"Failed to read '{self.image_list[index]}'. File is probably corrupted. Rerun data processing")
-            raise e
-
-        if self.image_transforms is not None:
-            img_torch = self.image_transforms(img_torch)
-
-        batch = {"image" : img_torch,
-                "path" : str(self.image_list[index])}
-
-        if self.landmark_list is not None:
-            landmark_type, landmark = load_landmark(self.landmark_list[index])
-            landmark_torch = torch.from_numpy(landmark)
-
-            if self.image_transforms is not None:
-                landmark_torch = self.image_transforms(landmark_torch)
-
-            batch["landmark"] = landmark_torch
-
-        return batch
-
-    def __len__(self):
-        return len(self.image_list)
-
-
-
 import cv2
 import scipy
 from skimage.io import imread, imsave
-from skimage.transform import estimate_transform, warp, resize, rescale
+from skimage.transform import estimate_transform, warp
 from glob import glob
 import scipy.io
 

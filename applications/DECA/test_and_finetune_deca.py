@@ -170,6 +170,8 @@ def main():
     initialize(config_path="deca_conf", job_name="finetune_deca")
     cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
     cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
+    # cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
+    # cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
     finetune_deca(cfg_coarse, cfg_detail)
 
 
