@@ -188,8 +188,8 @@ def main():
     # override = ['learning.num_gpus=2', 'model/paths=cluster']
     override = sys.argv[1:]
     initialize(config_path="deca_conf", job_name="finetune_deca")
-    cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
-    cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
+    cfg_coarse = compose(config_name="deca_finetune_coarse_emonet", overrides=override)
+    cfg_detail = compose(config_name="deca_finetune_detail_emonet", overrides=override)
     # cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
     # cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
     finetune_deca(cfg_coarse, cfg_detail)

@@ -1,7 +1,7 @@
 defaults:
   - data: data_desktop
   - model/paths : desktop
-  - model/settings : default_coarse
+  - model/settings : default_coarse_emonet
   - model/sizes : default
   - model/flame_tex: bfm_desktop
   - learning/optimizer: finetune_adam_coarse

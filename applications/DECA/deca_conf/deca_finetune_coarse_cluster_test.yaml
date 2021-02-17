@@ -3,7 +3,6 @@ defaults:
   - model/paths : cluster
   - model/settings : default_coarse
   - model/sizes : default
-#  - model/sizes : default_coarse
   - model/flame_tex: bfm
   - learning: finetune_adam_coarse
   - inout: cluster
