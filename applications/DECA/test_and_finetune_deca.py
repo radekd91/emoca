@@ -127,7 +127,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     conf.coarse = cfg_coarse
     conf.detail = cfg_detail
     # configs = [cfg_coarse, cfg_detail]
-    configs = [cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
+    configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
     stages_prefixes = ["start", "start", "", "", "", ""]
 
