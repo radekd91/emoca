@@ -291,12 +291,14 @@ class DecaModule(LightningModule):
                                       align_corners=False)
         # images
         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
-        predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
-
+        # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
         if self.deca.config.useSeg:
             masks = masks[:, None, :, :]
         else:
             masks = mask_face_eye * ops['alpha_images']
+
+        if self.deca.config.background_from_input:
+            predicted_images = (1. - masks) * images + masks * predicted_images
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
@@ -306,6 +308,8 @@ class DecaModule(LightningModule):
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
             uv_texture = albedo.detach() * uv_shading
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
+            if self.deca.config.background_from_input:
+                predicted_detailed_image = (1. - masks) * images + masks*predicted_detailed_image
 
             # --- extract texture
             uv_pverts = self.deca.render.world2uv(trans_verts).detach()

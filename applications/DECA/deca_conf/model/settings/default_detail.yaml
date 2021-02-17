@@ -6,8 +6,10 @@
 train_coarse: 0
 useSeg: false
 #useSeg: true
+background_from_input: true
 detail_constrain_type: exchange
 mode: detail
+
 
 resume_training: True # this loads a pretrained model
 
