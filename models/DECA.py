@@ -87,14 +87,16 @@ class DecaModule(LightningModule):
                     self.deca.E_flame.eval()
                 self.deca.E_detail.train()
                 self.deca.D_detail.train()
-            if self.emonet_loss is not None:
-                self.emonet_loss.eval()
 
-            self.deca.flame.eval()
-            self.deca.flametex.eval()
+        # these are set to eval no matter what, they're never being trained
+        if self.emonet_loss is not None:
+            self.emonet_loss.eval()
 
-            self.deca.perceptual_loss.eval()
-            self.deca.id_loss.eval()
+        self.deca.flame.eval()
+        self.deca.flametex.eval()
+
+        self.deca.perceptual_loss.eval()
+        self.deca.id_loss.eval()
 
         return self
 
