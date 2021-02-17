@@ -549,14 +549,15 @@ def tensor2image(tensor):
     return image.astype(np.uint8).copy()
 
 
+class C(object):
+    pass
+
+
 def dict2obj(d):
     # if isinstance(d, list):
     #     d = [dict2obj(x) for x in d]
     if not isinstance(d, dict):
         return d
-
-    class C(object):
-        pass
 
     o = C()
     for k in d:
