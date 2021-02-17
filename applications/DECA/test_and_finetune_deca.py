@@ -14,7 +14,7 @@ import wandb
 import datetime
 # import hydra
 from omegaconf import DictConfig, OmegaConf
-import copy
+# import copy
 
 
 def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
@@ -27,7 +27,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     # index = 220
     # index = 120
     index = cfg_coarse.data.sequence_index
-    annotation_list = copy.deepcopy(cfg_coarse.data.annotation_list) # sth weird is modifying the list, that's why deep copy
+    # annotation_list = copy.deepcopy(cfg_coarse.data.annotation_list) # sth weird is modifying the list, that's why deep copy
+    annotation_list = cfg_coarse.data.annotation_list.copy()
 
     print(f"Looking for video {index} in {len(fvdm.video_list)}")
 

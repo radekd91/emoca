@@ -17,8 +17,8 @@ import pickle as pkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
-import copy
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
+# import copy
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
 # from utils.FaceDetector import FAN, MTCNN
@@ -89,7 +89,9 @@ class EmotionDataModule(pl.LightningDataModule):
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
-            copy.deepcopy(self.annotation_list), self.filter_pattern, image_transforms=im_transforms,
+            # copy.deepcopy(self.annotation_list),
+            self.annotation_list.copy(),
+            self.filter_pattern, image_transforms=im_transforms,
             split_style=self.split_style, split_ratio=self.split_ratio,
             with_landmarks=self.with_landmarks,
             landmark_transform=lmk_transforms,
@@ -111,14 +113,17 @@ class EmotionDataModule(pl.LightningDataModule):
         im_transforms = Resize((self.image_size, self.image_size))
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
-        self.test_set = self.dm.get_annotated_emotion_dataset(copy.deepcopy(self.annotation_list), self.filter_pattern,
-                                                        image_transforms=im_transforms,
-                                                        with_landmarks = self.with_landmarks,
-                                                        landmark_transform=lmk_transforms,
-                                                        with_segmentations=self.with_segmentations,
-                                                        segmentation_transform=seg_transforms,
-                                                        K=self.test_K,
-                                                        K_policy=self.test_K_policy)
+        self.test_set = self.dm.get_annotated_emotion_dataset(
+            # copy.deepcopy(self.annotation_list),
+            self.annotation_list.copy(),
+            self.filter_pattern,
+            image_transforms=im_transforms,
+            with_landmarks = self.with_landmarks,
+            landmark_transform=lmk_transforms,
+            with_segmentations=self.with_segmentations,
+            segmentation_transform=seg_transforms,
+            K=self.test_K,
+            K_policy=self.test_K_policy)
 
     def train_dataloader(self,*args, **kwargs) -> DataLoader:
         dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers, batch_size=self.train_batch_size)
