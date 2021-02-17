@@ -554,7 +554,8 @@ class VGG_16(nn.Module):
         self.fc6 = nn.Linear(512 * 7 * 7, 4096)
         self.fc7 = nn.Linear(4096, 4096)
         self.fc8 = nn.Linear(4096, 2622)
-        self.mean = torch.Tensor(np.array([129.1863, 104.7624, 93.5940]) / 255.).float().view(1, 3, 1, 1) #.cuda()
+        # self.mean = torch.Tensor(np.array([129.1863, 104.7624, 93.5940]) / 255.).float().view(1, 3, 1, 1) #.cuda()
+        self.register_buffer('mean', torch.Tensor(np.array([129.1863, 104.7624, 93.5940]) / 255.).float().view(1, 3, 1, 1))
         # self.mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).cuda()
 
     def load_weights(self, path="pretrained/VGG_FACE.t7"):
@@ -892,7 +893,8 @@ class VGGFace2Loss(nn.Module):
         checkpoint = pretrained_checkpoint_path or \
                      '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
         load_state_dict(self.reg_model, checkpoint)
-        self.mean_bgr = torch.tensor([91.4953, 103.8827, 131.0912])#.cuda()
+        # self.mean_bgr = torch.tensor([91.4953, 103.8827, 131.0912])#.cuda()
+        self.register_buffer('mean_bgr', torch.tensor([91.4953, 103.8827, 131.0912]))
 
     #     self._freeze_layer(self.reg_model)
     # def _freeze_layer(self, layer):
