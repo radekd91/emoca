@@ -505,7 +505,8 @@ class DecaModule(LightningModule):
         #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         # prefix = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
-        losses_and_metrics_to_log = {prefix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        # losses_and_metrics_to_log = {prefix + '_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {prefix + '_val_' + key: value.detach() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_val_' + 'epoch'] = self.current_epoch
         # losses_and_metrics_to_log[prefix + '_val_' + 'step'] = self.global_step
         # losses_and_metrics_to_log[prefix + '_val_' + 'batch_idx'] = batch_idx
@@ -540,7 +541,8 @@ class DecaModule(LightningModule):
             values = self._decode(values, training=False)
             if 'mask' in batch.keys():
                 losses_and_metrics = self.compute_loss(values, training=False)
-                losses_and_metrics_to_log = {prefix + '_test_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+                # losses_and_metrics_to_log = {prefix + '_test_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+                losses_and_metrics_to_log = {prefix + '_test_' + key: value.detach() for key, value in losses_and_metrics.items()}
             else:
                 losses_and_metric = None
 
@@ -572,7 +574,8 @@ class DecaModule(LightningModule):
 
         # prefix = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
-        losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        # losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = self.current_epoch
         # losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
 
