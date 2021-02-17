@@ -35,3 +35,5 @@ sfsw:
 
 use_emonet_loss: True
 emonet_reg: 0.15
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.15

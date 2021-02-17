@@ -21,11 +21,5 @@ shape_constrain_type: 'exchange' # None
 
 use_emonet_loss: False
 emonet_reg: 0.15
-
-
-# training related (to remove)
-#multi_gpu: false
-#n_epoch: 500
-
-# data related
-#training_data: vox1  #to remove
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.15

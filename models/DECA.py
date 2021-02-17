@@ -3,6 +3,7 @@ import torch
 import torchvision
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
+from pytorch_lightning.loggers import WandbLogger
 from layers.losses.EmoNetLoss import EmoNetLoss
 import numpy as np
 # from time import time
@@ -30,7 +31,7 @@ from .DecaFLAME import FLAME, FLAMETex
 import layers.losses.DecaLosses as lossfunc
 import utils.DecaUtils as util
 from wandb import Image
-from datasets.FaceVideoDataset import AffectNetExpressions
+from datasets.FaceVideoDataset import AffectNetExpressions, Expression7, expr7_to_affect_net
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 
@@ -153,6 +154,18 @@ class DecaModule(LightningModule):
             masks = batch['mask']
             masks = masks.view(-1, images.shape[-2], images.shape[-1])
 
+        if 'va' in batch:
+            va = batch['va']
+            va = va.view(-1, va.shape[-1])
+        else:
+            va = None
+
+        if 'expr7' in batch:
+            expr7 = batch['expr7']
+            expr7 = expr7.view(-1, expr7.shape[-1])
+        else:
+            expr7 = None
+
         if self.mode == DecaMode.DETAIL:
             with torch.no_grad():
                 parameters = self.deca.E_flame(images)
@@ -210,6 +223,12 @@ class DecaModule(LightningModule):
                     lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
                     masks = torch.cat([masks, masks], dim=0)
 
+                    if va is not None:
+                        va = torch.cat([va, va], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7], dim=0)
+
+
         # -- detail
         if self.mode == DecaMode.DETAIL:
             detailcode = self.deca.E_detail(images)
@@ -243,6 +262,12 @@ class DecaModule(LightningModule):
                     lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
                     masks = torch.cat([masks, masks], dim=0)
 
+                    if va is not None:
+                        va = torch.cat([va, va], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7], dim=0)
+
+
         codedict['shapecode'] = shapecode
         codedict['texcode'] = texcode
         codedict['expcode'] = expcode
@@ -256,6 +281,11 @@ class DecaModule(LightningModule):
             codedict['masks'] = masks
         if 'landmark' in batch.keys():
             codedict['lmk'] = lmk
+
+        if 'va' in batch.keys():
+            codedict['va'] = va
+        if 'expr7' in batch.keys():
+            codedict['expr7'] = expr7
         return codedict
 
 
@@ -352,7 +382,7 @@ class DecaModule(LightningModule):
 
         return codedict
 
-    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix):
+    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None):
         if self.deca.config.use_emonet_loss:
             d = loss_dict
             with torch.no_grad():
@@ -363,13 +393,48 @@ class DecaModule(LightningModule):
             emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
                 self.emonet_loss.compute_loss(images, predicted_images)
 
-        d[prefix + '_emo_feat_1_L1'] = emo_feat_loss_1 * self.deca.config.emonet_reg
-        d[prefix + '_emo_feat_2_L1'] = emo_feat_loss_2 * self.deca.config.emonet_reg
-        d[prefix + '_valence_L1'] = valence_loss * self.deca.config.emonet_reg
-        d[prefix + '_arousal_L1'] = arousal_loss * self.deca.config.emonet_reg
-        # d[prefix + '_expression_KL'] = expression_loss * self.deca.config.emonet_reg # KL seems to be causing NaN's
-        d[prefix + '_expression_L1'] = expression_loss * self.deca.config.emonet_reg
-        d[prefix + '_emotion_combined'] = (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_reg
+        # EmoNet self-consistency loss terms
+        d[prefix + '_emonet_feat_1_L1'] = emo_feat_loss_1 * self.deca.config.emonet_reg
+        d[prefix + '_emonet_feat_2_L1'] = emo_feat_loss_2 * self.deca.config.emonet_reg
+        d[prefix + '_emonet_valence_L1'] = valence_loss * self.deca.config.emonet_reg
+        d[prefix + '_emonet_arousal_L1'] = arousal_loss * self.deca.config.emonet_reg
+        # d[prefix + 'emonet_expression_KL'] = expression_loss * self.deca.config.emonet_reg # KL seems to be causing NaN's
+        d[prefix + '_emonet_expression_L1'] = expression_loss * self.deca.config.emonet_reg
+        d[prefix + '_emonet_combined'] = (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_reg
+
+        # Log also the VA
+        metric_dict[prefix + "_valence_input"] = self.emonet_loss.input_emotion['valence'].mean().detach()
+        metric_dict[prefix + "_valence_output"] = self.emonet_loss.output_emotion['valence'].mean().detach()
+        metric_dict[prefix + "_arousal_input"] = self.emonet_loss.input_emotion['arousal'].mean().detach()
+        metric_dict[prefix + "_arousal_output"] = self.emonet_loss.output_emotion['arousal'].mean().detach()
+
+        input_ex = self.emonet_loss.input_emotion['expression'].detach().cpu().numpy()
+        input_ex = np.argmax(input_ex, axis=1).mean()
+        output_ex = self.emonet_loss.output_emotion['expression'].detach().cpu().numpy()
+        output_ex = np.argmax(output_ex, axis=1).mean()
+        metric_dict[prefix + "_expression_input"] = torch.tensor(input_ex, device=self.device)
+        metric_dict[prefix + "_expression_output"] = torch.tensor(output_ex, device=self.device)
+
+        # GT emotion loss terms
+        if self.deca.config.use_gt_emotion_loss:
+            d = loss_dict
+        else:
+            d = metric_dict
+
+        if va is not None:
+            d[prefix + 'emo_sup_val_L1'] = F.l1_loss(self.emonet_loss.output_emotion['valence'], va[:, 0]) * self.deca.config.gt_emotion_reg
+            d[prefix + 'emo_sup_ar_L1'] = F.l1_loss(self.emonet_loss.output_emotion['arousal'], va[:, 1]) * self.deca.config.gt_emotion_reg
+
+            metric_dict[prefix + "_valence_gt"] = va[:, 0].mean().detach()
+            metric_dict[prefix + "_arousal_gt"] = va[:, 1].mean().detach()
+
+        if expr7 is not None:
+            affectnet_gt = [expr7_to_affect_net(int(expr7[i])).value for i in range(len(expr7))]
+            affectnet_gt = torch.tensor(np.array(affectnet_gt), device=self.device, dtype=torch.long)
+            d[prefix + '_emo_sup_expr_CE'] = F.cross_entropy(self.emonet_loss.output_emotion['expression'], affectnet_gt) * self.deca.config.gt_emotion_reg
+            metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
+
+
 
     def _compute_loss(self, codedict, training=True) -> (dict, dict):
         #### ----------------------- Losses
@@ -388,6 +453,19 @@ class DecaModule(LightningModule):
         expcode = codedict["expcode"]
         texcode = codedict["texcode"]
         ops = codedict["ops"]
+
+        if 'va' in codedict:
+            va = codedict['va']
+            va = va.view(-1, va.shape[-1])
+        else:
+            va = None
+
+        if 'expr7' in codedict:
+            expr7 = codedict['expr7']
+            expr7 = expr7.view(-1, expr7.shape[-1])
+        else:
+            expr7 = None
+
         if self.mode == DecaMode.DETAIL:
             uv_texture = codedict["uv_texture"]
             uv_texture_gt = codedict["uv_texture_gt"]
@@ -423,13 +501,18 @@ class DecaModule(LightningModule):
 
             if self.emonet_loss is not None:
                 # with torch.no_grad():
-                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse")
-                codedict["coarse_input_valence"] = self.emonet_loss.input_emotion['valence']
-                codedict["coarse_input_arousal"] = self.emonet_loss.input_emotion['arousal']
-                codedict["coarse_input_expression"] = self.emonet_loss.input_emotion['expression']
-                codedict["coarse_output_valence"] = self.emonet_loss.output_emotion['valence']
-                codedict["coarse_output_arousal"] = self.emonet_loss.output_emotion['arousal']
-                codedict["coarse_output_expression"] = self.emonet_loss.output_emotion['expression']
+                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse", va, expr7)
+                codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
+                codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["coarse_valence_output"] = self.emonet_loss.output_emotion['valence']
+                codedict["coarse_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression']
+
+                codedict["coarse_valence_gt"] = va[:,0]
+                codedict["coarse_arousal_gt"] = va[:,1]
+                codedict["coarse_expression_gt"] = expr7
+
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -443,12 +526,16 @@ class DecaModule(LightningModule):
 
             if self.emonet_loss is not None:
                 self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail")
-                codedict["detail_input_valence"] = self.emonet_loss.input_emotion['valence']
-                codedict["detail_input_arousal"] = self.emonet_loss.input_emotion['arousal']
-                codedict["detail_input_expression"] = self.emonet_loss.input_emotion['expression']
-                codedict["detail_output_valence"] = self.emonet_loss.output_emotion['valence']
-                codedict["detail_output_arousal"] = self.emonet_loss.output_emotion['arousal']
-                codedict["detail_output_expression"] = self.emonet_loss.output_emotion['expression']
+                codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
+                codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
+                codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression']
+
+                codedict["detail_valence_gt"] = va[:,0]
+                codedict["detail_arousal_gt"] = va[:,1]
+                codedict["detail_expression_gt"] = expr7
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 # if pi==0:
@@ -542,10 +629,11 @@ class DecaModule(LightningModule):
                 uv_detail_normals = values['uv_detail_normals']
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-            vis_dict = self._log_visualizations('val', visualizations, values, self.global_step, indices=0)
+            vis_dict = self._log_visualizations('val', visualizations, values, batch_idx, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # vis_dict[prefix + '_val_' + "visualization"] = image
-            self.logger.log_metrics(vis_dict)
+            if isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics(vis_dict)
             # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
@@ -582,10 +670,11 @@ class DecaModule(LightningModule):
 
         visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                        uv_detail_normals, values, self.global_step)
-        visdict = self._log_visualizations('test', visualizations, values, self.global_step, indices=0)
+        visdict = self._log_visualizations('test', visualizations, values, batch_idx, indices=0)
         # image = Image(grid_image, caption="full visualization")
         # visdict[ prefix + '_test_' + "visualization"] = image
-        self.logger.log_metrics(visdict)#, step=self.global_step)
+        if isinstance(self.logger, WandbLogger):
+            self.logger.log_metrics(visdict)#, step=self.global_step)
         self.logger.log_metrics(losses_and_metrics_to_log)
         return None
 
@@ -608,10 +697,11 @@ class DecaModule(LightningModule):
         if self.global_step % 100 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-            visdict = self._log_visualizations('train', visualizations, values, self.global_step, indices=0)
+            visdict = self._log_visualizations('train', visualizations, values, batch_idx, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # visdict[prefix + '_test_' + "visualization"] = image
-            self.logger.log_metrics(visdict)#, step=self.global_step)
+            if isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics(visdict)#, step=self.global_step)
 
 
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch, # recommended
@@ -651,10 +741,18 @@ class DecaModule(LightningModule):
         return image
 
 
-    def vae_2_str(self, valence, arousal, expression):
-        caption = "valence= %.03f\n" % valence
-        caption += "arousal= %.03f\n" % arousal
-        caption += "expression= %s \n" % AffectNetExpressions(expression).name
+    def vae_2_str(self, valence=None, arousal=None, affnet_expr=None, expr7=None, prefix=""):
+        caption = ""
+        if len(prefix) > 0:
+            prefix += "_"
+        if valence is not None:
+            caption += prefix + "valence= %.03f\n" % valence
+        if arousal is not None:
+            caption += prefix + "arousal= %.03f\n" % arousal
+        if affnet_expr is not None:
+            caption += prefix + "expression= %s \n" % AffectNetExpressions(affnet_expr).name
+        if expr7 is not None:
+            caption += prefix +"expression= %s \n" % Expression7(expr7).name
         return caption
 
     def _log_visualizations(self, stage, visdict, values, step, indices=None):
@@ -676,16 +774,27 @@ class DecaModule(LightningModule):
                 log_dict[prefix + "_" + stage + "_" + key] = wandb_image
             else:
                 for i in indices:
-                    caption = key + f" index_in_batch={i}"
+                    caption = key + f" batch_index={step}\n"
+                    caption += key + f" index_in_batch={i}\n"
                     if self.emonet_loss is not None:
                         if key == 'inputs':
-                            caption += "\n" + self.vae_2_str(values[mode_ + "_input_valence"][i].detach().cpu().item(),
-                                                             values[mode_ + "_input_valence"][i].detach().cpu().item(),
-                                                             np.argmax(values[mode_ + "_input_expression"][i].detach().cpu().numpy()))
+                            caption += self.vae_2_str(values[mode_ + "_valence_input"][i].detach().cpu().item(),
+                                                             values[mode_ + "_arousal_input"][i].detach().cpu().item(),
+                                                             np.argmax(values[mode_ + "_expression_input"][i].detach().cpu().numpy()),
+                                                             prefix="emonet") + "\n"
+                            if 'va' in values.keys():
+                                caption += self.vae_2_str(
+                                    values[mode_ + "_valence_gt"][i].detach().cpu().item(),
+                                    values[mode_ + "_arousal_gt"][i].detach().cpu().item(),
+                                    prefix="gt") + "\n"
+                            if 'expr7' in values.keys():
+                                caption += "\n" + self.vae_2_str(
+                                    expr7=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
+                                    prefix="gt") + "\n"
                         elif key == 'output_images_' + mode_:
-                            caption += "\n" + self.vae_2_str(values[mode_ + "_output_valence"][i].detach().cpu().item(),
-                                                             values[mode_ + "_output_valence"][i].detach().cpu().item(),
-                                                             np.argmax(values[mode_ + "_output_expression"][i].detach().cpu().numpy()))
+                            caption += self.vae_2_str(values[mode_ + "_valence_output"][i].detach().cpu().item(),
+                                                             values[mode_ + "_arousal_output"][i].detach().cpu().item(),
+                                                             np.argmax(values[mode_ + "_expression_output"][i].detach().cpu().numpy())) + "\n"
                         # elif key == 'output_images_detail':
                         #     caption += "\n" + self.vae_2_str(values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),

@@ -82,7 +82,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         }
 
         for key in self.annotations.keys():
-            sample[key] = self.annotations[key][index]
+            sample[key] = torch.tensor(self.annotations[key][index], dtype=torch.float32)
 
         if self.landmark_list is not None:
             # start = timer()

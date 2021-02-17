@@ -25,7 +25,7 @@ from models.DECA import DecaModule
 
 def finetune_deca(cfg_coarse, cfg_detail):
     deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
-
+    deca.cuda()
     # with open(Path(__file__).parent / "deca.pkl", "wb") as f:
     #     pkl.dump(deca, f)
     # with open(Path(__file__).parent / "deca.pkl", "rb") as f:
@@ -95,10 +95,11 @@ def finetune_deca(cfg_coarse, cfg_detail):
             print(f" landmark batch \t {b['landmark'].shape}")
             # if b['image'].shape[0] != 2 or b['mask'].shape[0] != 2 or b['landmark'].shape[0] != 2:
             #     print("ha!")
-            # b['image'] = b['image'][...].cuda()
-            # b['mask'] = b['mask'][...].cuda()
-            # b['landmark'] = b['landmark'][...].cuda()
-            # deca.training_step(b, i)
+            b['image'] = b['image'][...].cuda()
+            b['mask'] = b['mask'][...].cuda()
+            b['landmark'] = b['landmark'][...].cuda()
+            b['va'] = b['va'][...].cuda()
+            deca.training_step(b, i)
             # deca.validation_step(b, i)
             # b["mask"]
             # b["landmark"]
