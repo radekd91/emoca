@@ -17,7 +17,7 @@ from omegaconf import DictConfig, OmegaConf
 import copy
 
 
-def finetune_deca(cfg_coarse, cfg_detail):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
 
     fvdm = FaceVideoDataModule(Path(cfg_coarse.data.data_root), Path(cfg_coarse.data.data_root) / "processed",
                                cfg_coarse.data.processed_subfolder)
@@ -137,7 +137,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
                           default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)
-        if i == 0:
+        if test_first and i == 0:
             deca.reconfigure(cfg_detail.model, stage_name="start")
             # trainer.test(deca,
             #              test_dataloaders=[test_data_loader],
