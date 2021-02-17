@@ -25,6 +25,11 @@ from models.DECA import DecaModule
 
 def finetune_deca(cfg_coarse, cfg_detail):
     deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
+
+    # with open(Path(__file__).parent / "deca.pkl", "wb") as f:
+    #     pkl.dump(deca, f)
+    # with open(Path(__file__).parent / "deca.pkl", "rb") as f:
+    #     deca = pkl.load(f)
     # deca.cuda()
     # deca._move_extra_params_to_correct_device()
     batch_idx = 1
@@ -67,12 +72,12 @@ def finetune_deca(cfg_coarse, cfg_detail):
                                save_dir=full_run_dir)
 
     training_set_dl = DataLoader(training_set, shuffle=True,
-                                 # batch_size=cfg_coarse.model.batch_size_train,
+                                 # batch_size=cfg_coarse.learning.batch_size_train,
                                  batch_size=4,
                                  num_workers=cfg_coarse.data.num_workers)
 
     val_set_dl = DataLoader(val_set, shuffle=False,
-                            batch_size=cfg_coarse.model.batch_size_train,
+                            batch_size=cfg_coarse.learning.batch_size_train,
                             num_workers=cfg_coarse.data.num_workers)
     configs = [cfg_coarse, cfg_detail]
     # configs = [cfg_detail]
@@ -109,7 +114,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
         trainer.fit(deca, train_dataloader=training_set_dl, val_dataloaders=[val_set_dl, ])
 
         test_set_dl = DataLoader(val_set, shuffle=False,
-                                batch_size=cfg.model.batch_size_train,
+                                batch_size=cfg.learning.batch_size_train,
                                 num_workers=cfg.data.num_workers)
         wandb_logger.finalize("")
         trainer.test(deca, test_dataloaders=[test_set_dl], ckpt_path=None)

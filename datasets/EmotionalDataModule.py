@@ -17,7 +17,7 @@ import pickle as pkl
 # from collections import OrderedDict
 from tqdm import tqdm
 # import subprocess
-# import copy
+import copy
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
@@ -89,8 +89,8 @@ class EmotionDataModule(pl.LightningDataModule):
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
-            # copy.deepcopy(self.annotation_list),
-            self.annotation_list.copy(),
+            copy.deepcopy(self.annotation_list),
+            # self.annotation_list.copy(),
             self.filter_pattern, image_transforms=im_transforms,
             split_style=self.split_style, split_ratio=self.split_ratio,
             with_landmarks=self.with_landmarks,
@@ -114,8 +114,8 @@ class EmotionDataModule(pl.LightningDataModule):
         lmk_transforms = KeypointNormalization()
         seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         self.test_set = self.dm.get_annotated_emotion_dataset(
-            # copy.deepcopy(self.annotation_list),
-            self.annotation_list.copy(),
+            copy.deepcopy(self.annotation_list),
+            # self.annotation_list.copy(),
             self.filter_pattern,
             image_transforms=im_transforms,
             with_landmarks = self.with_landmarks,
@@ -124,6 +124,38 @@ class EmotionDataModule(pl.LightningDataModule):
             segmentation_transform=seg_transforms,
             K=self.test_K,
             K_policy=self.test_K_policy)
+
+    def reconfigure(self,
+                    train_batch_size=1,
+                    val_batch_size=1,
+                    test_batch_size=1,
+                    train_K=None,
+                    val_K=None,
+                    test_K=None,
+                    train_K_policy=None,
+                    val_K_policy=None,
+                    test_K_policy=None,
+                    ):
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
+        self.test_batch_size = test_batch_size
+        self.train_K = train_K
+        self.val_K = val_K
+        self.test_K = test_K
+        self.train_K_policy = train_K_policy
+        self.val_K_policy = val_K_policy
+        self.test_K_policy = test_K_policy
+
+        if self.training_set is not None:
+            self.training_set.K = self.train_K
+            self.training_set.K_policy = self.train_K_policy
+        if self.validation_set is not None:
+            self.validation_set.K = self.val_K
+            self.validation_set.K_policy = self.val_K_policy
+        if self.test_set is not None:
+            self.test_set.K = self.test_K
+            self.test_set.K_policy = self.test_K_policy
+
 
     def train_dataloader(self,*args, **kwargs) -> DataLoader:
         dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers, batch_size=self.train_batch_size)

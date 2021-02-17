@@ -42,13 +42,15 @@ class DecaMode(Enum):
 
 class DecaModule(LightningModule):
 
-    def __init__(self, model_params, learning_params, inout_params):
+    def __init__(self, model_params, learning_params, inout_params, stage_name = ""):
         super().__init__()
         self.learning_params = learning_params
         self.inout_params = inout_params
         self.deca = DECA(config=model_params)
         self.mode = DecaMode[str(model_params.mode).upper()]
-        self.stage_name = ""
+        self.stage_name = stage_name
+        if len(self.stage_name) > 0:
+            self.stage_name += "_"
         if 'emonet_reg' in self.deca.config.keys():
             self.emonet_loss = EmoNetLoss(self.device)
         else:
@@ -74,7 +76,7 @@ class DecaModule(LightningModule):
     #         self.emonet_loss.to(device=self.device)
 
     def train(self, mode: bool = True):
-        super().train(mode)
+        # super().train(mode) # not necessary
         if mode:
             if self.mode == DecaMode.COARSE:
                 self.deca.E_flame.train()
@@ -87,6 +89,10 @@ class DecaModule(LightningModule):
                     self.deca.E_flame.eval()
                 self.deca.E_detail.train()
                 self.deca.D_detail.train()
+        else:
+            self.deca.E_flame.eval()
+            self.deca.E_detail.eval()
+            self.deca.D_detail.eval()
 
         # these are set to eval no matter what, they're never being trained
         if self.emonet_loss is not None:
@@ -128,6 +134,16 @@ class DecaModule(LightningModule):
 
         # [B, K, 3, size, size] ==> [BxK, 3, size, size]
         images = batch['image']
+
+        if len(images.shape) == 5:
+            K = images.shape[1]
+        elif len(images.shape) == 4:
+            K = 1
+        else:
+            raise RuntimeError("Invalid image batch dimensions.")
+
+        # print("Batch size!")
+        # print(images.shape)
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
         if 'landmark' in batch.keys():
@@ -162,10 +178,12 @@ class DecaModule(LightningModule):
                 ### shape constraints
                 if self.deca.config.shape_constrain_type == 'same':
                     # reshape shapecode => [B, K, n_shape]
-                    shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
+                    # shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
+                    shapecode_idK = shapecode.view(original_batch_size, K, -1)
                     # get mean id
                     shapecode_mean = torch.mean(shapecode_idK, dim=[1])
-                    shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
+                    # shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
+                    shapecode_new = shapecode_mean[:, None, :].repeat(1, K, 1)
                     shapecode = shapecode_new.view(-1, self.deca.config.model.n_shape)
                 elif self.deca.config.shape_constrain_type == 'exchange':
                     '''
@@ -174,7 +192,8 @@ class DecaModule(LightningModule):
                     the later encourage s0, s1 is cloase in l2 space, but not really ensure shape will be close
                     '''
                     # new_order = np.array([np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(self.deca.config.batch_size_train)])
-                    new_order = np.array([np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
+                    # new_order = np.array([np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
+                    new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
                     new_order = new_order.flatten()
                     shapecode_new = shapecode[new_order]
                     # import ipdb; ipdb.set_trace()
@@ -205,7 +224,8 @@ class DecaModule(LightningModule):
                     # new_order = np.array(
                     #     [np.random.permutation(self.deca.config.K) + i * self.deca.config.K for i in range(self.deca.config.effective_batch_size)])
                     new_order = np.array(
-                        [np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
+                        # [np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
+                        [np.random.permutation(K) + i * K for i in range(original_batch_size)])
                     new_order = new_order.flatten()
                     detailcode_new = detailcode[new_order]
                     # import ipdb; ipdb.set_trace()
@@ -934,106 +954,106 @@ class DECA(torch.nn.Module):
         cv2.imwrite(savepath, grid_image)
         return grid_image
 
-    # deprecate
-    def test(self, n_person=None, testpath=None, scale=None, iscrop=None, return_params=False, vispath=None,
-             kptfolder=None):
-        if self.config.test_data == 'vox1':
-            testdata = VoxelDataset(K=self.config.K, image_size=self.config.image_size,
-                                    scale=[self.config.scale_min, self.config.scale_max], isEval=True)
-        elif self.config.test_data == 'testdata':
-            if testpath is None:
-                testpath = self.config.testpath
-            if scale is None:
-                scale = (self.config.scale_min + self.config.scale_max) / 2.
-            if iscrop is None:
-                iscrop = self.config.iscrop
-            if kptfolder is None:
-                testdata = TestData(testpath, iscrop=iscrop, crop_size=224, scale=scale)
-            else:
-                testdata = EvalData(testpath, kptfolder, iscrop=iscrop, crop_size=224, scale=scale)
-
-        else:
-            print('please check test data')
-            exit()
-
-        ## train model
-        self.E_flame.eval()  # self.M.train(); self.G.train()
-        self.E_detail.eval()
-        self.D_detail.eval()
-
-        if n_person is None or n_person > len(testdata):
-            n_person = len(testdata)
-
-        for i in range(n_person):
-            images = testdata[i]['image']  # .to(self.device)[None,...]
-            images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-            batch_size = images.shape[0]
-
-            # -- encoder
-            with torch.no_grad():
-                parameters = self.E_flame(images)
-                detailcode = self.E_detail(images)
-
-            code_list = self.decompose_code(parameters)
-            shapecode, texcode, expcode, posecode, cam, lightcode = code_list
-
-            # -- decoder
-            # FLAME
-            verts, landmarks2d, landmarks3d = self.flame(shape_params=shapecode, expression_params=expcode,
-                                                         pose_params=posecode)
-            predicted_landmarks = util.batch_orth_proj(landmarks2d, cam)[:, :, :2];
-            predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
-            trans_verts = util.batch_orth_proj(verts, cam);
-            trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
-            albedo = self.flametex(texcode)
-
-            # Detail
-            uv_z = self.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
-
-            # ------ rendering
-            # import ipdb; ipdb.set_trace()
-            ops = self.render(verts, trans_verts, albedo, lightcode)
-            # mask
-            mask_face_eye = F.grid_sample(self.uv_face_eye_mask.expand(batch_size, -1, -1, -1), ops['grid'].detach(),
-                                          align_corners=False)
-            # images
-            predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
-
-            # predicted_images_G = self.render(verts.detach(), trans_verts.detach(), albedo_G, lightcode.detach())['images']
-            visind = np.arange(self.config.K)
-            shape_images = self.render.render_shape(verts, trans_verts)
-
-            # render detail
-            uv_detail_normals, uv_coarse_vertices = self.displacement2normal(uv_z, verts, ops['normals'])
-            detail_normal_images = F.grid_sample(uv_detail_normals, ops['grid'], align_corners=False)
-            shape_detail_images = self.render.render_shape(verts, trans_verts,
-                                                           detail_normal_images=detail_normal_images)
-            uv_shading = self.render.add_SHlight(uv_detail_normals, lightcode)
-            uv_texture = albedo * uv_shading
-            predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'], align_corners=False)
-
-            visdict = {
-                'inputs': images[visind],
-                'landmarks': util.tensor_vis_landmarks(images[visind], predicted_landmarks[visind]),
-                'shape': shape_images[visind],
-                'detail_shape': shape_detail_images[visind],
-                'predicted_images': predicted_images[visind],
-                'detail_images': predicted_detailed_image[visind],
-                # 'albedo_images': ops['albedo_images'][visind],
-                'albedo': albedo[visind],
-            }
-            if vispath is None:
-                vispath_curr = '{}/{}/{}.jpg'.format(self.config.savefolder, self.config.dataname, i)
-            self.visualize(visdict, vispath_curr)
-            print('{}/{}: '.format(i, n_person), vispath_curr)
-            if return_params:
-                param_dict = {
-                    'shapecode': shapecode,
-                    'expcode': expcode,
-                    'posecode': posecode,
-                    'cam': cam,
-                    'texcode': texcode,
-                    'lightcode': lightcode,
-                    'detailcode': detailcode
-                }
-                return param_dict
+    # # deprecate
+    # def test(self, n_person=None, testpath=None, scale=None, iscrop=None, return_params=False, vispath=None,
+    #          kptfolder=None):
+    #     if self.config.test_data == 'vox1':
+    #         testdata = VoxelDataset(K=self.config.K, image_size=self.config.image_size,
+    #                                 scale=[self.config.scale_min, self.config.scale_max], isEval=True)
+    #     elif self.config.test_data == 'testdata':
+    #         if testpath is None:
+    #             testpath = self.config.testpath
+    #         if scale is None:
+    #             scale = (self.config.scale_min + self.config.scale_max) / 2.
+    #         if iscrop is None:
+    #             iscrop = self.config.iscrop
+    #         if kptfolder is None:
+    #             testdata = TestData(testpath, iscrop=iscrop, crop_size=224, scale=scale)
+    #         else:
+    #             testdata = EvalData(testpath, kptfolder, iscrop=iscrop, crop_size=224, scale=scale)
+    #
+    #     else:
+    #         print('please check test data')
+    #         exit()
+    #
+    #     ## train model
+    #     self.E_flame.eval()  # self.M.train(); self.G.train()
+    #     self.E_detail.eval()
+    #     self.D_detail.eval()
+    #
+    #     if n_person is None or n_person > len(testdata):
+    #         n_person = len(testdata)
+    #
+    #     for i in range(n_person):
+    #         images = testdata[i]['image']  # .to(self.device)[None,...]
+    #         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+    #         batch_size = images.shape[0]
+    #
+    #         # -- encoder
+    #         with torch.no_grad():
+    #             parameters = self.E_flame(images)
+    #             detailcode = self.E_detail(images)
+    #
+    #         code_list = self.decompose_code(parameters)
+    #         shapecode, texcode, expcode, posecode, cam, lightcode = code_list
+    #
+    #         # -- decoder
+    #         # FLAME
+    #         verts, landmarks2d, landmarks3d = self.flame(shape_params=shapecode, expression_params=expcode,
+    #                                                      pose_params=posecode)
+    #         predicted_landmarks = util.batch_orth_proj(landmarks2d, cam)[:, :, :2];
+    #         predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
+    #         trans_verts = util.batch_orth_proj(verts, cam);
+    #         trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
+    #         albedo = self.flametex(texcode)
+    #
+    #         # Detail
+    #         uv_z = self.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
+    #
+    #         # ------ rendering
+    #         # import ipdb; ipdb.set_trace()
+    #         ops = self.render(verts, trans_verts, albedo, lightcode)
+    #         # mask
+    #         mask_face_eye = F.grid_sample(self.uv_face_eye_mask.expand(batch_size, -1, -1, -1), ops['grid'].detach(),
+    #                                       align_corners=False)
+    #         # images
+    #         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
+    #
+    #         # predicted_images_G = self.render(verts.detach(), trans_verts.detach(), albedo_G, lightcode.detach())['images']
+    #         visind = np.arange(self.config.K)
+    #         shape_images = self.render.render_shape(verts, trans_verts)
+    #
+    #         # render detail
+    #         uv_detail_normals, uv_coarse_vertices = self.displacement2normal(uv_z, verts, ops['normals'])
+    #         detail_normal_images = F.grid_sample(uv_detail_normals, ops['grid'], align_corners=False)
+    #         shape_detail_images = self.render.render_shape(verts, trans_verts,
+    #                                                        detail_normal_images=detail_normal_images)
+    #         uv_shading = self.render.add_SHlight(uv_detail_normals, lightcode)
+    #         uv_texture = albedo * uv_shading
+    #         predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'], align_corners=False)
+    #
+    #         visdict = {
+    #             'inputs': images[visind],
+    #             'landmarks': util.tensor_vis_landmarks(images[visind], predicted_landmarks[visind]),
+    #             'shape': shape_images[visind],
+    #             'detail_shape': shape_detail_images[visind],
+    #             'predicted_images': predicted_images[visind],
+    #             'detail_images': predicted_detailed_image[visind],
+    #             # 'albedo_images': ops['albedo_images'][visind],
+    #             'albedo': albedo[visind],
+    #         }
+    #         if vispath is None:
+    #             vispath_curr = '{}/{}/{}.jpg'.format(self.config.savefolder, self.config.dataname, i)
+    #         self.visualize(visdict, vispath_curr)
+    #         print('{}/{}: '.format(i, n_person), vispath_curr)
+    #         if return_params:
+    #             param_dict = {
+    #                 'shapecode': shapecode,
+    #                 'expcode': expcode,
+    #                 'posecode': posecode,
+    #                 'cam': cam,
+    #                 'texcode': texcode,
+    #                 'lightcode': lightcode,
+    #                 'detailcode': detailcode
+    #             }
+    #             return param_dict

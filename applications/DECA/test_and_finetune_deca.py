@@ -14,23 +14,24 @@ import wandb
 import datetime
 # import hydra
 from omegaconf import DictConfig, OmegaConf
-# import copy
+import copy
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
+# def get_sequence_name(cfg):
+#
+#     # print(f"Looking for video {index} in {len(fvdm.video_list)}")
+#     return fvdm, sequence_name, filter_pattern
 
-    fvdm = FaceVideoDataModule(Path(cfg_coarse.data.data_root), Path(cfg_coarse.data.data_root) / "processed",
-                               cfg_coarse.data.processed_subfolder)
+def prepare_data(cfg):
+    fvdm = FaceVideoDataModule(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
+                               cfg.data.processed_subfolder)
     fvdm.prepare_data()
     fvdm.setup()
 
-    # index = 220
-    # index = 120
-    index = cfg_coarse.data.sequence_index
-    # annotation_list = copy.deepcopy(cfg_coarse.data.annotation_list) # sth weird is modifying the list, that's why deep copy
-    annotation_list = cfg_coarse.data.annotation_list.copy()
-
-    print(f"Looking for video {index} in {len(fvdm.video_list)}")
+    index = cfg.data.sequence_index
+    annotation_list = copy.deepcopy(
+        cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
+    # annotation_list = cfg_coarse.data.annotation_list.copy()
 
     if index == -1:
         sequence_name = annotation_list[0]
@@ -38,6 +39,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
             filter_pattern = 'VA_Set'
         elif annotation_list[0] == 'expr7':
             filter_pattern = 'Expression_Set'
+        else:
+            raise NotImplementedError()
     else:
         sequence_name = str(fvdm.video_list[index])
         filter_pattern = sequence_name
@@ -48,39 +51,102 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
             print("No GT for expressions. Skipping")
             # sys.exit(0)
 
+
+    # index = 220
+    # index = 120
+    index = cfg.data.sequence_index
+    annotation_list = copy.deepcopy(
+        cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
+    # annotation_list = cfg_coarse.data.annotation_list.copy()
+
+    print(f"Looking for video {index} in {len(fvdm.video_list)}")
+
     dm = EmotionDataModule(fvdm,
-                           image_size=cfg_coarse.model.image_size,
+                           image_size=cfg.model.image_size,
                            with_landmarks=True,
                            with_segmentations=True,
-                           split_ratio=cfg_coarse.data.split_ratio,
-                           split_style=cfg_coarse.data.split_style,
-                           train_K=cfg_coarse.model.train_K,
-                           train_K_policy=cfg_coarse.model.train_K_policy,
-                           val_K=cfg_coarse.model.val_K,
-                           val_K_policy=cfg_coarse.model.val_K_policy,
-                           test_K=cfg_coarse.model.train_K,
-                           test_K_policy=cfg_coarse.model.test_K_policy,
-                           annotation_list = annotation_list,
-                           filter_pattern = filter_pattern, 
-                           num_workers = cfg_coarse.data.num_workers,
-                           train_batch_size= cfg_coarse.model.batch_size_train,
-                           val_batch_size= cfg_coarse.model.batch_size_val,
-                           test_batch_size= cfg_coarse.model.batch_size_test
-                           )
-    # dm.prepare_data()
-    # dm.setup()
+                           split_ratio=cfg.data.split_ratio,
+                           split_style=cfg.data.split_style,
+                           train_K=cfg.learning.train_K,
+                           train_K_policy=cfg.learning.train_K_policy,
+                           val_K=cfg.learning.val_K,
+                           val_K_policy=cfg.learning.val_K_policy,
+                           test_K=cfg.learning.train_K,
+                           test_K_policy=cfg.learning.test_K_policy,
+                           annotation_list=annotation_list,
+                           filter_pattern=filter_pattern,
+                           num_workers=cfg.data.num_workers,
+                           train_batch_size=cfg.learning.batch_size_train,
+                           val_batch_size=cfg.learning.batch_size_val,
+                           test_batch_size=cfg.learning.batch_size_test)
+    return dm, sequence_name
 
-    deca = DecaModule(cfg_coarse.model, cfg_coarse.learning, cfg_coarse.inout)
+
+def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
+    if dm is None:
+        dm, sequence_name = prepare_data(cfg)
+
+    if deca is None:
+        logger.finalize("")
+        deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
+
+    else:
+        deca.reconfigure(cfg.model, prefix, downgrade_ok=True)
+
+    # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
+    # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
+    # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp_spawn' # ddp only seems to work for single .fit/test calls unfortunately,
+    accelerator = None if cfg.learning.num_gpus == 1 else 'dp'  # ddp only seems to work for single .fit/test calls unfortunately,
+
+    if accelerator is not None and 'LOCAL_RANK' not in os.environ.keys():
+        print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
+        os.environ['LOCAL_RANK'] = '0'
+
+    trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
+                      default_root_dir=cfg.inout.checkpoint_dir,
+                      logger=logger,
+                      accelerator=accelerator)
+    if stage == "train":
+        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
+        trainer.fit(deca, datamodule=dm)
+    elif stage == "test":
+        # trainer.test(deca,
+        #              test_dataloaders=[test_data_loader],
+        #              ckpt_path=None)
+        trainer.test(deca,
+                     datamodule=dm,
+                     ckpt_path=None)
+    else:
+        raise ValueError(f"Invalid stage {stage}")
+    logger.finalize("")
+    return deca
+
+
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     conf = DictConfig({})
     conf.coarse = cfg_coarse
     conf.detail = cfg_detail
+    # configs = [cfg_coarse, cfg_detail]
+    configs = [cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
+    stages = ["test", "train", "test", "train", "test"]
+    stages_prefixes = ["start", "", "", "", ""]
+
+    if not test_first:
+        configs = configs[1:]
+        stages = stages[1:]
+        stages_prefixes = stages_prefixes[1:]
+
+    dm, sequence_name = prepare_data(configs[0])
 
     project_name = 'EmotionalDeca'
     time = datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
-    experiment_name = time+ "_" + sequence_name
+    experiment_name = time + "_" + sequence_name
 
-    full_run_dir = Path(cfg_coarse.inout.output_dir) / experiment_name
+    full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
     full_run_dir.mkdir(parents=True)
+
+    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
+        OmegaConf.save(config=conf, f=outfile)
 
     coarse_checkpoint_dir = full_run_dir / "coarse"
     coarse_checkpoint_dir.mkdir(parents=True)
@@ -93,77 +159,26 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
 
-    # name = cfg_coarse.inout.name + '_' + str(filter_pattern) + "_" + \
-    #        datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
-
-    # train_data_loader = dm.train_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-    #                                         batch_size=cfg_coarse.model.batch_size_train,
-    #                                         num_workers=cfg_coarse.data.num_workers,
-    #                                         split_ratio=cfg_coarse.data.split_ratio,
-    #                                         split_style=cfg_coarse.data.split_style,
-    #                                         K=cfg_coarse.model.train_K,
-    #                                         K_policy=cfg_coarse.model.K_policy)
-    #
-    # val_data_loader = dm.val_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-    #                                     batch_size=cfg_coarse.model.batch_size_val,
-    #                                     num_workers=cfg_coarse.data.num_workers)
-    #
-    # test_data_loader = dm.test_dataloader(copy.deepcopy(annotation_list), filter_pattern,
-    #                                      batch_size=cfg_coarse.model.batch_size_val,
-    #                                      num_workers=cfg_coarse.data.num_workers,
-    #                                      K=cfg_coarse.model.test_K,
-    #                                      K_policy=cfg_coarse.model.K_policy)
-    # train_data_loader = dm.train_dataloader()
-    # val_data_loader = dm.val_dataloader()
-    # test_data_loader = dm.test_dataloader()
-
     wandb_logger = WandbLogger(name=experiment_name,
-                               project=project_name,
-                               config=dict(conf),
-                               version=time,
-                               save_dir=full_run_dir)
+                         project=project_name,
+                         config=dict(conf),
+                         version=time,
+                         save_dir=full_run_dir)
 
-    configs = [cfg_coarse, cfg_detail]
-    # configs = [cfg_detail]
+    deca = None
     for i, cfg in enumerate(configs):
-        if i > 0:
-            deca.reconfigure(cfg.model)
-
-        # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
-        # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
-        # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp_spawn' # ddp only seems to work for single .fit/test calls unfortunately,
-        accelerator = None if cfg.learning.num_gpus == 1 else 'dp' # ddp only seems to work for single .fit/test calls unfortunately,
-        if accelerator is not None and 'LOCAL_RANK' not in os.environ.keys():
-            print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
-            os.environ['LOCAL_RANK'] = '0'
-        trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
-                          default_root_dir=cfg.inout.checkpoint_dir,
-                          logger=wandb_logger,
-                          accelerator=accelerator)
-        if test_first and i == 0:
-            deca.reconfigure(cfg_detail.model, stage_name="start")
-            # trainer.test(deca,
-            #              test_dataloaders=[test_data_loader],
-            #              ckpt_path=None)
-            trainer.test(deca,
-                         datamodule=dm,
-                         ckpt_path=None)
-            # to make sure WANDB has the correct step
-            wandb_logger.finalize("")
-            deca.reconfigure(cfg.model, stage_name="", downgrade_ok=True)
-
-        # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
-        trainer.fit(deca, datamodule=dm)
-
-        # wandb_logger.finalize("")
-        # trainer.test(deca,
-        #              test_dataloaders=[test_data_loader],
-        #              ckpt_path=None)
-        trainer.test(deca,
-                     datamodule=dm,
-                     ckpt_path=None)
-        # to make sure WANDB has the correct step
-        wandb_logger.finalize("")
+        dm.reconfigure(
+            train_batch_size=cfg.learning.batch_size_train,
+            val_batch_size=cfg.learning.batch_size_val,
+            test_batch_size=cfg.learning.batch_size_test,
+            train_K=cfg.learning.train_K,
+            val_K=cfg.learning.val_K,
+            test_K=cfg.learning.test_K,
+            train_K_policy=cfg.learning.train_K_policy,
+            val_K_policy=cfg.learning.val_K_policy,
+            test_K_policy=cfg.learning.test_K_policy,
+        )
+        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger)
 
 
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune")

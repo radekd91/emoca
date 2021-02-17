@@ -5,5 +5,6 @@ defaults:
   - model/sizes : default
 #  - model/sizes : default_detail
   - model/flame_tex: bfm_desktop
-  - learning: finetune_adam_detail
+  - learning/optimizer: finetune_adam_detail
+  - learning/batching: single_gpu_detail
   - inout: desktop

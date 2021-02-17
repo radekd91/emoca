@@ -1,14 +1,4 @@
 # @package model
-batch_size_train: 1
-batch_size_test: 4
-batch_size_val: 4
-train_K: 2 # num pictures of an identity per batch
-val_K: 1 # num pictures of an identity per batch
-test_K: 1 # num pictures of an identity per batch
-train_K_policy: random
-val_K_policy: sequential
-test_K_policy: sequential
-#K_policy: sequential
 
 # latent space
 n_shape: 100
