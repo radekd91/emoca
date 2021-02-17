@@ -35,8 +35,10 @@ class EmotionDataModule(pl.LightningDataModule):
 
     def __init__(self, dm, image_size=256, with_landmarks=False, with_segmentations=False,
                  train_K=None,
+                 val_K=None,
                  test_K=None,
                  train_K_policy = None,
+                 val_K_policy = None,
                  test_K_policy = None,
                  annotation_list = None,
                  filter_pattern = None,
@@ -56,10 +58,10 @@ class EmotionDataModule(pl.LightningDataModule):
         self.with_landmarks = with_landmarks
         self.with_segmentations = with_segmentations
         self.train_K = train_K
-        self.val_K = 1
+        self.val_K = val_K
         self.test_K = test_K
         self.train_K_policy = train_K_policy
-        # self.val_K_policy = val_K_policy
+        self.val_K_policy = val_K_policy
         self.test_K_policy = test_K_policy
         self.annotation_list = annotation_list
         self.filter_pattern = filter_pattern
@@ -101,6 +103,8 @@ class EmotionDataModule(pl.LightningDataModule):
 
         if len(dataset) > 1:
             self.validation_set = dataset[1]
+            self.validation_set.K = self.val_K
+            self.validation_set.K_policy = self.val_K_policy
             self.indices_train = dataset[2]
             self.indices_val = dataset[3]
 

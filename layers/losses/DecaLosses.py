@@ -158,9 +158,10 @@ def batch_kp_2d_l1_loss(real_2d_kp, predicted_2d_kp, weights=None):
 def landmark_loss(predicted_landmarks, landmarks_gt, weight=1.):
     # (predicted_theta, predicted_verts, predicted_landmarks) = ringnet_outputs[-1]
     if torch.is_tensor(landmarks_gt) is not True:
-        real_2d = torch.cat(landmarks_gt).cuda()
+        real_2d = torch.cat(landmarks_gt) #.cuda()
     else:
-        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).cuda()], dim=-1)
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1))#.cuda()
+                             ], dim=-1)
     # real_2d = torch.cat(landmarks_gt).cuda()
 
     loss_lmk_2d = batch_kp_2d_l1_loss(real_2d, predicted_landmarks)
@@ -178,9 +179,10 @@ def eye_dis(landmarks):
 
 def eyed_loss(predicted_landmarks, landmarks_gt, weight=1.):
     if torch.is_tensor(landmarks_gt) is not True:
-        real_2d = torch.cat(landmarks_gt).cuda()
+        real_2d = torch.cat(landmarks_gt) #.cuda()
     else:
-        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).cuda()], dim=-1)
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)) #.cuda()
+                             ], dim=-1)
     pred_eyed = eye_dis(predicted_landmarks[:, :, :2])
     gt_eyed = eye_dis(real_2d[:, :, :2])
 
@@ -219,9 +221,10 @@ def lip_dis(landmarks):
 
 def lipd_loss(predicted_landmarks, landmarks_gt, weight=1.):
     if torch.is_tensor(landmarks_gt) is not True:
-        real_2d = torch.cat(landmarks_gt).cuda()
+        real_2d = torch.cat(landmarks_gt)#.cuda()
     else:
-        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).cuda()], dim=-1)
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1))#.cuda()
+                             ], dim=-1)
     pred_lipd = lip_dis(predicted_landmarks[:, :, :2])
     gt_lipd = lip_dis(real_2d[:, :, :2])
 
@@ -234,7 +237,7 @@ def weighted_landmark_loss(predicted_landmarks, landmarks_gt, weight=1.):
     # (predicted_theta, predicted_verts, predicted_landmarks) = ringnet_outputs[-1]
     # import ipdb; ipdb.set_trace()
     real_2d = landmarks_gt
-    weights = torch.ones((68,)).cuda()
+    weights = torch.ones((68,)).to(predicted_landmarks.device) #.cuda()
     weights[5:7] = 2
     weights[10:12] = 2
     # nose points
