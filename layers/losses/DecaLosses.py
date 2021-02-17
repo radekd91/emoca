@@ -181,7 +181,7 @@ def eyed_loss(predicted_landmarks, landmarks_gt, weight=1.):
     if torch.is_tensor(landmarks_gt) is not True:
         real_2d = torch.cat(landmarks_gt) #.cuda()
     else:
-        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)) #.cuda()
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).to(device=landmarks_gt.device) #.cuda()
                              ], dim=-1)
     pred_eyed = eye_dis(predicted_landmarks[:, :, :2])
     gt_eyed = eye_dis(real_2d[:, :, :2])
@@ -223,7 +223,7 @@ def lipd_loss(predicted_landmarks, landmarks_gt, weight=1.):
     if torch.is_tensor(landmarks_gt) is not True:
         real_2d = torch.cat(landmarks_gt)#.cuda()
     else:
-        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1))#.cuda()
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).to(device=predicted_landmarks.device) #.cuda()
                              ], dim=-1)
     pred_lipd = lip_dis(predicted_landmarks[:, :, :2])
     gt_lipd = lip_dis(real_2d[:, :, :2])
@@ -237,7 +237,7 @@ def weighted_landmark_loss(predicted_landmarks, landmarks_gt, weight=1.):
     # (predicted_theta, predicted_verts, predicted_landmarks) = ringnet_outputs[-1]
     # import ipdb; ipdb.set_trace()
     real_2d = landmarks_gt
-    weights = torch.ones((68,)).to(predicted_landmarks.device) #.cuda()
+    weights = torch.ones((68,)).to(device=predicted_landmarks.device) #.cuda()
     weights[5:7] = 2
     weights[10:12] = 2
     # nose points
@@ -384,7 +384,7 @@ def laplacian_hq_loss(prediction, gt):
     # https://torchgeometry.readthedocs.io/en/latest/_modules/kornia/filters/laplacian.html
     b, c, h, w = prediction.shape
     kernel_size = 3
-    kernel = get_laplacian_kernel2d(kernel_size).to(prediction.device).to(prediction.dtype)
+    kernel = get_laplacian_kernel2d(kernel_size).to(device=prediction.device).to(prediction.dtype)
     kernel = kernel.repeat(c, 1, 1, 1)
     padding = (kernel_size - 1) // 2
     lap_pre = F.conv2d(prediction, kernel, padding=padding, stride=1, groups=c)
