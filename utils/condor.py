@@ -115,7 +115,10 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
         fp.write(cs)
     os.chmod(condor_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC | stat.S_IXUSR | stat.S_IRUSR)  # make executable
 
-    cmd = 'cd %s && condor_submit_bid %d %s' % (submission_dir_cluster_side, bid, condor_fname,)
+    cmd = 'cd %s && ' \
+          f'chmod +x {os.path.basename(script_fname)} && ' \
+          f'chmod +x {os.path.basename(condor_fname)} && ' \
+          'condor_submit_bid %d %s' % (submission_dir_cluster_side, bid, condor_fname,)
     print("Called the following on the cluster: ")
     print(cmd)
     # subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
