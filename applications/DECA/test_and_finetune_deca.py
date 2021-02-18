@@ -17,11 +17,7 @@ import datetime
 from omegaconf import DictConfig, OmegaConf
 import copy
 
-
-# def get_sequence_name(cfg):
-#
-#     # print(f"Looking for video {index} in {len(fvdm.video_list)}")
-#     return fvdm, sequence_name, filter_pattern
+project_name = 'EmotionalDeca'
 
 def prepare_data(cfg):
     print(f"The data will be loaded from: '{cfg.data.data_root}'")
@@ -88,6 +84,15 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
     if dm is None:
         dm, sequence_name = prepare_data(cfg)
 
+    if logger is None:
+        N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
+        version = project_name[:N]
+        logger = WandbLogger(name=cfg.inout.name,
+                                   project=project_name,
+                                   # config=dict(conf),
+                                   version=version,
+                                   save_dir=cfg.inout.full_run_dir)
+
     if deca is None:
         logger.finalize("")
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
@@ -113,7 +118,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
     trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
-                      accelerator=accelerator)
+                      accelerator=accelerator,
+                      callbacks=[checkpoint_callback])
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)
@@ -167,7 +173,6 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
 
     dm, sequence_name = prepare_data(configs[0])
 
-    project_name = 'EmotionalDeca'
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     experiment_name = time + "_" + create_experiment_name(cfg_coarse, sequence_name)
 
