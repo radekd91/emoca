@@ -24,6 +24,7 @@ import copy
 #     return fvdm, sequence_name, filter_pattern
 
 def prepare_data(cfg):
+    print(f"The data will be loaded from: '{cfg.data.data_root}'")
     fvdm = FaceVideoDataModule(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
                                cfg.data.processed_subfolder)
     fvdm.prepare_data()
@@ -234,7 +235,7 @@ def configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_o
 # def main(cfg : DictConfig):
 def main():
     configured = False
-    if len(sys.argv) > 3:
+    if len(sys.argv) >= 3:
         if Path(sys.argv[1]).is_file():
             configured = True
             with open(sys.argv[1], 'r') as f:
@@ -248,7 +249,7 @@ def main():
         coarse_conf = "deca_finetune_coarse_emonet"
         detail_conf = "deca_finetune_detail_emonet"
 
-    if len(sys.argv) > 5:
+    if len(sys.argv) >= 5:
         coarse_override = sys.argv[3]
         detail_override = sys.argv[4]
     else:
