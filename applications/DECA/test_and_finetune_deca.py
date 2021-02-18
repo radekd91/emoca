@@ -132,9 +132,10 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     stages_prefixes = ["start", "start", "", "", "", ""]
 
     if not test_first:
-        configs = configs[2:]
-        stages = stages[2:]
-        stages_prefixes = stages_prefixes[1:]
+        num_test_stages = 2
+        configs = configs[num_test_stages:]
+        stages = stages[num_test_stages:]
+        stages_prefixes = stages_prefixes[num_test_stages:]
 
     dm, sequence_name = prepare_data(configs[0])
 

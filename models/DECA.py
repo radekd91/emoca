@@ -697,7 +697,7 @@ class DecaModule(LightningModule):
         if self.global_step % 100 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx)
-            visdict = self._log_visualizations('train', visualizations, values, batch_idx, indices=0)
+            visdict = self._log_visualizations('train', visualizations, values, self.current_epoch, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # visdict[prefix + '_test_' + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
