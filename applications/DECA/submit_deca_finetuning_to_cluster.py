@@ -147,11 +147,13 @@ def finetune_on_selected_sequences():
 
             GlobalHydra.instance().clear()
             config_pairs += [cfgs]
+
+            submit(cfgs[0], cfgs[1])
             # break
         # break
 
-    for cfg_pair in config_pairs:
-        submit(cfg_pair[0], cfg_pair[1])
+    # for cfg_pair in config_pairs:
+    #     submit(cfg_pair[0], cfg_pair[1])
 
 
 def default_main():
