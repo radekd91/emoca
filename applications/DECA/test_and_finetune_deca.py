@@ -19,8 +19,9 @@ import copy
 
 project_name = 'EmotionalDeca'
 
+
 def prepare_data(cfg):
-    print(f"The data will be loaded from: '{cfg.data.data_root}'")
+    # print(f"The data will be loaded from: '{cfg.data.data_root}'")
     fvdm = FaceVideoDataModule(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
                                cfg.data.processed_subfolder)
     fvdm.prepare_data()
