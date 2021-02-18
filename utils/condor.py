@@ -31,7 +31,10 @@ queue <<NJOBS>>
 
 script_template = """
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
-/home/rdanecek/anaconda3/condabin/conda activate work36
+source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
+#/home/rdanecek/anaconda3/condabin/conda init bash
+#/home/rdanecek/anaconda3/condabin/conda activate <<ENV>>
+activate <<ENV>>
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 deactivate
 """
@@ -51,12 +54,13 @@ deactivate
 
 
 # def execute_on_cluster(config_fname):
-def execute_on_cluster(local_script_path, args, submission_dir_local_mount,
+def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        submission_dir_cluster_side=None,
                        cluster_repo_dir='/home/rdanecek/workspace/repos/gdl',
                        cpus=1, gpus=0, mem_gb=4, num_jobs=1, bid=10, max_time_h=36, max_price=5000,
                        job_name="skynet",
                        python_bin='python',
+                       env='work36',
                        username='rdanecek',
                        gpu_mem_requirement_mb=None,
                        cuda_capability_requirement=None):
@@ -66,7 +70,8 @@ def execute_on_cluster(local_script_path, args, submission_dir_local_mount,
     # st = st.replace('<<CONFIG_FNAME>>', config_fname)
     st = st.replace('<<REPO_ROOT>>', cluster_repo_dir)
     st = st.replace('<<PYTHON_BIN>>', python_bin)
-    st = st.replace('<<SCRIPT_NAME>>', local_script_path)
+    st = st.replace('<<SCRIPT_NAME>>', cluster_script_path)
+    st = st.replace('<<ENV>>', env)
     script_fname = os.path.join(submission_dir_local_mount, 'run.sh')
 
 
@@ -105,12 +110,13 @@ def execute_on_cluster(local_script_path, args, submission_dir_local_mount,
     # write files
     with open(script_fname, 'w') as fp:
         fp.write(st)
-    os.chmod(script_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC)  # make executable
+    os.chmod(script_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC | stat.S_IXUSR | stat.S_IRUSR)  # make executable
     with open(condor_fname, 'w') as fp:
         fp.write(cs)
-    os.chmod(condor_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC)  # make executable
+    os.chmod(condor_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC | stat.S_IXUSR | stat.S_IRUSR)  # make executable
 
     cmd = 'cd %s && condor_submit_bid %d %s' % (submission_dir_cluster_side, bid, condor_fname,)
     print("Called the following on the cluster: ")
     print(cmd)
-    subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
+    # subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
+    print("Done")

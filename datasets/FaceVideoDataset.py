@@ -849,15 +849,16 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
     def _loadMeta(self):
+        print(f"Loading metadata of FaceVideoDataset from: '{self.metadata_path}'")
         with open(self.metadata_path, "rb") as f:
             version = pkl.load(f)
             self.video_list = pkl.load(f)
             self.video_metas = pkl.load(f)
             self.annotation_list = pkl.load(f)
-            try:
-                self.frame_lists = pkl.load(f)
-            except Exception:
-                pass
+            # try:
+            self.frame_lists = pkl.load(f)
+            # except Exception:
+            #     pass
 
     def _saveMeta(self):
         with open(self.metadata_path, "wb") as f:

@@ -15,6 +15,9 @@ def submit(cfg_coarse, cfg_detail):
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
     local_script_path = Path(test_and_finetune_deca.__file__).absolute()
+    cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
+                          / local_script_path.parents[0].name / local_script_path.name
+
     submission_folder_local.mkdir(parents=True)
 
     coarse_file = submission_folder_local / "submission_coarse_config.yaml"
@@ -24,12 +27,6 @@ def submit(cfg_coarse, cfg_detail):
         OmegaConf.save(config=cfg_coarse, f=outfile)
     with open(detail_file, 'w') as outfile:
         OmegaConf.save(config=cfg_detail, f=outfile)
-
-
-    rel_script_path = Path(test_and_finetune_deca.__file__).absolute().relative_to(local_script_path.parents[2])
-    cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
-                          / local_script_path.parents[0].name / local_script_path.name
-
 
 
     python_bin = 'python'
@@ -47,7 +44,7 @@ def submit(cfg_coarse, cfg_detail):
     mem_gb = 20
     args = f"{coarse_file.name} {detail_file.name}"
 
-    execute_on_cluster(str(local_script_path),
+    execute_on_cluster(str(cluster_script_path),
                        args,
                        str(submission_folder_local),
                        str(submission_folder_cluster),
