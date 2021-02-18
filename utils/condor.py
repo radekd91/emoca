@@ -34,9 +34,9 @@ export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
 source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
 #/home/rdanecek/anaconda3/condabin/conda init bash
 #/home/rdanecek/anaconda3/condabin/conda activate <<ENV>>
-activate <<ENV>>
+source activate <<ENV>>
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
-deactivate
+source deactivate
 """
 
 # ######################################################
