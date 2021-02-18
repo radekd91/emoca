@@ -49,9 +49,6 @@ def prepare_data(cfg):
             print("No GT for expressions. Skipping")
             # sys.exit(0)
 
-
-    # index = 220
-    # index = 120
     index = cfg.data.sequence_index
     annotation_list = copy.deepcopy(
         cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy

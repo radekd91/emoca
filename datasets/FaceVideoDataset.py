@@ -26,7 +26,7 @@ from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
-from .IO import load_segmentation, save_segmentation
+from datasets.IO import load_segmentation, save_segmentation
 
 # from memory_profiler import profile
 
@@ -2379,7 +2379,41 @@ def main():
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
 
+    test_videos = [
+        '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
+        '19-24-1920x1080.mp4', # angry young black guy on stage
+        '17-24-1920x1080.mp4', # black guy on stage, difficult light
+        '23-24-1920x1080.mp4', # white woman, over-articulated expressions
+        '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
+        '28-30-1280x720-1.mp4', # angry black guy
+        '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
+        '34-25-1920x1080.mp4', # white guy, mostly neutral
+        '50-30-1920x1080.mp4', # baby
+        '60-30-1920x1080.mp4', # smiling asian woman
+        '61-24-1920x1080.mp4', # very lively white woman
+        '63-30-1920x1080.mp4', # smiling asian woman
+        '66-25-1080x1920.mp4', # white girl acting out an emotional performance
+        '71-30-1920x1080.mp4', # old white woman, camera shaking
+        '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
+        '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+        '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+        '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
+        '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
+        '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+        '111-25-1920x1080.mp4', # disgusted white guy
+        '121-24-1920x1080.mp4', # white guy scared and happy faces
+    ]
+
+    indices = [dm.video_list.index(Path('VA_Set/videos/Train_Set') / name) for name in test_videos]
+
     # i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    # i = dm.video_list.index(Path('VA_Set/videos/Train_Set/9-15-1920x1080.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
+    i = dm.video_list.index(Path('VA_Set/videos/Train_Set/119-30-848x480.mp4')) # black lady with at Oscars
     i = dm.video_list.index(Path('Expression_Set/videos/Train_Set/1-30-1280x720.mp4')) # black lady with at Oscars
     # dm._process_everything_for_sequence(i)
     # dm._detect_faces_in_sequence(i)

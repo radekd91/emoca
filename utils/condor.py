@@ -65,6 +65,7 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        gpu_mem_requirement_mb=None,
                        cuda_capability_requirement=None):
     submission_dir_cluster_side = submission_dir_cluster_side or submission_dir_local_mount
+    logdir = 'logs'
 
     st = script_template
     # st = st.replace('<<CONFIG_FNAME>>', config_fname)
@@ -76,9 +77,9 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
 
 
     cs = condor_template
-    cs = cs.replace('<<PATH>>', submission_dir_local_mount)
+    cs = cs.replace('<<PATH>>', logdir)
     cs = cs.replace('<<ARGS>>', args)
-    cs = cs.replace('<<SCRIPTNAME>>', script_fname)
+    cs = cs.replace('<<SCRIPTNAME>>', os.path.basename(script_fname))
     cs = cs.replace('<<JOBNAME>>', job_name)
     cs = cs.replace('<<CPU_COUNT>>', str(int(cpus)))
     cs = cs.replace('<<GPU_COUNT>>', str(int(gpus)))
@@ -115,11 +116,12 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
         fp.write(cs)
     os.chmod(condor_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC | stat.S_IXUSR | stat.S_IRUSR)  # make executable
 
-    cmd = 'cd %s && ' \
+    cmd = f'cd {submission_dir_cluster_side} && ' \
+          f'mkdir {logdir} &&' \
           f'chmod +x {os.path.basename(script_fname)} && ' \
           f'chmod +x {os.path.basename(condor_fname)} && ' \
-          'condor_submit_bid %d %s' % (submission_dir_cluster_side, bid, condor_fname,)
+          f'condor_submit_bid {bid} {os.path.basename(condor_fname)}'
     print("Called the following on the cluster: ")
     print(cmd)
-    # subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
+    subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
     print("Done")
