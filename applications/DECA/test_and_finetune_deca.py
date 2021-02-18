@@ -7,6 +7,7 @@ from datasets.FaceVideoDataset import FaceVideoDataModule, \
     AffectNetExpressions, Expression7, AU8, expr7_to_affect_net
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from models.DECA import DecaModule
 from pytorch_lightning.loggers import WandbLogger
@@ -102,6 +103,12 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
         print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
         os.environ['LOCAL_RANK'] = '0'
 
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_loss',
+        filename='deca-{epoch:02d}-{val_loss:.2f}',
+        save_top_k=3,
+        mode='min',
+    )
     trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
@@ -182,19 +189,47 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger)
 
 
+def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
+    cfg_coarse, cfg_detail = configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides)
+    finetune_deca(cfg_coarse, cfg_detail)
+
+
+def configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
+    from hydra.experimental import compose, initialize
+    initialize(config_path="deca_conf", job_name="finetune_deca")
+    cfg_coarse = compose(config_name=coarse_cfg_default, overrides=coarse_overrides)
+    cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
+    return cfg_coarse, cfg_detail
+
+
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune")
 # def main(cfg : DictConfig):
 def main():
-    from hydra.experimental import compose, initialize
-    # override = ['learning.num_gpus=2', 'model/paths=cluster']
-    override = sys.argv[1:]
-    initialize(config_path="deca_conf", job_name="finetune_deca")
-    cfg_coarse = compose(config_name="deca_finetune_coarse_emonet", overrides=override)
-    cfg_detail = compose(config_name="deca_finetune_detail_emonet", overrides=override)
-    # cfg_coarse = compose(config_name="deca_finetune_coarse", overrides=override)
-    # cfg_detail = compose(config_name="deca_finetune_detail", overrides=override)
-    finetune_deca(cfg_coarse, cfg_detail)
+    configured = False
+    if len(sys.argv) > 3:
+        if Path(sys.argv[1]).is_file():
+            configured = True
+            with open(sys.argv[1], 'r') as f:
+                coarse_conf = OmegaConf.load(f)
+            with open(sys.argv[2], 'r') as f:
+                detail_conf = OmegaConf.load(f)
+        else:
+            coarse_conf = sys.argv[1]
+            detail_conf = sys.argv[2]
+    else:
+        coarse_conf = "deca_finetune_coarse_emonet"
+        detail_conf = "deca_finetune_detail_emonet"
 
+    if len(sys.argv) > 5:
+        coarse_override = sys.argv[3]
+        detail_override = sys.argv[4]
+    else:
+        coarse_override = []
+        detail_override = []
+    if configured:
+        finetune_deca(coarse_conf, detail_conf)
+    else:
+        configure_and_finetune(coarse_conf, coarse_override, detail_conf, detail_override)
 
 if __name__ == "__main__":
     main()

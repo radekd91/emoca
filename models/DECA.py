@@ -620,6 +620,8 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log = {prefix + '_val_' + key: value.detach() for key, value in losses_and_metrics.items()}
         # losses_and_metrics_to_log[prefix + '_val_' + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log[prefix + '_val_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # log val_loss also without any prefix for a model checkpoint to track it
+        losses_and_metrics_to_log['val_loss'] = losses_and_metrics_to_log[prefix + '_val_loss']
         # losses_and_metrics_to_log[prefix + '_val_' + 'step'] = self.global_step
         # losses_and_metrics_to_log[prefix + '_val_' + 'batch_idx'] = batch_idx
         # self._val_to_be_logged(losses_and_metrics_to_log)
@@ -693,6 +695,9 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         # losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
+
+        # log loss also without any prefix for a model checkpoint to track it
+        losses_and_metrics_to_log['loss'] = losses_and_metrics_to_log[prefix + '_train_loss']
 
         if self.global_step % 100 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
