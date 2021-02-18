@@ -129,6 +129,26 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
     return deca
 
 
+def create_experiment_name(cfg, sequence_name, version=0):
+    if version == 0:
+        experiment_name = sequence_name
+        if cfg.model.use_emonet_loss:
+            experiment_name += '_EmoNetLoss'
+        if cfg.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLoss'
+        if cfg.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLoss'
+        if cfg.model.useSeg:
+            experiment_name += '_SegmentGT'
+        else:
+            experiment_name += '_SegmentRend'
+
+    else:
+        raise NotImplementedError("Unsupported naming versino")
+
+    return experiment_name
+
+
 def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     conf = DictConfig({})
     conf.coarse = cfg_coarse
@@ -147,25 +167,33 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     dm, sequence_name = prepare_data(configs[0])
 
     project_name = 'EmotionalDeca'
-    time = datetime.datetime.now().strftime("%b_%d_%Y_%H-%M-%S")
-    experiment_name = time + "_" + sequence_name
+    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+    experiment_name = time + "_" + create_experiment_name(cfg_coarse, sequence_name)
 
-    full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
+    if cfg_coarse.inout.full_run_dir == 'todo':
+        full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
+    else:
+        full_run_dir = cfg_coarse.inout.full_run_dir
+
     full_run_dir.mkdir(parents=True)
-
-    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
-        OmegaConf.save(config=conf, f=outfile)
 
     coarse_checkpoint_dir = full_run_dir / "coarse"
     coarse_checkpoint_dir.mkdir(parents=True)
 
+    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
+    cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
+    cfg_coarse.inout.name = experiment_name
+
+    # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail"
     detail_checkpoint_dir.mkdir(parents=True)
 
-    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
-    cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
+    cfg_detail.inout.name = experiment_name
+
+    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
+        OmegaConf.save(config=conf, f=outfile)
 
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,

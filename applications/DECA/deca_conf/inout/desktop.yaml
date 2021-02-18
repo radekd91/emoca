@@ -1,5 +1,5 @@
 # @package _group_
 output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca
-full_run_dir:  /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca
-checkpoint_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca
-name: coding
+full_run_dir: todo
+checkpoint_dir: todo
+name: todo
