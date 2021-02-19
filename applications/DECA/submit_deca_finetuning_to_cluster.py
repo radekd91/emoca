@@ -151,7 +151,7 @@ def finetune_on_selected_sequences():
 
     finetune_modes = [
         ["", ""], # without emonet loss
-        ['model/settings=default_coarse_emonet', 'model/settings=default_coarse_emonet'] # with emonet loss
+        ['model/settings=default_coarse_emonet', 'model/settings=default_detail_emonet'] # with emonet loss
     ]
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
