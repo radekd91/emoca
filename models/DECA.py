@@ -773,7 +773,7 @@ class DecaModule(LightningModule):
 
     def _log_wandb_image(self, path, image, caption=None):
         from skimage.io import imsave
-        path.parents.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         imsave(path, image)
         if caption is not None:
             caption_file = Path(path).parent / (Path(path).stem + ".txt")
