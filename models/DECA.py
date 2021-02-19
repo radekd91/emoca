@@ -774,7 +774,7 @@ class DecaModule(LightningModule):
     def _log_wandb_image(self, path, image, caption=None):
         from skimage.io import imsave
         path.parent.mkdir(parents=True, exist_ok=True)
-        if image.max() < 100.:
+        if image.max() < 30.:
             image = image * 255.
         imsave(path, np.clip(image, 0, 255).astype(np.uint8))
         if caption is not None:
