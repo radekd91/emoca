@@ -779,7 +779,7 @@ class DecaModule(LightningModule):
             caption_file = Path(path).parent / (Path(path).stem + ".txt")
             with open(caption_file, "w") as f:
                 f.write(caption)
-        wandb_image = Image(path, caption=caption)
+        wandb_image = Image(str(path), caption=caption)
         return wandb_image
 
     def _log_visualizations(self, stage, visdict, values, step, indices=None):
@@ -797,7 +797,7 @@ class DecaModule(LightningModule):
                 indices = [indices,]
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
-                savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:.04d}_all.png')
+                savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
                 # wandb_image = Image(image, caption=key)
                 wandb_image = self._log_wandb_image(savepath, image)
                 log_dict[prefix + "_" + stage + "_" + key] = wandb_image
@@ -829,7 +829,7 @@ class DecaModule(LightningModule):
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  np.argmax(values["detail_output_expression"][
                         #                                                i].detach().cpu().numpy()))
-                    savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:.04d}_{i:.02d}.png')
+                    savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
                     image = images[i]
                     # wandb_image = Image(image, caption=caption)
                     wandb_image = self._log_wandb_image(savepath, image, caption)
@@ -904,8 +904,7 @@ class DecaModule(LightningModule):
 
         # savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir,  f'{stage}_images',
         #                                     self.current_epoch, batch_idx)
-        savepath = Path(
-            f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:.04d}.png')
+        savepath = f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:04d}.png'
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
         visualization_image = self.deca.visualize(visdict, savepath)
 
