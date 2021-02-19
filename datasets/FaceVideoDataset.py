@@ -27,7 +27,7 @@ from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 from datasets.IO import load_segmentation, save_segmentation
-import copy
+
 # from memory_profiler import profile
 
 from enum import Enum
@@ -1748,7 +1748,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             if detection_fnames is None:
                 continue
 
-            current_list = copy.deepcopy(annotation_list.copy)
+            current_list = annotation_list.copy()
             for annotation_name, value in detection_fnames.items():
                 detections += value
                 # annotations_all += [annotations[key]]
