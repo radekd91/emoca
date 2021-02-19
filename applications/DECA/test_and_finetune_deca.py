@@ -21,7 +21,7 @@ project_name = 'EmotionalDeca'
 
 
 def prepare_data(cfg):
-    # print(f"The data will be loaded from: '{cfg.data.data_root}'")
+    print(f"The data will be loaded from: '{cfg.data.data_root}'")
     fvdm = FaceVideoDataModule(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
                                cfg.data.processed_subfolder)
     fvdm.prepare_data()
@@ -137,6 +137,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
 def create_experiment_name(cfg, sequence_name, version=0):
     if version == 0:
         experiment_name = sequence_name
+        experiment_name = experiment_name.replace("/", "_")
         if cfg.model.use_emonet_loss:
             experiment_name += '_EmoNetLoss'
         if cfg.model.use_gt_emotion_loss:
@@ -180,6 +181,9 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
         full_run_dir = cfg_coarse.inout.full_run_dir
 
     full_run_dir.mkdir(parents=True)
+    print(f"The run will be saved  to: '{str(full_run_dir)}'")
+    with open("out_folder.txt", "w") as f:
+        f.write(str(full_run_dir))
 
     coarse_checkpoint_dir = full_run_dir / "coarse"
     coarse_checkpoint_dir.mkdir(parents=True)

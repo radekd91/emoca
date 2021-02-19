@@ -422,8 +422,10 @@ class DecaModule(LightningModule):
             d = metric_dict
 
         if va is not None:
-            d[prefix + 'emo_sup_val_L1'] = F.l1_loss(self.emonet_loss.output_emotion['valence'], va[:, 0]) * self.deca.config.gt_emotion_reg
-            d[prefix + 'emo_sup_ar_L1'] = F.l1_loss(self.emonet_loss.output_emotion['arousal'], va[:, 1]) * self.deca.config.gt_emotion_reg
+            d[prefix + 'emo_sup_val_L1'] = F.l1_loss(self.emonet_loss.output_emotion['valence'], va[:, 0]) \
+                                           * self.deca.config.gt_emotion_reg
+            d[prefix + 'emo_sup_ar_L1'] = F.l1_loss(self.emonet_loss.output_emotion['arousal'], va[:, 1]) \
+                                          * self.deca.config.gt_emotion_reg
 
             metric_dict[prefix + "_valence_gt"] = va[:, 0].mean().detach()
             metric_dict[prefix + "_arousal_gt"] = va[:, 1].mean().detach()
@@ -622,15 +624,18 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[prefix + '_val_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         # log val_loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log['val_loss'] = losses_and_metrics_to_log[prefix + '_val_loss']
-        # losses_and_metrics_to_log[prefix + '_val_' + 'step'] = self.global_step
-        # losses_and_metrics_to_log[prefix + '_val_' + 'batch_idx'] = batch_idx
+
+        losses_and_metrics_to_log[prefix + '_val_' + 'step'] = self.global_step
+        losses_and_metrics_to_log[prefix + '_val_' + 'batch_idx'] = batch_idx
+        losses_and_metrics_to_log['val_' + 'step'] = self.global_step
+        losses_and_metrics_to_log['val_' + 'batch_idx'] = batch_idx
         # self._val_to_be_logged(losses_and_metrics_to_log)
         if self.global_step % 200 == 0:
             uv_detail_normals = None
             if 'uv_detail_normals' in values.keys():
                 uv_detail_normals = values['uv_detail_normals']
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                           uv_detail_normals, values, batch_idx)
+                                           uv_detail_normals, values, batch_idx, "val", prefix)
             vis_dict = self._log_visualizations('val', visualizations, values, batch_idx, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # vis_dict[prefix + '_val_' + "visualization"] = image
@@ -665,18 +670,22 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[prefix + '_test_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         losses_and_metrics_to_log[prefix + '_test_' + 'step'] = torch.tensor(self.global_step, device=self.device)
         losses_and_metrics_to_log[prefix + '_test_' + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
+        losses_and_metrics_to_log['test_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        losses_and_metrics_to_log['test_' + 'step'] = torch.tensor(self.global_step, device=self.device)
+        losses_and_metrics_to_log['test_' + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
         # if self.global_step % 200 == 0:
         uv_detail_normals = None
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                       uv_detail_normals, values, self.global_step)
-        visdict = self._log_visualizations('test', visualizations, values, batch_idx, indices=0)
-        # image = Image(grid_image, caption="full visualization")
-        # visdict[ prefix + '_test_' + "visualization"] = image
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(visdict)#, step=self.global_step)
+        if self.batch_idx % 30 == 0:
+            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                           uv_detail_normals, values, self.global_step, "test", prefix)
+            visdict = self._log_visualizations('test', visualizations, values, batch_idx, indices=0)
+            # image = Image(grid_image, caption="full visualization")
+            # visdict[ prefix + '_test_' + "visualization"] = image
+            if isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics(visdict)#, step=self.global_step)
         self.logger.log_metrics(losses_and_metrics_to_log)
         return None
 
@@ -694,15 +703,17 @@ class DecaModule(LightningModule):
         # losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
-        # losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
+        losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
+        losses_and_metrics_to_log['train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        losses_and_metrics_to_log['train_' + 'step'] = self.global_step
 
         # log loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log['loss'] = losses_and_metrics_to_log[prefix + '_train_loss']
 
         if self.global_step % 100 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                           uv_detail_normals, values, batch_idx)
-            visdict = self._log_visualizations('train', visualizations, values, self.current_epoch, indices=0)
+                                           uv_detail_normals, values, batch_idx, "train", prefix)
+            visdict = self._log_visualizations('train', visualizations, values, batch_idx, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # visdict[prefix + '_test_' + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
@@ -760,6 +771,17 @@ class DecaModule(LightningModule):
             caption += prefix +"expression= %s \n" % Expression7(expr7).name
         return caption
 
+    def _log_wandb_image(self, path, image, caption=None):
+        from skimage.io import imsave
+        path.parents.mkdir(parents=True, exist_ok=True)
+        imsave(path, image)
+        if caption is not None:
+            caption_file = Path(path).parent / (Path(path).stem + ".txt")
+            with open(caption_file, "w") as f:
+                f.write(caption)
+        wandb_image = Image(path, caption=caption)
+        return wandb_image
+
     def _log_visualizations(self, stage, visdict, values, step, indices=None):
         mode_ = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
@@ -775,7 +797,9 @@ class DecaModule(LightningModule):
                 indices = [indices,]
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
-                wandb_image = Image(image, caption=key)
+                savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:.04d}_all.png')
+                # wandb_image = Image(image, caption=key)
+                wandb_image = self._log_wandb_image(savepath, image)
                 log_dict[prefix + "_" + stage + "_" + key] = wandb_image
             else:
                 for i in indices:
@@ -805,9 +829,10 @@ class DecaModule(LightningModule):
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  np.argmax(values["detail_output_expression"][
                         #                                                i].detach().cpu().numpy()))
-
+                    savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:.04d}_{i:.02d}.png')
                     image = images[i]
-                    wandb_image = Image(image, caption=caption)
+                    # wandb_image = Image(image, caption=caption)
+                    wandb_image = self._log_wandb_image(savepath, image, caption)
                     log_dict[prefix + "_" + stage + "_" + key] = wandb_image
         # self.log_dict(log_dict, on_step=on_step, on_epoch=on_epoch)
         # if on_step:
@@ -818,7 +843,7 @@ class DecaModule(LightningModule):
         # self.logger.experiment.log(log_dict)#, step=step)
         return log_dict
 
-    def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx):
+    def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx, stage, prefix):
         # visualize
         # if iter % 200 == 1:
         # visind = np.arange(8)  # self.config.batch_size )
@@ -877,8 +902,10 @@ class DecaModule(LightningModule):
         if 'uv_vis_mask_patch' in additional.keys():
             visdict['uv_vis_mask_patch'] = additional['uv_vis_mask_patch'][visind]
 
-        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir, 'train_images',
-                                            self.current_epoch, batch_idx)
+        # savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir,  f'{stage}_images',
+        #                                     self.current_epoch, batch_idx)
+        savepath = Path(
+            f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:.04d}.png')
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
         visualization_image = self.deca.visualize(visdict, savepath)
 

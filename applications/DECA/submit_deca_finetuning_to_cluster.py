@@ -29,7 +29,8 @@ def submit(cfg_coarse, cfg_detail, bid=10):
         OmegaConf.save(config=cfg_detail, f=outfile)
 
 
-    python_bin = 'python'
+    # python_bin = 'python'
+    python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
     gpu_mem_requirement_mb = 14000
     # gpu_mem_requirement_mb = None
@@ -40,7 +41,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     max_price = 5000
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
-    mem_gb = 20
+    mem_gb = 12
     args = f"{coarse_file.name} {detail_file.name}"
 
     execute_on_cluster(str(cluster_script_path),
@@ -87,7 +88,7 @@ test_video_indices = [
  161,
  393,
  145,
- 150
+ 150,
 ]
 
 test_videos = [
@@ -116,6 +117,31 @@ test_videos = [
     '121-24-1920x1080.mp4', # white guy scared and happy faces
 ]
 
+test_video_dict = {
+    148: '119-30-848x480.mp4', # black lady with at Oscars
+    399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
+    # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
+    # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
+    # 195: '23-24-1920x1080.mp4', # white woman, over-articulated expressions
+    207: '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
+    # 241: '28-30-1280x720-1.mp4', # angry black guy
+    # 269: '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
+    # 294: '34-25-1920x1080.mp4', # white guy, mostly neutral
+    # 374: '50-30-1920x1080.mp4', # baby
+    # 380: '60-30-1920x1080.mp4', # smiling asian woman
+    381: '61-24-1920x1080.mp4', # very lively white woman
+    382: '63-30-1920x1080.mp4', # smiling asian woman
+    385: '66-25-1080x1920.mp4', # white girl acting out an emotional performance
+    # 390: '71-30-1920x1080.mp4', # old white woman, camera shaking
+    # 394: '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
+    # 397: '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+    # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+    151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
+    161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    145: '111-25-1920x1080.mp4', # disgusted white guy
+    150: '121-24-1920x1080.mp4', # white guy scared and happy faces
+}
 
 def finetune_on_selected_sequences():
     from hydra.core.global_hydra import GlobalHydra
@@ -131,7 +157,7 @@ def finetune_on_selected_sequences():
     fixed_overrides_detail = []
 
     config_pairs = []
-    for i, video_index in enumerate(test_video_indices):
+    for i, video_index in enumerate(test_video_dict.keys()):
         for fmode in finetune_modes:
             coarse_overrides = fixed_overrides_coarse.copy()
             detail_overrides = fixed_overrides_detail.copy()
