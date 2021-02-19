@@ -385,11 +385,11 @@ class DecaModule(LightningModule):
     def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None):
         if self.deca.config.use_emonet_loss:
             d = loss_dict
-            with torch.no_grad():
-                emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
-                    self.emonet_loss.compute_loss(images, predicted_images)
+            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
+                self.emonet_loss.compute_loss(images, predicted_images)
         else:
             d = metric_dict
+            # with torch.no_grad():
             emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
                 self.emonet_loss.compute_loss(images, predicted_images)
 

@@ -119,28 +119,28 @@ test_videos = [
 
 test_video_dict = {
     148: '119-30-848x480.mp4', # black lady with at Oscars
-    399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
-    # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
-    # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
-    # 195: '23-24-1920x1080.mp4', # white woman, over-articulated expressions
-    207: '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
-    # 241: '28-30-1280x720-1.mp4', # angry black guy
-    # 269: '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
-    # 294: '34-25-1920x1080.mp4', # white guy, mostly neutral
-    # 374: '50-30-1920x1080.mp4', # baby
-    # 380: '60-30-1920x1080.mp4', # smiling asian woman
-    381: '61-24-1920x1080.mp4', # very lively white woman
-    382: '63-30-1920x1080.mp4', # smiling asian woman
-    385: '66-25-1080x1920.mp4', # white girl acting out an emotional performance
-    # 390: '71-30-1920x1080.mp4', # old white woman, camera shaking
-    # 394: '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
-    # 397: '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
-    161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
+    # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
+    # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
+    # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
+    # # 195: '23-24-1920x1080.mp4', # white woman, over-articulated expressions
+    # 207: '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
+    # # 241: '28-30-1280x720-1.mp4', # angry black guy
+    # # 269: '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
+    # # 294: '34-25-1920x1080.mp4', # white guy, mostly neutral
+    # # 374: '50-30-1920x1080.mp4', # baby
+    # # 380: '60-30-1920x1080.mp4', # smiling asian woman
+    # 381: '61-24-1920x1080.mp4', # very lively white woman
+    # 382: '63-30-1920x1080.mp4', # smiling asian woman
+    # 385: '66-25-1080x1920.mp4', # white girl acting out an emotional performance
+    # # 390: '71-30-1920x1080.mp4', # old white woman, camera shaking
+    # # 394: '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
+    # # 397: '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+    # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
+    # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
+    # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
     393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
-    145: '111-25-1920x1080.mp4', # disgusted white guy
-    150: '121-24-1920x1080.mp4', # white guy scared and happy faces
+    # 145: '111-25-1920x1080.mp4', # disgusted white guy
+    # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
 
 def finetune_on_selected_sequences():
@@ -163,7 +163,7 @@ def finetune_on_selected_sequences():
             detail_overrides = fixed_overrides_detail.copy()
             if fmode[0] != "":
                 coarse_overrides += [fmode[0]]
-                detail_overrides += [fmode[0]]
+                detail_overrides += [fmode[1]]
             data_override = f'data.sequence_index={video_index}'
             coarse_overrides += [data_override]
             detail_overrides += [data_override]
