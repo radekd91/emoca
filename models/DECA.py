@@ -678,7 +678,7 @@ class DecaModule(LightningModule):
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        if self.batch_idx % 30 == 0:
+        if batch_idx % 30 == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, self.global_step, "test", prefix)
             visdict = self._log_visualizations('test', visualizations, values, batch_idx, indices=0)
