@@ -57,7 +57,7 @@ class DecaModule(LightningModule):
         else:
             self.emonet_loss = None
 
-    def reconfigure(self, model_params, stage_name="", downgrade_ok=False):
+    def reconfigure(self, model_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
         self.deca._reconfigure(model_params)
@@ -65,6 +65,7 @@ class DecaModule(LightningModule):
         if len(self.stage_name) > 0:
             self.stage_name += "_"
         self.mode = DecaMode[str(model_params.mode).upper()]
+        self.train(mode=train)
         print(f"DECA MODE RECONFIGURED TO: {self.mode}")
 
     # should not be necessary now that the the buffers are registered
@@ -81,19 +82,29 @@ class DecaModule(LightningModule):
         if mode:
             if self.mode == DecaMode.COARSE:
                 self.deca.E_flame.train()
+                print("Setting E_flame to train")
                 self.deca.E_detail.eval()
+                print("Setting E_detail to eval")
                 self.deca.D_detail.eval()
-            if self.mode == DecaMode.DETAIL:
+                print("Setting D_detail to eval")
+            elif self.mode == DecaMode.DETAIL:
                 if self.deca.config.train_coarse:
+                    print("Setting E_flame to train")
                     self.deca.E_flame.train()
                 else:
+                    print("Setting E_flame to eval")
                     self.deca.E_flame.eval()
                 self.deca.E_detail.train()
+                print("Setting E_detail to train")
                 self.deca.D_detail.train()
+                print("Setting D_detail to train")
         else:
             self.deca.E_flame.eval()
+            print("Setting E_flame to eval")
             self.deca.E_detail.eval()
+            print("Setting E_detail to eval")
             self.deca.D_detail.eval()
+            print("Setting D_detail to eval")
 
         # these are set to eval no matter what, they're never being trained
         if self.emonet_loss is not None:

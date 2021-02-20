@@ -78,13 +78,16 @@ def prepare_data(cfg):
     return dm, sequence_name
 
 
-def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
+def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
+                           data_preparation_function=None,
+                           # data_preparation_function=prepare_data,
+                           ):
     if dm is None:
-        dm, sequence_name = prepare_data(cfg)
+        dm, sequence_name = data_preparation_function(cfg)
 
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        version = project_name[:N]
+        version = sequence_name[:N]
         logger = WandbLogger(name=cfg.inout.name,
                                    project=project_name,
                                    # config=dict(conf),
@@ -96,7 +99,11 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None):
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
 
     else:
-        deca.reconfigure(cfg.model, prefix, downgrade_ok=True)
+        if stage == 'train':
+            mode = True
+        else:
+            mode = False
+        deca.reconfigure(cfg.model, prefix, downgrade_ok=True, train=mode)
 
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
