@@ -152,38 +152,42 @@ def finetune_on_selected_sequences():
     finetune_modes = [
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [[], []],# without emonet loss
     ]
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
 
-    emonet_regs = [0.15, 0.15/2, 0.15/4 ]
+    # emonet_regs = [0.15,] #default
+    emonet_regs = [0.15, 0.15/5, 0.15/10 , 0.15/50 , 0.15/100 ]
 
     config_pairs = []
     for i, video_index in enumerate(test_video_dict.keys()):
-        for fmode in finetune_modes:
-            coarse_overrides = fixed_overrides_coarse.copy()
-            detail_overrides = fixed_overrides_detail.copy()
-            # if len(fmode[0]) != "":
-            coarse_overrides += fmode[0]
-            detail_overrides += fmode[1]
+        for emeonet_reg in emonet_regs:
+            for fmode in finetune_modes:
+                coarse_overrides = fixed_overrides_coarse.copy()
+                detail_overrides = fixed_overrides_detail.copy()
+                # if len(fmode[0]) != "":
+                coarse_overrides += fmode[0]
+                detail_overrides += fmode[1]
 
-            emonet_reg_override = f'data.sequence_index={video_index}'
-            data_override = f'data.sequence_index={video_index}'
-            coarse_overrides += [data_override]
-            detail_overrides += [data_override]
+                emonet_reg_override = f'model.emonet_reg={emeonet_reg}'
+                data_override = f'data.sequence_index={video_index}'
+                coarse_overrides += [data_override]
+                detail_overrides += [data_override]
+                coarse_overrides += [emonet_reg_override]
+                detail_overrides += [emonet_reg_override]
 
-            cfgs = test_and_finetune_deca.configure(
-                coarse_conf, coarse_overrides, detail_conf, detail_overrides)
+                cfgs = test_and_finetune_deca.configure(
+                    coarse_conf, coarse_overrides, detail_conf, detail_overrides)
 
-            GlobalHydra.instance().clear()
-            config_pairs += [cfgs]
+                GlobalHydra.instance().clear()
+                config_pairs += [cfgs]
 
-            submit(cfgs[0], cfgs[1])
+                submit(cfgs[0], cfgs[1])
+                # break
             # break
-        # break
 
     # for cfg_pair in config_pairs:
     #     submit(cfg_pair[0], cfg_pair[1])
