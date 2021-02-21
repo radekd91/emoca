@@ -141,20 +141,33 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     return deca
 
 
-def create_experiment_name(cfg, sequence_name, version=0):
+def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
     if version == 0:
         experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
-        if cfg.model.use_emonet_loss:
-            experiment_name += '_EmoNetLoss'
-        if cfg.model.use_gt_emotion_loss:
-            experiment_name += '_SupervisedEmoLoss'
-        if cfg.model.use_gt_emotion_loss:
-            experiment_name += '_SupervisedEmoLoss'
-        if cfg.model.useSeg:
-            experiment_name += '_SegmentGT'
+        if cfg_coarse.model.use_emonet_loss and cfg_detail.use_emonet_loss:
+            experiment_name += '_EmoNetLossB'
+        elif cfg_coarse.model.use_emonet_loss:
+            experiment_name += '_EmoNetLossC'
+        elif cfg_detail.use_emonet_loss:
+            experiment_name += '_EmoNetLossD'
+
+        if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossB'
+        elif cfg_coarse.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossC'
+        elif cfg_detail.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossD'
+
+        if cfg_coarse.model.useSeg:
+            experiment_name += '_CoSegmentGT'
         else:
-            experiment_name += '_SegmentRend'
+            experiment_name += '_CoSegmentRend'
+
+        if cfg_detail.model.useSeg:
+            experiment_name += '_DeSegmentGT'
+        else:
+            experiment_name += '_DeSegmentRend'
 
     else:
         raise NotImplementedError("Unsupported naming versino")
@@ -180,7 +193,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     dm, sequence_name = prepare_data(configs[0])
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    experiment_name = time + "_" + create_experiment_name(cfg_coarse, sequence_name)
+    experiment_name = time + "_" + create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
 
     if cfg_coarse.inout.full_run_dir == 'todo':
         full_run_dir = Path(configs[0].inout.output_dir) / experiment_name

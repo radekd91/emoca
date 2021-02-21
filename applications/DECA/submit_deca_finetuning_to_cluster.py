@@ -118,7 +118,7 @@ test_videos = [
 ]
 
 test_video_dict = {
-    148: '119-30-848x480.mp4', # black lady with at Oscars
+    148: '119-30-848x480.mp4', # black lady at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -138,7 +138,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -150,8 +150,11 @@ def finetune_on_selected_sequences():
     detail_conf = "deca_finetune_detail_cluster"
 
     finetune_modes = [
-        ["", ""], # without emonet loss
-        ['model/settings=default_coarse_emonet', 'model/settings=default_detail_emonet'] # with emonet loss
+        # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
+        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
+        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
+        # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
+        # [[], []],# without emonet loss
     ]
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
@@ -161,9 +164,9 @@ def finetune_on_selected_sequences():
         for fmode in finetune_modes:
             coarse_overrides = fixed_overrides_coarse.copy()
             detail_overrides = fixed_overrides_detail.copy()
-            if fmode[0] != "":
-                coarse_overrides += [fmode[0]]
-                detail_overrides += [fmode[1]]
+            # if len(fmode[0]) != "":
+            coarse_overrides += fmode[0]
+            detail_overrides += fmode[1]
             data_override = f'data.sequence_index={video_index}'
             coarse_overrides += [data_override]
             detail_overrides += [data_override]

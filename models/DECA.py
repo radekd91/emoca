@@ -970,12 +970,19 @@ class DecaModule(LightningModule):
 
     def configure_optimizers(self):
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        print("Configuring optimizer")
         trainable_params = []
         if self.mode == DecaMode.COARSE:
             trainable_params += list(self.deca.E_flame.parameters())
+            print("Add E_flame.parameters() to the optimizer")
         elif self.mode == DecaMode.DETAIL:
+            if self.deca.config.train_coarse:
+                trainable_params += list(self.deca.E_flame.parameters())
+                print("Add E_flame.parameters() to the optimizer")
             trainable_params += list(self.deca.E_detail.parameters())
+            print("Add E_detail.parameters() to the optimizer")
             trainable_params += list(self.deca.D_detail.parameters())
+            print("Add D_detail.parameters() to the optimizer")
         else:
             raise ValueError(f"Invalid deca mode: {self.mode}")
 

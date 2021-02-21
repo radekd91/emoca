@@ -2420,9 +2420,9 @@ def main():
     # # dm._segment_faces_in_sequence(i)
 
     # rpoblematic indices
-    dm._segment_faces_in_sequence(30)
-    dm._segment_faces_in_sequence(156)
-    # dm._segment_faces_in_sequence(399)
+    # dm._segment_faces_in_sequence(30)
+    # dm._segment_faces_in_sequence(156)
+    dm._segment_faces_in_sequence(399)
 
     # dm._create_emotional_image_dataset(['va'], "VA_Set")
     # dm._recognize_emotion_in_sequence(0)
