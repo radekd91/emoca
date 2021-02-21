@@ -145,12 +145,14 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
     if version == 0:
         experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
-        if cfg_coarse.model.use_emonet_loss and cfg_detail.use_emonet_loss:
+        if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
             experiment_name += '_EmoNetLossB'
         elif cfg_coarse.model.use_emonet_loss:
             experiment_name += '_EmoNetLossC'
-        elif cfg_detail.use_emonet_loss:
+        elif cfg_detail.model.use_emonet_loss:
             experiment_name += '_EmoNetLossD'
+        if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
+            experiment_name += '_reg-%.05f' % cfg_coarse.model.emonet_reg
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'

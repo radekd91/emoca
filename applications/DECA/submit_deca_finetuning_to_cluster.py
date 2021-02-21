@@ -159,6 +159,8 @@ def finetune_on_selected_sequences():
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
 
+    emonet_regs = [0.15, 0.15/2, 0.15/4 ]
+
     config_pairs = []
     for i, video_index in enumerate(test_video_dict.keys()):
         for fmode in finetune_modes:
@@ -167,6 +169,8 @@ def finetune_on_selected_sequences():
             # if len(fmode[0]) != "":
             coarse_overrides += fmode[0]
             detail_overrides += fmode[1]
+
+            emonet_reg_override = f'data.sequence_index={video_index}'
             data_override = f'data.sequence_index={video_index}'
             coarse_overrides += [data_override]
             detail_overrides += [data_override]
