@@ -1,6 +1,6 @@
 defaults:
-  - data: pretrain_coarse_data_desktop
-  - model/paths : desktop
+  - data: pretrain_coarse_data_cluster
+  - model/paths : cluster
   - model/settings : coarse_pretrain
   - model/sizes : default
   - model/flame_tex: bfm_desktop

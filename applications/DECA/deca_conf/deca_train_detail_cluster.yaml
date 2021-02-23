@@ -1,6 +1,6 @@
 defaults:
-  - data: detail_data_desktop
-  - model/paths : desktop
+  - data: detail_data_cluster
+  - model/paths : cluster
   - model/settings : detail_train
   - model/sizes : default
   - model/flame_tex: bfm_desktop
