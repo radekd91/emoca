@@ -1,4 +1,4 @@
-from test_and_finetune_deca import single_stage_deca_pass
+from applications.DECA.test_and_finetune_deca import single_stage_deca_pass
 from datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -90,7 +90,7 @@ def configure(coarse_pretrain_cfg_default, coarse_pretrain_overrides,
               coarse_cfg_default, coarse_overrides,
               detail_cfg_default, detail_overrides):
     from hydra.experimental import compose, initialize
-    initialize(config_path="deca_conf", job_name="finetune_deca")
+    initialize(config_path="deca_conf", job_name="train_deca")
     cfg_coarse_pretrain = compose(config_name=coarse_pretrain_cfg_default, overrides=coarse_pretrain_overrides)
     cfg_coarse = compose(config_name=coarse_cfg_default, overrides=coarse_overrides)
     cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
