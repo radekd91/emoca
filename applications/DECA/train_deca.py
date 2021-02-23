@@ -24,12 +24,12 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail):
     conf.coarse_pretraining = cfg_coarse_pretraining
     conf.coarse = cfg_coarse
     conf.detail = cfg_detail
-    # configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
-    # stages = ["train", "test", "train", "test", "train", "test"]
-    # stages_prefixes = ["pretrain", "pretrain", "", "", "", ""]
-    configs = [cfg_coarse_pretraining, cfg_coarse, cfg_detail]
-    stages = ["train", "train", "train",]
-    stages_prefixes = ["pretrain", "", ""]
+    configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
+    stages = ["train", "test", "train", "test", "train", "test"]
+    stages_prefixes = ["pretrain", "pretrain", "", "", "", ""]
+    # configs = [cfg_coarse_pretraining, cfg_coarse, cfg_detail]
+    # stages = ["train", "train", "train",]
+    # stages_prefixes = ["pretrain", "", ""]
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     experiment_name = time + "_" + create_experiment_name()
