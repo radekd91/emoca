@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import WandbLogger
 import datetime
 
 
-project_name = 'Deca'
+project_name = 'EmotionalDeca'
 
 def prepare_data(cfg):
     dm = DecaDataModule(cfg)
