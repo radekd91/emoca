@@ -129,12 +129,18 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         save_top_k=3,
         mode='min',
     )
+
+    val_check_interval = 1.0
+    if hasattr(cfg.model, 'val_check_interval'):
+        val_check_interval = cfg.model.val_check_interval
+
     trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.model.max_epochs,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
                       accelerator=accelerator,
                       callbacks=[checkpoint_callback],
-                      num_sanity_val_steps=0
+                      val_check_interval=val_check_interval,
+                      # num_sanity_val_steps=0
                       )
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
