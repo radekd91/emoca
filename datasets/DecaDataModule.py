@@ -43,7 +43,7 @@ class DatasetSplitter(Dataset):
         return dataset
 
     def __len__(self):
-        # return 10
+        return 10
         if self.training:
             return len(self.idx_train)
         return len(self.idx_val)
