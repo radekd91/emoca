@@ -87,7 +87,7 @@ def train_on_selected_sequences():
     fixed_overrides_detail = []
 
     # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15,] #new default
+    emonet_regs = [0.15/100,] #new default
     # emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []

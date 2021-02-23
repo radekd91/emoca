@@ -35,6 +35,9 @@ sfsw:
 - 0
 - 0
 
+use_detail_l1: True
+use_detail_mrf: True
+use_detailed_photo: False
 
 use_emonet_loss: False
 emonet_reg: 0.15

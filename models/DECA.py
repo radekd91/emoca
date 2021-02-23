@@ -500,18 +500,27 @@ class DecaModule(LightningModule):
 
             # landmark losses (only useful if coarse model is being trained
             if training or lmk is not None:
+                if self.deca.config.use_landmarks:
+                    d = losses
+                else:
+                    d = metrics
+
                 if self.deca.config.useWlmk:
-                    losses['landmark'] = lossfunc.weighted_landmark_loss(predicted_landmarks,
+                    d['landmark'] = lossfunc.weighted_landmark_loss(predicted_landmarks,
                                                                               lmk) * self.deca.config.lmk_weight
                 else:
-                    losses['landmark'] = lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
+                    d['landmark'] = lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
-                losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
-                losses['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
+                d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
+                d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
             # photometric loss
             if training or masks is not None:
-                losses['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
+                if self.deca.config.use_photometric:
+                    d = losses
+                else:
+                    d = metrics
+                d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
 
             if self.deca.config.idw > 1e-3:
                 shading_images = self.deca.render.add_SHlight(ops['normal_images'], lightcode.detach())
@@ -549,8 +558,13 @@ class DecaModule(LightningModule):
             uv_shading = codedict["uv_shading"]
             uv_vis_mask = codedict["uv_vis_mask"] # uv_mask of what is visible
 
-            metrics['photometric_detailed_texture'] = (masks * (
+            photometric_detailed = (masks * (
                     predicted_detailed_image - images).abs()).mean() * self.deca.config.photow
+
+            if self.deca.config.use_detailed_photo:
+                losses['photometric_detailed_texture'] = photometric_detailed
+            else:
+                metrics['photometric_detailed_texture'] = photometric_detailed
 
             if self.emonet_loss is not None:
                 self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail")
@@ -587,12 +601,20 @@ class DecaModule(LightningModule):
                     self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
                     [new_size, new_size], mode='bilinear')
 
-                losses['detail_l1_{}'.format(pi)] = (
-                                                            uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
+                detail_l1 = (uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
                                                     self.deca.config.sfsw[pi]
-                losses['detail_mrf_{}'.format(pi)] = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                if self.deca.config.use_detail_l1:
+                    losses['detail_l1_{}'.format(pi)] = detail_l1
+                else:
+                    metrics['detail_l1_{}'.format(pi)] = detail_l1
+
+                mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
                                                                                uv_texture_gt_patch * uv_vis_mask_patch) * \
                                                      self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                if self.deca.config.use_mrf:
+                    losses['detail_mrf_{}'.format(pi)] = mrf
+                else:
+                    metrics['detail_mrf_{}'.format(pi)] = mrf
 
                 # if pi == 2:
                 #     uv_texture_gt_patch_ = uv_texture_gt_patch

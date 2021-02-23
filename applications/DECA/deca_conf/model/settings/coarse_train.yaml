@@ -11,7 +11,7 @@ resume_training: True # this loads a pretrained model
 #useSeg: false
 useSeg: true
 background_from_input: true
-
+use_landmarks: True
 useWlmk: True
 #useWlmk: False
 lmk_weight: 1
