@@ -182,6 +182,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         else:
             experiment_name += '_DeSegmentRend'
 
+        if not cfg_detail.model.use_detail_l1:
+            experiment_name += '_NoDetL1'
+        if not cfg_detail.model.use_detail_mrf:
+            experiment_name += '_NoMRF'
+
     else:
         raise NotImplementedError("Unsupported naming versino")
 
