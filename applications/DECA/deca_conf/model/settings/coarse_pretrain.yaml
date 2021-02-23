@@ -23,7 +23,8 @@ exp_reg: 1e-4
 shape_reg: 1e-4
 tex_reg: 0
 light_reg: 0
-photow: 0
+use_photometric: False
+photow: 2.
 shape_constrain_type: 'exchange' # None
 
 use_emonet_loss: False
