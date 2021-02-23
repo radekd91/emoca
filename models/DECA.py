@@ -611,7 +611,7 @@ class DecaModule(LightningModule):
                 mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
                                                                                uv_texture_gt_patch * uv_vis_mask_patch) * \
                                                      self.deca.config.sfsw[pi] * self.deca.config.mrfwr
-                if self.deca.config.use_mrf:
+                if self.deca.config.use_detail_mrf:
                     losses['detail_mrf_{}'.format(pi)] = mrf
                 else:
                     metrics['detail_mrf_{}'.format(pi)] = mrf
