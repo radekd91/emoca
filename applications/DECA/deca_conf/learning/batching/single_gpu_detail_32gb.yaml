@@ -1,7 +1,7 @@
 # @package learning
 
 batch_size_train: 6
-batch_size_test: 4
+batch_size_test: 1
 batch_size_val: 4
 train_K: 3 # num pictures of an identity per batch
 val_K: 1 # num pictures of an identity per batch
