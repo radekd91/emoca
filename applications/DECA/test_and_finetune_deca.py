@@ -131,7 +131,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     )
 
     val_check_interval = 1.0
-    if hasattr(cfg.model, 'val_check_interval'):
+    if 'val_check_interval' in cfg.model.keys():
         val_check_interval = cfg.model.val_check_interval
 
     trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.model.max_epochs,
