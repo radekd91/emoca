@@ -193,6 +193,13 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         if not cfg_detail.model.use_detail_mrf:
             experiment_name += '_NoMRF'
 
+        if not cfg_coarse.model.background_from_input and not cfg_detail.model.background_from_input:
+            experiment_name += '_BackBlackB'
+        elif not cfg_coarse.model.background_from_input:
+            experiment_name += '_BackBlackC'
+        elif not cfg_detail.model.background_from_input:
+            experiment_name += '_BackBlackD'
+
     else:
         raise NotImplementedError("Unsupported naming versino")
 

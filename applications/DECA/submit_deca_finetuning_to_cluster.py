@@ -155,12 +155,14 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
-            ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
-            ['model/settings=default_detail_emonet', 'model.use_detail_mrf=false']], # without mrf losses
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
-            ['model/settings=default_detail_emonet', 'model.use_detail_l1=false']] # without mrf losses
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
+        #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
+        #     ['model/settings=default_detail_emonet', 'model.use_detail_mrf=false']], # without mrf losses
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
+        #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false']] # without mrf losses
+        [['model/settings=default_coarse_emonet', 'model.background_from_input=false'],
+            ['model/settings=default_detail_emonet', 'model.background_from_input=false']], # with emonet loss, background black
         # [[], []],# without emonet loss
     ]
     fixed_overrides_coarse = []

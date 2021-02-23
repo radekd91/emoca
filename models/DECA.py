@@ -343,6 +343,8 @@ class DecaModule(LightningModule):
 
         if self.deca.config.background_from_input:
             predicted_images = (1. - masks) * images + masks * predicted_images
+        else:
+            predicted_images = masks * predicted_images
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
@@ -354,6 +356,8 @@ class DecaModule(LightningModule):
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
             if self.deca.config.background_from_input:
                 predicted_detailed_image = (1. - masks) * images + masks*predicted_detailed_image
+            else:
+                predicted_detailed_image = masks * predicted_detailed_image
 
             # --- extract texture
             uv_pverts = self.deca.render.world2uv(trans_verts).detach()
