@@ -561,9 +561,11 @@ class DecaModule(LightningModule):
                 codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
                 codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression']
 
-                codedict["detail_valence_gt"] = va[:,0]
-                codedict["detail_arousal_gt"] = va[:,1]
-                codedict["detail_expression_gt"] = expr7
+                if va is not None:
+                    codedict["detail_valence_gt"] = va[:,0]
+                    codedict["detail_arousal_gt"] = va[:,1]
+                if expr7 is not None:
+                    codedict["detail_expression_gt"] = expr7
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 # if pi==0:
@@ -637,8 +639,6 @@ class DecaModule(LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         with torch.no_grad():
-            if isinstance(batch['image'], list):
-                print("break")
             values = self._encode(batch, training=False)
             values = self._decode(values, training=False)
             losses_and_metrics = self.compute_loss(values, training=False)

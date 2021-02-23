@@ -118,7 +118,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     dm.setup()
     val_data = dm.val_dataloader()
     if isinstance(val_data, list):
-        loss_to_monitor = '0_' + loss_to_monitor + "/dataloader_idx_0"
+        loss_to_monitor = loss_to_monitor + "/dataloader_idx_0"
+        # loss_to_monitor = '0_' + loss_to_monitor + "/dataloader_idx_0"
     # if len(prefix) > 0:
     #     loss_to_monitor = prefix + "_" + loss_to_monitor
 
