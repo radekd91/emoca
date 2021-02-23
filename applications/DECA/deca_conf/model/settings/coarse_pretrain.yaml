@@ -1,5 +1,5 @@
 # @package model
-max_epochs: 1
+max_epochs: 35
 
 test_vis_frequency: 1
 val_vis_frequency: 200
