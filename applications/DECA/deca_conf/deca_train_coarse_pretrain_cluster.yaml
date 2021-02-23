@@ -1,0 +1,9 @@
+defaults:
+  - data: pretrain_coarse_data_desktop
+  - model/paths : desktop
+  - model/settings : coarse_pretrain
+  - model/sizes : default
+  - model/flame_tex: bfm_desktop
+  - learning/optimizer: finetune_adam_coarse
+  - learning/batching: single_gpu_coarse_pretrain
+  - inout: desktop
