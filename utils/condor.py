@@ -62,7 +62,8 @@ ln -s $PWD results/submission
 def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        submission_dir_cluster_side=None,
                        cluster_repo_dir='/home/rdanecek/workspace/repos/gdl',
-                       cpus=1, gpus=0, mem_gb=4, num_jobs=1, bid=10, max_time_h=36, max_price=5000,
+                       cpus=1, gpus=0, mem_gb=4, num_jobs=1, bid=10, max_time_h=None,
+                       max_price=5000,
                        job_name="skynet",
                        python_bin='python',
                        env='work36',
@@ -89,7 +90,7 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     cs = cs.replace('<<CPU_COUNT>>', str(int(cpus)))
     cs = cs.replace('<<GPU_COUNT>>', str(int(gpus)))
     cs = cs.replace('<<MEMORYMBS>>', str(int(mem_gb * 1024)))
-    cs = cs.replace('<<MAX_TIME>>', str(int(max_time_h * 3600)))
+    cs = cs.replace('<<MAX_TIME>>', str(int(max_time_h * 3600))) #TODO: fix this, i'ts missing in the script
     cs = cs.replace('<<MAX_PRICE>>', str(int(max_price)))
     cs = cs.replace('<<NJOBS>>', str(num_jobs))
 

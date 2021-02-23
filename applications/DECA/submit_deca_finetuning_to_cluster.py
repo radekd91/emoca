@@ -32,13 +32,13 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = 14000
+    gpu_mem_requirement_mb = cfg_coarse.learning.gpu_memory_min_gb * 1024
     # gpu_mem_requirement_mb = None
     cpus = cfg_coarse.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     gpus = cfg_coarse.learning.num_gpus
     num_jobs = 1
-    max_time_h = 24
-    max_price = 5000
+    max_time_h = 36
+    max_price = 8000
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
     mem_gb = 12
@@ -118,7 +118,7 @@ test_videos = [
 ]
 
 test_video_dict = {
-    148: '119-30-848x480.mp4', # black lady at Oscars
+    # 148: '119-30-848x480.mp4', # black lady at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -138,7 +138,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -154,13 +154,14 @@ def finetune_on_selected_sequences():
         [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
+        # [['model.useSeg=true'], []], # segmentation coarse
         # [[], []],# without emonet loss
     ]
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
 
     # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15, 0.15/5, 0.15/10 , 0.15/50 , 0.15/100 ]
+    emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
     for i, video_index in enumerate(test_video_dict.keys()):

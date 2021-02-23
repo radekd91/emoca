@@ -1,12 +1,9 @@
 # @package model
-max_epochs: 20
+max_epochs: 1
 
-test_vis_frequency: 30
+test_vis_frequency: 1
 val_vis_frequency: 200
 train_vis_frequency: 100
-
-# settings
-#use_flip: false # not used
 
 train_coarse: false
 useSeg: false
@@ -26,7 +23,8 @@ light_reg: 12
 photow: 2
 idw: 0.12
 useConstraint: true
-mrfwr: 0.01
+mrfwr: 0.01 # default from the code
+#mrfwr: 0.05 # listed in the paper
 zregw: 0.005
 zdiffw: 0.005
 zsymw: 0.005
@@ -38,7 +36,7 @@ sfsw:
 - 0
 
 
-use_emonet_loss: True
+use_emonet_loss: False
 emonet_reg: 0.15
 use_gt_emotion_loss: False
 gt_emotion_reg: 0.15

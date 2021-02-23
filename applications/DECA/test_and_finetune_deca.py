@@ -114,17 +114,27 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
         os.environ['LOCAL_RANK'] = '0'
 
+    loss_to_monitor = 'val_loss'
+    dm.setup()
+    val_data = dm.val_dataloader()
+    if isinstance(val_data, list):
+        loss_to_monitor = '0_' + loss_to_monitor + "/dataloader_idx_0"
+    # if len(prefix) > 0:
+    #     loss_to_monitor = prefix + "_" + loss_to_monitor
+
     checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss',
+        monitor=loss_to_monitor,
         filename='deca-{epoch:02d}-{val_loss:.2f}',
         save_top_k=3,
         mode='min',
     )
-    trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
+    trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.model.max_epochs,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
                       accelerator=accelerator,
-                      callbacks=[checkpoint_callback])
+                      callbacks=[checkpoint_callback],
+                      num_sanity_val_steps=0
+                      )
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)

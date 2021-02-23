@@ -1,0 +1,32 @@
+# @package model
+max_epochs: 1
+
+test_vis_frequency: 1
+val_vis_frequency: 200
+train_vis_frequency: 100
+
+
+mode: coarse
+resume_training: False # this loads a pretrained model
+#useSeg: false
+useSeg: true
+background_from_input: true
+
+useWlmk: True
+#useWlmk: False
+#lmk_weight: 1e-4 # REALLY? this value is in the paper but seems awfully low
+lmk_weight: 1.0
+eyed: 1.0
+lipd: 0.1
+idw: 0.0
+exp_reg: 1e-4
+shape_reg: 1e-4
+tex_reg: 0
+light_reg: 0
+photow: 0
+shape_constrain_type: 'exchange' # None
+
+use_emonet_loss: False
+emonet_reg: 0.0
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.0

@@ -1,5 +1,11 @@
 # @package model
 
+max_epochs: 20
+
+test_vis_frequency: 30
+val_vis_frequency: 200
+train_vis_frequency: 100
+
 # settings
 #use_flip: false # not used
 

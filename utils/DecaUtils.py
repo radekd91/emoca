@@ -790,9 +790,9 @@ def load_openpose_landmarks(fname):
     return landmarks  # landmarks.T  # 3*68
 
 
-def load_torch7_landmarks(fname):
+def load_torch7_landmarks(fname, allow_pickle=False):
     landmarks = np.ones((68, 3), dtype=np.float32)
-    lmk_data = np.load(fname)  # [68, 3]
+    lmk_data = np.load(fname, allow_pickle=allow_pickle)  # [68, 3]
     landmarks[:, :2] = lmk_data  # this is 68 * 3
     # landmarks = np.concatenate((res[17:], np.ones((51,1))),axis=1)
     return landmarks  # landmarks.T  # 3*68

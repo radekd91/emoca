@@ -85,29 +85,29 @@ def finetune_deca(cfg_coarse, cfg_detail):
         if i > 0:
             deca.reconfigure(cfg.model)
 
-        from tqdm import tqdm
-        for i, b in enumerate(tqdm(training_set_dl)):
-        # for i, b in enumerate(tqdm(training_set)):
-        # for i, b in enumerate(tqdm(val_set_dl)):
-            print(f"batch {i}")
-            print(f" image batch \t\t {b['image'].shape}")
-            print(f" mask batch \t\t {b['mask'].shape}")
-            print(f" landmark batch \t {b['landmark'].shape}")
-            # if b['image'].shape[0] != 2 or b['mask'].shape[0] != 2 or b['landmark'].shape[0] != 2:
-            #     print("ha!")
-            b['image'] = b['image'][...].cuda()
-            b['mask'] = b['mask'][...].cuda()
-            b['landmark'] = b['landmark'][...].cuda()
-            b['va'] = b['va'][...].cuda()
-            deca.training_step(b, i)
-            # deca.validation_step(b, i)
-            # b["mask"]
-            # b["landmark"]
+        # from tqdm import tqdm
+        # for i, b in enumerate(tqdm(training_set_dl)):
+        # # for i, b in enumerate(tqdm(training_set)):
+        # # for i, b in enumerate(tqdm(val_set_dl)):
+        #     print(f"batch {i}")
+        #     print(f" image batch \t\t {b['image'].shape}")
+        #     print(f" mask batch \t\t {b['mask'].shape}")
+        #     print(f" landmark batch \t {b['landmark'].shape}")
+        #     # if b['image'].shape[0] != 2 or b['mask'].shape[0] != 2 or b['landmark'].shape[0] != 2:
+        #     #     print("ha!")
+        #     b['image'] = b['image'][...].cuda()
+        #     b['mask'] = b['mask'][...].cuda()
+        #     b['landmark'] = b['landmark'][...].cuda()
+        #     b['va'] = b['va'][...].cuda()
+        #     deca.training_step(b, i)
+        #     # deca.validation_step(b, i)
+        #     # b["mask"]
+        #     # b["landmark"]
 
         accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
         # if accelerator is not None:
         #     os.environ['LOCAL_RANK'] = '0'
-        trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.learning.max_epochs,
+        trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.model.max_epochs,
                           default_root_dir=cfg.inout.checkpoint_dir,
                           logger=wandb_logger,
                           accelerator=accelerator)

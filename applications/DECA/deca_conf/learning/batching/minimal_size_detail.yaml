@@ -11,3 +11,5 @@ val_K_policy: sequential
 test_K_policy: sequential
 #K_policy: sequential
 num_gpus: 1
+
+gpu_memory_min_gb: 14
