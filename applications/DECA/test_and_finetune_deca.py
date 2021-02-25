@@ -297,6 +297,14 @@ def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_defa
     finetune_deca(cfg_coarse, cfg_detail)
 
 
+def resume_training(run_path, start_at_stage):
+    with open(Path(run_path) / "cfg.yaml", "r") as f:
+        conf = OmegaConf.load(f)
+    cfg_coarse = conf.coarse
+    cfg_detail = conf.detail
+    finetune_deca(cfg_coarse, cfg_detail, start_i=start_at_stage)
+
+
 def configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
     from hydra.experimental import compose, initialize
     initialize(config_path="deca_conf", job_name="finetune_deca")

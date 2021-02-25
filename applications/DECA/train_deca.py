@@ -121,6 +121,13 @@ def configure_and_train(coarse_pretrain_cfg_default, coarse_pretrain_overrides,
     train_deca(cfg_coarse_pretrain, cfg_coarse, cfg_detail)
 
 
+def resume_training(run_path, start_at_stage):
+    with open(Path(run_path) / "cfg.yaml", "r") as f:
+        conf = OmegaConf.load(f)
+    cfg_coarse_pretraining = conf.coarse_pretraining
+    cfg_coarse = conf.coarse
+    cfg_detail = conf.detail
+    train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=start_at_stage)
 
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune")
 # def main(cfg : DictConfig):
