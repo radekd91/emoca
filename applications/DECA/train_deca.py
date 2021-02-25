@@ -88,7 +88,10 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     deca = None
     checkpoint = None
     if start_i > 0:
+        print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
         checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        print(f"Found {len(checkpoints)} checkpoints")
+        print(checkpoints)
         checkpoint = str(checkpoints[-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
