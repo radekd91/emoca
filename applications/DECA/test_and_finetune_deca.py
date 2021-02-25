@@ -103,7 +103,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             mode = True
         else:
             mode = False
-        deca.reconfigure(cfg.model, prefix, downgrade_ok=True, train=mode)
+        deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
 
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
@@ -128,6 +128,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         filename='deca-{epoch:02d}-{val_loss:.2f}',
         save_top_k=3,
         mode='min',
+        dirpath=cfg.inout.checkpoint_dir
     )
 
     val_check_interval = 1.0
@@ -207,9 +208,6 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
 
 
 def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
-    conf = DictConfig({})
-    conf.coarse = cfg_coarse
-    conf.detail = cfg_detail
     # configs = [cfg_coarse, cfg_detail]
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
@@ -236,21 +234,24 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
     with open("out_folder.txt", "w") as f:
         f.write(str(full_run_dir))
 
-    coarse_checkpoint_dir = full_run_dir / "coarse"
+    coarse_checkpoint_dir = full_run_dir / "coarse" / "checkpoints"
     coarse_checkpoint_dir.mkdir(parents=True)
 
-    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
+    cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
 
     # if cfg_detail.inout.full_run_dir == 'todo':
-    detail_checkpoint_dir = full_run_dir / "detail"
+    detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
     detail_checkpoint_dir.mkdir(parents=True)
 
-    cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
+    cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
 
+    conf = DictConfig({})
+    conf.coarse = cfg_coarse
+    conf.detail = cfg_detail
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=conf, f=outfile)
 

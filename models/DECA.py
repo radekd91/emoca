@@ -57,9 +57,10 @@ class DecaModule(LightningModule):
         else:
             self.emonet_loss = None
 
-    def reconfigure(self, model_params, stage_name="", downgrade_ok=False, train=True):
+    def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
+        self.inout_params = inout_params
         self.deca._reconfigure(model_params)
         self.stage_name = stage_name
         if len(self.stage_name) > 0:

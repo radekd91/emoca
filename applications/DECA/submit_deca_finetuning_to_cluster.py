@@ -161,8 +161,8 @@ def finetune_on_selected_sequences():
         #     ['model/settings=default_detail_emonet', 'model.use_detail_mrf=false']], # without mrf losses
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false']] # without mrf losses
-        # [['model/settings=default_coarse_emonet', 'model.background_from_input=false'],
-        #     ['model/settings=default_detail_emonet', 'model.background_from_input=false']], # with emonet loss, background black
+        [['model/settings=default_coarse_emonet', 'model.background_from_input=false'],
+            ['model/settings=default_detail_emonet', 'model.background_from_input=false']], # with emonet loss, background black
         [['model/settings=default_coarse_emonet', 'model.background_from_input=false', 'model.useSeg=true'],
             ['model/settings=default_detail_emonet', 'model.background_from_input=false']],
         # with emonet loss, background black
@@ -172,7 +172,7 @@ def finetune_on_selected_sequences():
     fixed_overrides_detail = []
 
     # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15/100,] # new default
+    emonet_regs = [0.15,] # new default
     # emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
