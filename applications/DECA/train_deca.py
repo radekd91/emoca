@@ -19,11 +19,7 @@ def create_experiment_name():
     return "DECA_training"
 
 
-def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail):
-    conf = DictConfig({})
-    conf.coarse_pretraining = cfg_coarse_pretraining
-    conf.coarse = cfg_coarse
-    conf.detail = cfg_detail
+def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["train", "test", "train", "test", "train", "test"]
     stages_prefixes = ["pretrain", "pretrain", "", "", "", ""]
@@ -31,28 +27,32 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail):
     # stages = ["train", "train", "train",]
     # stages_prefixes = ["pretrain", "", ""]
 
-    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    experiment_name = time + "_" + create_experiment_name()
-
     if cfg_coarse.inout.full_run_dir == 'todo':
+        time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        experiment_name = time + "_" + create_experiment_name()
         full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
+        exist_ok = False # a path for a new experiment should not yet exist
     else:
-        full_run_dir = cfg_coarse.inout.full_run_dir
+        experiment_name = cfg_coarse.inout.name
+        len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
+        time = experiment_name[:len_time_str]
+        full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
+        exist_ok = True # a path for an old experiment should exist
 
-    full_run_dir.mkdir(parents=True)
+    full_run_dir.mkdir(parents=True, exist_ok=exist_ok)
     print(f"The run will be saved  to: '{str(full_run_dir)}'")
     with open("out_folder.txt", "w") as f:
         f.write(str(full_run_dir))
 
     coarse_pretrain_checkpoint_dir = full_run_dir / "coarse_pretrain"
-    coarse_pretrain_checkpoint_dir.mkdir(parents=True)
+    coarse_pretrain_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_coarse_pretraining.inout.full_run_dir = str(full_run_dir / "coarse_pretrain")
     cfg_coarse_pretraining.inout.checkpoint_dir = str(coarse_pretrain_checkpoint_dir)
     cfg_coarse_pretraining.inout.name = experiment_name
 
     coarse_checkpoint_dir = full_run_dir / "coarse"
-    coarse_checkpoint_dir.mkdir(parents=True)
+    coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
@@ -60,12 +60,17 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail):
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail"
-    detail_checkpoint_dir.mkdir(parents=True)
+    detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
 
+    # save config to target folder
+    conf = DictConfig({})
+    conf.coarse_pretraining = cfg_coarse_pretraining
+    conf.coarse = cfg_coarse
+    conf.detail = cfg_detail
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=conf, f=outfile)
 
@@ -81,9 +86,18 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail):
     #3) then train detail
 
     deca = None
-    for i, cfg in enumerate(configs):
+    checkpoint = None
+    if start_i > 0:
+        checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        checkpoint = str(checkpoints[-1])
+        print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+
+    for i, cfg in range(start_i, len(configs)):
+        cfg = configs[i]
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=wandb_logger,
-                                      data_preparation_function=prepare_data)
+                                      data_preparation_function=prepare_data,
+                                      checkpoint=checkpoint)
+        checkpoint = None
 
 
 def configure(coarse_pretrain_cfg_default, coarse_pretrain_overrides,

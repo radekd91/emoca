@@ -80,8 +80,7 @@ def prepare_data(cfg):
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
-                           # data_preparation_function=prepare_data,
-                           ):
+                           checkpoint=None):
     if dm is None:
         dm, sequence_name = data_preparation_function(cfg)
 
@@ -97,13 +96,15 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if deca is None:
         logger.finalize("")
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
-
     else:
         if stage == 'train':
             mode = True
         else:
             mode = False
         deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
+
+    if checkpoint is not None:
+        deca.load_from_checkpoint(checkpoint)
 
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
@@ -207,7 +208,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     # configs = [cfg_coarse, cfg_detail]
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
@@ -221,21 +222,25 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
 
     dm, sequence_name = prepare_data(configs[0])
 
-    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    experiment_name = time + "_" + create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
-
     if cfg_coarse.inout.full_run_dir == 'todo':
+        time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        experiment_name = time + "_" + create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
         full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
+        exist_ok = False # a path for a new experiment should not yet exist
     else:
-        full_run_dir = cfg_coarse.inout.full_run_dir
+        experiment_name = cfg_coarse.inout.name
+        len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
+        time = experiment_name[:len_time_str]
+        full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
+        exist_ok = True # a path for an old experiment should exist
 
-    full_run_dir.mkdir(parents=True)
+    full_run_dir.mkdir(parents=True, exist_ok=exist_ok)
     print(f"The run will be saved  to: '{str(full_run_dir)}'")
     with open("out_folder.txt", "w") as f:
         f.write(str(full_run_dir))
 
     coarse_checkpoint_dir = full_run_dir / "coarse" / "checkpoints"
-    coarse_checkpoint_dir.mkdir(parents=True)
+    coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
@@ -243,7 +248,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
-    detail_checkpoint_dir.mkdir(parents=True)
+    detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
@@ -262,7 +267,14 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
                          save_dir=full_run_dir)
 
     deca = None
-    for i, cfg in enumerate(configs):
+    checkpoint = None
+    if start_i > 0:
+        checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).glob("*.ckpt")))
+        checkpoint = str(checkpoints[-1])
+        print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+
+    for i, cfg in range(start_i, len(configs)):
+        cfg = configs[i]
         dm.reconfigure(
             train_batch_size=cfg.learning.batch_size_train,
             val_batch_size=cfg.learning.batch_size_val,
@@ -274,7 +286,10 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True):
             val_K_policy=cfg.learning.val_K_policy,
             test_K_policy=cfg.learning.test_K_policy,
         )
-        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger)
+        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger,
+                                      data_preparation_function=prepare_data,
+                                      checkpoint=checkpoint)
+        checkpoint = None
 
 
 def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
