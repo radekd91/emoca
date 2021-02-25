@@ -96,15 +96,19 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if deca is None:
         logger.finalize("")
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
+        if checkpoint is not None:
+            deca.load_from_checkpoint(checkpoint_path=checkpoint)
+            deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
     else:
         if stage == 'train':
             mode = True
         else:
             mode = False
+        if checkpoint is not None:
+            deca.load_from_checkpoint(checkpoint_path=checkpoint)
         deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
 
-    if checkpoint is not None:
-        deca.load_from_checkpoint(checkpoint)
+
 
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
