@@ -80,7 +80,7 @@ def prepare_data(cfg):
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
-                           checkpoint=None):
+                           checkpoint=None, checkpoint_kwargs=None):
     if dm is None:
         dm, sequence_name = data_preparation_function(cfg)
 
@@ -98,11 +98,12 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         if checkpoint is None:
             deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
         else:
+            checkpoint_kwargs = checkpoint_kwargs or {}
+            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
             if stage == 'train':
                 mode = True
             else:
                 mode = False
-            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint)
             deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
     else:
         if stage == 'train':
@@ -278,6 +279,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
 
     deca = None
     checkpoint = None
+    checkpoint_kwargs = None
     if start_i > 0:
         print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
         checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
@@ -286,6 +288,12 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
             print(f" - {str(ckpt)}")
         checkpoint = str(checkpoints[-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+        checkpoint_kwargs = {
+            "model_params": configs[start_i-1].model,
+            "learning_params": configs[start_i-1].learning,
+            "inout_params": configs[start_i-1].inout,
+            "stage_name":  stages_prefixes[start_i-1],
+        }
 
     for i in range(start_i, len(configs)):
         cfg = configs[i]
@@ -302,7 +310,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
         )
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger,
                                       data_preparation_function=prepare_data,
-                                      checkpoint=checkpoint)
+                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
         checkpoint = None
 
 
