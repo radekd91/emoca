@@ -44,25 +44,25 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     with open("out_folder.txt", "w") as f:
         f.write(str(full_run_dir))
 
-    coarse_pretrain_checkpoint_dir = full_run_dir / "coarse_pretrain"
+    coarse_pretrain_checkpoint_dir = full_run_dir / "coarse_pretrain" / "checkpoints"
     coarse_pretrain_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
-    cfg_coarse_pretraining.inout.full_run_dir = str(full_run_dir / "coarse_pretrain")
+    cfg_coarse_pretraining.inout.full_run_dir = str(coarse_pretrain_checkpoint_dir.parent)
     cfg_coarse_pretraining.inout.checkpoint_dir = str(coarse_pretrain_checkpoint_dir)
     cfg_coarse_pretraining.inout.name = experiment_name
 
-    coarse_checkpoint_dir = full_run_dir / "coarse"
+    coarse_checkpoint_dir = full_run_dir / "coarse" / "checkpoints"
     coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
-    cfg_coarse.inout.full_run_dir = str(full_run_dir / "coarse")
+    cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
 
     # if cfg_detail.inout.full_run_dir == 'todo':
-    detail_checkpoint_dir = full_run_dir / "detail"
+    detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
     detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
-    cfg_detail.inout.full_run_dir = str(full_run_dir / "detail")
+    cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
 
