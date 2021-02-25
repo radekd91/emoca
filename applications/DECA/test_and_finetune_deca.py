@@ -95,17 +95,22 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
     if deca is None:
         logger.finalize("")
-        deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
-        if checkpoint is not None:
-            deca.load_from_checkpoint(checkpoint_path=checkpoint)
+        if checkpoint is None:
+            deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
+        else:
+            if stage == 'train':
+                mode = True
+            else:
+                mode = False
+            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint)
             deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
     else:
         if stage == 'train':
             mode = True
         else:
             mode = False
-        if checkpoint is not None:
-            deca.load_from_checkpoint(checkpoint_path=checkpoint)
+        # if checkpoint is not None:
+        #     deca.load_from_checkpoint(checkpoint_path=checkpoint)
         deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
 
 
