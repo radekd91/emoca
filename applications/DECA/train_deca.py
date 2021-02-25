@@ -91,11 +91,12 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
         print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
         checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
         print(f"Found {len(checkpoints)} checkpoints")
-        print(checkpoints)
+        for ckpt in checkpoints:
+            print(f" - {str(ckpt)}")
         checkpoint = str(checkpoints[-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
-    for i, cfg in range(start_i, len(configs)):
+    for i in range(start_i, len(configs)):
         cfg = configs[i]
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=wandb_logger,
                                       data_preparation_function=prepare_data,

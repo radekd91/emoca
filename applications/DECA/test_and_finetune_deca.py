@@ -270,11 +270,15 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     deca = None
     checkpoint = None
     if start_i > 0:
-        checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).glob("*.ckpt")))
+        print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
+        checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        print(f"Found {len(checkpoints)} checkpoints")
+        for ckpt in checkpoints:
+            print(f" - {str(ckpt)}")
         checkpoint = str(checkpoints[-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
-    for i, cfg in range(start_i, len(configs)):
+    for i in range(start_i, len(configs)):
         cfg = configs[i]
         dm.reconfigure(
             train_batch_size=cfg.learning.batch_size_train,
