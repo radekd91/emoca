@@ -126,7 +126,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
     checkpoint_callback = ModelCheckpoint(
         monitor=loss_to_monitor,
-        filename='deca-{epoch:02d}-{val_loss:.2f}',
+        # filename='deca-{epoch:02d}-{val_loss:.2f}',
+        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.2f}',
         save_top_k=3,
         mode='min',
         dirpath=cfg.inout.checkpoint_dir
