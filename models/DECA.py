@@ -1021,12 +1021,15 @@ class DecaModule(LightningModule):
         else:
             raise ValueError(f"Unsupported optimizer: '{self.learning_params.optimizer}'")
 
-        opt = { self.deca.opt : None }
+        optimizers = [self.deca.opt]
+        schedulers = []
         if 'learning_rate_decay' in self.learning_params.keys():
             scheduler = torch.optim.lr_scheduler.ExponentialLR(self.deca.opt, gamma=self.learning_params.learning_rate_decay)
-            opt[self.deca.opt] = scheduler
+            schedulers += [scheduler]
+        else:
+            schedulers += [None]
 
-        return opt
+        return optimizers, schedulers
 
 
 class DECA(torch.nn.Module):
