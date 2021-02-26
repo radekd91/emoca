@@ -868,7 +868,7 @@ class DecaModule(LightningModule):
                 indices = [indices,]
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
-                savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
+                savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
                 # wandb_image = Image(image, caption=key)
                 wandb_image = self._log_wandb_image(savepath, image)
                 name = prefix + "_" + stage + "_" + key
@@ -905,7 +905,7 @@ class DecaModule(LightningModule):
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  np.argmax(values["detail_output_expression"][
                         #                                                i].detach().cpu().numpy()))
-                    savepath = Path(f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
+                    savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
                     image = images[i]
                     # wandb_image = Image(image, caption=caption)
                     wandb_image = self._log_wandb_image(savepath, image, caption)
@@ -983,55 +983,11 @@ class DecaModule(LightningModule):
 
         # savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir,  f'{stage}_images',
         #                                     self.current_epoch, batch_idx)
-        savepath = f'{self.inout_params.checkpoint_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:04d}.png'
+        savepath = f'{self.inout_params.full_run_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:04d}.png'
         Path(savepath).parent.mkdir(exist_ok=True, parents=True)
         visualization_image = self.deca.visualize(visdict, savepath)
 
         return visdict, visualization_image[..., [2,1,0]]
-
-    def _visualization_checkpoint_old(self,  verts, trans_verts, ops, images, lmk, predicted_images,
-                                  predicted_landmarks, masks,
-                                  albedo, predicted_detailed_image, uv_detail_normals, batch_idx,
-                                  uv_texture_patch=None, uv_texture_gt=None, uv_vis_mask_patch=None):
-        # visualize
-        # if iter % 200 == 1:
-        # visind = np.arange(8)  # self.config.batch_size )
-        batch_size = verts.shape[0]
-        visind = np.arange(batch_size)
-        shape_images = self.deca.render.render_shape(verts, trans_verts)
-        if uv_detail_normals is not None:
-            detail_normal_images = F.grid_sample(uv_detail_normals.detach(), ops['grid'].detach(),
-                                                 align_corners=False)
-            shape_detail_images = self.deca.render.render_shape(verts, trans_verts,
-                                                           detail_normal_images=detail_normal_images)
-        else:
-            shape_detail_images = None
-
-        visdict = {
-            'inputs': images[visind],
-            'landmarks_gt': util.tensor_vis_landmarks(images[visind], lmk[visind]),# , isScale=False),
-            'landmarks': util.tensor_vis_landmarks(images[visind], predicted_landmarks[visind]),
-            'shape': shape_images[visind],
-            'predicted_images': predicted_images[visind],
-            'albedo_images': ops['albedo_images'][visind],
-            'mask': masks.repeat(1, 3, 1, 1)[visind],
-            'albedo': albedo[visind],
-            # details
-
-        }
-        if predicted_detailed_image is not None:
-            visdict['detailed_images'] = predicted_detailed_image[visind]
-            visdict['shape_detail_images'] = shape_detail_images[visind]
-            visdict['detailed_images'] = predicted_detailed_image[visind]
-            visdict['uv_detail_normals'] = uv_detail_normals[visind] * 0.5 + 0.5
-            visdict['uv_texture_patch'] = uv_texture_patch[visind]
-            visdict['uv_texture_gt'] = uv_texture_gt[visind]
-            visdict['uv_vis_mask_patch'] = uv_vis_mask_patch[visind]
-
-        savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir, 'train_images',
-                                            self.current_epoch, batch_idx)
-        Path(savepath).parent.mkdir(exist_ok=True, parents=True)
-        self.deca.visualize(visdict, savepath)
 
 
     def configure_optimizers(self):
@@ -1183,107 +1139,3 @@ class DECA(torch.nn.Module):
         grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
         cv2.imwrite(savepath, grid_image)
         return grid_image
-
-    # # deprecate
-    # def test(self, n_person=None, testpath=None, scale=None, iscrop=None, return_params=False, vispath=None,
-    #          kptfolder=None):
-    #     if self.config.test_data == 'vox1':
-    #         testdata = VoxelDataset(K=self.config.K, image_size=self.config.image_size,
-    #                                 scale=[self.config.scale_min, self.config.scale_max], isEval=True)
-    #     elif self.config.test_data == 'testdata':
-    #         if testpath is None:
-    #             testpath = self.config.testpath
-    #         if scale is None:
-    #             scale = (self.config.scale_min + self.config.scale_max) / 2.
-    #         if iscrop is None:
-    #             iscrop = self.config.iscrop
-    #         if kptfolder is None:
-    #             testdata = TestData(testpath, iscrop=iscrop, crop_size=224, scale=scale)
-    #         else:
-    #             testdata = EvalData(testpath, kptfolder, iscrop=iscrop, crop_size=224, scale=scale)
-    #
-    #     else:
-    #         print('please check test data')
-    #         exit()
-    #
-    #     ## train model
-    #     self.E_flame.eval()  # self.M.train(); self.G.train()
-    #     self.E_detail.eval()
-    #     self.D_detail.eval()
-    #
-    #     if n_person is None or n_person > len(testdata):
-    #         n_person = len(testdata)
-    #
-    #     for i in range(n_person):
-    #         images = testdata[i]['image']  # .to(self.device)[None,...]
-    #         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-    #         batch_size = images.shape[0]
-    #
-    #         # -- encoder
-    #         with torch.no_grad():
-    #             parameters = self.E_flame(images)
-    #             detailcode = self.E_detail(images)
-    #
-    #         code_list = self.decompose_code(parameters)
-    #         shapecode, texcode, expcode, posecode, cam, lightcode = code_list
-    #
-    #         # -- decoder
-    #         # FLAME
-    #         verts, landmarks2d, landmarks3d = self.flame(shape_params=shapecode, expression_params=expcode,
-    #                                                      pose_params=posecode)
-    #         predicted_landmarks = util.batch_orth_proj(landmarks2d, cam)[:, :, :2];
-    #         predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
-    #         trans_verts = util.batch_orth_proj(verts, cam);
-    #         trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
-    #         albedo = self.flametex(texcode)
-    #
-    #         # Detail
-    #         uv_z = self.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
-    #
-    #         # ------ rendering
-    #         # import ipdb; ipdb.set_trace()
-    #         ops = self.render(verts, trans_verts, albedo, lightcode)
-    #         # mask
-    #         mask_face_eye = F.grid_sample(self.uv_face_eye_mask.expand(batch_size, -1, -1, -1), ops['grid'].detach(),
-    #                                       align_corners=False)
-    #         # images
-    #         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
-    #
-    #         # predicted_images_G = self.render(verts.detach(), trans_verts.detach(), albedo_G, lightcode.detach())['images']
-    #         visind = np.arange(self.config.K)
-    #         shape_images = self.render.render_shape(verts, trans_verts)
-    #
-    #         # render detail
-    #         uv_detail_normals, uv_coarse_vertices = self.displacement2normal(uv_z, verts, ops['normals'])
-    #         detail_normal_images = F.grid_sample(uv_detail_normals, ops['grid'], align_corners=False)
-    #         shape_detail_images = self.render.render_shape(verts, trans_verts,
-    #                                                        detail_normal_images=detail_normal_images)
-    #         uv_shading = self.render.add_SHlight(uv_detail_normals, lightcode)
-    #         uv_texture = albedo * uv_shading
-    #         predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'], align_corners=False)
-    #
-    #         visdict = {
-    #             'inputs': images[visind],
-    #             'landmarks': util.tensor_vis_landmarks(images[visind], predicted_landmarks[visind]),
-    #             'shape': shape_images[visind],
-    #             'detail_shape': shape_detail_images[visind],
-    #             'predicted_images': predicted_images[visind],
-    #             'detail_images': predicted_detailed_image[visind],
-    #             # 'albedo_images': ops['albedo_images'][visind],
-    #             'albedo': albedo[visind],
-    #         }
-    #         if vispath is None:
-    #             vispath_curr = '{}/{}/{}.jpg'.format(self.config.savefolder, self.config.dataname, i)
-    #         self.visualize(visdict, vispath_curr)
-    #         print('{}/{}: '.format(i, n_person), vispath_curr)
-    #         if return_params:
-    #             param_dict = {
-    #                 'shapecode': shapecode,
-    #                 'expcode': expcode,
-    #                 'posecode': posecode,
-    #                 'cam': cam,
-    #                 'texcode': texcode,
-    #                 'lightcode': lightcode,
-    #                 'detailcode': detailcode
-    #             }
-    #             return param_dict
