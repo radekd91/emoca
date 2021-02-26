@@ -1,9 +1,9 @@
 defaults:
-  - data: pretrain_coarse_data_cluster
+  - data: detail_data_cluster
   - model/paths : cluster
-  - model/settings : coarse_pretrain
+  - model/settings : detail_train_emonet
   - model/sizes : default
   - model/flame_tex: bfm
   - learning/optimizer: finetune_adam_coarse
-  - learning/batching: single_gpu_coarse_pretrain
+  - learning/batching: single_gpu_detail
   - inout: cluster
