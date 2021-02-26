@@ -1026,8 +1026,8 @@ class DecaModule(LightningModule):
         if 'learning_rate_decay' in self.learning_params.keys():
             scheduler = torch.optim.lr_scheduler.ExponentialLR(self.deca.opt, gamma=self.learning_params.learning_rate_decay)
             schedulers += [scheduler]
-        else:
-            schedulers += [None]
+        if len(schedulers) == 0:
+            return self.deca.opt
 
         return optimizers, schedulers
 
