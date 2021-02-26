@@ -80,11 +80,6 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
                          version=time,
                          save_dir=full_run_dir)
 
-    #TODO: create a proper config for each stage
-    #1) first train coarse without photometric
-    #2) then train coarse with photometric
-    #3) then train detail
-
     deca = None
     checkpoint = None
     checkpoint_kwargs = None

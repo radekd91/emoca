@@ -213,6 +213,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         elif not cfg_detail.model.background_from_input:
             experiment_name += '_BackBlackD'
 
+        if cfg_coarse.learning.learning_rate != 0.0001:
+            experiment_name += f'CoLR-{cfg_coarse.learning.learning_rate}'
+        if cfg_detail.learning.learning_rate != 0.0001:
+            experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
+
     else:
         raise NotImplementedError("Unsupported naming versino")
 
