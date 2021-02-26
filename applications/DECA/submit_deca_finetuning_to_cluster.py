@@ -118,7 +118,8 @@ test_videos = [
 ]
 
 test_video_dict = {
-    148: '119-30-848x480.mp4', # black lady at Oscars
+    # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
+    # 148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -139,7 +140,7 @@ test_video_dict = {
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
     # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
-    # 145: '111-25-1920x1080.mp4', # disgusted white guy
+    145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
 
@@ -151,7 +152,7 @@ def finetune_on_selected_sequences():
 
     finetune_modes = [
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
-        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
+        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
@@ -161,10 +162,10 @@ def finetune_on_selected_sequences():
         #     ['model/settings=default_detail_emonet', 'model.use_detail_mrf=false']], # without mrf losses
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false']] # without mrf losses
-        [['model/settings=default_coarse_emonet', 'model.background_from_input=false'],
-            ['model/settings=default_detail_emonet', 'model.background_from_input=false']], # with emonet loss, background black
-        [['model/settings=default_coarse_emonet', 'model.background_from_input=false', 'model.useSeg=true'],
-            ['model/settings=default_detail_emonet', 'model.background_from_input=false']],
+        # [['model/settings=default_coarse_emonet', 'model.background_from_input=false'],
+        #     ['model/settings=default_detail_emonet', 'model.background_from_input=false']], # with emonet loss, background black
+        # [['model/settings=default_coarse_emonet', 'model.background_from_input=false', 'model.useSeg=true'],
+        #     ['model/settings=default_detail_emonet', 'model.background_from_input=false']],
         # with emonet loss, background black
         # [[], []],# without emonet loss
     ]
@@ -172,7 +173,7 @@ def finetune_on_selected_sequences():
     fixed_overrides_detail = []
 
     # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15,] # new default
+    emonet_regs = [0.15/100,] # new default
     # emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
