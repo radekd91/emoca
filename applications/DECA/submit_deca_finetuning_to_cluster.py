@@ -119,7 +119,7 @@ test_videos = [
 
 test_video_dict = {
     # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
-    # 148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
+    148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
