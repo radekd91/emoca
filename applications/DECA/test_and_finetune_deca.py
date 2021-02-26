@@ -182,7 +182,24 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         elif cfg_detail.model.use_emonet_loss:
             experiment_name += '_EmoNetLossD'
         if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
-            experiment_name += '_reg-%.05f' % cfg_coarse.model.emonet_reg
+            experiment_name += '_'
+            if cfg_coarse.model.use_emonet_feat_1:
+                experiment_name += 'F1'
+            if cfg_coarse.model.use_emonet_feat_2:
+                experiment_name += 'F2'
+            if cfg_coarse.model.use_emonet_valence:
+                experiment_name += 'V'
+            if cfg_coarse.model.use_emonet_arousal:
+                experiment_name += 'A'
+            if cfg_coarse.model.use_emonet_expression:
+                experiment_name += 'E'
+            if cfg_coarse.model.use_emonet_combined:
+                experiment_name += 'C'
+
+        if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
+            experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
+
+
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'

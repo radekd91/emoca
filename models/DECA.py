@@ -52,7 +52,7 @@ class DecaModule(LightningModule):
         self.stage_name = stage_name
         if len(self.stage_name) > 0:
             self.stage_name += "_"
-        if 'emonet_reg' in self.deca.config.keys():
+        if 'emonet_weight' in self.deca.config.keys():
             self.emonet_loss = EmoNetLoss(self.device)
         else:
             self.emonet_loss = None
@@ -412,14 +412,21 @@ class DecaModule(LightningModule):
             emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
                 self.emonet_loss.compute_loss(images, predicted_images)
 
+        def loss_or_metric(name, loss, is_loss):
+            if not is_loss:
+                metric_dict[name] = loss
+            else:
+                loss_dict[name] = loss
+
         # EmoNet self-consistency loss terms
-        d[prefix + '_emonet_feat_1_L1'] = emo_feat_loss_1 * self.deca.config.emonet_reg
-        d[prefix + '_emonet_feat_2_L1'] = emo_feat_loss_2 * self.deca.config.emonet_reg
-        d[prefix + '_emonet_valence_L1'] = valence_loss * self.deca.config.emonet_reg
-        d[prefix + '_emonet_arousal_L1'] = arousal_loss * self.deca.config.emonet_reg
-        # d[prefix + 'emonet_expression_KL'] = expression_loss * self.deca.config.emonet_reg # KL seems to be causing NaN's
-        d[prefix + '_emonet_expression_L1'] = expression_loss * self.deca.config.emonet_reg
-        d[prefix + '_emonet_combined'] = (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_reg
+        loss_or_metric(prefix + '_emonet_feat_1_L1', emo_feat_loss_1 * self.deca.config.emonet_weight, self.deca.config.use_emonet_feat_1 and self.deca.config.use_emonet_loss)
+        loss_or_metric(prefix + '_emonet_feat_2_L1', emo_feat_loss_2 * self.deca.config.emonet_weight, self.deca.config.use_emonet_feat_2 and self.deca.config.use_emonet_loss)
+        loss_or_metric(prefix + '_emonet_valence_L1', valence_loss * self.deca.config.emonet_weight, self.deca.config.use_emonet_valence and self.deca.config.use_emonet_loss)
+        loss_or_metric(prefix + '_emonet_arousal_L1', arousal_loss * self.deca.config.emonet_weight, self.deca.config.use_emonet_arousal and self.deca.config.use_emonet_loss)
+        # loss_or_metric(prefix + 'emonet_expression_KL'] = expression_loss * self.deca.config.emonet_weight # KL seems to be causing NaN's
+        loss_or_metric(prefix + '_emonet_expression_L1',expression_loss * self.deca.config.emonet_weight, self.deca.config.use_emonet_expression and self.deca.config.use_emonet_loss)
+        loss_or_metric(prefix + '_emonet_combined', (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss and self.deca.config.use_emonet_loss)
+                       * self.deca.config.emonet_weight, self.deca.config.use_emonet_combined and self.deca.config.use_emonet_loss)
 
         # Log also the VA
         metric_dict[prefix + "_valence_input"] = self.emonet_loss.input_emotion['valence'].mean().detach()

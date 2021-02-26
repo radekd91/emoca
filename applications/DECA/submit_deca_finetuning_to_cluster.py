@@ -119,7 +119,7 @@ test_videos = [
 
 test_video_dict = {
     # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
-    148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
+    # 148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -139,7 +139,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -153,8 +153,8 @@ def finetune_on_selected_sequences():
     finetune_modes = [
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']], # with emonet loss, segmentation coarse
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true', 'learning/optimizer=finetune_adam_coarse_lower_lr'],
-         ['model/settings=default_detail_emonet', 'learning/optimizer=finetune_adam_coarse_lower_lr']], # with emonet loss, segmentation coarse, lower lr
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true', 'learning/optimizer=finetune_adam_coarse_lower_lr'],
+        #  ['model/settings=default_detail_emonet', 'learning/optimizer=finetune_adam_coarse_lower_lr']], # with emonet loss, segmentation coarse, lower lr
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
@@ -170,19 +170,21 @@ def finetune_on_selected_sequences():
         #     ['model/settings=default_detail_emonet', 'model.background_from_input=false']],
         # with emonet loss, background black
         # [[], []],# without emonet loss
-        [['model.useSeg=true', 'learning/optimizer=finetune_adam_coarse_lower_lr'],
-         ['learning/optimizer=finetune_adam_coarse_lower_lr']], #segmentation coarse, lower lr
+        # [['model.useSeg=true', 'learning/optimizer=finetune_adam_coarse_lower_lr'],
+        #     ['learning/optimizer=finetune_adam_coarse_lower_lr']], #segmentation coarse, lower lr
+        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']],
+        # with emonet loss, segmentation coarse
     ]
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
 
-    # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15/100,] # new default
-    # emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
+    # emonet_weights = [0.15,] # old default
+    emonet_weights = [0.15/100,] # new default
+    # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
     for i, video_index in enumerate(test_video_dict.keys()):
-        for emeonet_reg in emonet_regs:
+        for emeonet_reg in emonet_weights:
             for fmode in finetune_modes:
                 coarse_overrides = fixed_overrides_coarse.copy()
                 detail_overrides = fixed_overrides_detail.copy()
@@ -190,12 +192,12 @@ def finetune_on_selected_sequences():
                 coarse_overrides += fmode[0]
                 detail_overrides += fmode[1]
 
-                emonet_reg_override = f'model.emonet_reg={emeonet_reg}'
+                emonet_weight_override = f'model.emonet_weight={emeonet_reg}'
                 data_override = f'data.sequence_index={video_index}'
                 coarse_overrides += [data_override]
                 detail_overrides += [data_override]
-                coarse_overrides += [emonet_reg_override]
-                detail_overrides += [emonet_reg_override]
+                coarse_overrides += [emonet_weight_override]
+                detail_overrides += [emonet_weight_override]
 
                 cfgs = test_and_finetune_deca.configure(
                     coarse_conf, coarse_overrides, detail_conf, detail_overrides)

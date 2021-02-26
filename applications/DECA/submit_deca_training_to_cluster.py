@@ -86,12 +86,12 @@ def train_on_selected_sequences():
     fixed_overrides_coarse = []
     fixed_overrides_detail = []
 
-    # emonet_regs = [0.15,] #default
-    emonet_regs = [0.15/100,] #new default
-    # emonet_regs = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
+    # emonet_weights = [0.15,] #default
+    emonet_weights = [0.15/100,] #new default
+    # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
-    for emeonet_reg in emonet_regs:
+    for emeonet_reg in emonet_weights:
         for fmode in finetune_modes:
             pretrain_coarse_overrides = fixed_overrides_coarse_pretrain.copy()
             coarse_overrides = fixed_overrides_coarse.copy()
@@ -105,10 +105,10 @@ def train_on_selected_sequences():
             # pretrain_coarse_overrides += [data_override]
             # coarse_overrides += [data_override]
             # detail_overrides += [data_override]
-            emonet_reg_override = f'model.emonet_reg={emeonet_reg}'
-            pretrain_coarse_overrides += [emonet_reg_override]
-            coarse_overrides += [emonet_reg_override]
-            detail_overrides += [emonet_reg_override]
+            emonet_weight_override = f'model.emonet_weight={emeonet_reg}'
+            pretrain_coarse_overrides += [emonet_weight_override]
+            coarse_overrides += [emonet_weight_override]
+            detail_overrides += [emonet_weight_override]
 
             cfgs = train_deca.configure(
                 pretrain_coarse_conf, pretrain_coarse_overrides,

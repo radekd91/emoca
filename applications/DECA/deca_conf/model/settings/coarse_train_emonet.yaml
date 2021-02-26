@@ -28,7 +28,14 @@ use_photometric: True
 photow: 2.
 shape_constrain_type: 'exchange' # None
 
-use_emonet_loss: True
-emonet_reg: 0.0015
+use_emonet_loss: True # if this one is false, the following are considered false as well
+use_emonet_feat_1: True
+use_emonet_feat_2: True
+use_emonet_valence: True
+use_emonet_arousal: True
+use_emonet_expression: True
+use_emonet_combined: True
+
+emonet_weight: 0.0015
 use_gt_emotion_loss: False
 gt_emotion_reg: 0.0
