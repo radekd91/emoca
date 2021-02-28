@@ -13,7 +13,7 @@ background_from_input: true
 detail_constrain_type: exchange
 mode: detail
 
-resume_training: True # this loads a pretrained model
+resume_training: False # this loads a pretrained model
 
 lmk_weight: 1
 useWlmk: true

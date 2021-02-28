@@ -86,7 +86,15 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     if start_i > 0:
         print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
         checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        print(f"Found {len(checkpoints)} checkpoints")
+        if len(checkpoints) == 0:
+            print(f"Did not found checkpoints. Looking in subfolders")
+            checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).rglob("*.ckpt")))
+            if len(checkpoints) == 0:
+                print(f"Did not find checkpoints to resume from. Terminating")
+                sys.exit()
+            print(f"Found {len(checkpoints)} checkpoints")
+        else:
+            print(f"Found {len(checkpoints)} checkpoints")
         for ckpt in checkpoints:
             print(f" - {str(ckpt)}")
         checkpoint = str(checkpoints[-1])
