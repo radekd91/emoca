@@ -254,6 +254,8 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
             experiment_name += 'CoPhoto'
         if cfg_coarse.model.config.use_landmarks:
             experiment_name += 'CoLMK'
+        if cfg_coarse.model.config.idw:
+            experiment_name += f'_IDW-{cfg_coarse.model.config.idw}'
 
     else:
         raise NotImplementedError("Unsupported naming versino")
