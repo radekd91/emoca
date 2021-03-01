@@ -16,7 +16,7 @@ from typing import Optional, Union, List
 import pickle as pkl
 import compress_pickle as cpkl
 # from collections import OrderedDict
-from tqdm import tqdm
+from tqdm import tqdm, auto
 # import subprocess
 from torchvision.transforms import Resize, Compose, Normalize
 # from decalib.deca import DECA
@@ -27,6 +27,7 @@ from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 from datasets.IO import load_segmentation, save_segmentation
+import hashlib
 
 # from memory_profiler import profile
 
@@ -142,6 +143,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.video_metas = None
         self.annotation_list = None
         self.frame_lists = None
+        self.loaded = False
         # self.detection_lists = None
 
         self.detection_fnames = []
@@ -849,6 +851,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
     def _loadMeta(self):
+        if self.loaded:
+            print("FaceVideoDataset already loaded.")
+            return
         print(f"Loading metadata of FaceVideoDataset from: '{self.metadata_path}'")
         with open(self.metadata_path, "rb") as f:
             version = pkl.load(f)
@@ -859,6 +864,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             self.frame_lists = pkl.load(f)
             # except Exception:
             #     pass
+        self.loaded = True
 
     def _saveMeta(self):
         with open(self.metadata_path, "wb") as f:
@@ -1715,7 +1721,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                         annotation_list=None,
                                         filter_pattern=None,
                                         with_landmarks=False,
-                                        with_segmentation=False):
+                                        with_segmentation=False,
+                                        crash_on_missing_file=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
         annotations = OrderedDict()
         detections = []
@@ -1742,8 +1749,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 if res is None:
                     continue
 
-            detection_fnames, annotations, recognition_labels, discarded_annotations, \
-            detection_not_found = self._get_validated_annotations_for_sequence(si, crash_on_failure=False)
+            ## TODO: or more like an idea - a solution towards duplicate videos between va/au/expression set
+            # would be to append the video path here to serve as a key in the dictionaries (instead of just the stem
+            # of the path)
+
+            detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found = \
+                self._get_validated_annotations_for_sequence(si, crash_on_failure=False)
 
             if detection_fnames is None:
                 continue
@@ -1776,25 +1787,52 @@ class FaceVideoDataModule(pl.LightningDataModule):
             landmarks = None
         else:
             landmarks = []
-            for det in detections:
+            invalid_indices = set()
+            print("Checking if every frame has a corresponding landmark file")
+            for det_i, det in enumerate(auto.tqdm(detections)):
                 lmk = det.parents[3]
                 lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
                 lmk = lmk.parent / (lmk.stem + ".pkl")
                 if not (self.output_dir / lmk).is_file():
-                    raise RuntimeError(f"Landmark does not exist {lmk}")
-                landmarks += [lmk]
+                    if crash_on_missing_file:
+                        raise RuntimeError(f"Landmark does not exist {lmk}")
+                    else:
+                        print(f"Skipping sample {det} due to missing landmark")
+                        invalid_indices.add(det_i)
+                else:
+                    landmarks += [lmk]
+            invalid_indices = sorted(list(invalid_indices), reverse=True)
+            for idx in invalid_indices:
+                del detections[idx]
+                del recognition_labels_all[idx]
+                for key in annotations_all.keys():
+                    del annotations_all[key][idx]
 
         if not with_segmentation:
             segmentations = None
         else:
             segmentations = []
-            for det in detections:
+            invalid_indices = set()
+            print("Checking if every frame has a corresponding segmentation file")
+            for det_i, det in enumerate(auto.tqdm(detections)):
                 seg = det.parents[3]
                 seg = seg / "segmentations" / (det.relative_to(seg / "detections"))
                 seg = seg.parent / (seg.stem + ".pkl")
                 if not (self.output_dir / seg).is_file():
-                    raise RuntimeError(f"Landmark does not exist {seg}")
-                segmentations += [seg]
+                    if crash_on_missing_file:
+                        raise RuntimeError(f"Landmark does not exist {seg}")
+                    else:
+                        print(f"Skipping sample {det} due to missing segmentation")
+                        invalid_indices.add(det_i)
+                else:
+                    segmentations += [seg]
+            invalid_indices = sorted(list(invalid_indices), reverse=True)
+            for idx in invalid_indices:
+                del detections[idx]
+                del recognition_labels_all[idx]
+                del landmarks[idx]
+                for key in annotations_all.keys():
+                    del annotations_all[key][idx]
 
         return detections, landmarks, segmentations, annotations_all, recognition_labels_all
 
@@ -1809,27 +1847,103 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       with_segmentations=False,
                                       segmentation_transform=None,
                                       K=None,
-                                      K_policy=None):
-        detections, landmarks, segmentations, annotations, recognition_labels = \
-            self._create_emotional_image_dataset(
-                annotation_list, filter_pattern, with_landmarks, with_segmentations)
+                                      K_policy=None,
+                                      # if you add more parameters here, add them also to the hash list
+                                      load_from_cache=True # do not add this one to the hash list
+                                      ):
+        hash_list = tuple([annotation_list,
+                      filter_pattern,
+                      image_transforms,
+                      split_ratio,
+                      split_style,
+                      with_landmarks,
+                      landmark_transform, # TODO comment out
+                      with_segmentations,
+                      segmentation_transform, # TODO comment out
+                      K,
+                      K_policy,
+                      # add new parameters here
+                     ])
+        # h = hash(hash_list)
+        cache_hash = hashlib.sha224(pkl.dumps(hash_list)).hexdigest()
+        cache_folder = Path(self.output_dir) / "cache" / str(cache_hash)
+        # load from cache if exists
+        if cache_folder.exists() and load_from_cache:
+            print(f"Loading dataset from '{cache_folder}'")
+            if split_ratio is not None and split_style is not None:
+                with open(cache_folder / "train.pkl", "rb") as f:
+                    training_set = pkl.load(f)
+                    idx_train = pkl.load(f)
+                with open(cache_folder / "val.pkl", "rb") as f:
+                    val_set = pkl.load(f)
+                    idx_val = pkl.load(f)
+                return training_set, val_set, idx_train, idx_val
+            else:
+                with open(cache_folder / "all.pkl", "rb") as f:
+                    dataset = pkl.load(f)
+                return dataset
+
+        if load_from_cache:
+            print(f"Cached dataset not found in {cache_folder} and will have to be processed.")
+
+
+        # Process the dataset
+        # inter_cache_hash = hash(tuple([
+        #     annotation_list,
+        #     filter_pattern]))
+        inter_cache_hash = hashlib.sha224(pkl.dumps(
+            tuple([annotation_list,
+                    filter_pattern]
+                  ))).hexdigest()
+        inter_cache_folder = cache_folder = Path(self.output_dir) / "cache" / str(inter_cache_hash)
+        if (inter_cache_folder / "lists.pkl").exists() and load_from_cache:
+            with open(inter_cache_folder / "lists.pkl", "rb") as f:
+                detections = pkl.load(f)
+                landmarks = pkl.load(f)
+                segmentations = pkl.load(f)
+                annotations = pkl.load(f)
+                recognition_labels = pkl.load(f)
+
+        else:
+            detections, landmarks, segmentations, annotations, recognition_labels = \
+                self._create_emotional_image_dataset(
+                    annotation_list, filter_pattern, with_landmarks, with_segmentations)
+            inter_cache_folder.mkdir(exist_ok=True, parents=True)
+            with open(inter_cache_folder / "lists.pkl", "wb") as f:
+                pkl.dump(detections, f)
+                pkl.dump(landmarks, f)
+                pkl.dump(segmentations, f)
+                pkl.dump(annotations, f)
+                pkl.dump(recognition_labels, f)
 
         if split_ratio is not None and split_style is not None:
             idxs = np.arange(len(detections), dtype=np.int32)
             if split_style == 'random':
                 np.random.seed(0)
                 np.random.shuffle(idxs)
+                split_idx = int(idxs.size * split_ratio)
+                idx_train = idxs[:split_idx]
+                idx_val = idxs[split_idx:]
+            elif split_style == 'manual':
+                idx_train = []
+                idx_val = []
+                for i, det in enumerate(auto.tqdm(detections)):
+                    if 'Train_Set' in str(det):
+                        idx_train += [i]
+                    elif 'Validation_Set' in str(det):
+                        idx_val += [i]
+                    else:
+                        idx_val += [i]
+
             elif split_style == 'sequential':
-                pass
+                split_idx = int(idxs.size * split_ratio)
+                idx_train = idxs[:split_idx]
+                idx_val = idxs[split_idx:]
             else:
                 raise ValueError(f"Invalid split style {split_style}")
 
             if split_ratio < 0 or split_ratio > 1:
                 raise ValueError(f"Invalid split ratio {split_ratio}")
-
-            split_idx = int(idxs.size*split_ratio)
-            idx_train = idxs[:split_idx]
-            idx_val = idxs[split_idx:]
 
             def index_list_by_list(l, idxs):
                 return [l[i] for i in idxs]
@@ -1891,6 +2005,15 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 K_policy='sequential')
                 # K_policy=None)
 
+            print(f"Caching dataset to '{cache_folder}'")
+            cache_folder.mkdir(exist_ok=True, parents=True)
+            with open(cache_folder / "train.pkl", "wb") as f:
+                pkl.dump(dataset_train, f)
+                pkl.dump(idx_train, f)
+            with open(cache_folder / "val.pkl", "wb") as f:
+                pkl.dump(dataset_val, f)
+                pkl.dump(idx_val, f)
+
             return dataset_train, dataset_val, idx_train, idx_val
 
         dataset = EmotionalImageDataset(detections, annotations,
@@ -1902,6 +2025,11 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                         segmentation_transform=segmentation_transform,
                                         K=K,
                                         K_policy=K_policy)
+        print(f"Caching dataset to '{cache_folder}'")
+        cache_folder.mkdir(exist_ok=True, parents=True)
+        with open(cache_folder / "all.pkl", "wb") as f:
+            pkl.dump(dataset, f)
+
         return dataset
 
 

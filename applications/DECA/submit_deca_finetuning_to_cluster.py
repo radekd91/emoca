@@ -157,7 +157,7 @@ def finetune_on_selected_sequences():
         #  ['model/settings=default_detail_emonet', 'learning/optimizer=finetune_adam_coarse_lower_lr']], # with emonet loss, segmentation coarse, lower lr
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
-        # [['model.useSeg=true'], []], # segmentation coarse
+        [['model.useSeg=true'], []], # segmentation coarse
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
@@ -172,7 +172,7 @@ def finetune_on_selected_sequences():
         # [[], []],# without emonet loss
         # [['model.useSeg=true', 'learning/optimizer=finetune_adam_coarse_lower_lr'],
         #     ['learning/optimizer=finetune_adam_coarse_lower_lr']], #segmentation coarse, lower lr
-        [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']],
+        # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']],
         # with emonet loss, segmentation coarse
     ]
     fixed_overrides_coarse = []

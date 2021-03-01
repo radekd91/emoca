@@ -31,15 +31,29 @@ def prepare_data(cfg):
     annotation_list = copy.deepcopy(
         cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
     # annotation_list = cfg_coarse.data.annotation_list.copy()
-
+    # index = -1 # TODO: delete
+    # cfg.data.split_style = 'manual' # TODO: delete
     if index == -1:
         sequence_name = annotation_list[0]
-        if annotation_list[0] == 'va':
-            filter_pattern = 'VA_Set'
-        elif annotation_list[0] == 'expr7':
-            filter_pattern = 'Expression_Set'
-        else:
+        filters = []
+        if 'va' in annotation_list:
+            filters += ['VA_Set']
+        if 'expr7' in annotation_list:
+            filters += ['Expression_Set']
+        if 'au' in annotation_list:
+            filters += ['AU_Set']
+        filter_pattern = f"({'|'.join(filters)})"
+        if len(filters) == 0:
             raise NotImplementedError()
+
+        # if 'va' in annotation_list and 'expr7' in annotation_list:
+        #     filter_pattern = "(VA_Set|Expression_Set)"
+        # elif annotation_list[0] == 'va':
+        #     filter_pattern = 'VA_Set'
+        # elif annotation_list[0] == 'expr7':
+        #     filter_pattern = 'Expression_Set'
+        # else:
+        #     raise NotImplementedError()
     else:
         sequence_name = str(fvdm.video_list[index])
         filter_pattern = sequence_name
@@ -86,7 +100,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        version = sequence_name[:N]
+        version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
+        # version = project_name #TODO
         logger = WandbLogger(name=cfg.inout.name,
                                    project=project_name,
                                    # config=dict(conf),
@@ -235,6 +250,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         if cfg_detail.learning.learning_rate != 0.0001:
             experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
 
+        if cfg_coarse.model.config.use_photometric:
+            experiment_name += 'CoPhoto'
+        if cfg_coarse.model.config.use_landmarks:
+            experiment_name += 'CoLMK'
+
     else:
         raise NotImplementedError("Unsupported naming versino")
 
@@ -254,7 +274,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
         stages_prefixes = stages_prefixes[num_test_stages:]
 
     dm, sequence_name = prepare_data(configs[0])
-
+    dm.setup()
+    # sys.exit(0) ## TODO: DELETE
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         experiment_name = time + "_" + create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
@@ -296,7 +317,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
                          config=dict(conf),
-                         version=time,
+                         # version=time,
+                         version=experiment_name,
                          save_dir=full_run_dir)
 
     deca = None

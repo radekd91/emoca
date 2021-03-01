@@ -79,6 +79,8 @@ class EmotionDataModule(pl.LightningDataModule):
         pass
 
     def setup(self, stage: Optional[str] = None):
+
+
         self.dm.prepare_data()
         self.dm.setup()
         if self.training_set is not None:
