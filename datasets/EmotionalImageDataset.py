@@ -251,6 +251,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
                 path = self.path_prefix / path
             # start = timer()
             img = imread(path)
+            input_img_shape = img.shape
             # end = timer()
             # print(f"Image reading took {end-start} s.")
         except Exception as e:
@@ -309,7 +310,13 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         if landmark is not None:
             landmark = np.squeeze(landmark)
-            self.landmark_normalizer.set_scale(img.shape[0], img.shape[1])
+            if isinstance(self.landmark_normalizer, KeypointScale):
+                self.landmark_normalizer.set_scale(
+                    img.shape[0] / input_img_shape[0],
+                    img.shape[1] / input_img_shape[1])
+            elif isinstance(self.landmark_normalizer, KeypointNormalization):
+                self.landmark_normalizer.set_scale(img.shape[0], img.shape[1])
+                # self.landmark_normalizer.set_scale(input_img_shape[0], input_img_shape[1])
             landmark = self.landmark_normalizer(landmark)
 
         sample = {
