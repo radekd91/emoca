@@ -1926,6 +1926,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 pkl.dump(recognition_labels, f)
 
         if split_ratio is not None and split_style is not None:
+            if image_transforms is not None:
+                if not isinstance(image_transforms, list) or len(image_transforms) != 2:
+                    raise ValueError("You have to provide image transforms for both trainng and validation sets")
             idxs = np.arange(len(detections), dtype=np.int32)
             if split_style == 'random':
                 np.random.seed(0)
@@ -1995,7 +1998,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 detection_train,
                 annotations_train,
                 recognition_labels_train,
-                image_transforms,
+                image_transforms[0],
                 self.output_dir,
                 landmark_list=landmarks_train,
                 segmentation_list=segmentations_train,
@@ -2009,7 +2012,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 detection_val,
                 annotations_val,
                 recognition_labels_val,
-                image_transforms,
+                image_transforms[1],
                 self.output_dir,
                 landmark_list=landmarks_val,
                 segmentation_list=segmentations_val,

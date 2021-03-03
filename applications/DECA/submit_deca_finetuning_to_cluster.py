@@ -139,7 +139,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -158,6 +158,7 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         [['model.useSeg=true'], []], # segmentation coarse
+        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],

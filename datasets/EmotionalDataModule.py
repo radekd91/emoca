@@ -77,7 +77,8 @@ class EmotionDataModule(pl.LightningDataModule):
         if self.training_set is not None:
             return
 
-        im_transforms = create_image_augmenter(self.image_size, self.augmentation)
+        im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
+        im_transforms_val = create_image_augmenter(self.image_size)
         # from torchvision.transforms import Resize
         # im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
         # # lmk_transforms = KeypointScale()
@@ -87,7 +88,7 @@ class EmotionDataModule(pl.LightningDataModule):
             copy.deepcopy(self.annotation_list),
             # self.annotation_list.copy(),
             self.filter_pattern,
-            image_transforms=im_transforms,
+            image_transforms=[im_transforms_train, im_transforms_val],
             split_style=self.split_style,
             split_ratio=self.split_ratio,
             with_landmarks=self.with_landmarks,
@@ -107,7 +108,7 @@ class EmotionDataModule(pl.LightningDataModule):
             self.indices_train = dataset[2]
             self.indices_val = dataset[3]
 
-        im_transforms = create_image_augmenter(self.image_size)
+        im_transforms_test = create_image_augmenter(self.image_size)
         # im_transforms = Resize((self.image_size, self.image_size))
         # lmk_transforms = KeypointNormalization()
         # seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
@@ -115,7 +116,7 @@ class EmotionDataModule(pl.LightningDataModule):
             copy.deepcopy(self.annotation_list),
             # self.annotation_list.copy(),
             self.filter_pattern,
-            image_transforms=im_transforms,
+            image_transforms=im_transforms_test,
             with_landmarks = self.with_landmarks,
             # landmark_transform=lmk_transforms,
             with_segmentations=self.with_segmentations,

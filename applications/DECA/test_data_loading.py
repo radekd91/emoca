@@ -11,6 +11,7 @@ def main():
     dm.setup()
 
     dataset = dm.training_set
+    # dataset = dm.validation_set
     # image_index = 0
     # sample = dataset[image_index]
     for i in range(50):
