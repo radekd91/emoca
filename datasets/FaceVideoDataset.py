@@ -21,7 +21,7 @@ from tqdm import tqdm, auto
 from torchvision.transforms import Resize, Compose, Normalize
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
-from datasets.EmotionalImageDataset import EmotionalImageDataset, EmotionalImageDatasetImgAug
+from datasets.EmotionalImageDataset import EmotionalImageDatasetOld, EmotionalImageDataset
 from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
@@ -1991,7 +1991,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 segmentations_val = None
 
             # dataset_train = EmotionalImageDataset(
-            dataset_train = EmotionalImageDatasetImgAug(
+            dataset_train = EmotionalImageDataset(
                 detection_train,
                 annotations_train,
                 recognition_labels_train,
@@ -2005,7 +2005,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 K_policy=K_policy)
 
             # dataset_val = EmotionalImageDataset(
-            dataset_val = EmotionalImageDatasetImgAug(
+            dataset_val = EmotionalImageDataset(
                 detection_val,
                 annotations_val,
                 recognition_labels_val,
@@ -2034,7 +2034,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             return dataset_train, dataset_val, idx_train, idx_val
 
         # dataset = EmotionalImageDataset(
-        dataset = EmotionalImageDatasetImgAug(
+        dataset = EmotionalImageDataset(
             detections,
             annotations,
             recognition_labels,

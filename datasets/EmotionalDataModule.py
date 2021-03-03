@@ -4,75 +4,17 @@ import pytorch_lightning as pl
 
 import glob, os, sys
 from pathlib import Path
-# import pyvista as pv
-# from utils.mesh import load_mesh
-# from scipy.io import wavfile
-# import resampy
 import numpy as np
 import torch
 # import torchaudio
 # from enum import Enum
 from typing import Optional, Union, List, Any, overload
 import pickle as pkl
-# from collections import OrderedDict
 from tqdm import tqdm
-# import subprocess
 import copy
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA')))
-# from decalib.deca import DECA
-# from decalib.datasets import datasets
-# from utils.FaceDetector import FAN, MTCNN
-# from facenet_pytorch import InceptionResnetV1
-# from collections import OrderedDict
-from PIL import Image
 # import gc
 # from memory_profiler import profile
-import imgaug
-
-import imgaug.augmenters.meta as meta
-# import imgaug.augmenters.geometric as geom
-# import imgaug.augmenters.imgcorruptlike as corrupt
-# import imgaug.augmenters.imgcorruptlike as arithmetic
-import importlib
-
-from torchvision.transforms import Resize
-from transforms.keypoints import KeypointScale, KeypointNormalization
-
-def augmenter_from_key_value(name, kwargs):
-    if hasattr(meta, name):
-        sub_augmenters = []
-        for item in kwargs:
-            key = list(item.keys())[0]
-            # kwargs_ = {k: v for d in item for k, v in d.items()}
-            sub_augmenters += [augmenter_from_key_value(key, item[key])]
-            # sub_augmenters += [augmenter_from_key_value(key, kwargs[key])]
-        cl = getattr(imgaug.augmenters, name)
-        return cl(sub_augmenters)
-
-    if hasattr(imgaug.augmenters, name):
-        cl = getattr(imgaug.augmenters, name)
-        kwargs_ = {k: v for d in kwargs for k, v in d.items()}
-        return cl(**kwargs_)
-
-    raise RuntimeError(f"Augmenter with name '{name}' is either not supported or it does not exist")
-
-
-def augmenter_from_dict(augmentation):
-    augmenter_list = []
-    for aug in augmentation:
-        if len(aug) > 1:
-            raise RuntimeError("This should be just a single element")
-        key = list(aug.keys())[0]
-        augmenter_list += [augmenter_from_key_value(key, kwargs=aug[key])]
-    return imgaug.augmenters.Sequential(augmenter_list)
-
-
-def create_image_augmenter(im_size, augmentation=None) -> imgaug.augmenters.Augmenter:
-    augmenter_list = [imgaug.augmenters.Resize(im_size)]
-    if augmentation is not None:
-        augmenter_list += [augmenter_from_dict(augmentation)]
-    augmenter = imgaug.augmenters.Sequential(augmenter_list)
-    return augmenter
+from transforms.imgaug import create_image_augmenter
 
 
 class EmotionDataModule(pl.LightningDataModule):

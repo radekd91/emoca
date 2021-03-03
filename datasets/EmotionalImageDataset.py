@@ -12,7 +12,8 @@ from .IO import load_segmentation, process_segmentation
 # from timeit import default_timer as timer
 
 
-class EmotionalImageDataset(torch.utils.data.Dataset):
+### THIS CLASS IS DEPRECATED AND TO BE DELETED LATER
+class EmotionalImageDatasetOld(torch.utils.data.Dataset):
 
     def __init__(self, image_list, annotations, labels, image_transforms,
                  path_prefix=None,
@@ -191,7 +192,7 @@ def numpy_image_to_torch(img : np.ndarray) -> torch.Tensor:
     return torch.from_numpy(img)
 
 
-class EmotionalImageDatasetImgAug(torch.utils.data.Dataset):
+class EmotionalImageDataset(torch.utils.data.Dataset):
 
     def __init__(self,
                  image_list : list,
