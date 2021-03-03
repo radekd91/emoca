@@ -222,6 +222,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         if segmentation_list is not None and len(segmentation_list) != len(segmentation_list):
             raise RuntimeError("There must be a segmentation for every image")
         self.segmentation_list = segmentation_list
+        self.landmark_normalizer = KeypointNormalization()
         # self.segmentation_transform = segmentation_transform
         self.segmentation_discarded_labels = segmentation_discarded_lables
         self.K = K  # how many samples of one identity to get?
@@ -308,6 +309,8 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         if landmark is not None:
             landmark = np.squeeze(landmark)
+            self.landmark_normalizer.set_scale(img.shape[1], img.shape[2])
+            landmark = self.landmark_normalizer(landmark)
 
         sample = {
             "image": numpy_image_to_torch(img),
@@ -396,7 +399,8 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             index_axis(k, i).imshow(sample["image"][k, ...].numpy().transpose([1,2,0]))
             i += 1
             if 'landmark' in sample.keys():
-                lmk_im = tensor_vis_landmarks(sample['image'][k:k+1, ...], sample['landmark'][k:k+1, ...],
+                lmk_im = tensor_vis_landmarks(sample['image'][k:k+1, ...],
+                                              self.landmark_normalizer.inv(sample['landmark'][k:k+1, ...]),
                                               isScale=False, rgb2bgr=False, scale_colors=True).numpy()[0]\
                     .transpose([1,2,0])
                 index_axis(k, i).imshow(lmk_im)
