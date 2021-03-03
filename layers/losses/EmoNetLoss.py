@@ -5,10 +5,12 @@ import sys
 import inspect
 import torch.nn.functional as F
 
+
 def get_emonet(device=None):
     device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    path_to_emonet = Path(__file__).parent.parent.parent.parent / "emonet"
+    path_to_emonet = Path(__file__).absolute().resolve().parent.parent.parent.parent / "emonet"
     if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
+        print(f"Adding EmoNet path '{path_to_emonet}'")
         sys.path += [str(path_to_emonet)]
 
     from emonet.models import EmoNet
@@ -87,10 +89,10 @@ class EmoNetLoss(torch.nn.Module):
         expression_loss = self.expression_loss(input_emotion['expression'], output_emotion['expression'])
         return emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss
 
-    # @property
-    # def input_emo(self):
-    #     return self.input_emotion
-    #
-    # @property
-    # def output_emo(self):
-    #     return self.output_emotion
+    @property
+    def input_emo(self):
+        return self.input_emotion
+
+    @property
+    def output_emo(self):
+        return self.output_emotion

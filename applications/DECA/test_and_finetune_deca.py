@@ -19,6 +19,23 @@ import copy
 
 project_name = 'EmotionalDeca'
 
+def find_latest_checkpoint(cfg):
+    print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
+    checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
+    if len(checkpoints) == 0:
+        print(f"Did not found checkpoints. Looking in subfolders")
+        checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).rglob("*.ckpt")))
+        if len(checkpoints) == 0:
+            print(f"Did not find checkpoints to resume from. Terminating")
+            sys.exit()
+        print(f"Found {len(checkpoints)} checkpoints")
+    else:
+        print(f"Found {len(checkpoints)} checkpoints")
+    for ckpt in checkpoints:
+        print(f" - {str(ckpt)}")
+    checkpoint = str(checkpoints[-1])
+    return checkpoint
+
 
 def prepare_data(cfg):
     print(f"The data will be loaded from: '{cfg.data.data_root}'")
@@ -81,7 +98,7 @@ def prepare_data(cfg):
                            train_K_policy=cfg.learning.train_K_policy,
                            val_K=cfg.learning.val_K,
                            val_K_policy=cfg.learning.val_K_policy,
-                           test_K=cfg.learning.train_K,
+                           test_K=cfg.learning.test_K,
                            test_K_policy=cfg.learning.test_K_policy,
                            annotation_list=annotation_list,
                            filter_pattern=filter_pattern,
@@ -101,7 +118,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
         version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
-        # version = project_name #TODO
+        # version = project_name #TODO: uncomment this line eventually (for the next round of experiments)
         logger = WandbLogger(name=cfg.inout.name,
                                    project=project_name,
                                    # config=dict(conf),
@@ -154,6 +171,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         # filename='deca-{epoch:02d}-{val_loss:.2f}',
         filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.2f}',
         save_top_k=3,
+        save_last=True,
         mode='min',
         dirpath=cfg.inout.checkpoint_dir
     )
@@ -327,13 +345,15 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     checkpoint = None
     checkpoint_kwargs = None
     if start_i > 0:
-        print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
-        checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        print(f"Found {len(checkpoints)} checkpoints")
-        for ckpt in checkpoints:
-            print(f" - {str(ckpt)}")
-        checkpoint = str(checkpoints[-1])
+        # print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
+        # checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        # print(f"Found {len(checkpoints)} checkpoints")
+        # for ckpt in checkpoints:
+        #     print(f" - {str(ckpt)}")
+        # checkpoint = str(checkpoints[-1])
+        checkpoint = find_latest_checkpoint(configs[start_i-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+        configs[start_i-1].model.resume_training = False # make sure the training is not magically resumed by the old code
         checkpoint_kwargs = {
             "model_params": configs[start_i-1].model,
             "learning_params": configs[start_i-1].learning,
@@ -409,6 +429,7 @@ def main():
         finetune_deca(coarse_conf, detail_conf)
     else:
         configure_and_finetune(coarse_conf, coarse_override, detail_conf, detail_override)
+
 
 if __name__ == "__main__":
     main()

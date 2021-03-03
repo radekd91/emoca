@@ -19,6 +19,26 @@ def create_experiment_name():
     return "DECA_training"
 
 
+
+def find_latest_checkpoint(cfg):
+    print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
+    checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
+    if len(checkpoints) == 0:
+        print(f"Did not found checkpoints. Looking in subfolders")
+        checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).rglob("*.ckpt")))
+        if len(checkpoints) == 0:
+            print(f"Did not find checkpoints to resume from. Terminating")
+            sys.exit()
+        print(f"Found {len(checkpoints)} checkpoints")
+    else:
+        print(f"Found {len(checkpoints)} checkpoints")
+    for ckpt in checkpoints:
+        print(f" - {str(ckpt)}")
+    checkpoint = str(checkpoints[-1])
+    return checkpoint
+
+
+
 def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["train", "test", "train", "test", "train", "test"]
@@ -84,21 +104,23 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     checkpoint = None
     checkpoint_kwargs = None
     if start_i > 0:
-        print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
-        checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        if len(checkpoints) == 0:
-            print(f"Did not found checkpoints. Looking in subfolders")
-            checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).rglob("*.ckpt")))
-            if len(checkpoints) == 0:
-                print(f"Did not find checkpoints to resume from. Terminating")
-                sys.exit()
-            print(f"Found {len(checkpoints)} checkpoints")
-        else:
-            print(f"Found {len(checkpoints)} checkpoints")
-        for ckpt in checkpoints:
-            print(f" - {str(ckpt)}")
-        checkpoint = str(checkpoints[-1])
+        # print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
+        # checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        # if len(checkpoints) == 0:
+        #     print(f"Did not found checkpoints. Looking in subfolders")
+        #     checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).rglob("*.ckpt")))
+        #     if len(checkpoints) == 0:
+        #         print(f"Did not find checkpoints to resume from. Terminating")
+        #         sys.exit()
+        #     print(f"Found {len(checkpoints)} checkpoints")
+        # else:
+        #     print(f"Found {len(checkpoints)} checkpoints")
+        # for ckpt in checkpoints:
+        #     print(f" - {str(ckpt)}")
+        # checkpoint = str(checkpoints[-1])
+        checkpoint = find_latest_checkpoint(configs[start_i-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+        configs[start_i - 1].model.resume_training = False
         checkpoint_kwargs = {
             "model_params": configs[start_i-1].model,
             "learning_params": configs[start_i-1].learning,

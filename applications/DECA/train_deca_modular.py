@@ -19,6 +19,27 @@ def create_experiment_name():
     return "DECA_training"
 
 
+def find_latest_checkpoint(cfg, replace_root = None, relative_to = None, ckpt_index=-1):
+    checkpoint_dir = cfg.inout.checkpoint_dir
+    if replace_root is not None and relative_to is not None:
+        checkpoint_dir = str(Path(replace_root) / Path(checkpoint_dir).relative_to(relative_to))
+    print(f"Looking for checkpoint in '{checkpoint_dir}'")
+    checkpoints = sorted(list(Path(checkpoint_dir).glob("*.ckpt")))
+    if len(checkpoints) == 0:
+        print(f"Did not found checkpoints. Looking in subfolders")
+        checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
+        if len(checkpoints) == 0:
+            print(f"Did not find checkpoints to resume from. Terminating")
+            sys.exit()
+        print(f"Found {len(checkpoints)} checkpoints")
+    else:
+        print(f"Found {len(checkpoints)} checkpoints")
+    for ckpt in checkpoints:
+        print(f" - {str(ckpt)}")
+    checkpoint = str(checkpoints[ckpt_index])
+    return checkpoint
+
+
 def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_names: list, start_i=0, prepare_data=None):
     # configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     # stages = ["train", "test", "train", "test", "train", "test"]
@@ -71,19 +92,22 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
                          project=project_name,
                          config=dict(conf),
                          version=time,
+                         # version=experiment_name, #TODO use this for the next round of experiments
                          save_dir=full_run_dir)
 
     deca = None
     checkpoint = None
     checkpoint_kwargs = None
     if start_i > 0:
-        print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
-        checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        print(f"Found {len(checkpoints)} checkpoints")
-        for ckpt in checkpoints:
-            print(f" - {str(ckpt)}")
-        checkpoint = str(checkpoints[-1])
+        # print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
+        # checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
+        # print(f"Found {len(checkpoints)} checkpoints")
+        # for ckpt in checkpoints:
+        #     print(f" - {str(ckpt)}")
+        # checkpoint = str(checkpoints[-1])
+        checkpoint = find_latest_checkpoint(configs[start_i-1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+        configs[start_i - 1].model.resume_training = False
         checkpoint_kwargs = {
             "model_params": configs[start_i-1].model,
             "learning_params": configs[start_i-1].learning,

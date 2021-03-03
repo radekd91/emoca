@@ -10,6 +10,7 @@ import numpy as np
 from skimage.io import imread
 import cv2
 from pathlib import Path
+from skimage.io import imsave
 
 # add DECA's repo
 # sys.path += [str(Path(__file__).parent.parent.parent.absolute() / 'DECA-training')]
@@ -83,29 +84,29 @@ class DecaModule(LightningModule):
         if mode:
             if self.mode == DecaMode.COARSE:
                 self.deca.E_flame.train()
-                print("Setting E_flame to train")
+                # print("Setting E_flame to train")
                 self.deca.E_detail.eval()
-                print("Setting E_detail to eval")
+                # print("Setting E_detail to eval")
                 self.deca.D_detail.eval()
-                print("Setting D_detail to eval")
+                # print("Setting D_detail to eval")
             elif self.mode == DecaMode.DETAIL:
                 if self.deca.config.train_coarse:
-                    print("Setting E_flame to train")
+                    # print("Setting E_flame to train")
                     self.deca.E_flame.train()
                 else:
-                    print("Setting E_flame to eval")
+                    # print("Setting E_flame to eval")
                     self.deca.E_flame.eval()
                 self.deca.E_detail.train()
-                print("Setting E_detail to train")
+                # print("Setting E_detail to train")
                 self.deca.D_detail.train()
-                print("Setting D_detail to train")
+                # print("Setting D_detail to train")
         else:
             self.deca.E_flame.eval()
-            print("Setting E_flame to eval")
+            # print("Setting E_flame to eval")
             self.deca.E_detail.eval()
-            print("Setting E_detail to eval")
+            # print("Setting E_detail to eval")
             self.deca.D_detail.eval()
-            print("Setting D_detail to eval")
+            # print("Setting D_detail to eval")
 
         # these are set to eval no matter what, they're never being trained
         if self.emonet_loss is not None:
@@ -178,11 +179,12 @@ class DecaModule(LightningModule):
         else:
             expr7 = None
 
-        if self.mode == DecaMode.DETAIL:
+        if self.mode == DecaMode.COARSE or \
+                (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
+            parameters = self.deca.E_flame(images)
+        elif self.mode == DecaMode.DETAIL:
             with torch.no_grad():
                 parameters = self.deca.E_flame(images)
-        elif self.mode == DecaMode.COARSE:
-            parameters = self.deca.E_flame(images)
         else:
             raise ValueError(f"Invalid DECA Mode {self.mode}")
 
@@ -530,6 +532,8 @@ class DecaModule(LightningModule):
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
                 d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
                 d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
+                #TODO: fix this on the next iteration lipd_loss
+                # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
             # photometric loss
             if training or masks is not None:
@@ -767,7 +771,8 @@ class DecaModule(LightningModule):
             # visdict[ prefix + '_' + stage_str + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
                 self.logger.log_metrics(visdict)#, step=self.global_step)
-        self.logger.log_metrics(losses_and_metrics_to_log)
+        if self.logger is not None:
+            self.logger.log_metrics(losses_and_metrics_to_log)
         return None
 
     def training_step(self, batch, batch_idx): #, debug=True):
@@ -852,18 +857,28 @@ class DecaModule(LightningModule):
             caption += prefix +"expression= %s \n" % Expression7(expr7).name
         return caption
 
-    def _log_wandb_image(self, path, image, caption=None):
-        from skimage.io import imsave
-        path.parent.mkdir(parents=True, exist_ok=True)
+    def _fix_image(self, image):
         if image.max() < 30.:
             image = image * 255.
-        imsave(path, np.clip(image, 0, 255).astype(np.uint8))
+        image = np.clip(image, 0, 255).astype(np.uint8)
+        return image
+
+    def _log_wandb_image(self, path, image, caption=None):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        image = self._fix_image(image)
+        imsave(path, image)
         if caption is not None:
             caption_file = Path(path).parent / (Path(path).stem + ".txt")
             with open(caption_file, "w") as f:
                 f.write(caption)
         wandb_image = Image(str(path), caption=caption)
         return wandb_image
+
+    def _log_array_image(self, path, image, caption=None):
+        image = self._fix_image(image)
+        if path is not None:
+            imsave(path, image)
+        return image
 
     def _log_visualizations(self, stage, visdict, values, step, indices=None, dataloader_idx=None):
         mode_ = str(self.mode.name).lower()
@@ -881,12 +896,15 @@ class DecaModule(LightningModule):
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
                 savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
-                # wandb_image = Image(image, caption=key)
-                wandb_image = self._log_wandb_image(savepath, image)
+                # im2log = Image(image, caption=key)
+                if isinstance(self.logger, WandbLogger):
+                    im2log = self._log_wandb_image(savepath, image)
+                else:
+                    im2log = self._log_array_image(savepath, image)
                 name = prefix + "_" + stage + "_" + key
                 if dataloader_idx is not None:
                     name += "/dataloader_idx_" + str(dataloader_idx)
-                log_dict[name] = wandb_image
+                log_dict[name] = im2log
             else:
                 for i in indices:
                     caption = key + f" batch_index={step}\n"
@@ -919,12 +937,17 @@ class DecaModule(LightningModule):
                         #                                                i].detach().cpu().numpy()))
                     savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
                     image = images[i]
-                    # wandb_image = Image(image, caption=caption)
-                    wandb_image = self._log_wandb_image(savepath, image, caption)
+                    # im2log = Image(image, caption=caption)
+                    if isinstance(self.logger, WandbLogger):
+                        im2log = self._log_wandb_image(savepath, image, caption)
+                    elif self.logger is not None:
+                        im2log = self._log_array_image(savepath, image, caption)
+                    else:
+                        im2log = self._log_array_image(None, image, caption)
                     name = prefix + "_" + stage + "_" + key
                     if dataloader_idx is not None:
                         name += "/dataloader_idx_" + str(dataloader_idx)
-                    log_dict[name] = wandb_image
+                    log_dict[name] = im2log
         # self.log_dict(log_dict, on_step=on_step, on_epoch=on_epoch)
         # if on_step:
         #     step = self.global_step
@@ -934,10 +957,8 @@ class DecaModule(LightningModule):
         # self.logger.experiment.log(log_dict)#, step=step)
         return log_dict
 
-    def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx, stage, prefix):
-        # visualize
-        # if iter % 200 == 1:
-        # visind = np.arange(8)  # self.config.batch_size )
+    def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx, stage, prefix,
+                                  save=True):
         batch_size = verts.shape[0]
         visind = np.arange(batch_size)
         shape_images = self.deca.render.render_shape(verts, trans_verts)
@@ -993,13 +1014,14 @@ class DecaModule(LightningModule):
         if 'uv_vis_mask_patch' in additional.keys():
             visdict['uv_vis_mask_patch'] = additional['uv_vis_mask_patch'][visind]
 
-        # savepath = '{}/{}/{}_{}.png'.format(self.inout_params.checkpoint_dir,  f'{stage}_images',
-        #                                     self.current_epoch, batch_idx)
-        savepath = f'{self.inout_params.full_run_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:04d}.png'
-        Path(savepath).parent.mkdir(exist_ok=True, parents=True)
-        visualization_image = self.deca.visualize(visdict, savepath)
-
-        return visdict, visualization_image[..., [2,1,0]]
+        if save:
+            savepath = f'{self.inout_params.full_run_dir}/{prefix}_{stage}/combined/{self.current_epoch:04d}_{batch_idx:04d}.png'
+            Path(savepath).parent.mkdir(exist_ok=True, parents=True)
+            visualization_image = self.deca.visualize(visdict, savepath)
+            return visdict, visualization_image[..., [2, 1, 0]]
+        else:
+            visualization_image = None
+            return visdict, None
 
 
     def configure_optimizers(self):

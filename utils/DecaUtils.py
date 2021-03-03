@@ -275,10 +275,9 @@ def batch_orth_proj(X, camera):
     camera = camera.clone().view(-1, 1, 3)
     X_trans = X[:, :, :2] + camera[:, :, 1:]
     X_trans = torch.cat([X_trans, X[:, :, 2:]], 2)
-    shape = X_trans.shape
+    # shape = X_trans.shape
     # Xn = (camera[:, :, 0] * X_trans.view(shape[0], -1)).view(shape)
     Xn = (camera[:, :, 0:1] * X_trans)
-    # import ipdb; ipdb.set_trace()
     return Xn
 
 

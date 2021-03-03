@@ -11,17 +11,20 @@ useSeg: false
 #useSeg: true
 background_from_input: true
 use_landmarks: True
+#use_landmarks: False
 useWlmk: True
 #useWlmk: False
 lmk_weight: 1
 eyed: 1.0
 lipd: 0.1
 idw: 0.15
+#idw: 0.
 exp_reg: 1e-4
 shape_reg: 1e-4
 tex_reg: 1e-5
 light_reg: 12
 use_photometric: True
+#use_photometric: False
 photow: 2.
 shape_constrain_type: 'exchange' # None
 
