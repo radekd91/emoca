@@ -1,5 +1,6 @@
 defaults:
-  - data: data_desktop
+  - data/datasets: data_desktop
+  - data/augmentations: none
   - model/paths : desktop
   - model/settings : default_detail_emonet
   - model/sizes : default

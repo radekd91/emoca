@@ -27,13 +27,61 @@ import copy
 from PIL import Image
 # import gc
 # from memory_profiler import profile
+import imgaug
+
+import imgaug.augmenters.meta as meta
+# import imgaug.augmenters.geometric as geom
+# import imgaug.augmenters.imgcorruptlike as corrupt
+# import imgaug.augmenters.imgcorruptlike as arithmetic
+import importlib
 
 from torchvision.transforms import Resize
 from transforms.keypoints import KeypointScale, KeypointNormalization
 
+def augmenter_from_key_value(name, kwargs):
+    if hasattr(meta, name):
+        sub_augmenters = []
+        for item in kwargs:
+            key = list(item.keys())[0]
+            # kwargs_ = {k: v for d in item for k, v in d.items()}
+            sub_augmenters += [augmenter_from_key_value(key, item[key])]
+            # sub_augmenters += [augmenter_from_key_value(key, kwargs[key])]
+        cl = getattr(imgaug.augmenters, name)
+        return cl(sub_augmenters)
+
+    if hasattr(imgaug.augmenters, name):
+        cl = getattr(imgaug.augmenters, name)
+        kwargs_ = {k: v for d in kwargs for k, v in d.items()}
+        return cl(**kwargs_)
+
+    raise RuntimeError(f"Augmenter with name '{name}' is either not supported or it does not exist")
+
+
+def augmenter_from_dict(augmentation):
+    augmenter_list = []
+    for aug in augmentation:
+        if len(aug) > 1:
+            raise RuntimeError("This should be just a single element")
+        key = list(aug.keys())[0]
+        augmenter_list += [augmenter_from_key_value(key, kwargs=aug[key])]
+    return imgaug.augmenters.Sequential(augmenter_list)
+
+
+def create_image_augmenter(im_size, augmentation=None) -> imgaug.augmenters.Augmenter:
+    augmenter_list = [imgaug.augmenters.Resize(im_size)]
+    if augmentation is not None:
+        augmenter_list += [augmenter_from_dict(augmentation)]
+    augmenter = imgaug.augmenters.Sequential(augmenter_list)
+    return augmenter
+
+
 class EmotionDataModule(pl.LightningDataModule):
 
-    def __init__(self, dm, image_size=256, with_landmarks=False, with_segmentations=False,
+    def __init__(self, dm,
+                 image_size=256,
+                 augmentation = None,
+                 with_landmarks=False,
+                 with_segmentations=False,
                  train_K=None,
                  val_K=None,
                  test_K=None,
@@ -52,6 +100,7 @@ class EmotionDataModule(pl.LightningDataModule):
         super().__init__()
         self.dm = dm
         self.image_size = image_size
+        self.augmentation = augmentation
         self.training_set = None
         self.validation_set = None
         self.testing_set = None
@@ -85,20 +134,24 @@ class EmotionDataModule(pl.LightningDataModule):
         self.dm.setup()
         if self.training_set is not None:
             return
-        from torchvision.transforms import Resize
-        im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
-        # lmk_transforms = KeypointScale()
-        lmk_transforms = KeypointNormalization()
-        seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
+
+        im_transforms = create_image_augmenter(self.image_size, self.augmentation)
+        # from torchvision.transforms import Resize
+        # im_transforms = Resize((self.image_size, self.image_size), Image.BICUBIC)
+        # # lmk_transforms = KeypointScale()
+        # lmk_transforms = KeypointNormalization()
+        # seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         dataset = self.dm.get_annotated_emotion_dataset(
             copy.deepcopy(self.annotation_list),
             # self.annotation_list.copy(),
-            self.filter_pattern, image_transforms=im_transforms,
-            split_style=self.split_style, split_ratio=self.split_ratio,
+            self.filter_pattern,
+            image_transforms=im_transforms,
+            split_style=self.split_style,
+            split_ratio=self.split_ratio,
             with_landmarks=self.with_landmarks,
-            landmark_transform=lmk_transforms,
+            # landmark_transform=lmk_transforms,
             with_segmentations=self.with_segmentations,
-            segmentation_transform=seg_transforms,
+            # segmentation_transform=seg_transforms,
             K=self.train_K,
             K_policy=self.train_K_policy)
         if not (isinstance(dataset, list) or isinstance(dataset, tuple)):
@@ -112,18 +165,19 @@ class EmotionDataModule(pl.LightningDataModule):
             self.indices_train = dataset[2]
             self.indices_val = dataset[3]
 
-        im_transforms = Resize((self.image_size, self.image_size))
-        lmk_transforms = KeypointNormalization()
-        seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
+        im_transforms = create_image_augmenter(self.image_size)
+        # im_transforms = Resize((self.image_size, self.image_size))
+        # lmk_transforms = KeypointNormalization()
+        # seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
         self.test_set = self.dm.get_annotated_emotion_dataset(
             copy.deepcopy(self.annotation_list),
             # self.annotation_list.copy(),
             self.filter_pattern,
             image_transforms=im_transforms,
             with_landmarks = self.with_landmarks,
-            landmark_transform=lmk_transforms,
+            # landmark_transform=lmk_transforms,
             with_segmentations=self.with_segmentations,
-            segmentation_transform=seg_transforms,
+            # segmentation_transform=seg_transforms,
             K=self.test_K,
             K_policy=self.test_K_policy)
 

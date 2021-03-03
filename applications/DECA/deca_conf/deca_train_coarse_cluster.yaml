@@ -1,5 +1,6 @@
 defaults:
-  - data: coarse_data_cluster
+  - data/datasets: coarse_data_cluster
+  - data/augmentations: none
   - model/paths : cluster
   - model/settings : coarse_train
   - model/sizes : default

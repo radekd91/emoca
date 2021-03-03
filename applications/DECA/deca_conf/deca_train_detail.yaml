@@ -1,5 +1,6 @@
 defaults:
-  - data: detail_data_desktop
+  - data/datasets: detail_data_desktop
+  - data/augmentations: none
   - model/paths : desktop
   - model/settings : detail_train
   - model/sizes : default

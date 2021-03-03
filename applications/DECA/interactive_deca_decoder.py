@@ -159,7 +159,7 @@ def main():
 
     values, visdict = test(deca, dm, image_index)
 
-    plot_results(visdict)
+    plot_results(visdict, "title")
 
 
 

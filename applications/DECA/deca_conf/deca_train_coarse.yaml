@@ -1,5 +1,6 @@
 defaults:
-  - data: coarse_data_desktop
+  - data/datasets: coarse_data_desktop
+  - data/augmentations: none
   - model/paths : desktop
   - model/settings : coarse_train
   - model/sizes : default

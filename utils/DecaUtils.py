@@ -645,17 +645,22 @@ def plot_verts(image, kpts, color='r'):
     return image
 
 
-def tensor_vis_landmarks(images, landmarks, gt_landmarks=None, color='g', isScale=True):
+def tensor_vis_landmarks(images, landmarks, gt_landmarks=None, color='g', isScale=True, rgb2bgr=True, scale_colors=True):
     # visualize landmarks
     vis_landmarks = []
     images = images.cpu().numpy()
     predicted_landmarks = landmarks.detach().cpu().numpy()
     if gt_landmarks is not None:
         gt_landmarks_np = gt_landmarks.detach().cpu().numpy()
+    if rgb2bgr:
+        color_idx = [2, 1, 0]
+    else:
+        color_idx = [0, 1, 2]
     for i in range(images.shape[0]):
         image = images[i]
-        image = image.transpose(1, 2, 0)[:, :, [2, 1, 0]].copy()
-        image = image * 255
+        image = image.transpose(1, 2, 0)[:, :, color_idx].copy()
+        if scale_colors:
+            image = image * 255
         if isScale:
             predicted_landmark = predicted_landmarks[i] * image.shape[0] / 2 + image.shape[0] / 2
         else:
@@ -674,7 +679,9 @@ def tensor_vis_landmarks(images, landmarks, gt_landmarks=None, color='g', isScal
 
     vis_landmarks = np.stack(vis_landmarks)
     vis_landmarks = torch.from_numpy(
-        vis_landmarks[:, :, :, [2, 1, 0]].transpose(0, 3, 1, 2)) / 255.  # , dtype=torch.float32)
+        vis_landmarks[:, :, :, color_idx].transpose(0, 3, 1, 2))
+    if scale_colors:
+        vis_landmarks /= 255.  # , dtype=torch.float32)
     return vis_landmarks
 
 

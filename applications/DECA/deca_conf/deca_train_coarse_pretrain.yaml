@@ -1,5 +1,6 @@
 defaults:
-  - data: pretrain_coarse_data_desktop
+  - data/datasets: pretrain_coarse_data_desktop
+  - data/augmentations: none
   - model/paths : desktop
   - model/settings : coarse_pretrain
   - model/sizes : default

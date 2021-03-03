@@ -88,8 +88,14 @@ def prepare_data(cfg):
 
     print(f"Looking for video {index} in {len(fvdm.video_list)}")
 
+    if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
+        augmentation = copy.deepcopy( OmegaConf.to_container(cfg.data.augmentation))
+    else:
+        augmentation = None
+
     dm = EmotionDataModule(fvdm,
                            image_size=cfg.model.image_size,
+                           augmentation=augmentation,
                            with_landmarks=True,
                            with_segmentations=True,
                            split_ratio=cfg.data.split_ratio,
@@ -100,7 +106,7 @@ def prepare_data(cfg):
                            val_K_policy=cfg.learning.val_K_policy,
                            test_K=cfg.learning.test_K,
                            test_K_policy=cfg.learning.test_K_policy,
-                           annotation_list=annotation_list,
+                           annotation_list= copy.deepcopy(OmegaConf.to_container(annotation_list)),
                            filter_pattern=filter_pattern,
                            num_workers=cfg.data.num_workers,
                            train_batch_size=cfg.learning.batch_size_train,

@@ -21,13 +21,14 @@ from tqdm import tqdm, auto
 from torchvision.transforms import Resize, Compose, Normalize
 # from decalib.deca import DECA
 # from decalib.datasets import datasets
-from datasets.EmotionalImageDataset import EmotionalImageDataset
+from datasets.EmotionalImageDataset import EmotionalImageDataset, EmotionalImageDatasetImgAug
 from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 from datasets.IO import load_segmentation, save_segmentation
 import hashlib
+# import zlib
 
 # from memory_profiler import profile
 
@@ -1837,15 +1838,16 @@ class FaceVideoDataModule(pl.LightningDataModule):
         return detections, landmarks, segmentations, annotations_all, recognition_labels_all
 
 
-    def get_annotated_emotion_dataset(self, annotation_list = None,
+    def get_annotated_emotion_dataset(self,
+                                      annotation_list = None,
                                       filter_pattern=None,
                                       image_transforms=None,
                                       split_ratio=None,
                                       split_style=None,
                                       with_landmarks=False,
-                                      landmark_transform=None,
+                                      # landmark_transform=None,
                                       with_segmentations=False,
-                                      segmentation_transform=None,
+                                      # segmentation_transform=None,
                                       K=None,
                                       K_policy=None,
                                       # if you add more parameters here, add them also to the hash list
@@ -1857,15 +1859,17 @@ class FaceVideoDataModule(pl.LightningDataModule):
                       split_ratio,
                       split_style,
                       with_landmarks,
-                      landmark_transform, # TODO comment out
+                      # landmark_transform, # TODO comment out
                       with_segmentations,
-                      segmentation_transform, # TODO comment out
+                      # segmentation_transform, # TODO comment out
                       K,
                       K_policy,
                       # add new parameters here
                      ])
         # h = hash(hash_list)
-        cache_hash = hashlib.sha224(pkl.dumps(hash_list)).hexdigest()
+        # cache_hash = hashlib.sha224(pkl.dumps(hash_list)).hexdigest()
+        cache_hash = hashlib.md5(pkl.dumps(hash_list)).hexdigest()
+        # # cache_hash = zlib.adler32(pkl.dumps(hash_list)) & 0xffffffff
         cache_folder = Path(self.output_dir) / "cache" / str(cache_hash)
         # load from cache if exists
         if cache_folder.exists() and load_from_cache:
@@ -1888,14 +1892,19 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
         # Process the dataset
+        str_to_hash = pkl.dumps(tuple([annotation_list, filter_pattern]))
+        # import json
+        # str_to_hash = json.dumps(tuple([annotation_list, filter_pattern]), sort_keys=True)
         # inter_cache_hash = hash(tuple([
         #     annotation_list,
         #     filter_pattern]))
-        inter_cache_hash = hashlib.sha224(pkl.dumps(
-            tuple([annotation_list,
-                    filter_pattern]
-                  ))).hexdigest()
-        inter_cache_folder = cache_folder = Path(self.output_dir) / "cache" / str(inter_cache_hash)
+        # inter_cache_hash = hashlib.sha224(pkl.dumps(
+        inter_cache_hash = hashlib.md5(str_to_hash).hexdigest()
+        # inter_cache_hash = zlib.adler32(pkl.dumps(
+        #     tuple([annotation_list,
+        #             filter_pattern]
+        #           ))) & 0xffffffff
+        inter_cache_folder = Path(self.output_dir) / "cache" / str(inter_cache_hash)
         if (inter_cache_folder / "lists.pkl").exists() and load_from_cache:
             with open(inter_cache_folder / "lists.pkl", "rb") as f:
                 detections = pkl.load(f)
@@ -1981,23 +1990,31 @@ class FaceVideoDataModule(pl.LightningDataModule):
             else:
                 segmentations_val = None
 
-            dataset_train = EmotionalImageDataset(
-                detection_train, annotations_train, recognition_labels_train,
-                image_transforms, self.output_dir,
+            # dataset_train = EmotionalImageDataset(
+            dataset_train = EmotionalImageDatasetImgAug(
+                detection_train,
+                annotations_train,
+                recognition_labels_train,
+                image_transforms,
+                self.output_dir,
                 landmark_list=landmarks_train,
                 segmentation_list=segmentations_train,
-                landmark_transform=landmark_transform,
-                segmentation_transform=segmentation_transform,
+                # landmark_transform=landmark_transform,
+                # segmentation_transform=segmentation_transform,
                 K=K,
                 K_policy=K_policy)
 
-            dataset_val = EmotionalImageDataset(
-                detection_val, annotations_val, recognition_labels_val,
-                image_transforms, self.output_dir,
+            # dataset_val = EmotionalImageDataset(
+            dataset_val = EmotionalImageDatasetImgAug(
+                detection_val,
+                annotations_val,
+                recognition_labels_val,
+                image_transforms,
+                self.output_dir,
                 landmark_list=landmarks_val,
                 segmentation_list=segmentations_val,
-                landmark_transform=landmark_transform,
-                segmentation_transform=segmentation_transform,
+                # landmark_transform=landmark_transform,
+                # segmentation_transform=segmentation_transform,
                 # K=K,
                 K=1,
                 # K=None,
@@ -2016,15 +2033,19 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
             return dataset_train, dataset_val, idx_train, idx_val
 
-        dataset = EmotionalImageDataset(detections, annotations,
-                                        recognition_labels, image_transforms,
-                                        self.output_dir,
-                                        landmark_list=landmarks,
-                                        landmark_transform=landmark_transform,
-                                        segmentation_list=segmentations,
-                                        segmentation_transform=segmentation_transform,
-                                        K=K,
-                                        K_policy=K_policy)
+        # dataset = EmotionalImageDataset(
+        dataset = EmotionalImageDatasetImgAug(
+            detections,
+            annotations,
+            recognition_labels,
+            image_transforms,
+            self.output_dir,
+            landmark_list=landmarks,
+            # landmark_transform=landmark_transform,
+            segmentation_list=segmentations,
+            # segmentation_transform=segmentation_transform,
+            K=K,
+            K_policy=K_policy)
         print(f"Caching dataset to '{cache_folder}'")
         cache_folder.mkdir(exist_ok=True, parents=True)
         with open(cache_folder / "all.pkl", "wb") as f:
