@@ -281,6 +281,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         if cfg_coarse.model.idw:
             experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
+        if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
+            experiment_name += "_Aug"
+
     else:
         raise NotImplementedError("Unsupported naming versino")
 
