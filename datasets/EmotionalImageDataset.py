@@ -309,7 +309,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
         if landmark is not None:
             landmark = np.squeeze(landmark)
-            self.landmark_normalizer.set_scale(img.shape[1], img.shape[2])
+            self.landmark_normalizer.set_scale(img.shape[0], img.shape[1])
             landmark = self.landmark_normalizer(landmark)
 
         sample = {
