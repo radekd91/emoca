@@ -166,8 +166,8 @@ def finetune_on_selected_sequences():
         [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
          ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
 
-        # [['model.useSeg=true', 'data/augmentations=default'],
-        #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+        [['model.useSeg=true', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
 
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only

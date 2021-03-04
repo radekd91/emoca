@@ -211,7 +211,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
 
 def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
-    if version == 0:
+    if version <= 1:
         experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
@@ -295,7 +295,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
             experiment_name += "_DwC"
 
     else:
-        raise NotImplementedError("Unsupported naming versino")
+        raise NotImplementedError("Unsupported naming version")
 
     return experiment_name
 
