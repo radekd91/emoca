@@ -210,7 +210,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     return deca
 
 
-def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
+def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
     if version == 0:
         experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
@@ -247,15 +247,16 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         elif cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossD'
 
-        if cfg_coarse.model.useSeg:
-            experiment_name += '_CoSegGT'
-        else:
-            experiment_name += '_CoSegRend'
+        if version == 0:
+            if cfg_coarse.model.useSeg:
+                experiment_name += '_CoSegGT'
+            else:
+                experiment_name += '_CoSegRend'
 
-        if cfg_detail.model.useSeg:
-            experiment_name += '_DeSegGT'
-        else:
-            experiment_name += '_DeSegRend'
+            if cfg_detail.model.useSeg:
+                experiment_name += '_DeSegGT'
+            else:
+                experiment_name += '_DeSegRend'
 
         if not cfg_detail.model.use_detail_l1:
             experiment_name += '_NoDetL1'
@@ -269,10 +270,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         elif not cfg_detail.model.background_from_input:
             experiment_name += '_BackBlackD'
 
-        if cfg_coarse.learning.learning_rate != 0.0001:
-            experiment_name += f'CoLR-{cfg_coarse.learning.learning_rate}'
-        if cfg_detail.learning.learning_rate != 0.0001:
-            experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
+        if version == 0:
+            if cfg_coarse.learning.learning_rate != 0.0001:
+                experiment_name += f'CoLR-{cfg_coarse.learning.learning_rate}'
+            if cfg_detail.learning.learning_rate != 0.0001:
+                experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
 
         if cfg_coarse.model.use_photometric:
             experiment_name += 'CoPhoto'
@@ -288,6 +290,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
 
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
+
+        if cfg_detail.model.train_coarse:
+            experiment_name += "_DwC"
 
     else:
         raise NotImplementedError("Unsupported naming versino")
