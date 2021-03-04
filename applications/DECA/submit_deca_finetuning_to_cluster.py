@@ -119,7 +119,7 @@ test_videos = [
 
 test_video_dict = {
     # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
-    148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
+    # 148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -163,8 +163,8 @@ def finetune_on_selected_sequences():
         #     ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
         # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
 
-        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
+        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
 
         [['model.useSeg=true', 'data/augmentations=default'],
          ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together

@@ -7,7 +7,7 @@ from datasets.FaceVideoDataset import FaceVideoDataModule, \
     AffectNetExpressions, Expression7, AU8, expr7_to_affect_net
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from models.DECA import DecaModule
 from pytorch_lightning.loggers import WandbLogger
@@ -172,6 +172,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     # if len(prefix) > 0:
     #     loss_to_monitor = prefix + "_" + loss_to_monitor
 
+    callbacks = []
     checkpoint_callback = ModelCheckpoint(
         monitor=loss_to_monitor,
         # filename='deca-{epoch:02d}-{val_loss:.2f}',
@@ -181,6 +182,14 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         mode='min',
         dirpath=cfg.inout.checkpoint_dir
     )
+    callbacks += [checkpoint_callback]
+    if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
+        early_stopping_callback = EarlyStopping(monitor=loss_to_monitor,
+                                                mode='min',
+                                                patience=3,
+                                                strict=True)
+        callbacks += [early_stopping_callback]
+
 
     val_check_interval = 1.0
     if 'val_check_interval' in cfg.model.keys():
@@ -190,10 +199,11 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
                       accelerator=accelerator,
-                      callbacks=[checkpoint_callback],
+                      callbacks=callbacks,
                       val_check_interval=val_check_interval,
                       # num_sanity_val_steps=0
                       )
+
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)
@@ -293,6 +303,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
 
         if cfg_detail.model.train_coarse:
             experiment_name += "_DwC"
+
+        if hasattr(cfg_coarse.learning, 'early_stopping') and cfg_coarse.learning.early_stopping \
+            and hasattr(cfg_detail.learning, 'early_stopping') and cfg_detail.learning.early_stopping:
+            experiment_name += "_early"
+
 
     else:
         raise NotImplementedError("Unsupported naming version")
