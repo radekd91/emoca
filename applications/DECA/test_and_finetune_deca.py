@@ -281,6 +281,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         if cfg_coarse.model.idw:
             experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
+        if cfg_coarse.model.shape_constrain_type != 'exchange':
+            experiment_name += f'_Co-{cfg_coarse.model.shape_constrain_type}'
+        if cfg_detail.model.detail_constrain_type != 'exchange':
+            experiment_name += f'_De-{cfg_coarse.model.detail_constrain_type}'
+
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
 
