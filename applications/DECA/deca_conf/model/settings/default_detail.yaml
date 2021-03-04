@@ -20,13 +20,16 @@ mode: detail
 resume_training: False # this loads a pretrained model
 
 lmk_weight: 1
+eyed: 1.0 # used only when train_coarse is true
+lipd: 0.1 # used only when train_coarse is true
+use_photometric: # used only when train_coarse is true
+photow: 2
+idw: 0.12 # used only when train_coarse is true
 useWlmk: true
 shape_reg: 0.0001
 exp_reg: 0.0001
 tex_reg: 0.0001
 light_reg: 12
-photow: 2
-idw: 0.12
 useConstraint: true
 mrfwr: 0.01
 zregw: 0.005
