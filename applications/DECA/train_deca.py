@@ -49,7 +49,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
 
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-        experiment_name = time + "_" + create_experiment_name()
+        experiment_name = create_experiment_name()
         full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
         exist_ok = False # a path for a new experiment should not yet exist
     else:
@@ -70,6 +70,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     cfg_coarse_pretraining.inout.full_run_dir = str(coarse_pretrain_checkpoint_dir.parent)
     cfg_coarse_pretraining.inout.checkpoint_dir = str(coarse_pretrain_checkpoint_dir)
     cfg_coarse_pretraining.inout.name = experiment_name
+    cfg_coarse_pretraining.inout.time = time
 
     coarse_checkpoint_dir = full_run_dir / "coarse" / "checkpoints"
     coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
@@ -77,6 +78,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
+    cfg_coarse.inout.time = time
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
@@ -85,6 +87,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
+    cfg_detail.inout.time = time
 
     # save config to target folder
     conf = DictConfig({})

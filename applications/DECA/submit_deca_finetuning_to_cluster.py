@@ -139,7 +139,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -158,13 +158,17 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
-        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
-        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-        #     ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
-        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
 
-        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-        #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
+        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+            ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+
+        [['model.useSeg=true', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
+
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
 
         [['model.useSeg=true', 'data/augmentations=default'],
          ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together

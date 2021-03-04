@@ -70,6 +70,7 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
     cfg_first.inout.full_run_dir = str(cfg_first_checkpoint_dir.parent)
     cfg_first.inout.checkpoint_dir = str(cfg_first_checkpoint_dir)
     cfg_first.inout.name = experiment_name
+    cfg_first.inout.time = time
 
     for i in range(start_i+1, len(configs)):
         cfg = configs[i]
@@ -79,6 +80,7 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
         cfg.inout.full_run_dir = str(checkpoint_dir.parent)
         cfg.inout.checkpoint_dir = str(checkpoint_dir)
         cfg.inout.name = experiment_name
+        cfg.inout.time = time
 
     # save config to target folder
     conf = DictConfig({})
@@ -91,8 +93,7 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
                          config=dict(conf),
-                         version=time,
-                         # version=experiment_name, #TODO use this for the next round of experiments
+                         version=time + "_" + experiment_name,
                          save_dir=full_run_dir)
 
     deca = None

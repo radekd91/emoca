@@ -123,13 +123,16 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
-        # version = project_name #TODO: uncomment this line eventually (for the next round of experiments)
+
+        if hasattr(cfg.inout, 'time'):
+            version = cfg.inout.time + "_" + cfg.inout.name
+        else:
+            version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
+
         logger = WandbLogger(name=cfg.inout.name,
-                                   project=project_name,
-                                   # config=dict(conf),
-                                   version=version,
-                                   save_dir=cfg.inout.full_run_dir)
+                    project=project_name,
+                    version=version,
+                    save_dir=cfg.inout.full_run_dir)
 
     if deca is None:
         logger.finalize("")
@@ -332,13 +335,16 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     # sys.exit(0) ## TODO: DELETE
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-        experiment_name = time + "_" + create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
+        experiment_name = create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
         full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
         exist_ok = False # a path for a new experiment should not yet exist
     else:
         experiment_name = cfg_coarse.inout.name
         len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        time = experiment_name[:len_time_str]
+        if hasattr(cfg_coarse.inout, 'time'):
+            time = cfg_coarse.inout.time
+        else:
+            time = experiment_name[:len_time_str]
         full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
         exist_ok = True # a path for an old experiment should exist
 
@@ -353,6 +359,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
+    cfg_coarse.inout.time = time
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
@@ -361,6 +368,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
+    cfg_detail.inout.time = time
 
     conf = DictConfig({})
     conf.coarse = cfg_coarse
@@ -371,8 +379,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
                          config=dict(conf),
-                         # version=time,
-                         version=experiment_name,
+                         version=time + "_" + experiment_name,
                          save_dir=full_run_dir)
 
     deca = None
