@@ -159,11 +159,12 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
         # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
-        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'], ['data/augmentations=default', 'model/settings=default_coarse_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
-        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
+        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+        #     ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
 
         [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model/settings=default_coarse_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
+         ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
 
         # [['model.useSeg=true', 'data/augmentations=default'],
          # ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together

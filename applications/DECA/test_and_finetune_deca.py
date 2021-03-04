@@ -215,11 +215,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
         experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
-            experiment_name += '_EmoNetLossB'
+            experiment_name += '_EmoLossB'
         elif cfg_coarse.model.use_emonet_loss:
-            experiment_name += '_EmoNetLossC'
+            experiment_name += '_EmoLossC'
         elif cfg_detail.model.use_emonet_loss:
-            experiment_name += '_EmoNetLossD'
+            experiment_name += '_EmoLossD'
         if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
             experiment_name += '_'
             if cfg_coarse.model.use_emonet_feat_1:
@@ -248,14 +248,14 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
             experiment_name += '_SupervisedEmoLossD'
 
         if cfg_coarse.model.useSeg:
-            experiment_name += '_CoSegmentGT'
+            experiment_name += '_CoSegGT'
         else:
-            experiment_name += '_CoSegmentRend'
+            experiment_name += '_CoSegRend'
 
         if cfg_detail.model.useSeg:
-            experiment_name += '_DeSegmentGT'
+            experiment_name += '_DeSegGT'
         else:
-            experiment_name += '_DeSegmentRend'
+            experiment_name += '_DeSegRend'
 
         if not cfg_detail.model.use_detail_l1:
             experiment_name += '_NoDetL1'
@@ -282,9 +282,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=0):
             experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
         if cfg_coarse.model.shape_constrain_type != 'exchange':
-            experiment_name += f'_Co-{cfg_coarse.model.shape_constrain_type}'
+            experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
         if cfg_detail.model.detail_constrain_type != 'exchange':
-            experiment_name += f'_De-{cfg_coarse.model.detail_constrain_type}'
+            experiment_name += f'_De{cfg_coarse.model.detail_constrain_type}'
 
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
