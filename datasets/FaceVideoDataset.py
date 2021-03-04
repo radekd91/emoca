@@ -4,10 +4,6 @@ import pytorch_lightning as pl
 from PIL import Image
 import glob, os, sys
 from pathlib import Path
-# import pyvista as pv
-# from utils.mesh import load_mesh
-# from scipy.io import wavfile
-# import resampy
 import numpy as np
 import torch
 # import torchaudio
@@ -19,9 +15,7 @@ import compress_pickle as cpkl
 from tqdm import tqdm, auto
 # import subprocess
 from torchvision.transforms import Resize, Compose, Normalize
-# from decalib.deca import DECA
-# from decalib.datasets import datasets
-from datasets.EmotionalImageDataset import EmotionalImageDatasetOld, EmotionalImageDataset
+from datasets.EmotionalImageDataset import EmotionalImageDataset
 from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
@@ -1725,24 +1719,19 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                         with_segmentation=False,
                                         crash_on_missing_file=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
-        annotations = OrderedDict()
         detections = []
-        # annotations_all = []
         annotations_all = OrderedDict()
         for a in annotation_list:
             annotations_all[a] = []
         recognition_labels_all = []
-        discared_all = []
-        non_detected_all = []
 
-        # annotation_list += []
 
         import re
         if filter_pattern is not None:
             # p = re.compile(filter_pattern)
             p = re.compile(filter_pattern, re.IGNORECASE)
 
-        for si in range(self.num_sequences):
+        for si in auto.tqdm(range(self.num_sequences)):
             sequence_name = self.video_list[si]
 
             if filter_pattern is not None:
@@ -1768,8 +1757,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     if annotation_key in current_list:
                         current_list.remove(annotation_key)
                     array = annotations[annotation_name][annotation_key]
-                    if annotation_key not in annotations_all.keys():
-                        annotations_all[annotation_key] = []
                     annotations_all[annotation_key] += array.tolist()
                     n = array.shape[0]
 
@@ -1778,62 +1765,61 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     print("No desired GT is found. Skipping sequence %d" % si)
 
                 for annotation_name in current_list:
-                    annotations_all[annotation_name] = [None] * n
+                    annotations_all[annotation_name] += [None] * n
 
         print("Data gathered")
         print(f"Found {len(detections)} detections with annotations "
               f"of {len(set(recognition_labels_all))} identities")
 
+        # #TODO: delete debug code:
+        # N = 3000
+        # detections = detections[:N] + detections[-N:]
+        # recognition_labels_all = recognition_labels_all[:N] + recognition_labels_all[-N:]
+        # for key in annotations_all.keys():
+        #     annotations_all[key] = annotations_all[key][:N] + annotations_all[key][-N:]
+        # # end debug code : todo remove
+
+        invalid_indices = set()
         if not with_landmarks:
             landmarks = None
         else:
             landmarks = []
-            invalid_indices = set()
             print("Checking if every frame has a corresponding landmark file")
             for det_i, det in enumerate(auto.tqdm(detections)):
                 lmk = det.parents[3]
                 lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
                 lmk = lmk.parent / (lmk.stem + ".pkl")
-                if not (self.output_dir / lmk).is_file():
-                    if crash_on_missing_file:
-                        raise RuntimeError(f"Landmark does not exist {lmk}")
-                    else:
-                        print(f"Skipping sample {det} due to missing landmark")
-                        invalid_indices.add(det_i)
-                else:
-                    landmarks += [lmk]
-            invalid_indices = sorted(list(invalid_indices), reverse=True)
-            for idx in invalid_indices:
-                del detections[idx]
-                del recognition_labels_all[idx]
-                for key in annotations_all.keys():
-                    del annotations_all[key][idx]
+                file_exists = (self.output_dir / lmk).is_file()
+                if not file_exists and crash_on_missing_file:
+                    raise RuntimeError(f"Landmark does not exist {lmk}")
+                elif not file_exists:
+                    invalid_indices.add(det_i)
+                landmarks += [lmk]
 
         if not with_segmentation:
             segmentations = None
         else:
             segmentations = []
-            invalid_indices = set()
             print("Checking if every frame has a corresponding segmentation file")
             for det_i, det in enumerate(auto.tqdm(detections)):
                 seg = det.parents[3]
                 seg = seg / "segmentations" / (det.relative_to(seg / "detections"))
                 seg = seg.parent / (seg.stem + ".pkl")
-                if not (self.output_dir / seg).is_file():
-                    if crash_on_missing_file:
-                        raise RuntimeError(f"Landmark does not exist {seg}")
-                    else:
-                        print(f"Skipping sample {det} due to missing segmentation")
-                        invalid_indices.add(det_i)
-                else:
-                    segmentations += [seg]
-            invalid_indices = sorted(list(invalid_indices), reverse=True)
-            for idx in invalid_indices:
-                del detections[idx]
-                del recognition_labels_all[idx]
-                del landmarks[idx]
-                for key in annotations_all.keys():
-                    del annotations_all[key][idx]
+                file_exists = (self.output_dir / seg).is_file()
+                if not file_exists and crash_on_missing_file:
+                    raise RuntimeError(f"Landmark does not exist {seg}")
+                elif not file_exists:
+                    invalid_indices.add(det_i)
+                segmentations += [seg]
+
+        invalid_indices = sorted(list(invalid_indices), reverse=True)
+        for idx in invalid_indices:
+            del detections[idx]
+            del landmarks[idx]
+            del segmentations[idx]
+            del recognition_labels_all[idx]
+            for key in annotations_all.keys():
+                del annotations_all[key][idx]
 
         return detections, landmarks, segmentations, annotations_all, recognition_labels_all
 
@@ -1845,9 +1831,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       split_ratio=None,
                                       split_style=None,
                                       with_landmarks=False,
-                                      # landmark_transform=None,
                                       with_segmentations=False,
-                                      # segmentation_transform=None,
                                       K=None,
                                       K_policy=None,
                                       # if you add more parameters here, add them also to the hash list
@@ -1859,9 +1843,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                       split_ratio,
                       split_style,
                       with_landmarks,
-                      # landmark_transform, # TODO comment out
                       with_segmentations,
-                      # segmentation_transform, # TODO comment out
                       K,
                       K_policy,
                       # add new parameters here
@@ -2002,8 +1984,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 self.output_dir,
                 landmark_list=landmarks_train,
                 segmentation_list=segmentations_train,
-                # landmark_transform=landmark_transform,
-                # segmentation_transform=segmentation_transform,
                 K=K,
                 K_policy=K_policy)
 
@@ -2016,8 +1996,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 self.output_dir,
                 landmark_list=landmarks_val,
                 segmentation_list=segmentations_val,
-                # landmark_transform=landmark_transform,
-                # segmentation_transform=segmentation_transform,
                 # K=K,
                 K=1,
                 # K=None,
@@ -2044,9 +2022,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             image_transforms,
             self.output_dir,
             landmark_list=landmarks,
-            # landmark_transform=landmark_transform,
             segmentation_list=segmentations,
-            # segmentation_transform=segmentation_transform,
             K=K,
             K_policy=K_policy)
         print(f"Caching dataset to '{cache_folder}'")

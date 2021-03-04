@@ -210,6 +210,10 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
                  ):
         self.image_list = image_list
         self.annotations = annotations
+        for key in annotations:
+            if len(annotations[key]) != len(image_list):
+                raise RuntimeError("There must be an annotation of each type for every image but "
+                                   f"this is not the case for '{key}'")
         if len(labels) != len(image_list):
             raise RuntimeError("There must be a label for every image")
         self.labels = labels
@@ -325,7 +329,10 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         }
 
         for key in self.annotations.keys():
-            sample[key] = torch.tensor(self.annotations[key][index], dtype=torch.float32)
+            annotation = self.annotations[key][index]
+            if annotation is None:
+                continue
+            sample[key] = torch.tensor(annotation, dtype=torch.float32)
         if landmark is not None:
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:

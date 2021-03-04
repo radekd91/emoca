@@ -45,8 +45,7 @@ def prepare_data(cfg):
     fvdm.setup()
 
     index = cfg.data.sequence_index
-    annotation_list = copy.deepcopy(
-        cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
+    annotation_list = OmegaConf.to_container(copy.deepcopy(cfg.data.annotation_list))  # sth weird is modifying the list, that's why deep copy
     # annotation_list = cfg_coarse.data.annotation_list.copy()
     # index = -1 # TODO: delete
     # cfg.data.split_style = 'manual' # TODO: delete
@@ -81,9 +80,9 @@ def prepare_data(cfg):
             print("No GT for expressions. Skipping")
             # sys.exit(0)
 
-    index = cfg.data.sequence_index
-    annotation_list = copy.deepcopy(
-        cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
+    # index = cfg.data.sequence_index
+    # annotation_list = copy.deepcopy(
+    #     cfg.data.annotation_list)  # sth weird is modifying the list, that's why deep copy
     # annotation_list = cfg_coarse.data.annotation_list.copy()
 
     print(f"Looking for video {index} in {len(fvdm.video_list)}")
@@ -106,7 +105,7 @@ def prepare_data(cfg):
                            val_K_policy=cfg.learning.val_K_policy,
                            test_K=cfg.learning.test_K,
                            test_K_policy=cfg.learning.test_K_policy,
-                           annotation_list= copy.deepcopy(OmegaConf.to_container(annotation_list)),
+                           annotation_list= copy.deepcopy(annotation_list),
                            filter_pattern=filter_pattern,
                            num_workers=cfg.data.num_workers,
                            train_batch_size=cfg.learning.batch_size_train,
