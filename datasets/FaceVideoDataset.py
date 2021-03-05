@@ -1719,7 +1719,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                         with_segmentation=False,
                                         crash_on_missing_file=False):
         annotation_list = annotation_list or ['va', 'expr7', 'au8']
-        detections = []
+        detections_all = []
         annotations_all = OrderedDict()
         for a in annotation_list:
             annotations_all[a] = []
@@ -1750,8 +1750,8 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 continue
 
             current_list = annotation_list.copy()
-            for annotation_name, value in detection_fnames.items():
-                detections += value
+            for annotation_name, detection_list in detection_fnames.items():
+                detections_all += detection_list
                 # annotations_all += [annotations[key]]
                 for annotation_key in annotations[annotation_name].keys():
                     if annotation_key in current_list:
@@ -1760,7 +1760,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     annotations_all[annotation_key] += array.tolist()
                     n = array.shape[0]
 
-                recognition_labels_all += len(detections)*[annotation_name + "_" + str(recognition_labels[annotation_name])]
+                recognition_labels_all += len(detection_list)*[annotation_name + "_" + str(recognition_labels[annotation_name])]
                 if len(current_list) != len(annotation_list):
                     print("No desired GT is found. Skipping sequence %d" % si)
 
@@ -1768,12 +1768,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     annotations_all[annotation_name] += [None] * n
 
         print("Data gathered")
-        print(f"Found {len(detections)} detections with annotations "
+        print(f"Found {len(detections_all)} detections_all with annotations "
               f"of {len(set(recognition_labels_all))} identities")
 
         # #TODO: delete debug code:
         # N = 3000
-        # detections = detections[:N] + detections[-N:]
+        # detections_all = detections_all[:N] + detections_all[-N:]
         # recognition_labels_all = recognition_labels_all[:N] + recognition_labels_all[-N:]
         # for key in annotations_all.keys():
         #     annotations_all[key] = annotations_all[key][:N] + annotations_all[key][-N:]
@@ -1785,9 +1785,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
         else:
             landmarks = []
             print("Checking if every frame has a corresponding landmark file")
-            for det_i, det in enumerate(auto.tqdm(detections)):
+            for det_i, det in enumerate(auto.tqdm(detections_all)):
                 lmk = det.parents[3]
-                lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections"))
+                lmk = lmk / "landmarks" / (det.relative_to(lmk / "detections_all"))
                 lmk = lmk.parent / (lmk.stem + ".pkl")
                 file_exists = (self.output_dir / lmk).is_file()
                 if not file_exists and crash_on_missing_file:
@@ -1801,9 +1801,9 @@ class FaceVideoDataModule(pl.LightningDataModule):
         else:
             segmentations = []
             print("Checking if every frame has a corresponding segmentation file")
-            for det_i, det in enumerate(auto.tqdm(detections)):
+            for det_i, det in enumerate(auto.tqdm(detections_all)):
                 seg = det.parents[3]
-                seg = seg / "segmentations" / (det.relative_to(seg / "detections"))
+                seg = seg / "segmentations" / (det.relative_to(seg / "detections_all"))
                 seg = seg.parent / (seg.stem + ".pkl")
                 file_exists = (self.output_dir / seg).is_file()
                 if not file_exists and crash_on_missing_file:
@@ -1814,14 +1814,14 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         invalid_indices = sorted(list(invalid_indices), reverse=True)
         for idx in invalid_indices:
-            del detections[idx]
+            del detections_all[idx]
             del landmarks[idx]
             del segmentations[idx]
             del recognition_labels_all[idx]
             for key in annotations_all.keys():
                 del annotations_all[key][idx]
 
-        return detections, landmarks, segmentations, annotations_all, recognition_labels_all
+        return detections_all, landmarks, segmentations, annotations_all, recognition_labels_all
 
 
     def get_annotated_emotion_dataset(self,

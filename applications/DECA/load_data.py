@@ -38,7 +38,7 @@ def load_data(path_to_models=None,
     cfg = conf[stage]
 
     if relative_to_path is not None and replace_root_path is not None:
-        checkpoint = find_checkpoint(cfg, replace_root_path, relative_to_path, ckpt_index=ckpt_index)
+        checkpoint = find_checkpoint(cfg, replace_root_path, relative_to_path, mode=ckpt_index)
         print(f"Loading checkpoint '{checkpoint}'")
         cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
