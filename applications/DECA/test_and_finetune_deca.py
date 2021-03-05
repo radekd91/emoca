@@ -75,7 +75,7 @@ def prepare_data(cfg):
             filters += ['VA_Set']
         if 'expr7' in annotation_list:
             filters += ['Expression_Set']
-        if 'au' in annotation_list:
+        if 'au8' in annotation_list:
             filters += ['AU_Set']
         filter_pattern = f"({'|'.join(filters)})"
         if len(filters) == 0:
