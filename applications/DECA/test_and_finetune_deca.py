@@ -19,7 +19,7 @@ import copy
 
 project_name = 'EmotionalDeca'
 
-def find_latest_checkpoint(cfg):
+def find_checkpoint(cfg, mode='latest' ):
     print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
     checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
     if len(checkpoints) == 0:
@@ -33,8 +33,27 @@ def find_latest_checkpoint(cfg):
         print(f"Found {len(checkpoints)} checkpoints")
     for ckpt in checkpoints:
         print(f" - {str(ckpt)}")
-    checkpoint = str(checkpoints[-1])
-    return checkpoint
+
+    if isinstance(mode, int):
+        checkpoint = str(checkpoints[mode])
+        return checkpoint
+    if mode == 'latest':
+        checkpoint = str(checkpoints[-1])
+        return checkpoint
+    if mode == 'best':
+        min_value = 999999999999999.
+        min_idx = -1
+        for idx, ckpt in enumerate(checkpoints):
+            end_idx = str(ckpt.stem).rfind('=') + 1
+            loss_value = float(str(ckpt.stem)[end_idx:])
+            if loss_value <= min_value:
+                min_value = loss_value
+                min_idx = idx
+        if min_idx == -1:
+            raise RuntimeError("Finding the best checkpoint failed")
+        checkpoint = str(checkpoints[min_idx])
+        return checkpoint
+    raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
 
 
 def prepare_data(cfg):
@@ -177,8 +196,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     callbacks = []
     checkpoint_callback = ModelCheckpoint(
         monitor=loss_to_monitor,
-        # filename='deca-{epoch:02d}-{val_loss:.2f}',
-        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.2f}',
+        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.4f}',
         save_top_k=3,
         save_last=True,
         mode='min',
@@ -209,6 +227,13 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)
+        deca = DecaModule.load_from_checkpoint(checkpoint_callback.best_model_path,
+                                               model_params=cfg.model,
+                                               learning_params=cfg.learning,
+                                               inout_params=cfg.inout,
+                                               stage_name=prefix
+                                               )
+
     elif stage == "test":
         # trainer.test(deca,
         #              test_dataloaders=[test_data_loader],
@@ -391,7 +416,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
         # for ckpt in checkpoints:
         #     print(f" - {str(ckpt)}")
         # checkpoint = str(checkpoints[-1])
-        checkpoint = find_latest_checkpoint(configs[start_i-1])
+        checkpoint = find_checkpoint(configs[start_i - 1], 'best')
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
         configs[start_i-1].model.resume_training = False # make sure the training is not magically resumed by the old code
         checkpoint_kwargs = {

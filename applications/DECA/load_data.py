@@ -1,7 +1,7 @@
 from models.DECA import DecaModule
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
-from applications.DECA.train_deca_modular import find_latest_checkpoint
+from applications.DECA.train_deca_modular import find_checkpoint
 from applications.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
@@ -38,7 +38,7 @@ def load_data(path_to_models=None,
     cfg = conf[stage]
 
     if relative_to_path is not None and replace_root_path is not None:
-        checkpoint = find_latest_checkpoint(cfg, replace_root_path, relative_to_path, ckpt_index=ckpt_index)
+        checkpoint = find_checkpoint(cfg, replace_root_path, relative_to_path, ckpt_index=ckpt_index)
         print(f"Loading checkpoint '{checkpoint}'")
         cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
@@ -52,8 +52,9 @@ def load_data(path_to_models=None,
 
 
     # annotation_list = ['va', 'expr7', 'au8']
-    annotation_list = ['va', 'expr7',]
+    # annotation_list = ['va', 'expr7',]
     # annotation_list = ['va']
+    annotation_list = ['expr7']
     index = -1
     cfg.data.split_style = 'manual'
     cfg.data.annotation_list = annotation_list

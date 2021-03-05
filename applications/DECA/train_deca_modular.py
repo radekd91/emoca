@@ -19,7 +19,7 @@ def create_experiment_name():
     return "DECA_training"
 
 
-def find_latest_checkpoint(cfg, replace_root = None, relative_to = None, ckpt_index=-1):
+def find_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
     checkpoint_dir = cfg.inout.checkpoint_dir
     if replace_root is not None and relative_to is not None:
         checkpoint_dir = str(Path(replace_root) / Path(checkpoint_dir).relative_to(relative_to))
@@ -36,8 +36,27 @@ def find_latest_checkpoint(cfg, replace_root = None, relative_to = None, ckpt_in
         print(f"Found {len(checkpoints)} checkpoints")
     for ckpt in checkpoints:
         print(f" - {str(ckpt)}")
-    checkpoint = str(checkpoints[ckpt_index])
-    return checkpoint
+
+    if isinstance(mode, int):
+        checkpoint = str(checkpoints[mode])
+        return checkpoint
+    if mode == 'latest':
+        checkpoint = str(checkpoints[-1])
+        return checkpoint
+    if mode == 'best':
+        min_value = 999999999999999.
+        min_idx = -1
+        for idx, ckpt in enumerate(checkpoints):
+            end_idx = str(ckpt.stem).rfind('=') + 1
+            loss_value = float(str(ckpt.stem)[end_idx:])
+            if loss_value <= min_value:
+                min_value = loss_value
+                min_idx = idx
+        if min_idx == -1:
+            raise RuntimeError("Finding the best checkpoint failed")
+        checkpoint = str(checkpoints[min_idx])
+        return checkpoint
+    raise RuntimeError("")
 
 
 def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_names: list, start_i=0, prepare_data=None):
@@ -106,7 +125,7 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
         # for ckpt in checkpoints:
         #     print(f" - {str(ckpt)}")
         # checkpoint = str(checkpoints[-1])
-        checkpoint = find_latest_checkpoint(configs[start_i-1])
+        checkpoint = find_checkpoint(configs[start_i - 1])
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
         configs[start_i - 1].model.resume_training = False
         checkpoint_kwargs = {
