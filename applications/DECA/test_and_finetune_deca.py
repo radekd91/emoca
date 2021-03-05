@@ -227,12 +227,19 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)
-        deca = DecaModule.load_from_checkpoint(checkpoint_callback.best_model_path,
-                                               model_params=cfg.model,
-                                               learning_params=cfg.learning,
-                                               inout_params=cfg.inout,
-                                               stage_name=prefix
-                                               )
+        if hasattr(cfg.inout, 'checkpoint_after_training'):
+            if cfg.inout.checkpoint_after_training == 'best':
+                deca = DecaModule.load_from_checkpoint(checkpoint_callback.best_model_path,
+                                                       model_params=cfg.model,
+                                                       learning_params=cfg.learning,
+                                                       inout_params=cfg.inout,
+                                                       stage_name=prefix
+                                                       )
+            elif cfg.inout.checkpoint_after_training == 'latest':
+                pass # do nothing, the latest is obviously loaded
+            else:
+                print(f"[WARNING] Unexpected value of cfg.inout.checkpoint_after_training={cfg.inout.checkpoint_after_training}. "
+                      f"Will do nothing")
 
     elif stage == "test":
         # trainer.test(deca,
@@ -410,13 +417,10 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     checkpoint = None
     checkpoint_kwargs = None
     if start_i > 0:
-        # print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
-        # checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        # print(f"Found {len(checkpoints)} checkpoints")
-        # for ckpt in checkpoints:
-        #     print(f" - {str(ckpt)}")
-        # checkpoint = str(checkpoints[-1])
-        checkpoint = find_checkpoint(configs[start_i - 1], 'best')
+        checkpoint_mode = 'latest'
+        if hasattr(configs[start_i - 1].inout, 'checkpoint_after_training'):
+            checkpoint_mode = configs[start_i - 1].inout.checkpoint_after_training
+        checkpoint = find_checkpoint(configs[start_i - 1], checkpoint_mode)
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
         configs[start_i-1].model.resume_training = False # make sure the training is not magically resumed by the old code
         checkpoint_kwargs = {

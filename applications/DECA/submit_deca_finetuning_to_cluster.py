@@ -159,7 +159,7 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
 
-        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
 
         [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
             ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
