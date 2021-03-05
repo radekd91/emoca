@@ -50,7 +50,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         experiment_name = create_experiment_name()
-        full_run_dir = Path(configs[0].inout.output_dir) / experiment_name
+        full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
     else:
         experiment_name = cfg_coarse.inout.name

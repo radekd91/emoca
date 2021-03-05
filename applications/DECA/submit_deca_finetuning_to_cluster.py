@@ -139,7 +139,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
