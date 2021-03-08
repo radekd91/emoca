@@ -114,8 +114,8 @@ def finetune_on_all_sequences():
     # test_vis_frequency: 30
     # val_vis_frequency: 200
     # train_vis_frequency: 100
-    fixed_overrides_coarse = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "test_vis_frequency=1000"]
-    fixed_overrides_detail = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "test_vis_frequency=1000"]
+    fixed_overrides_coarse = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "model.test_vis_frequency=1000"]
+    fixed_overrides_detail = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "model.test_vis_frequency=1000"]
 
     emonet_weights = [0.15/100,] # new default
     # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
