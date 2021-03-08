@@ -51,15 +51,15 @@ def load_data(path_to_models=None,
     }
 
 
-    # # annotation_list = ['va', 'expr7', 'au8']
+    annotation_list = ['va', 'expr7', 'au8']
     # # annotation_list = ['va', 'expr7',]
     # # annotation_list = ['va']
     # # annotation_list = ['expr7']
     # annotation_list = ['au8']
-    # index = -1
-    # cfg.data.split_style = 'manual'
-    # cfg.data.annotation_list = annotation_list
-    # cfg.data.sequence_index = index
+    index = -1
+    cfg.data.split_style = 'manual'
+    cfg.data.annotation_list = annotation_list
+    cfg.data.sequence_index = index
     dm, name = prepare_data(cfg)
     dm.setup()
     return dm
@@ -68,9 +68,16 @@ def load_data(path_to_models=None,
 def test(dm, image_index = None, values = None):
     if image_index is None and values is None:
         raise ValueError("Specify either an image to encode-decode or values to decode.")
-    test_set = dm.test_set
-    image_index = 0
-    dm.test_set[image_index]
+    print(f"Training set size: {len(dm.training_set)}")
+    print(f"Validation set size: {len(dm.validation_set)}")
+    print(f"Test set size: {len(dm.test_set)}")
+
+    import numpy as np
+    idxs = np.arange(len(dm.training_set), dtype=np.int32)
+    np.random.shuffle(idxs)
+    for i in range(1000):
+        sample = dm.training_set[idxs[i]]
+        # dm.training_set.visualize_sample(sample)
     print("Done")
 
 

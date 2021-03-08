@@ -326,13 +326,33 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         sample = {
             "image": numpy_image_to_torch(img),
             "path": str(self.image_list[index]),
+            "label": str(self.labels[index]),
         }
 
         for key in self.annotations.keys():
             annotation = self.annotations[key][index]
-            if annotation is None:
+            if isinstance(annotation, int):
+                annotation = [annotation]
+
+            if annotation is None or len(annotation) == 0:
+                if key == 'au8':
+                    sample[key] = torch.tensor([float('nan')]*8)
+                elif key == 'expr7':
+                    sample[key] = torch.tensor([float('nan')]*2)[0:1]
+                elif key == 'va':
+                    sample[key] = torch.tensor([float('nan')]*2)
+                else:
+                    raise RuntimeError(f"Unknown annotation type: '{key}'")
+                # print(f"{key}, size {sample[key].size()}")
+                if len(sample[key].size()) == 0:
+                    print(f"[WARNING] Annotation '{key}' is empty for some reason and will be invalidated")
                 continue
             sample[key] = torch.tensor(annotation, dtype=torch.float32)
+            if len(sample[key].size()) == 0:
+                print(f"[WARNING] Annotation '{key}' is empty for some reason (even though it was not None and will be invalidated")
+                print("annotation value: ")
+                print(annotation)
+
         if landmark is not None:
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
@@ -355,9 +375,17 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         label_indices = self.label2index[label]
 
         if self.K_policy == 'random':
-            indices = np.arange(len(label_indices), dtype=np.int32)
-            np.random.shuffle(indices)
-            indices = indices[:self.K-1]
+            picked_label_indices = np.arange(len(label_indices), dtype=np.int32)
+            # print("Size of label_indices:")
+            # print(len(label_indices))
+            np.random.shuffle(picked_label_indices)
+            if len(label_indices) < self.K-1:
+                print(f"[WARNING]. Label '{label}' only has {len(label_indices)} samples which is less than {self.K}. S"
+                      f"ome samples will be duplicated")
+                picked_label_indices = np.concatenate(self.K*[picked_label_indices], axis=0)
+
+            picked_label_indices = picked_label_indices[:self.K-1]
+            indices = [label_indices[i] for i in picked_label_indices]
         elif self.K_policy == 'sequential':
             indices = []
             idx = label_indices.index(index) + 1
@@ -372,6 +400,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         batches = []
         batches += [self._get_sample(index)]
         for i in range(self.K-1):
+            # idx = indices[i]
             idx = indices[i]
             batches += [self._get_sample(idx)]
 
@@ -382,7 +411,19 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         #             combined_batch[key] = []
         #         combined_batch[key] += [value]
 
-        combined_batch = default_collate(batches)
+        try:
+            combined_batch = default_collate(batches)
+        except RuntimeError as e:
+            print(f"Failed for index {index}")
+            # print("Failed paths: ")
+            for bi, batch in enumerate(batches):
+                print(f"Index= {bi}")
+                print(f"Path='{batch['path']}")
+                print(f"Label='{batch['label']}")
+                for key in batch:
+                    if isinstance(batch[key], torch.Tensor):
+                        print(f"{key} shape='{batch[key].shape}")
+            raise e
 
         # end = timer()
         # print(f"Reading sample {index} took {end - start}s")
@@ -423,6 +464,10 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             if 'mask' in sample.keys():
                 index_axis(k, i).imshow(sample["mask"][k, ...].numpy().transpose([1,2,0]), cmap='gray')
                 i += 1
+
+            print(f"Path {k} = {sample['path'][k]}")
+            print(f"Label {k} = {sample['label'][k]}")
+
 
         plt.show()
 

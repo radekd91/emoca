@@ -112,10 +112,14 @@ class EmotionDataModule(pl.LightningDataModule):
         # im_transforms = Resize((self.image_size, self.image_size))
         # lmk_transforms = KeypointNormalization()
         # seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
+        if self.split_style == 'manual':
+            test_filter_pattern = "Test_Set"
+        else:
+            test_filter_pattern = self.filter_pattern
         self.test_set = self.dm.get_annotated_emotion_dataset(
             copy.deepcopy(self.annotation_list),
             # self.annotation_list.copy(),
-            self.filter_pattern,
+            test_filter_pattern,
             image_transforms=im_transforms_test,
             with_landmarks = self.with_landmarks,
             # landmark_transform=lmk_transforms,
