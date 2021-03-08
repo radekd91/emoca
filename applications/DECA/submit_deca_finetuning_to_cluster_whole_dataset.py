@@ -64,91 +64,11 @@ def submit(cfg_coarse, cfg_detail, bid=10):
                        )
 
 
-
-test_video_indices = [
- 148,
- 399,
- 169,
- 167,
- 195,
- 207,
- 241,
- 269,
- 294,
- 374,
- 380,
- 381,
- 382,
- 385,
- 390,
- 394,
- 397,
- 404,
- 151,
- 161,
- 393,
- 145,
- 150,
-]
-
-test_videos = [
-    '119-30-848x480.mp4', # black lady with at Oscars
-    '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
-    '19-24-1920x1080.mp4', # angry young black guy on stage
-    '17-24-1920x1080.mp4', # black guy on stage, difficult light
-    '23-24-1920x1080.mp4', # white woman, over-articulated expressions
-    '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
-    '28-30-1280x720-1.mp4', # angry black guy
-    '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
-    '34-25-1920x1080.mp4', # white guy, mostly neutral
-    '50-30-1920x1080.mp4', # baby
-    '60-30-1920x1080.mp4', # smiling asian woman
-    '61-24-1920x1080.mp4', # very lively white woman
-    '63-30-1920x1080.mp4', # smiling asian woman
-    '66-25-1080x1920.mp4', # white girl acting out an emotional performance
-    '71-30-1920x1080.mp4', # old white woman, camera shaking
-    '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
-    '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
-    '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
-    '111-25-1920x1080.mp4', # disgusted white guy
-    '121-24-1920x1080.mp4', # white guy scared and happy faces
-]
-
-test_video_dict = {
-    # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
-    148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
-    # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
-    # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
-    # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
-    # # 195: '23-24-1920x1080.mp4', # white woman, over-articulated expressions
-    # 207: '24-30-1920x1080-2.mp4', # white woman, over-articulated expressions
-    # # 241: '28-30-1280x720-1.mp4', # angry black guy
-    # # 269: '31-30-1920x1080.mp4', # crazy white guy, beard, view from the side
-    # # 294: '34-25-1920x1080.mp4', # white guy, mostly neutral
-    # # 374: '50-30-1920x1080.mp4', # baby
-    # # 380: '60-30-1920x1080.mp4', # smiling asian woman
-    # 381: '61-24-1920x1080.mp4', # very lively white woman
-    # 382: '63-30-1920x1080.mp4', # smiling asian woman
-    # 385: '66-25-1080x1920.mp4', # white girl acting out an emotional performance
-    # # 390: '71-30-1920x1080.mp4', # old white woman, camera shaking
-    # # 394: '83-24-1920x1080.mp4', # excited black guy (but expressions mostly neutral)
-    # # 397: '87-25-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
-    # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
-    # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
-    # 145: '111-25-1920x1080.mp4', # disgusted white guy
-    # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
-}
-
-def finetune_on_selected_sequences():
+def finetune_on_all_sequences():
     from hydra.core.global_hydra import GlobalHydra
 
-    coarse_conf = "deca_finetune_coarse_cluster"
-    detail_conf = "deca_finetune_detail_cluster"
+    coarse_conf = "deca_finetune_coarse_cluster_all"
+    detail_conf = "deca_finetune_detail_cluster_all"
 
     finetune_modes = [
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
@@ -158,9 +78,6 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
-
-        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']],
-        # segmentation coarse, DATA AUGMENTATION, entire dataset
 
         [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
 
@@ -193,39 +110,39 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet']],
         # with emonet loss, segmentation coarse
     ]
-    fixed_overrides_coarse = []
-    fixed_overrides_detail = []
 
-    # emonet_weights = [0.15,] # old default
+    # test_vis_frequency: 30
+    # val_vis_frequency: 200
+    # train_vis_frequency: 100
+    fixed_overrides_coarse = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "test_vis_frequency=1000"]
+    fixed_overrides_detail = ["model.val_vis_frequency=3000", "model.train_vis_frequency=500", "test_vis_frequency=1000"]
+
     emonet_weights = [0.15/100,] # new default
     # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
 
     config_pairs = []
-    # video_indices = test_video_dict.keys()
-    video_indices = [-1]
-    for i, video_index in enumerate(video_indices):
-        for emeonet_reg in emonet_weights:
-            for fmode in finetune_modes:
-                coarse_overrides = fixed_overrides_coarse.copy()
-                detail_overrides = fixed_overrides_detail.copy()
-                # if len(fmode[0]) != "":
-                coarse_overrides += fmode[0]
-                detail_overrides += fmode[1]
+    for emeonet_reg in emonet_weights:
+        for fmode in finetune_modes:
+            coarse_overrides = fixed_overrides_coarse.copy()
+            detail_overrides = fixed_overrides_detail.copy()
+            # if len(fmode[0]) != "":
+            coarse_overrides += fmode[0]
+            detail_overrides += fmode[1]
 
-                emonet_weight_override = f'model.emonet_weight={emeonet_reg}'
-                data_override = f'data.sequence_index={video_index}'
-                coarse_overrides += [data_override]
-                detail_overrides += [data_override]
-                coarse_overrides += [emonet_weight_override]
-                detail_overrides += [emonet_weight_override]
+            emonet_weight_override = f'model.emonet_weight={emeonet_reg}'
+            # data_override = f'data.sequence_index={video_index}'
+            # coarse_overrides += [data_override]
+            # detail_overrides += [data_override]
+            coarse_overrides += [emonet_weight_override]
+            detail_overrides += [emonet_weight_override]
 
-                cfgs = test_and_finetune_deca.configure(
-                    coarse_conf, coarse_overrides, detail_conf, detail_overrides)
+            cfgs = test_and_finetune_deca.configure(
+                coarse_conf, coarse_overrides, detail_conf, detail_overrides)
 
-                GlobalHydra.instance().clear()
-                config_pairs += [cfgs]
+            GlobalHydra.instance().clear()
+            config_pairs += [cfgs]
 
-                submit(cfgs[0], cfgs[1])
+            submit(cfgs[0], cfgs[1])
                 # break
             # break
 
@@ -234,10 +151,10 @@ def finetune_on_selected_sequences():
 
 
 def default_main():
-    coarse_conf = "deca_finetune_coarse_cluster"
+    coarse_conf = "deca_finetune_coarse_cluster_all"
     coarse_overrides = []
 
-    detail_conf = "deca_finetune_detail_cluster"
+    detail_conf = "deca_finetune_detail_cluster_all"
     detail_overrides = []
 
     cfg_coarse, cfg_detail = test_and_finetune_deca.configure(
@@ -248,5 +165,5 @@ def default_main():
 
 if __name__ == "__main__":
     # default_main()
-    finetune_on_selected_sequences()
+    finetune_on_all_sequences()
 

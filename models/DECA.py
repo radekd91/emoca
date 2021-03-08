@@ -709,7 +709,7 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[stage_str + 'step'] = self.global_step
         losses_and_metrics_to_log[stage_str + 'batch_idx'] = batch_idx
         # self._val_to_be_logged(losses_and_metrics_to_log)
-        if self.global_step % self.deca.config.val_vis_frequency == 0:
+        if batch_idx % self.deca.config.val_vis_frequency == 0:
             uv_detail_normals = None
             if 'uv_detail_normals' in values.keys():
                 uv_detail_normals = values['uv_detail_normals']

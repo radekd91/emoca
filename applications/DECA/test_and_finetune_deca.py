@@ -492,6 +492,7 @@ def main():
                 coarse_conf = OmegaConf.load(f)
             with open(sys.argv[2], 'r') as f:
                 detail_conf = OmegaConf.load(f)
+
         else:
             coarse_conf = sys.argv[1]
             detail_conf = sys.argv[2]

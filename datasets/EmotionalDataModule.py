@@ -112,6 +112,11 @@ class EmotionDataModule(pl.LightningDataModule):
         # im_transforms = Resize((self.image_size, self.image_size))
         # lmk_transforms = KeypointNormalization()
         # seg_transforms = Resize((self.image_size, self.image_size), Image.NEAREST)
+        if self.split_style in ['sequential_by_label', 'random_by_label']:
+            self.test_set = copy.deepcopy(self.validation_set)
+            self.test_set.K = self.test_K
+            self.test_set.K_policy = self.test_K_policy
+            return
         if self.split_style == 'manual':
             test_filter_pattern = "Test_Set"
         else:
