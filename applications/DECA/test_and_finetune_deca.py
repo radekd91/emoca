@@ -219,7 +219,13 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if 'val_check_interval' in cfg.model.keys():
         val_check_interval = cfg.model.val_check_interval
 
-    trainer = Trainer(gpus=cfg.learning.num_gpus, max_epochs=cfg.model.max_epochs,
+    max_steps = None
+    if hasattr(cfg.model, 'max_steps'):
+        max_steps = cfg.model.max_steps
+
+    trainer = Trainer(gpus=cfg.learning.num_gpus,
+                      max_epochs=cfg.model.max_epochs,
+                      max_steps=max_steps,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
                       accelerator=accelerator,

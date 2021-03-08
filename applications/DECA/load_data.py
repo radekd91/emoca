@@ -63,6 +63,7 @@ def load_data(path_to_models=None,
     cfg.data.split_style = 'sequential_by_label'
     cfg.data.annotation_list = annotation_list
     cfg.data.sequence_index = index
+    cfg.learning.train_K_policy = 'sequential'
     dm, name = prepare_data(cfg)
     dm.setup()
     return dm
