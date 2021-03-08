@@ -239,8 +239,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if stage == "train":
         # trainer.fit(deca, train_dataloader=train_data_loader, val_dataloaders=[val_data_loader, ])
         trainer.fit(deca, datamodule=dm)
-        if hasattr(cfg.inout, 'checkpoint_after_training'):
-            if cfg.inout.checkpoint_after_training == 'best':
+        if hasattr(cfg.learning, 'checkpoint_after_training'):
+            if cfg.learning.checkpoint_after_training == 'best':
                 print(f"Loading the best checkpoint after training '{checkpoint_callback.best_model_path}'.")
                 deca = DecaModule.load_from_checkpoint(checkpoint_callback.best_model_path,
                                                        model_params=cfg.model,
@@ -248,11 +248,11 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                                                        inout_params=cfg.inout,
                                                        stage_name=prefix
                                                        )
-            elif cfg.inout.checkpoint_after_training == 'latest':
+            elif cfg.learning.checkpoint_after_training == 'latest':
                 print(f"Keeping the lastest weights after training.")
                 pass # do nothing, the latest is obviously loaded
             else:
-                print(f"[WARNING] Unexpected value of cfg.inout.checkpoint_after_training={cfg.inout.checkpoint_after_training}. "
+                print(f"[WARNING] Unexpected value of cfg.learning.checkpoint_after_training={cfg.learning.checkpoint_after_training}. "
                       f"Will do nothing")
 
     elif stage == "test":
@@ -431,8 +431,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     checkpoint_kwargs = None
     if start_i > 0:
         checkpoint_mode = 'latest'
-        if hasattr(configs[start_i - 1].inout, 'checkpoint_after_training'):
-            checkpoint_mode = configs[start_i - 1].inout.checkpoint_after_training
+        if hasattr(configs[start_i - 1].learning, 'checkpoint_after_training'):
+            checkpoint_mode = configs[start_i - 1].learning.checkpoint_after_training
         checkpoint = find_checkpoint(configs[start_i - 1], checkpoint_mode)
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
         configs[start_i-1].model.resume_training = False # make sure the training is not magically resumed by the old code
