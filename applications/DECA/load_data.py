@@ -5,6 +5,7 @@ from applications.DECA.train_deca_modular import find_checkpoint
 from applications.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
+from tqdm import auto
 
 
 def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
@@ -57,7 +58,9 @@ def load_data(path_to_models=None,
     # # annotation_list = ['expr7']
     # annotation_list = ['au8']
     index = -1
-    cfg.data.split_style = 'manual'
+    # cfg.data.split_style = 'manual'
+    # cfg.data.split_style = 'random_by_label'
+    cfg.data.split_style = 'sequential_by_label'
     cfg.data.annotation_list = annotation_list
     cfg.data.sequence_index = index
     dm, name = prepare_data(cfg)
@@ -75,9 +78,9 @@ def test(dm, image_index = None, values = None):
     import numpy as np
     idxs = np.arange(len(dm.training_set), dtype=np.int32)
     np.random.shuffle(idxs)
-    for i in range(1000):
+    for i in auto.tqdm(range(1000)):
         sample = dm.training_set[idxs[i]]
-        # dm.training_set.visualize_sample(sample)
+        dm.training_set.visualize_sample(sample)
     print("Done")
 
 

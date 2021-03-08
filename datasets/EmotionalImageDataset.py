@@ -46,7 +46,7 @@ class EmotionalImageDatasetOld(torch.utils.data.Dataset):
             if self.K_policy not in ['random', 'sequential']:
                 raise ValueError(f"Invalid K policy {self.K_policy}")
 
-        self.labels_set = set(self.labels)
+        self.labels_set = sorted(list(set(self.labels)))
         self.label2index = {}
 
         for label in self.labels_set:
@@ -235,7 +235,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
             if self.K_policy not in ['random', 'sequential']:
                 raise ValueError(f"Invalid K policy {self.K_policy}")
 
-        self.labels_set = set(self.labels)
+        self.labels_set = sorted(list(set(self.labels)))
         self.label2index = {}
 
         for label in self.labels_set:

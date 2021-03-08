@@ -1867,73 +1867,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             print(f"Saving done.")
 
         if split_ratio is not None and split_style is not None:
-            print(f"Splitting the dataset. Split style '{split_style}', split ratio: '{split_ratio}'")
-            if image_transforms is not None:
-                if not isinstance(image_transforms, list) or len(image_transforms) != 2:
-                    raise ValueError("You have to provide image transforms for both trainng and validation sets")
-            idxs = np.arange(len(detections), dtype=np.int32)
-            if split_style == 'random':
-                np.random.seed(0)
-                np.random.shuffle(idxs)
-                split_idx = int(idxs.size * split_ratio)
-                idx_train = idxs[:split_idx]
-                idx_val = idxs[split_idx:]
-            elif split_style == 'manual':
-                idx_train = []
-                idx_val = []
-                for i, det in enumerate(auto.tqdm(detections)):
-                    if 'Train_Set' in str(det):
-                        idx_train += [i]
-                    elif 'Validation_Set' in str(det):
-                        idx_val += [i]
-                    else:
-                        idx_val += [i]
-
-            elif split_style == 'sequential':
-                split_idx = int(idxs.size * split_ratio)
-                idx_train = idxs[:split_idx]
-                idx_val = idxs[split_idx:]
-            else:
-                raise ValueError(f"Invalid split style {split_style}")
-
-            if split_ratio < 0 or split_ratio > 1:
-                raise ValueError(f"Invalid split ratio {split_ratio}")
-
-            def index_list_by_list(l, idxs):
-                return [l[i] for i in idxs]
-
-            def index_dict_by_list(d, idxs):
-                res =  d.__class__()
-                for key in d.keys():
-                    res[key] = [d[key][i] for i in idxs]
-                return res
-
-            detection_train = index_list_by_list(detections, idx_train)
-            annotations_train = index_dict_by_list(annotations, idx_train)
-            recognition_labels_train = index_list_by_list(recognition_labels, idx_train)
-            if with_landmarks:
-                landmarks_train = index_list_by_list(landmarks, idx_train)
-            else:
-                landmarks_train = None
-
-            if with_segmentations:
-                segmentations_train = index_list_by_list(segmentations, idx_train)
-            else:
-                segmentations_train = None
-
-            detection_val = index_list_by_list(detections, idx_val)
-            annotations_val = index_dict_by_list(annotations, idx_val)
-            recognition_labels_val = index_list_by_list(recognition_labels, idx_val)
-
-            if with_landmarks:
-                landmarks_val = index_list_by_list(landmarks, idx_val)
-            else:
-                landmarks_val = None
-
-            if with_segmentations:
-                segmentations_val = index_list_by_list(segmentations, idx_val)
-            else:
-                segmentations_val = None
 
             hash_list = tuple([annotation_list,
                                filter_pattern,
@@ -1959,6 +1892,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                      segmentations_train = pkl.load(f)
                      annotations_train = pkl.load(f)
                      recognition_labels_train = pkl.load(f)
+                     idx_train = pkl.load(f)
                 with open(cache_folder / "lists_val.pkl", "rb") as f:
                     # validation
                      detection_val = pkl.load(f)
@@ -1966,8 +1900,110 @@ class FaceVideoDataModule(pl.LightningDataModule):
                      segmentations_val = pkl.load(f)
                      annotations_val = pkl.load(f)
                      recognition_labels_val = pkl.load(f)
+                     idx_val = pkl.load(f)
                 print("Loading done")
             else:
+                print(f"Splitting the dataset. Split style '{split_style}', split ratio: '{split_ratio}'")
+                if image_transforms is not None:
+                    if not isinstance(image_transforms, list) or len(image_transforms) != 2:
+                        raise ValueError("You have to provide image transforms for both trainng and validation sets")
+                idxs = np.arange(len(detections), dtype=np.int32)
+                if split_style == 'random':
+                    np.random.seed(0)
+                    np.random.shuffle(idxs)
+                    split_idx = int(idxs.size * split_ratio)
+                    idx_train = idxs[:split_idx]
+                    idx_val = idxs[split_idx:]
+                elif split_style == 'manual':
+                    idx_train = []
+                    idx_val = []
+                    for i, det in enumerate(auto.tqdm(detections)):
+                        if 'Train_Set' in str(det):
+                            idx_train += [i]
+                        elif 'Validation_Set' in str(det):
+                            idx_val += [i]
+                        else:
+                            idx_val += [i]
+
+                elif split_style == 'sequential':
+                    split_idx = int(idxs.size * split_ratio)
+                    idx_train = idxs[:split_idx]
+                    idx_val = idxs[split_idx:]
+                elif split_style == 'random_by_label':
+                    idx_train = []
+                    idx_val = []
+                    unique_labels = sorted(list(set(recognition_labels)))
+                    np.random.seed(0)
+                    print(f"Going through {len(unique_labels)} unique labels and splitting its samples into "
+                          f"training/validations set randomly.")
+                    for li, label in enumerate(auto.tqdm(unique_labels)):
+                        label_indices = np.array([i for i in range(len(recognition_labels)) if recognition_labels[i] == label],
+                                                 dtype=np.int32)
+                        np.random.shuffle(label_indices)
+                        split_idx = int(len(label_indices) * split_ratio)
+                        i_train = label_indices[:split_idx]
+                        i_val = label_indices[split_idx:]
+                        idx_train += i_train.tolist()
+                        idx_val += i_val.tolist()
+                    idx_train = np.array(idx_train, dtype= np.int32)
+                    idx_val = np.array(idx_val, dtype= np.int32)
+                elif split_style == 'sequential_by_label':
+                    idx_train = []
+                    idx_val = []
+                    unique_labels = sorted(list(set(recognition_labels)))
+                    print(f"Going through {len(unique_labels)} unique labels and splitting its samples into "
+                          f"training/validations set sequentially.")
+                    for li, label in enumerate(auto.tqdm(unique_labels)):
+                        label_indices = [i for i in range(len(recognition_labels)) if recognition_labels[i] == label]
+                        split_idx = int(len(label_indices) * split_ratio)
+                        i_train = label_indices[:split_idx]
+                        i_val = label_indices[split_idx:]
+                        idx_train += i_train
+                        idx_val += i_val
+                    idx_train = np.array(idx_train, dtype= np.int32)
+                    idx_val = np.array(idx_val, dtype= np.int32)
+                else:
+                    raise ValueError(f"Invalid split style {split_style}")
+
+                if split_ratio < 0 or split_ratio > 1:
+                    raise ValueError(f"Invalid split ratio {split_ratio}")
+
+                def index_list_by_list(l, idxs):
+                    return [l[i] for i in idxs]
+
+                def index_dict_by_list(d, idxs):
+                    res = d.__class__()
+                    for key in d.keys():
+                        res[key] = [d[key][i] for i in idxs]
+                    return res
+
+                detection_train = index_list_by_list(detections, idx_train)
+                annotations_train = index_dict_by_list(annotations, idx_train)
+                recognition_labels_train = index_list_by_list(recognition_labels, idx_train)
+                if with_landmarks:
+                    landmarks_train = index_list_by_list(landmarks, idx_train)
+                else:
+                    landmarks_train = None
+
+                if with_segmentations:
+                    segmentations_train = index_list_by_list(segmentations, idx_train)
+                else:
+                    segmentations_train = None
+
+                detection_val = index_list_by_list(detections, idx_val)
+                annotations_val = index_dict_by_list(annotations, idx_val)
+                recognition_labels_val = index_list_by_list(recognition_labels, idx_val)
+
+                if with_landmarks:
+                    landmarks_val = index_list_by_list(landmarks, idx_val)
+                else:
+                    landmarks_val = None
+
+                if with_segmentations:
+                    segmentations_val = index_list_by_list(segmentations, idx_val)
+                else:
+                    segmentations_val = None
+
                 print(f"Dataset split processed. Saving into: '{str(cache_folder)}'.")
                 with open(cache_folder / "lists_train.pkl", "wb") as f:
                     # training
@@ -1976,6 +2012,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     pkl.dump(segmentations_train, f)
                     pkl.dump(annotations_train, f)
                     pkl.dump(recognition_labels_train, f)
+                    pkl.dump(idx_train, f)
                 with open(cache_folder / "lists_val.pkl", "wb") as f:
                     # validation
                     pkl.dump(detection_val, f)
@@ -1983,6 +2020,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     pkl.dump(segmentations_val, f)
                     pkl.dump(annotations_val, f)
                     pkl.dump(recognition_labels_val, f)
+                    pkl.dump(idx_val, f)
                 print(f"Saving done.")
 
             dataset_train = EmotionalImageDataset(

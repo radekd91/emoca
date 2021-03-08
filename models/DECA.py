@@ -167,6 +167,7 @@ class DecaModule(LightningModule):
             masks = batch['mask']
             masks = masks.view(-1, images.shape[-2], images.shape[-1])
 
+        #TODO: TAKE CARE OF the CASE WHEN va, expr7 and au8 are NaN (the label does not exist)!!!
         if 'va' in batch:
             va = batch['va']
             va = va.view(-1, va.shape[-1])
