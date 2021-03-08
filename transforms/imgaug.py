@@ -1,17 +1,23 @@
 import imgaug
 import imgaug.augmenters.meta as meta
+import imgaug.augmenters as aug
 
 
 def augmenter_from_key_value(name, kwargs):
     if hasattr(meta, name):
         sub_augmenters = []
+        kwargs_ = {}
         for item in kwargs:
             key = list(item.keys())[0]
-            # kwargs_ = {k: v for d in item for k, v in d.items()}
-            sub_augmenters += [augmenter_from_key_value(key, item[key])]
-            # sub_augmenters += [augmenter_from_key_value(key, kwargs[key])]
+            if hasattr(aug, key): # is augmenter? if so, create and add to list
+                sub_augmenters += [augmenter_from_key_value(key, item[key])]
+            else: # otherwise it's not an augmenter and it will be a kwarg for this augmenter
+                kwargs_[key] = item[key]
         cl = getattr(imgaug.augmenters, name)
-        return cl(sub_augmenters)
+        args_ = []
+        if len(sub_augmenters) > 0:
+            args_ += [sub_augmenters]
+        return cl(*args_, **kwargs_)
 
     if hasattr(imgaug.augmenters, name):
         cl = getattr(imgaug.augmenters, name)

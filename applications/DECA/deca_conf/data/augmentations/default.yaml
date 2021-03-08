@@ -13,8 +13,8 @@ augmentation:
   - OneOf:
       - JpegCompression:
           - compression:
-              - 0
-              - 10
+              - 50
+              - 90
       - AdditiveGaussianNoise:
           - scale:
             - 0
@@ -28,3 +28,5 @@ augmentation:
           - alpha:
               - 0.0
               - 0.5
+      - Identity:
+          - name: identity

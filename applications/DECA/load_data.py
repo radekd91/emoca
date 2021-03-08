@@ -51,15 +51,15 @@ def load_data(path_to_models=None,
     }
 
 
-    # annotation_list = ['va', 'expr7', 'au8']
-    # annotation_list = ['va', 'expr7',]
-    # annotation_list = ['va']
-    # annotation_list = ['expr7']
-    annotation_list = ['au8']
-    index = -1
-    cfg.data.split_style = 'manual'
-    cfg.data.annotation_list = annotation_list
-    cfg.data.sequence_index = index
+    # # annotation_list = ['va', 'expr7', 'au8']
+    # # annotation_list = ['va', 'expr7',]
+    # # annotation_list = ['va']
+    # # annotation_list = ['expr7']
+    # annotation_list = ['au8']
+    # index = -1
+    # cfg.data.split_style = 'manual'
+    # cfg.data.annotation_list = annotation_list
+    # cfg.data.sequence_index = index
     dm, name = prepare_data(cfg)
     dm.setup()
     return dm
@@ -133,7 +133,7 @@ def main():
 
     values = test( dm, image_index)
 
-    plot_results(visdict, "title")
+    # plot_results(visdict, "title")
 
 
 

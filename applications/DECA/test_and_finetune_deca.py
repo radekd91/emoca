@@ -204,9 +204,13 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     )
     callbacks += [checkpoint_callback]
     if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
+        patience = 3
+        if hasattr(cfg.learning.early_stopping, 'patience'):
+            patience = cfg.learning.early_stopping.patience
+
         early_stopping_callback = EarlyStopping(monitor=loss_to_monitor,
                                                 mode='min',
-                                                patience=3,
+                                                patience=patience,
                                                 strict=True)
         callbacks += [early_stopping_callback]
 
@@ -229,6 +233,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         trainer.fit(deca, datamodule=dm)
         if hasattr(cfg.inout, 'checkpoint_after_training'):
             if cfg.inout.checkpoint_after_training == 'best':
+                print(f"Loading the best checkpoint after training '{checkpoint_callback.best_model_path}'.")
                 deca = DecaModule.load_from_checkpoint(checkpoint_callback.best_model_path,
                                                        model_params=cfg.model,
                                                        learning_params=cfg.learning,
@@ -236,6 +241,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                                                        stage_name=prefix
                                                        )
             elif cfg.inout.checkpoint_after_training == 'latest':
+                print(f"Keeping the lastest weights after training.")
                 pass # do nothing, the latest is obviously loaded
             else:
                 print(f"[WARNING] Unexpected value of cfg.inout.checkpoint_after_training={cfg.inout.checkpoint_after_training}. "
@@ -363,7 +369,6 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
 
     dm, sequence_name = prepare_data(configs[0])
     dm.setup()
-    # sys.exit(0) ## TODO: DELETE
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
