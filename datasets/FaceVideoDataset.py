@@ -1837,58 +1837,13 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                       # if you add more parameters here, add them also to the hash list
                                       load_from_cache=True # do not add this one to the hash list
                                       ):
-        # hash_list = tuple([annotation_list,
-        #               filter_pattern,
-        #               image_transforms,
-        #               split_ratio,
-        #               split_style,
-        #               with_landmarks,
-        #               with_segmentations,
-        #               K,
-        #               K_policy,
-        #               # add new parameters here
-        #              ])
-        # # h = hash(hash_list)
-        # # cache_hash = hashlib.sha224(pkl.dumps(hash_list)).hexdigest()
-        # cache_hash = hashlib.md5(pkl.dumps(hash_list)).hexdigest()
-        # # # cache_hash = zlib.adler32(pkl.dumps(hash_list)) & 0xffffffff
-        # cache_folder = Path(self.output_dir) / "cache" / str(cache_hash)
-        # # load from cache if exists
-        # if cache_folder.exists() and load_from_cache:
-        #     print(f"Loading dataset from '{cache_folder}'")
-        #     if split_ratio is not None and split_style is not None:
-        #         with open(cache_folder / "train.pkl", "rb") as f:
-        #             training_set = pkl.load(f)
-        #             idx_train = pkl.load(f)
-        #         with open(cache_folder / "val.pkl", "rb") as f:
-        #             val_set = pkl.load(f)
-        #             idx_val = pkl.load(f)
-        #         return training_set, val_set, idx_train, idx_val
-        #     else:
-        #         with open(cache_folder / "all.pkl", "rb") as f:
-        #             dataset = pkl.load(f)
-        #         return dataset
-
-        # if load_from_cache:
-        #     print(f"Cached dataset not found in {cache_folder} and might have to be processed.")
-
-
         # Process the dataset
         str_to_hash = pkl.dumps(tuple([annotation_list, filter_pattern]))
-        # import json
-        # str_to_hash = json.dumps(tuple([annotation_list, filter_pattern]), sort_keys=True)
-        # inter_cache_hash = hash(tuple([
-        #     annotation_list,
-        #     filter_pattern]))
-        # inter_cache_hash = hashlib.sha224(pkl.dumps(
         inter_cache_hash = hashlib.md5(str_to_hash).hexdigest()
-        # inter_cache_hash = zlib.adler32(pkl.dumps(
-        #     tuple([annotation_list,
-        #             filter_pattern]
-        #           ))) & 0xffffffff
         inter_cache_folder = Path(self.output_dir) / "cache" / str(inter_cache_hash)
         if (inter_cache_folder / "lists.pkl").exists() and load_from_cache:
-            print(f"Found processed filelists in '{str(inter_cache_folder)}'. Reprocessing will not be needed. Loading ...")
+            print(f"Found processed filelists in '{str(inter_cache_folder)}'. "
+                  f"Reprocessing will not be needed. Loading ...")
             with open(inter_cache_folder / "lists.pkl", "rb") as f:
                 detections = pkl.load(f)
                 landmarks = pkl.load(f)
@@ -1990,13 +1945,10 @@ class FaceVideoDataModule(pl.LightningDataModule):
                                K_policy,
                                # add new parameters here
                                ])
-            # cache_hash = hashlib.sha224(pkl.dumps(hash_list)).hexdigest()
             cache_hash = hashlib.md5(pkl.dumps(hash_list)).hexdigest()
-            # # cache_hash = zlib.adler32(pkl.dumps(hash_list)) & 0xffffffff
             cache_folder = Path(self.output_dir) / "cache" / "tmp" / str(cache_hash)
             cache_folder.mkdir(exist_ok=True, parents=True)
             # load from cache if exists
-
             if load_from_cache and (cache_folder / "lists_train.pkl").is_file() and \
                 (cache_folder / "lists_val.pkl").is_file():
                 print(f"Dataset split found in: '{str(cache_folder)}'. Loading ...")
@@ -2033,7 +1985,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                     pkl.dump(recognition_labels_val, f)
                 print(f"Saving done.")
 
-            # dataset_train = EmotionalImageDataset(
             dataset_train = EmotionalImageDataset(
                 detection_train,
                 annotations_train,
@@ -2045,7 +1996,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 K=K,
                 K_policy=K_policy)
 
-            # dataset_val = EmotionalImageDataset(
             dataset_val = EmotionalImageDataset(
                 detection_val,
                 annotations_val,
@@ -2061,15 +2011,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 K_policy='sequential')
                 # K_policy=None)
 
-            # print(f"Caching dataset to '{cache_folder}'")
-            # cache_folder.mkdir(exist_ok=True, parents=True)
-            # with open(cache_folder / "train.pkl", "wb") as f:
-            #     pkl.dump(dataset_train, f)
-            #     pkl.dump(idx_train, f)
-            # with open(cache_folder / "val.pkl", "wb") as f:
-            #     pkl.dump(dataset_val, f)
-            #     pkl.dump(idx_val, f)
-
             return dataset_train, dataset_val, idx_train, idx_val
 
         # dataset = EmotionalImageDataset(
@@ -2083,11 +2024,6 @@ class FaceVideoDataModule(pl.LightningDataModule):
             segmentation_list=segmentations,
             K=K,
             K_policy=K_policy)
-        # print(f"Caching dataset to '{cache_folder}'")
-        # cache_folder.mkdir(exist_ok=True, parents=True)
-        # with open(cache_folder / "all.pkl", "wb") as f:
-        #     pkl.dump(dataset, f)
-
         return dataset
 
 
