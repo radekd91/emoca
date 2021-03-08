@@ -849,13 +849,13 @@ class DecaModule(LightningModule):
         caption = ""
         if len(prefix) > 0:
             prefix += "_"
-        if valence is not None:
+        if valence is not None and not np.isnan(valence).any():
             caption += prefix + "valence= %.03f\n" % valence
-        if arousal is not None:
+        if arousal is not None and not np.isnan(arousal).any():
             caption += prefix + "arousal= %.03f\n" % arousal
-        if affnet_expr is not None:
+        if affnet_expr is not None and not np.isnan(affnet_expr).any():
             caption += prefix + "expression= %s \n" % AffectNetExpressions(affnet_expr).name
-        if expr7 is not None:
+        if expr7 is not None and not np.isnan(expr7).any():
             caption += prefix +"expression= %s \n" % Expression7(expr7).name
         return caption
 

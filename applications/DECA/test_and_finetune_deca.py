@@ -205,7 +205,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     callbacks += [checkpoint_callback]
     if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
         patience = 3
-        if hasattr(cfg.learning.early_stopping, 'patience'):
+        if hasattr(cfg.learning.early_stopping, 'patience') and cfg.learning.early_stopping.patience:
             patience = cfg.learning.early_stopping.patience
 
         early_stopping_callback = EarlyStopping(monitor=loss_to_monitor,
@@ -224,6 +224,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if hasattr(cfg.model, 'max_steps'):
         max_steps = cfg.model.max_steps
         print(f"Setting max steps to {max_steps}")
+
+    print(f"After training checkpoint strategy: {cfg.learning.checkpoint_after_training}")
 
     trainer = Trainer(gpus=cfg.learning.num_gpus,
                       max_epochs=cfg.model.max_epochs,
