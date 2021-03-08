@@ -455,20 +455,21 @@ class DecaModule(LightningModule):
         else:
             d = metric_dict
 
-        if va is not None:
-            d[prefix + 'emo_sup_val_L1'] = F.l1_loss(self.emonet_loss.output_emotion['valence'], va[:, 0]) \
-                                           * self.deca.config.gt_emotion_reg
-            d[prefix + 'emo_sup_ar_L1'] = F.l1_loss(self.emonet_loss.output_emotion['arousal'], va[:, 1]) \
-                                          * self.deca.config.gt_emotion_reg
-
-            metric_dict[prefix + "_valence_gt"] = va[:, 0].mean().detach()
-            metric_dict[prefix + "_arousal_gt"] = va[:, 1].mean().detach()
-
-        if expr7 is not None:
-            affectnet_gt = [expr7_to_affect_net(int(expr7[i])).value for i in range(len(expr7))]
-            affectnet_gt = torch.tensor(np.array(affectnet_gt), device=self.device, dtype=torch.long)
-            d[prefix + '_emo_sup_expr_CE'] = F.cross_entropy(self.emonet_loss.output_emotion['expression'], affectnet_gt) * self.deca.config.gt_emotion_reg
-            metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
+        # TODO: uncomment this after you handle the case when certain entries are NaN (GT missing, not a bug)
+        # if va is not None:
+        #     d[prefix + 'emo_sup_val_L1'] = F.l1_loss(self.emonet_loss.output_emotion['valence'], va[:, 0]) \
+        #                                    * self.deca.config.gt_emotion_reg
+        #     d[prefix + 'emo_sup_ar_L1'] = F.l1_loss(self.emonet_loss.output_emotion['arousal'], va[:, 1]) \
+        #                                   * self.deca.config.gt_emotion_reg
+        #
+        #     metric_dict[prefix + "_valence_gt"] = va[:, 0].mean().detach()
+        #     metric_dict[prefix + "_arousal_gt"] = va[:, 1].mean().detach()
+        #
+        # if expr7 is not None:
+        #     affectnet_gt = [expr7_to_affect_net(int(expr7[i])).value for i in range(len(expr7))]
+        #     affectnet_gt = torch.tensor(np.array(affectnet_gt), device=self.device, dtype=torch.long)
+        #     d[prefix + '_emo_sup_expr_CE'] = F.cross_entropy(self.emonet_loss.output_emotion['expression'], affectnet_gt) * self.deca.config.gt_emotion_reg
+        #     metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
 
 
 
