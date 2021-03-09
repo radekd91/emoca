@@ -71,6 +71,8 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
         min_value = 999999999999999.
         min_idx = -1
         for idx, ckpt in enumerate(checkpoints):
+            if ckpt.stem == "last": # disregard last
+                continue
             end_idx = str(ckpt.stem).rfind('=') + 1
             loss_value = float(str(ckpt.stem)[end_idx:])
             if loss_value <= min_value:
