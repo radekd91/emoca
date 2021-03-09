@@ -39,8 +39,8 @@ source activate <<ENV>>
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 OUTFOLDER=$(cat out_folder.txt)
+ln -s $PWD $OUTFOLDER/submission 
 ln -s $OUTFOLDER results
-ln -s $PWD results/submission 
 # source deactivate
 """
 

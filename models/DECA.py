@@ -255,8 +255,8 @@ class DecaModule(LightningModule):
                     the difference from ||so - s1|| is 
                     the later encourage s0, s1 is cloase in l2 space, but not really ensure shape will be close
                     '''
-                    # new_order = np.array(
-                    #     [np.random.permutation(self.deca.config.K) + i * self.deca.config.K for i in range(self.deca.config.effective_batch_size)])
+                    # this creates a per-ring random permutation. The detail exchange happens ONLY between the same
+                    # identities (within the ring) but not outside (no cross-identity detail exchange)
                     new_order = np.array(
                         # [np.random.permutation(self.deca.config.train_K) + i * self.deca.config.train_K for i in range(original_batch_size)])
                         [np.random.permutation(K) + i * K for i in range(original_batch_size)])
@@ -1119,10 +1119,12 @@ class DECA(torch.nn.Module):
         self.E_detail = ResnetEncoder(outsize=self.n_detail)
         self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
                                   sample_mode='bilinear')
+        # self._load_old_checkpoint()
 
+    def _load_old_checkpoint(self):
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
-            print('trained model found. load {}'.format(model_path))
+            print(f"Loading model state from '{model_path}'")
             checkpoint = torch.load(model_path)
             # model
             util.copy_state_dict(self.E_flame.state_dict(), checkpoint['E_flame'])

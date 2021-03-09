@@ -19,7 +19,28 @@ import copy
 
 project_name = 'EmotionalDeca'
 
-def find_checkpoint(cfg, mode='latest' ):
+
+def get_checkpoint_with_kwargs(cfg, prefix):
+    checkpoint = get_checkpoint(cfg)
+    cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
+    checkpoint_kwargs = {
+        "model_params": cfg.model,
+        "learning_params": cfg.learning,
+        "inout_params": cfg.inout,
+        "stage_name": prefix
+    }
+    return checkpoint, checkpoint_kwargs
+
+
+def get_checkpoint(cfg):
+    checkpoint_mode = 'latest'
+    if hasattr(cfg.learning, 'checkpoint_after_training'):
+        checkpoint_mode = cfg.learning.checkpoint_after_training
+    checkpoint = locate_checkpoint(cfg, checkpoint_mode)
+    return checkpoint
+
+
+def locate_checkpoint(cfg, mode='latest'):
     print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
     checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
     if len(checkpoints) == 0:
@@ -107,7 +128,7 @@ def prepare_data(cfg):
     print(f"Looking for video {index} in {len(fvdm.video_list)}")
 
     if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
-        augmentation = copy.deepcopy( OmegaConf.to_container(cfg.data.augmentation))
+        augmentation = copy.deepcopy(OmegaConf.to_container(cfg.data.augmentation))
     else:
         augmentation = None
 
@@ -156,6 +177,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         logger.finalize("")
         if checkpoint is None:
             deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
+            if cfg.model.resume_training:
+                print("[WARNING] Loading DECA checkpoint pretrained by the old code")
+                deca.deca._load_old_checkpoint()
         else:
             checkpoint_kwargs = checkpoint_kwargs or {}
             deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
@@ -365,7 +389,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, force_new_location = False):
     # configs = [cfg_coarse, cfg_detail]
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
@@ -379,7 +403,17 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
 
     dm, sequence_name = prepare_data(configs[0])
     dm.setup()
-    if cfg_coarse.inout.full_run_dir == 'todo':
+
+    if start_i > 0 or force_new_location:
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[start_i - 1], stages_prefixes[start_i - 1])
+    else:
+        checkpoint, checkpoint_kwargs = None, None
+
+    old_run_dir = None
+    if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
+        if cfg_coarse.inout.full_run_dir != 'todo':
+            old_run_dir = cfg_coarse.inout.full_run_dir
+            cfg_coarse.inout.full_run_dir_previous = old_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
@@ -403,6 +437,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
+    if old_run_dir is not None:
+        cfg_coarse.inout.full_run_dir_previous = old_run_dir
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
     cfg_coarse.inout.time = time
@@ -412,6 +448,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
     detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
+    if old_run_dir is not None:
+        cfg_detail.inout.full_run_dir_previous = old_run_dir
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
     cfg_detail.inout.time = time
@@ -429,21 +467,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0):
                          save_dir=full_run_dir)
 
     deca = None
-    checkpoint = None
-    checkpoint_kwargs = None
-    if start_i > 0:
-        checkpoint_mode = 'latest'
-        if hasattr(configs[start_i - 1].learning, 'checkpoint_after_training'):
-            checkpoint_mode = configs[start_i - 1].learning.checkpoint_after_training
-        checkpoint = find_checkpoint(configs[start_i - 1], checkpoint_mode)
+    if start_i > 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
-        configs[start_i-1].model.resume_training = False # make sure the training is not magically resumed by the old code
-        checkpoint_kwargs = {
-            "model_params": configs[start_i-1].model,
-            "learning_params": configs[start_i-1].learning,
-            "inout_params": configs[start_i-1].inout,
-            "stage_name":  stages_prefixes[start_i-1],
-        }
 
     for i in range(start_i, len(configs)):
         cfg = configs[i]

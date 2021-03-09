@@ -1,0 +1,1 @@
+from applications.DECA.interactive_deca_decoder import load_deca_and_data, test

@@ -1,4 +1,4 @@
-from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, find_checkpoint
+from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs
 from datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -18,34 +18,19 @@ def prepare_data(cfg):
 def create_experiment_name():
     return "DECA_training"
 
-#
-#
-# def find_latest_checkpoint(cfg):
-#     print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
-#     checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
-#     if len(checkpoints) == 0:
-#         print(f"Did not found checkpoints. Looking in subfolders")
-#         checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).rglob("*.ckpt")))
-#         if len(checkpoints) == 0:
-#             print(f"Did not find checkpoints to resume from. Terminating")
-#             sys.exit()
-#         print(f"Found {len(checkpoints)} checkpoints")
-#     else:
-#         print(f"Found {len(checkpoints)} checkpoints")
-#     for ckpt in checkpoints:
-#         print(f" - {str(ckpt)}")
-#     checkpoint = str(checkpoints[-1])
-#     return checkpoint
-#
 
-
-def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
+def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, force_new_location=False):
     configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["train", "test", "train", "test", "train", "test"]
     stages_prefixes = ["pretrain", "pretrain", "", "", "", ""]
     # configs = [cfg_coarse_pretraining, cfg_coarse, cfg_detail]
     # stages = ["train", "train", "train",]
     # stages_prefixes = ["pretrain", "", ""]
+
+    if start_i > 0 or force_new_location:
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[start_i - 1], stages_prefixes[start_i - 1])
+    else:
+        checkpoint, checkpoint_kwargs = None, None
 
     if cfg_coarse.inout.full_run_dir == 'todo':
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
@@ -104,34 +89,8 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0):
                          save_dir=full_run_dir)
 
     deca = None
-    checkpoint = None
-    checkpoint_kwargs = None
-    if start_i > 0:
-        # print(f"Looking for checkpoint in '{configs[start_i-1].inout.checkpoint_dir}'")
-        # checkpoints = sorted(list(Path(configs[start_i-1].inout.checkpoint_dir).glob("*.ckpt")))
-        # if len(checkpoints) == 0:
-        #     print(f"Did not found checkpoints. Looking in subfolders")
-        #     checkpoints = sorted(list(Path(configs[start_i - 1].inout.checkpoint_dir).rglob("*.ckpt")))
-        #     if len(checkpoints) == 0:
-        #         print(f"Did not find checkpoints to resume from. Terminating")
-        #         sys.exit()
-        #     print(f"Found {len(checkpoints)} checkpoints")
-        # else:
-        #     print(f"Found {len(checkpoints)} checkpoints")
-        # for ckpt in checkpoints:
-        #     print(f" - {str(ckpt)}")
-        # checkpoint = str(checkpoints[-1])
-        # checkpoint = find_latest_checkpoint(configs[start_i-1])
-        checkpoint = find_checkpoint(configs[start_i-1], 'latest')
+    if start_i > 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
-        configs[start_i - 1].model.resume_training = False
-        checkpoint_kwargs = {
-            "model_params": configs[start_i-1].model,
-            "learning_params": configs[start_i-1].learning,
-            "inout_params": configs[start_i-1].inout,
-            "stage_name":  stages_prefixes[start_i-1],
-        }
-
 
     for i in range(start_i, len(configs)):
         cfg = configs[i]

@@ -41,7 +41,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     max_price = 8000
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
-    mem_gb = 12
+    mem_gb = 20
     args = f"{coarse_file.name} {detail_file.name}"
 
     execute_on_cluster(str(cluster_script_path),
