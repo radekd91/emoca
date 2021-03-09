@@ -87,8 +87,6 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
     # configs = [cfg_coarse_pretraining, cfg_coarse_pretraining, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     # stages = ["train", "test", "train", "test", "train", "test"]
     # stages_prefixes = ["pretrain", "pretrain", "", "", "", ""]
-
-    #TODO: this implementation is a little behind with the conventions set in test_and_finetune_deca - fix that before use!
     if start_i > 0 or force_new_location:
         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[start_i - 1],stage_prefixes[start_i - 1])
         checkpoint = locate_checkpoint(configs[start_i - 1])
