@@ -216,7 +216,12 @@ def optimize(deca,
 
     stopping_condition_hit = False
 
-    save_path.mkdir(exist_ok=True, parents=True)
+    if save_path is not None:
+        print(f"Creating savepath: {save_path}")
+        save_path.mkdir(exist_ok=True, parents=True)
+    else:
+        print("No visuals will be saved")
+
     since_last_improvement = 0
     losses_by_step = []
     logs = {}
