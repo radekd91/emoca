@@ -149,7 +149,7 @@ def main():
     path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
     relative_to_path = None
     replace_root_path = None
-    out_folder = '/ps/scratch/rdanecek/emoca/finetune_deca/optimize_emotion'
+    out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
 
     ## not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
