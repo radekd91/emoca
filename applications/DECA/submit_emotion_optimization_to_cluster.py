@@ -5,7 +5,7 @@ import copy
 import datetime
 from omegaconf import DictConfig, OmegaConf
 from utils.condor import execute_on_cluster
-
+import time as t
 
 def submit_single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
                                model_folder, stage, image_index, target_image, keyword, optim_kwargs):
@@ -22,6 +22,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
                           / local_script_path.parents[0].name / local_script_path.name
 
     submission_folder_local.mkdir(parents=True)
+    t.sleep(1)
 
     cgf_name = "optim_kwargs.yaml"
     with open(submission_folder_local / cgf_name, 'w') as outfile:
@@ -41,7 +42,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     job_name = "optimize_emotion"
     cuda_capability_requirement = 6
     mem_gb = 10
-    args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name}" \
+    args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name} " \
                     f"{model_folder} {stage} {image_index} {target_image} {keyword} {cgf_name}"
 
     execute_on_cluster(str(cluster_script_path),
@@ -122,7 +123,8 @@ def main():
     deca_models["General2"] = \
         ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
 
-    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
 
     target_images = [
         target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
@@ -144,16 +146,16 @@ def main():
 
 
     # # cluster
-    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    # relative_to_path = None
-    # replace_root_path = None
-    # out_folder = '/ps/scratch/rdanecek/emoca/finetune_deca/optimize_emotion'
+    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    relative_to_path = None
+    replace_root_path = None
+    out_folder = '/ps/scratch/rdanecek/emoca/finetune_deca/optimize_emotion'
 
-    # not on cluster
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = '/ps/scratch/'
-    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    ## not on cluster
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    # relative_to_path = '/ps/scratch/'
+    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     experiment_name = "det_exp"

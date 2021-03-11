@@ -489,14 +489,14 @@ def loss_function_configs(target_image):
 
 
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                        model_folder, stage, image_index, losses_to_use=None, **kwargs):
-    if losses_to_use is not None:
-        target_image = "~/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/VA_Set/" \
-                       "detections/Train_Set/82-25-854x480/002400_000.png"
-        losses_to_use = []
-        losses_to_use += [CriterionWrapper(TargetEmotionCriterion(target_image), "predicted_detailed_image")]
-        # losses_to_use += ["loss_shape_reg"]
-        losses_to_use += ["loss_expression_reg"]
+                        model_folder, stage, image_index, losses_to_use, **kwargs):
+    # if losses_to_use is not None:
+    #     target_image = "~/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/VA_Set/" \
+    #                    "detections/Train_Set/82-25-854x480/002400_000.png"
+    #     losses_to_use = []
+    #     losses_to_use += [CriterionWrapper(TargetEmotionCriterion(target_image), "predicted_detailed_image")]
+    #     losses_to_use += ["loss_shape_reg"]
+        # losses_to_use += ["loss_expression_reg"]
 
 
     # path_to_models = in_folder[0]
