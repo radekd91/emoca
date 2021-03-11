@@ -657,8 +657,8 @@ if __name__ == "__main__":
     for i, arg in enumerate(sys.argv):
         print(f"arg[{i}] = {arg}")
     path_to_models = Path(sys.argv[1])
-    relative_to_path = sys.argv[2]
-    replace_root_path = sys.argv[3]
+    relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
+    replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
     out_folder = Path(sys.argv[4])
     model_name = sys.argv[5]
     model_folder = sys.argv[6]
