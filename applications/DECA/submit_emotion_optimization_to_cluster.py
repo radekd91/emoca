@@ -174,7 +174,7 @@ def main():
         "optimize_cam": False,
         "optimize_light": False,
         "lr": 0.01,
-        "max_iters": 0.01,
+        "max_iters": 1000,
         "patience": 20,
         "visualize_progress" : False,
         "visualize_result" : False,

@@ -43,7 +43,9 @@ def load_deca_and_data(path_to_models=None,
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, "testing")
         deca.deca._load_old_checkpoint()
     else:
+        print(f"Taking config of stage '{stage}'")
         cfg = conf[stage]
+        print(cfg.keys())
         cfg.model.resume_training = False
 
         checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)

@@ -436,6 +436,7 @@ def loss_function_config(target_image, keyword, emonet=None):
             target_image, use_valence=True, use_arousal=True, use_feat_2=False, emonet_loss_instance=emonet),
             "predicted_detailed_image")]
         losses += ["loss_expression_reg"]
+        return losses
 
     if keyword == "emotion_e_reg_exp":
         losses += [CriterionWrapper(TargetEmotionCriterion(
