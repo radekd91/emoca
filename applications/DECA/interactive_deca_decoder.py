@@ -23,7 +23,6 @@ def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
     return cfg
 
 
-
 def load_deca_and_data(path_to_models=None,
                        run_name=None,
                        stage=None,
@@ -36,21 +35,30 @@ def load_deca_and_data(path_to_models=None,
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
 
-    cfg = conf[stage]
+    if stage is None:
+        cfg = conf.detail
+        cfg.model.resume_training = True
+        if relative_to_path is not None and replace_root_path is not None:
+            cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+        deca = DecaModule(cfg.model, cfg.learning, cfg.inout, "testing")
+        deca.deca._load_old_checkpoint()
+    else:
+        cfg = conf[stage]
+        cfg.model.resume_training = False
 
-    if relative_to_path is not None and replace_root_path is not None:
-        checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
-        print(f"Loading checkpoint '{checkpoint}'")
+        if relative_to_path is not None and replace_root_path is not None:
+            checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+            print(f"Loading checkpoint '{checkpoint}'")
         cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
-    cfg.model.resume_training = False
-    checkpoint_kwargs = {
-        "model_params": cfg.model,
-        "learning_params": cfg.learning,
-        "inout_params": cfg.inout,
-        "stage_name": "testing",
-    }
-    deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+        checkpoint_kwargs = {
+            "model_params": cfg.model,
+            "learning_params": cfg.learning,
+            "inout_params": cfg.inout,
+            "stage_name": "testing",
+        }
+        deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+
     train_or_test = 'test'
     if train_or_test == 'train':
         mode = True
@@ -112,7 +120,7 @@ def test(deca, dm, image_index = None, values = None, batch=None):
     # predicted_detailed_image = values['predicted_detailed_image']
 
 
-def plot_results(vis_dict, title, detail=True):
+def plot_results(vis_dict, title, detail=True, show=True, save_path=None):
     # plt.figure()
 
     # plt.subplot(pos, **kwargs)
@@ -155,8 +163,14 @@ def plot_results(vis_dict, title, detail=True):
     # plt.title(title)
     fig.suptitle(title)
 
-    plt.show()
-    #
+    fig.set_size_inches(18.5, 5.5)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=100)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
 
 
 def main():
