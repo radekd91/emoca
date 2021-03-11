@@ -46,10 +46,10 @@ def load_deca_and_data(path_to_models=None,
         cfg = conf[stage]
         cfg.model.resume_training = False
 
+        checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+        print(f"Loading checkpoint '{checkpoint}'")
         if relative_to_path is not None and replace_root_path is not None:
-            checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
-            print(f"Loading checkpoint '{checkpoint}'")
-        cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+            cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
         checkpoint_kwargs = {
             "model_params": cfg.model,
