@@ -653,6 +653,9 @@ from omegaconf import OmegaConf, DictConfig
 
 
 if __name__ == "__main__":
+    print("Running:" + __file__)
+    for i, arg in enumerate(sys.argv):
+        print(f"arg[{i}] = {arg}")
     path_to_models = Path(sys.argv[1])
     relative_to_path = sys.argv[2]
     replace_root_path = sys.argv[3]
@@ -664,6 +667,8 @@ if __name__ == "__main__":
     target_image = sys.argv[9]
     loss_keyword = sys.argv[10]
     optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
+
+
     optimization_with_specified_loss(path_to_models,
                                        relative_to_path,
                                        replace_root_path,
