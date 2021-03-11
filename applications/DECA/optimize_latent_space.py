@@ -533,7 +533,7 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
         save_path.mkdir(parents=True, exist_ok=True)
         optimize(deca, values,
                  losses_to_use=losses_to_use,
-                 max_iters=max_iters,
+                 # max_iters=max_iters,
                  verbose=True,
                  # visualize_progress=False,
                  save_path=save_path,
