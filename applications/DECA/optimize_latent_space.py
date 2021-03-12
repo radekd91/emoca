@@ -144,6 +144,21 @@ def save_visualization(deca, values, title, save_path=None, show=False):
     return vis_dict
 
 
+def copy_values(values):
+    copied_values = {}
+    for key, val in values.items():
+        try:
+            copied_values[key] = val.detach().clone()
+        except Exception as e:
+            try:
+                copied_values[key] = copy.deepcopy(val)
+            except Exception as e2:
+                # print(val)
+                # try:
+                copied_values[key] = {k: v.detach().clone() if torch.is_tensor(v) else copy.deepcopy(v)
+                                    for k, v in values[key].items()}
+    return copied_values
+
 def optimize(deca,
              values,
              # optimize_detail=True,
@@ -160,7 +175,7 @@ def optimize(deca,
              optimize_light=False,
              lr = 0.01,
              losses_to_use=None,
-             losses_weights=None,
+             loss_weights=None,
              visualize_progress=False,
              visualize_result=False,
              max_iters = 1000,
@@ -185,7 +200,7 @@ def optimize(deca,
     losses_to_use = losses_to_use or "loss"
     if not isinstance(losses_to_use, list):
         losses_to_use = [losses_to_use,]
-    losses_weights = losses_weights or [1.] * len(losses_to_use)
+    loss_weights = loss_weights or [1.] * len(losses_to_use)
 
     # deca.deca.config.train_coarse = True
     # deca.deca.config.mode = DecaMode.DETAIL
@@ -237,14 +252,14 @@ def optimize(deca,
         total_loss = 0
         for i, loss in enumerate(losses_to_use):
             if isinstance(loss, str):
-                term = losses_and_metrics[loss] * losses_weights[i]
+                term = losses_and_metrics[loss] * loss_weights[i]
                 if logs is not None:
                     if loss not in logs.keys():
                         logs[loss] = []
                     logs[loss] += [term.item()]
                 total_loss = total_loss + term
             else:
-                term = loss(vals) * losses_weights[i]
+                term = loss(vals) * loss_weights[i]
                 if logs is not None:
                     if loss.name not in logs.keys():
                         logs[loss.name] = []
@@ -269,7 +284,7 @@ def optimize(deca,
 
     save_visualization(deca, values,
                        save_path=save_path / f"start.png" if save_path is not None else None,
-                       title=f"Start",
+                       title=f"Start, loss={loss:.10f}",
                        show=visualize_result)
 
     # optimizer = torch.optim.Adam(parameters, lr=0.01)
@@ -332,19 +347,8 @@ def optimize(deca,
             since_last_improvement = 0
             best_iter = i
             best_loss = loss.item()
-            best_values = {}
-            for key, val in values.items():
-                try:
-                    best_values[key] = val.detach().clone()
-                except Exception as e:
-                    try:
-                        best_values[key] = copy.deepcopy(val)
-                    except Exception as e2:
-                        # print(val)
-                        # try:
-                        best_values[key] = {k: v.detach().clone() if torch.is_tensor(v) else copy.deepcopy(v)
-                                        for k, v in values[key].items() }
-                        # except Exception as e3:
+            best_values = copy_values(values)
+
         if since_last_improvement > patience:
             stopping_condition_hit = True
             print(f"Breaking at iteration {i} becase there was no improvement for the last {since_last_improvement} steps.")
@@ -517,6 +521,48 @@ def loss_function_config(target_image, keyword, emonet=None):
     raise ValueError(f"Unknown keyword '{keyword}'")
 
 
+def loss_function_config_v2(target_image, loss_dict, emonet=None):
+
+    losses = []
+    loss_weights = []
+    for keyword, weight in loss_dict.items():
+        loss_weights += [weight]
+        if keyword == "emotion_f2":
+            losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
+        elif keyword == "emotion_f1":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_feat_1=True, use_feat_2=False, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+
+        elif keyword == "emotion_f12":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_feat_1=True, use_feat_2=True, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+
+        elif keyword == "emotion_va":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_valence=True, use_arousal=True, use_feat_2=False, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+
+        elif keyword == "emotion_e":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_expression=True, use_feat_2=False, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+
+        elif keyword == "emotion_vae":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_valence=True, use_arousal=True, use_expression=True, use_feat_2=False, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+        elif keyword == "emotion_f12vae":
+            losses += [CriterionWrapper(TargetEmotionCriterion(
+                target_image, use_feat_1=True, use_feat_2=True, use_valence=True, use_arousal=True, use_expression=True, emonet_loss_instance=emonet),
+                "predicted_detailed_image")]
+        else:
+            losses += [keyword]
+
+    return losses, loss_weights
+
+
 def loss_function_configs(target_image):
     loss_configs = {}
 
@@ -577,7 +623,16 @@ def replace_codes(values_from, values_to,
 
 
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                        model_folder, stage, image_index, target_image, losses_to_use=None, num_repeats=1, **kwargs):
+                        model_folder, stage, image_index, target_image,
+                        num_repeats=1,
+                        losses_to_use: dict = None , **kwargs):
+    if losses_to_use is None:
+        raise RuntimeError("No losses specified. ")
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use)
+
+    # if loss_weights is None:
+    #     loss_weights = [1.] * len(losses_to_use)
+
     # if losses_to_use is not None:
     #     target_image = "~/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/VA_Set/" \
     #                    "detections/Train_Set/82-25-854x480/002400_000.png"
@@ -640,8 +695,10 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
             # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
             save_path = Path(out_folder) / key / f"{i:02d}"
             save_path.mkdir(parents=True, exist_ok=True)
-            optimize(deca, values,
+            optimize(deca,
+                     copy_values(values),  #important to copy
                      losses_to_use=losses_to_use,
+                     loss_weights=loss_weights,
                      # max_iters=max_iters,
                      verbose=True,
                      # visualize_progress=False,
@@ -684,10 +741,11 @@ def optimization_with_specified_loss(path_to_models,
                                        stage,
                                        starting_image_index,
                                        target_image,
-                                       loss_keyword,
+                                       # loss_keyword,
                                         num_repeats,
                                        optim_kwargs):
-    loss_list = loss_function_config(target_image, loss_keyword)
+    # loss_list = loss_function_config(target_image, loss_keyword)
+
     single_optimization(path_to_models,
                         relative_to_path,
                         replace_root_path,
@@ -698,7 +756,7 @@ def optimization_with_specified_loss(path_to_models,
                         stage,
                         starting_image_index,
                         target_image,
-                        loss_list,
+                        # loss_list,
                         num_repeats,
                         **optim_kwargs)
 
@@ -781,9 +839,9 @@ if __name__ == "__main__":
     stage = None if sys.argv[7] == "None" else sys.argv[7]
     starting_image_index = int(sys.argv[8])
     target_image = sys.argv[9]
-    loss_keyword = sys.argv[10]
-    num_repeats= int(sys.argv[11])
-    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[12]))
+    # loss_keyword = sys.argv[10]
+    num_repeats= int(sys.argv[10])
+    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
 
 
     optimization_with_specified_loss(path_to_models,
@@ -795,6 +853,6 @@ if __name__ == "__main__":
                                        stage,
                                        starting_image_index,
                                        target_image,
-                                       loss_keyword,
+                                       # loss_keyword,
                                        num_repeats,
                                        optim_kwargs)

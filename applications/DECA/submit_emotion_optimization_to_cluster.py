@@ -8,10 +8,12 @@ from utils.condor import execute_on_cluster
 import time as t
 
 def submit_single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                               model_folder, stage, image_index, target_image, keyword, num_repeats, optim_kwargs):
+                               model_folder, stage, image_index, target_image,
+                               # keyword,
+                               num_repeats, optim_kwargs):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/optimize_emotion/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
@@ -43,7 +45,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     cuda_capability_requirement = 6
     mem_gb = 10
     args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name} " \
-                    f"{model_folder} {stage} {image_index} {target_image} {keyword} {num_repeats} {cgf_name}"
+                    f"{model_folder} {stage} {image_index} {target_image} {num_repeats} {cgf_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -78,6 +80,38 @@ def optimization_for_different_targets(path_to_models, relative_to_path, replace
             model_name, model_folder, stage, starting_image_index, target_image, loss_keywords,
             num_repeats,
             optim_kwargs, submit)
+
+
+def optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
+                                       model_folder, stage, starting_image_index, target_images,
+                                       num_repeats,
+                                       optim_kwargs,
+                                       submit=True):
+    for target_image in target_images:
+        if not submit:
+            optimization_with_specified_loss(path_to_models,
+                                             relative_to_path,
+                                             replace_root_path,
+                                             out_folder,
+                                             model_name,
+                                             model_folder,
+                                             stage,
+                                             starting_image_index,
+                                             target_image,
+                                             num_repeats,
+                                             optim_kwargs)
+        else:
+            submit_single_optimization(path_to_models,
+                                       relative_to_path,
+                                       replace_root_path,
+                                       out_folder,
+                                       model_name,
+                                       model_folder,
+                                       stage,
+                                       starting_image_index,
+                                       target_image,
+                                       num_repeats,
+                                       optim_kwargs)
 
 
 def optimization_with_different_losses(path_to_models,
@@ -124,27 +158,27 @@ def optimization_with_different_losses(path_to_models,
 
 
 def main():
-    # # cluster
-    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    # relative_to_path = None
-    # replace_root_path = None
-    # out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
-    # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = True
+    # cluster
+    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    relative_to_path = None
+    replace_root_path = None
+    out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
+    target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    submit = True
 
     ## not on cluster
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = '/ps/scratch/'
-    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = False
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    # relative_to_path = '/ps/scratch/'
+    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # submit = False
 
     deca_models = {}
-    deca_models["Octavia"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
-    deca_models["Rachel"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
+    # deca_models["Octavia"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
+    # deca_models["Rachel"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
     deca_models["General1"] = \
         ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
     deca_models["General2"] = \
@@ -171,13 +205,6 @@ def main():
 
     num_repeats = 5
     # num_repeats = 1
-
-    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    experiment_name = "det_exp"
-    # experiment_name = "det_exp"
-
-    experiment_name = time + "_" + experiment_name
-    out_folder = str(Path(out_folder) / experiment_name)
 
     optim_kwargs = {
         "optimize_detail": False,
@@ -217,30 +244,41 @@ def main():
     kw = copy.deepcopy(optim_kwargs)
     kw["optimize_detail"] = True
     kw["optimize_expression"] = True
+    kw["losses_to_use"] = {
+        # "emotion_f1": 1.,
+        # "emotion_f2": 1.,
+        # "emotion_va": 1.,
+        "emotion_vae": 1.,
+        # "emotion_e": 1.,
+        # "emotion_f12vae": 1.,
+        # "loss_shape_reg": 100.,
+        "loss_expression_reg" : 100.,
+    }
+    experiment_name = "vae_exp_det"
 
-    # # expression, detail, pose
-    # kw = copy.deepcopy(optim_kwargs)
-    # kw["optimize_detail"] = True
-    # kw["optimize_expression"] = True
-    # kw["optimize_neck_pose"] = True
-    # kw["optimize_jaw_pose"] = True
+    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
-    loss_keywords = ["emotion",
-                      "emotion_f1_reg_exp",
-                    "emotion_f2_reg_exp",
-                    "emotion_f12_reg_exp",
-                     "emotion_va_reg_exp",
-                     "emotion_e_reg_exp",
-                     "emotion_vae_reg_exp",
-                     "emotion_f12vae_reg_exp"]
+    experiment_name = time + "_" + experiment_name
+    out_folder = str(Path(out_folder) / experiment_name)
+
+    # loss_keywords = ["emotion",
+    #                   "emotion_f1_reg_exp",
+    #                 "emotion_f2_reg_exp",
+    #                 "emotion_f12_reg_exp",
+    #                  "emotion_va_reg_exp",
+    #                  "emotion_e_reg_exp",
+    #                  "emotion_vae_reg_exp",
+    #                  "emotion_f12vae_reg_exp"]
 
     for name, cfg in deca_models.items():
         model_folder = cfg[0]
         stage = cfg[1]
         starting_image_index = cfg[2]
-        optimization_for_different_targets(path_to_models, relative_to_path, replace_root_path, out_folder, name,
+        optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path, out_folder, name,
                                            model_folder, stage, starting_image_index,
-                                           target_images, loss_keywords, num_repeats, kw, submit)
+                                           target_images,
+                                           # loss_keywords,
+                                           num_repeats, kw, submit)
 
 if __name__ == "__main__":
     main()

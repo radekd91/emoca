@@ -34,8 +34,8 @@ source /home/rdanecek/.bashrc
 source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
 #/home/rdanecek/anaconda3/condabin/conda init bash
 #/home/rdanecek/anaconda3/condabin/conda activate <<ENV>>
-source activate <<ENV>>
-#conda activate <<ENV>>
+#source activate <<ENV>>
+conda activate <<ENV>>
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 OUTFOLDER=$(cat out_folder.txt)
