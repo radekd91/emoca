@@ -774,7 +774,7 @@ if __name__ == "__main__":
     out_folder = Path(sys.argv[4])
     model_name = sys.argv[5]
     model_folder = sys.argv[6]
-    stage = None if sys.argv[7] == "None" else sys.argv[3]
+    stage = None if sys.argv[7] == "None" else sys.argv[7]
     starting_image_index = int(sys.argv[8])
     target_image = sys.argv[9]
     loss_keyword = sys.argv[10]
