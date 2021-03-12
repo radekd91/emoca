@@ -82,7 +82,9 @@ def optimization_for_different_targets(path_to_models, relative_to_path, replace
             optim_kwargs, submit)
 
 
-def optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
+def optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
+                                          out_folder,
+                                          model_name,
                                        model_folder, stage, starting_image_index, target_images,
                                        num_repeats,
                                        optim_kwargs,
@@ -92,7 +94,7 @@ def optimization_for_different_targets_v2(path_to_models, relative_to_path, repl
             optimization_with_specified_loss(path_to_models,
                                              relative_to_path,
                                              replace_root_path,
-                                             out_folder,
+                                             str(Path(out_folder) / model_name / target_image.parent.stem / target_image.stem),
                                              model_name,
                                              model_folder,
                                              stage,
@@ -104,7 +106,7 @@ def optimization_for_different_targets_v2(path_to_models, relative_to_path, repl
             submit_single_optimization(path_to_models,
                                        relative_to_path,
                                        replace_root_path,
-                                       out_folder,
+                                       str(Path(out_folder) / model_name / target_image.parent.stem / target_image.stem),
                                        model_name,
                                        model_folder,
                                        stage,
