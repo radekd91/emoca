@@ -17,7 +17,7 @@ def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
         cfg.model.face_eye_mask_path = str(Path(replace_root_path) / Path(cfg.model.face_eye_mask_path).relative_to(relative_to_path))
         cfg.model.fixed_displacement_path = str(Path(replace_root_path) / Path(cfg.model.fixed_displacement_path).relative_to(relative_to_path))
         cfg.model.pretrained_vgg_face_path = str(Path(replace_root_path) / Path(cfg.model.pretrained_vgg_face_path).relative_to(relative_to_path))
-
+        cfg.model.pretrained_modelpath = '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
         cfg.data.data_root = str(Path(replace_root_path) / Path(cfg.data.data_root).relative_to(relative_to_path))
 
     return cfg
@@ -46,6 +46,8 @@ def load_deca_and_data(path_to_models=None,
         print(f"Taking config of stage '{stage}'")
         print(conf.keys())
         cfg = conf[stage]
+        if relative_to_path is not None and replace_root_path is not None:
+            cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
         cfg.model.resume_training = False
 
         checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
@@ -131,22 +133,45 @@ def plot_results(vis_dict, title, detail=True, show=True, save_path=None):
 
     if detail:
         fig, axs = plt.subplots(1, 8)
-        axs[0].imshow(vis_dict['detail_detail__inputs'])
-        axs[1].imshow(vis_dict['detail_detail__landmarks_gt'])
-        axs[2].imshow(vis_dict['detail_detail__landmarks_predicted'])
-        axs[3].imshow(vis_dict['detail_detail__mask'])
-        axs[4].imshow(vis_dict['detail_detail__geometry_coarse'])
-        axs[5].imshow(vis_dict['detail_detail__geometry_detail'])
-        axs[6].imshow(vis_dict['detail_detail__output_images_coarse'])
-        axs[7].imshow(vis_dict['detail_detail__output_images_detail'])
+        prefix = None
+        for key in list(vis_dict.keys()):
+            if 'detail__inputs' in key:
+                start_idx = key.rfind('detail__inputs')
+                prefix = key[:start_idx]
+                # print(f"Prefix was found to be: '{prefix}'")
+                break
+        if prefix is None:
+            print(vis_dict.keys())
+            raise RuntimeError(f"Uknown disctionary content. Avaliable keys {vis_dict.keys()}")
+        axs[0].imshow(vis_dict[f'{prefix}detail__inputs'])
+        if f'{prefix}detail__landmarks_gt'in vis_dict.keys():
+            axs[1].imshow(vis_dict[f'{prefix}detail__landmarks_gt'])
+        axs[2].imshow(vis_dict[f'{prefix}detail__landmarks_predicted'])
+        if f'{prefix}detail__mask'in vis_dict.keys():
+            axs[3].imshow(vis_dict[f'{prefix}detail__mask'])
+        axs[4].imshow(vis_dict[f'{prefix}detail__geometry_coarse'])
+        axs[5].imshow(vis_dict[f'{prefix}detail__geometry_detail'])
+        axs[6].imshow(vis_dict[f'{prefix}detail__output_images_coarse'])
+        axs[7].imshow(vis_dict[f'{prefix}detail__output_images_detail'])
     else:
         fig, axs = plt.subplots(1, 6)
-        axs[0].imshow(vis_dict['coarse_coarse__inputs'])
-        axs[1].imshow(vis_dict['coarse_coarse__landmarks_gt'])
-        axs[2].imshow(vis_dict['coarse_coarse__landmarks_predicted'])
-        axs[3].imshow(vis_dict['coarse_coarse__mask'])
-        axs[4].imshow(vis_dict['coarse_coarse__geometry_coarse'])
-        axs[5].imshow(vis_dict['coarse_coarse__output_images_coarse'])
+        prefix = None
+        for key in list(vis_dict.keys()):
+            if 'coarse__inputs' in key:
+                start_idx = key.rfind('coarse__inputs')
+                prefix = key[:start_idx]
+                break
+        if prefix is None:
+            print(vis_dict.keys())
+            raise RuntimeError(f"Uknown disctionary content. Avaliable keys {vis_dict.keys()}")
+        axs[0].imshow(vis_dict[f'{prefix}coarse__inputs'])
+        if f'{prefix}coarse__landmarks_gt' in vis_dict.keys():
+            axs[1].imshow(vis_dict[f'{prefix}coarse__landmarks_gt'])
+        axs[2].imshow(vis_dict[f'{prefix}coarse__landmarks_predicted'])
+        if f'{prefix}coarse__mask'in vis_dict.keys():
+            axs[3].imshow(vis_dict[f'{prefix}coarse__mask'])
+        axs[4].imshow(vis_dict[f'{prefix}coarse__geometry_coarse'])
+        axs[5].imshow(vis_dict[f'{prefix}coarse__output_images_coarse'])
 
     # axs[0,0].imshow(vis_dict['detail_detail__inputs'])
     # axs[0,1].imshow(vis_dict['detail_detail__landmarks_gt'])

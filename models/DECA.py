@@ -524,7 +524,8 @@ class DecaModule(LightningModule):
         if self.mode == DecaMode.COARSE or (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
 
             # landmark losses (only useful if coarse model is being trained
-            if training or lmk is not None:
+            # if training or lmk is not None:
+            if lmk is not None:
                 if self.deca.config.use_landmarks:
                     d = losses
                 else:
@@ -542,7 +543,8 @@ class DecaModule(LightningModule):
                 # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
             # photometric loss
-            if training or masks is not None:
+            # if training or masks is not None:
+            if masks is not None:
                 if self.deca.config.use_photometric:
                     d = losses
                 else:

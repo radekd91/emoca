@@ -11,6 +11,20 @@ import matplotlib.pyplot as plt
 import sys, os
 
 
+def load_image_to_batch(image):
+    if isinstance(image, str) or isinstance(image, Path):
+        image = imread(image)[:, :, :3]
+
+    if isinstance(image, np.ndarray):
+        image = np.transpose(image, [2, 0, 1])[None, ...]
+        if image.dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+            image = image.astype(np.float32)
+            image /= 255.
+
+    image = torch.from_numpy(image).cuda()
+    return image
+
+
 class TargetEmotionCriterion(torch.nn.Module):
 
     def __init__(self,
@@ -25,19 +39,22 @@ class TargetEmotionCriterion(torch.nn.Module):
         super().__init__()
         self.emonet_loss = emonet_loss_instance or EmoNetLoss('cuda')
 
-        if isinstance(target_image, str) or isinstance(target_image, Path):
-            target_image = imread(target_image)[:,:,:3]
-
-        if isinstance(target_image, np.ndarray):
-            target_image = np.transpose(target_image, [2,0,1])[None, ...]
-            if target_image.dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-                target_image = target_image.astype(np.float32)
-                target_image /= 255.
+        # if isinstance(target_image, str) or isinstance(target_image, Path):
+        #     target_image = imread(target_image)[:,:,:3]
+        #
+        # if isinstance(target_image, np.ndarray):
+        #     target_image = np.transpose(target_image, [2,0,1])[None, ...]
+        #     if target_image.dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+        #         target_image = target_image.astype(np.float32)
+        #         target_image /= 255.
 
         # if target_image.shape[2] != self.emonet_loss.size[0] or target_image.shape[3] != self.emonet_loss.size[1]:
         #     target_image = F.interpolate(target_image)
 
-        target_image = torch.from_numpy(target_image).cuda()
+        # target_image = torch.from_numpy(target_image).cuda()
+
+        target_image = load_image_to_batch(target_image)
+
         # self.target_image = target_image
         self.register_buffer('target_image', target_image)
         self.target_emotion = self.emonet_loss.emonet_out(target_image)
@@ -108,6 +125,25 @@ class CriterionWrapper(torch.nn.Module):
     def name(self):
         return self.criterion.name
 
+
+def save_visualization(deca, values, title, save_path=None, show=False):
+    uv_detail_normals = None
+    if 'uv_detail_normals' in values.keys():
+        uv_detail_normals = values['uv_detail_normals']
+    visualizations, grid_image = deca._visualization_checkpoint(values['verts'],
+                                                                values['trans_verts'],
+                                                                values['ops'],
+                                                                uv_detail_normals,
+                                                                values,
+                                                                0,
+                                                                "",
+                                                                "",
+                                                                save=False)
+    vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
+    plot_results(vis_dict, title, detail=True, show=show, save_path=save_path)
+    return vis_dict
+
+
 def optimize(deca,
              values,
              # optimize_detail=True,
@@ -130,8 +166,18 @@ def optimize(deca,
              max_iters = 1000,
              patience = 20,
              verbose=True,
-             save_path=None
+             save_path=None,
+             optimizer_type= "LBFGS",
              ):
+    if sum([optimize_detail,
+             optimize_identity,
+             optimize_expression,
+             optimize_neck_pose,
+             optimize_jaw_pose,
+             optimize_texture,
+             optimize_cam,
+             optimize_light]) == 0:
+        raise ValueError("Nothing to optimizze for. Everything is set to false")
 
     if save_path is not None:
         print(f"Results will be saved to '{save_path}'")
@@ -187,10 +233,6 @@ def optimize(deca,
     if len(parameters) == 0:
         raise RuntimeError("No parameters are being optimized")
 
-    # optimizer = torch.optim.Adam(parameters, lr=0.01)
-    # optimizer = torch.optim.SGD(parameters, lr=0.001)
-    optimizer = torch.optim.LBFGS(parameters, lr=lr)
-
     def criterion(vals, losses_and_metrics, logs=None):
         total_loss = 0
         for i, loss in enumerate(losses_to_use):
@@ -211,21 +253,42 @@ def optimize(deca,
 
         return total_loss
 
-    best_loss = 99999999999999.
-    eps = 1e-6
-
-    stopping_condition_hit = False
-
     if save_path is not None:
         print(f"Creating savepath: {save_path}")
         save_path.mkdir(exist_ok=True, parents=True)
     else:
         print("No visuals will be saved")
 
-    since_last_improvement = 0
-    losses_by_step = []
     logs = {}
-    for i in range(max_iters):
+    losses_by_step = []
+
+
+    losses_and_metrics = deca.compute_loss(values, training=True)
+    loss = criterion(values, losses_and_metrics, logs)
+    losses_by_step += [loss.item()]
+
+    save_visualization(deca, values,
+                       save_path=save_path / f"start.png" if save_path is not None else None,
+                       title=f"Start",
+                       show=visualize_result)
+
+    # optimizer = torch.optim.Adam(parameters, lr=0.01)
+    # optimizer = torch.optim.SGD(parameters, lr=0.001)
+    # optimizer = torch.optim.LBFGS(parameters, lr=lr)
+
+    optimizer_class = getattr(torch.optim, optimizer_type)
+    optimizer = optimizer_class(parameters, lr=lr)
+
+
+    best_loss = 99999999999999.
+    eps = 1e-6
+
+    stopping_condition_hit = False
+
+
+
+    since_last_improvement = 0
+    for i in range(1,max_iters+1):
 
         def closure():
             optimizer.zero_grad()
@@ -250,21 +313,10 @@ def optimize(deca,
         optimizer.step(closure=closure)
 
         if visualize_progress or save_path is not None:
-            uv_detail_normals = None
-            if 'uv_detail_normals' in values.keys():
-                uv_detail_normals = values['uv_detail_normals']
-            visualizations, grid_image = deca._visualization_checkpoint(values['verts'],
-                                                                        values['trans_verts'],
-                                                                        values['ops'],
-                                                                        uv_detail_normals,
-                                                                        values,
-                                                                        0,
-                                                                        "",
-                                                                        "",
-                                                                        save=False)
-            vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
-            step_path = save_path / f"step_{i:04d}.png" if save_path is not None else None
-            plot_results(vis_dict, f"Iter {i:04d}, loss={loss:.10f}", detail=True, show=visualize_progress, save_path=step_path)
+            save_visualization(deca, values,
+                               save_path=save_path / f"step_{i:04d}.png" if save_path is not None else None,
+                               title=f"Iter {i:04d}, loss={loss:.10f}",
+                               show=visualize_progress)
 
         losses_by_step += [loss.item()]
 
@@ -306,28 +358,17 @@ def optimize(deca,
 
     values = deca._decode(best_values, training=False)
     losses_and_metrics = deca.compute_loss(values, training=False)
-    uv_detail_normals = None
-    if 'uv_detail_normals' in values.keys():
-        uv_detail_normals = values['uv_detail_normals']
-    visualizations, grid_image = deca._visualization_checkpoint(values['verts'],
-                                                                values['trans_verts'],
-                                                                values['ops'],
-                                                                uv_detail_normals,
-                                                                values,
-                                                                0,
-                                                                "",
-                                                                "",
-                                                                save=False)
-    vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
-    if visualize_result or save_path:
-        best_path = save_path / f"best.png" if save_path is not None else None
-        plot_results(vis_dict, f"Best iter {best_iter:04d}, loss={best_loss:.10f}", detail=True, show=visualize_result, save_path=best_path)
 
+    save_visualization(deca, values,
+                       save_path=save_path / f"best.png" if save_path is not None else None,
+                       title=f"Best iter {best_iter:04d}, loss={best_loss:.10f}",
+                       show=visualize_progress)
     plt.figure()
     plt.plot(losses_by_step)
     if save_path is not None:
         plt.savefig(save_path / "optimization.png", dpi=100)
     plt.title("Optimization")
+
 
     print(logs)
     for term in logs.keys():
@@ -494,8 +535,49 @@ def loss_function_configs(target_image):
     return loss_configs
 
 
+def replace_codes(values_from, values_to,
+                  optimize_detail=False,
+                  optimize_identity=False,
+                  optimize_expression=False,
+                  optimize_neck_pose=False,
+                  optimize_jaw_pose=False,
+                  optimize_texture=False,
+                  optimize_cam=False,
+                  optimize_light=False,
+                  **kwargs):
+    if optimize_detail:
+        values_to['detailcode'] = values_from['detailcode'].detach().clone()
+
+    if optimize_identity:
+        values_to['shapecode'] = values_from['shapecode'].detach().clone()
+
+    if optimize_expression:
+        values_to['expcode'] = values_from['expcode'].detach().clone()
+
+    if optimize_neck_pose and optimize_jaw_pose:
+        values_to['posecode'] = values_from['posecode'].detach().clone()
+    elif optimize_neck_pose:
+        posecode = values_from['posecode'].detach().clone()
+        neck_pose = posecode[:,:3]
+        values_to['posecode'] = torch.cat([neck_pose, posecode[:,3:]], dim=1)
+    elif optimize_jaw_pose:
+        posecode = values_from['posecode'].detach().clone()
+        jaw_pose = posecode[:, 3:]
+        values_to['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
+
+    if optimize_texture:
+        values_to['texcode'] = values_from['texcode'].detach().clone()
+
+    if optimize_cam:
+        values_to['cam'] = values_from['cam'].detach().clone()
+
+    if optimize_light:
+        values_to['lightcode'] = values_from['lightcode'].detach().clone()
+    return values_to
+
+
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                        model_folder, stage, image_index, losses_to_use, **kwargs):
+                        model_folder, stage, image_index, target_image, losses_to_use=None, **kwargs):
     # if losses_to_use is not None:
     #     target_image = "~/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/VA_Set/" \
     #                    "detections/Train_Set/82-25-854x480/002400_000.png"
@@ -524,26 +606,47 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
     # deca.deca.config.mode = DecaMode.COARSE
     # image_index = 390 * 4 + 1
     # image_index = 90*4
-    values, visdict = test(deca, dm, image_index)
-    print(values.keys())
 
-    # plot_results(visdict, "title")
+    initializations = {}
+    values_input, visdict_input = test(deca, dm, image_index=image_index)
+    # print(values_input.keys())
+    # if not initialize_from_target:
+    # initializations["from_input"] = [values_input, visdict_input]
+        # plot_results(visdict, "title")
+        # max_iters = 1000 # part of kwargs now
 
-    max_iters = 1000
-    # max_iters = 100
-    # max_iters = 10
+    # if initialize_from_target:
+    batch = {}
+    batch["image"] = load_image_to_batch(target_image)
+    values_target, visdict_target = test(deca, dm, batch=batch)
+    values_target = replace_codes(values_input, values_target, **kwargs)
+    initializations["from_target"] = [values_target, visdict_target]
 
-    num_repeats = 5
-    for i in range(num_repeats):
-        save_path = Path(out_folder) / model_name / f"{i:02d}"
-        save_path.mkdir(parents=True, exist_ok=True)
-        optimize(deca, values,
-                 losses_to_use=losses_to_use,
-                 # max_iters=max_iters,
-                 verbose=True,
-                 # visualize_progress=False,
-                 save_path=save_path,
-                 **kwargs)
+
+    # TODO: possibly add an option for randomized
+
+    # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
+    Path(out_folder ).mkdir(exist_ok=True, parents=True)
+    with open("out_folder.txt", "w") as f:
+        f.write(str(out_folder))
+    with open(Path(out_folder) / "submission_folder.txt", "w") as f:
+        f.write(os.getcwd())
+
+    for key, vals in initializations.items():
+        values, visdict = vals[0], vals[1]
+        # num_repeats = 5
+        num_repeats = 1
+        for i in range(num_repeats):
+            # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
+            save_path = Path(out_folder) / key / f"{i:02d}"
+            save_path.mkdir(parents=True, exist_ok=True)
+            optimize(deca, values,
+                     losses_to_use=losses_to_use,
+                     # max_iters=max_iters,
+                     verbose=True,
+                     # visualize_progress=False,
+                     save_path=save_path,
+                     **kwargs)
 
 
 def optimization_with_different_losses(path_to_models,
@@ -566,6 +669,7 @@ def optimization_with_different_losses(path_to_models,
                             model_folder,
                             stage,
                             starting_image_index,
+                            target_image,
                             loss_list,
                             **optim_kwargs)
 
@@ -584,11 +688,13 @@ def optimization_with_specified_loss(path_to_models,
     single_optimization(path_to_models,
                         relative_to_path,
                         replace_root_path,
-                        out_folder / loss_keyword,
+                        # out_folder / loss_keyword,
+                        out_folder ,
                         model_name,
                         model_folder,
                         stage,
                         starting_image_index,
+                        target_image,
                         loss_list,
                         **optim_kwargs)
 
