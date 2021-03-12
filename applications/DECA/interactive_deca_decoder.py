@@ -52,8 +52,8 @@ def load_deca_and_data(path_to_models=None,
 
         checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
         print(f"Loading checkpoint '{checkpoint}'")
-        if relative_to_path is not None and replace_root_path is not None:
-            cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+        # if relative_to_path is not None and replace_root_path is not None:
+        #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
         checkpoint_kwargs = {
             "model_params": cfg.model,

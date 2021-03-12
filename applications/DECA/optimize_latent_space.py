@@ -577,7 +577,7 @@ def replace_codes(values_from, values_to,
 
 
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                        model_folder, stage, image_index, target_image, losses_to_use=None, **kwargs):
+                        model_folder, stage, image_index, target_image, losses_to_use=None, num_repeats=1, **kwargs):
     # if losses_to_use is not None:
     #     target_image = "~/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/VA_Set/" \
     #                    "detections/Train_Set/82-25-854x480/002400_000.png"
@@ -611,7 +611,7 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
     values_input, visdict_input = test(deca, dm, image_index=image_index)
     # print(values_input.keys())
     # if not initialize_from_target:
-    # initializations["from_input"] = [values_input, visdict_input]
+    initializations["from_input"] = [values_input, visdict_input]
         # plot_results(visdict, "title")
         # max_iters = 1000 # part of kwargs now
 
@@ -635,7 +635,7 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
     for key, vals in initializations.items():
         values, visdict = vals[0], vals[1]
         # num_repeats = 5
-        num_repeats = 1
+        # num_repeats = 1
         for i in range(num_repeats):
             # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
             save_path = Path(out_folder) / key / f"{i:02d}"
@@ -658,6 +658,7 @@ def optimization_with_different_losses(path_to_models,
                                        stage,
                                        starting_image_index,
                                        target_image,
+                                        num_repeats,
                                        optim_kwargs):
     loss_configs = loss_function_configs(target_image)
     for key, loss_list in loss_configs.items():
@@ -671,6 +672,7 @@ def optimization_with_different_losses(path_to_models,
                             starting_image_index,
                             target_image,
                             loss_list,
+                            num_repeats,
                             **optim_kwargs)
 
 def optimization_with_specified_loss(path_to_models,
@@ -683,6 +685,7 @@ def optimization_with_specified_loss(path_to_models,
                                        starting_image_index,
                                        target_image,
                                        loss_keyword,
+                                        num_repeats,
                                        optim_kwargs):
     loss_list = loss_function_config(target_image, loss_keyword)
     single_optimization(path_to_models,
@@ -696,6 +699,7 @@ def optimization_with_specified_loss(path_to_models,
                         starting_image_index,
                         target_image,
                         loss_list,
+                        num_repeats,
                         **optim_kwargs)
 
 
@@ -778,7 +782,8 @@ if __name__ == "__main__":
     starting_image_index = int(sys.argv[8])
     target_image = sys.argv[9]
     loss_keyword = sys.argv[10]
-    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
+    num_repeats= int(sys.argv[11])
+    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[12]))
 
 
     optimization_with_specified_loss(path_to_models,
@@ -791,4 +796,5 @@ if __name__ == "__main__":
                                        starting_image_index,
                                        target_image,
                                        loss_keyword,
+                                       num_repeats,
                                        optim_kwargs)

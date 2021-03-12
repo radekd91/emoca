@@ -8,9 +8,9 @@ from utils.condor import execute_on_cluster
 import time as t
 
 def submit_single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                               model_folder, stage, image_index, target_image, keyword, optim_kwargs):
+                               model_folder, stage, image_index, target_image, keyword, num_repeats, optim_kwargs):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion/submission"
     submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
@@ -43,7 +43,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     cuda_capability_requirement = 6
     mem_gb = 10
     args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name} " \
-                    f"{model_folder} {stage} {image_index} {target_image} {keyword} {cgf_name}"
+                    f"{model_folder} {stage} {image_index} {target_image} {keyword} {num_repeats} {cgf_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -66,13 +66,18 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
 
 
 def optimization_for_different_targets(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                                       model_folder, stage, starting_image_index, target_images, loss_keywords, optim_kwargs,
+                                       model_folder, stage, starting_image_index, target_images,
+                                       loss_keywords,
+                                       num_repeats,
+                                       optim_kwargs,
                                        submit=True):
     for target_image in target_images:
         optimization_with_different_losses(
             path_to_models, relative_to_path, replace_root_path,
             Path(out_folder) / Path(model_name) / target_image.parent.stem / target_image.stem,
-            model_name, model_folder, stage, starting_image_index, target_image, loss_keywords, optim_kwargs, submit)
+            model_name, model_folder, stage, starting_image_index, target_image, loss_keywords,
+            num_repeats,
+            optim_kwargs, submit)
 
 
 def optimization_with_different_losses(path_to_models,
@@ -85,6 +90,7 @@ def optimization_with_different_losses(path_to_models,
                                        starting_image_index,
                                        target_image,
                                        loss_keywords,
+                                        num_repeats,
                                        optim_kwargs,
                                        submit = True):
 
@@ -100,6 +106,7 @@ def optimization_with_different_losses(path_to_models,
                             starting_image_index,
                             target_image,
                             keyword,
+                            num_repeats,
                             optim_kwargs)
         else:
             submit_single_optimization(path_to_models,
@@ -112,25 +119,26 @@ def optimization_with_different_losses(path_to_models,
                             starting_image_index,
                             target_image,
                             keyword,
+                            num_repeats,
                             optim_kwargs)
 
 
 def main():
-    # cluster
-    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = None
-    replace_root_path = None
-    out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
-    target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
+    # # cluster
+    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    # relative_to_path = None
+    # replace_root_path = None
+    # out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
+    # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # submit = True
 
-    # ## not on cluster
-    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    # relative_to_path = '/ps/scratch/'
-    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = False
+    ## not on cluster
+    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    relative_to_path = '/ps/scratch/'
+    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    submit = False
 
     deca_models = {}
     deca_models["Octavia"] = \
@@ -160,6 +168,9 @@ def main():
         if not t.exists():
             print(t)
         # print(t.exists())
+
+    num_repeats = 5
+    # num_repeats = 1
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     experiment_name = "det_exp"
@@ -229,7 +240,7 @@ def main():
         starting_image_index = cfg[2]
         optimization_for_different_targets(path_to_models, relative_to_path, replace_root_path, out_folder, name,
                                            model_folder, stage, starting_image_index,
-                                           target_images, loss_keywords, kw, submit)
+                                           target_images, loss_keywords, num_repeats, kw, submit)
 
 if __name__ == "__main__":
     main()
