@@ -274,7 +274,8 @@ def main():
         model_folder = cfg[0]
         stage = cfg[1]
         starting_image_index = cfg[2]
-        optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path, out_folder, name,
+        optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
+                                              out_folder, name,
                                            model_folder, stage, starting_image_index,
                                            target_images,
                                            # loss_keywords,

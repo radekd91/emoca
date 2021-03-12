@@ -680,8 +680,8 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
 
     # TODO: possibly add an option for randomized
 
-    # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
-    Path(out_folder ).mkdir(exist_ok=True, parents=True)
+    Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
+    # Path(out_folder ).mkdir(exist_ok=True, parents=True)
     with open("out_folder.txt", "w") as f:
         f.write(str(out_folder))
     with open(Path(out_folder) / "submission_folder.txt", "w") as f:
@@ -692,8 +692,8 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
         # num_repeats = 5
         # num_repeats = 1
         for i in range(num_repeats):
-            # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
-            save_path = Path(out_folder) / key / f"{i:02d}"
+            save_path = Path(out_folder) / model_name / key / f"{i:02d}"
+            # save_path = Path(out_folder) / key / f"{i:02d}"
             save_path.mkdir(parents=True, exist_ok=True)
             optimize(deca,
                      copy_values(values),  #important to copy
