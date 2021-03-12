@@ -51,6 +51,8 @@ class DecaModule(LightningModule):
         self.deca = DECA(config=model_params)
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.stage_name = stage_name
+        if self.stage_name is None:
+            self.stage_name = ""
         if len(self.stage_name) > 0:
             self.stage_name += "_"
         if 'emonet_weight' in self.deca.config.keys():
@@ -64,6 +66,8 @@ class DecaModule(LightningModule):
         self.inout_params = inout_params
         self.deca._reconfigure(model_params)
         self.stage_name = stage_name
+        if self.stage_name is None:
+            self.stage_name = ""
         if len(self.stage_name) > 0:
             self.stage_name += "_"
         self.mode = DecaMode[str(model_params.mode).upper()]
