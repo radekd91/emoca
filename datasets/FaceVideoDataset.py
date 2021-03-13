@@ -20,7 +20,7 @@ from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
-from datasets.IO import load_segmentation, save_segmentation
+from datasets.IO import load_segmentation, save_segmentation, save_emotion, load_emotion
 import hashlib
 # import zlib
 
@@ -245,6 +245,12 @@ class FaceVideoDataModule(pl.LightningDataModule):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    def _get_path_to_sequence_emotions(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        suffix = Path(video_file.parts[-4]) / 'emotions' / video_file.parts[-2] / video_file.stem
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
     def _get_path_to_sequence_reconstructions(self, sequence_id):
         video_file = self.video_list[sequence_id]
         suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
@@ -401,10 +407,16 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
         return net, "face_parsing"
 
+    def _get_emotion_net(self, device):
+        from layers.losses.EmoNetLoss import get_emonet
+
+        net = get_emonet()
+        net = net.to(device)
+
+        return net, "emo_net"
+
     def _segment_faces_in_sequence(self, sequence_id):
         import time
-
-
 
         video_file = self.video_list[sequence_id]
         print("Segmenting faces in sequence: '%s'" % video_file)
@@ -472,6 +484,62 @@ class FaceVideoDataModule(pl.LightningDataModule):
                 save_segmentation(segmentation_path, segmentation[j], seg_type)
             end = time.time()
             print(f" Saving batch {i} took: {end - start}")
+
+
+    def _extract_emotion_from_faces_in_sequence(self, sequence_id):
+        import time
+
+        video_file = self.video_list[sequence_id]
+        print("Extracting emotion fetures from faces in sequence: '%s'" % video_file)
+        # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+
+        in_detection_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_emotion_folder = self._get_path_to_sequence_emotions(sequence_id)
+        out_emotion_folder.mkdir(exist_ok=True, parents=True)
+        print("into folder : '%s'" % str(out_emotion_folder))
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print(device)
+        net, emotion_type = self._get_emotion_net(device)
+
+        detection_fnames = sorted(list(in_detection_folder.glob("*.png")))
+
+        # ref_im = imread(detection_fnames[0])
+        # ref_size = Resize((ref_im.shape[0], ref_im.shape[1]), interpolation=Image.NEAREST)
+
+        transforms = Compose([
+            Resize((256, 256)),
+        ])
+        batch_size = 64
+
+        dataset = UnsupervisedImageDataset(detection_fnames, image_transforms=transforms,
+                                           im_read='pil')
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+
+        # import matplotlib.pyplot as plt
+
+        for i, batch in enumerate(tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            # images = fixed_image_standardization(batch['image'].to(device))
+            images = batch['image'].cuda()
+            # start = time.time()
+            with torch.no_grad():
+                out = net(images, intermediate_features=True)
+            # end = time.time()
+            # print(f" Inference batch {i} took : {end - start}")
+            emotion_features = {key : val.detach().cpu().numpy() for key, val in out.items()}
+
+            # start = time.time()
+            for j in range(images.size()[0]):
+                image_path = batch['path'][j]
+                emotion_path = out_emotion_folder / (Path(image_path).stem + ".pkl")
+                emotion_feature_j = {key: val[j] for key, val in emotion_features.items()}
+                del emotion_feature_j['emo_feat'] # too large to be stored per frame = (768, 64, 64)
+                del emotion_feature_j['heatmap'] # not too large but probably not usefull = (68, 64, 64)
+                # we are keeping emo_feat_2 (output of last conv layer (before FC) and then the outputs of the FCs - expression, valence and arousal)
+                save_emotion(emotion_path, emotion_feature_j, emotion_type)
+            # end = time.time()
+            # print(f" Saving batch {i} took: {end - start}")
 
     @staticmethod
     def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='overlay.png'):
@@ -2578,6 +2646,8 @@ def main():
     # # dm._process_everything_for_sequence(i)
     # # dm._detect_faces_in_sequence(i)
     # # dm._segment_faces_in_sequence(i)
+
+    dm._extract_emotion_from_faces_in_sequence(0)
 
     # rpoblematic indices
     # dm._segment_faces_in_sequence(30)

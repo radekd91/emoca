@@ -6,6 +6,7 @@ import datetime
 from omegaconf import DictConfig, OmegaConf
 from utils.condor import execute_on_cluster
 import time as t
+import random
 
 def submit_single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
                                model_folder, stage, image_index, target_image,
@@ -15,7 +16,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion/submission"
     submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/optimize_emotion/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    submission_folder_name = time + "_" + "submission"
+    submission_folder_name = time + "_" + "submission_%.3d" % random.randint(0,100)
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
@@ -218,7 +219,8 @@ def main():
         "optimize_cam": False,
         "optimize_light": False,
         "lr": 0.01,
-        "optimizer_type" : "LBFGS",
+        # "optimizer_type" : "LBFGS",
+        "optimizer_type" : "SGD",
         "max_iters": 1000,
         "patience": 20,
         "visualize_progress" : False,
@@ -254,13 +256,24 @@ def main():
         # "emotion_e": 1.,
         # "emotion_f12vae": 1.,
         # "loss_shape_reg": 100.,
-        "loss_expression_reg" : 100.,
+        # "loss_expression_reg" : 100.,
+        "loss_expression_reg" : 10.,
+        # "loss_z_reg" : 10.,
     }
-    experiment_name = "vae_exp_det"
+
+    experiment_name = ""
+    for key in kw["losses_to_use"].keys():
+        experiment_name += f"{key}_{kw['losses_to_use'][key]:.2f}_"
+    experiment_name += kw["optimizer_type"] + "_" + str(kw["lr"])
+
+    # experiment_name = f"f12vae_exp_{kw['losses_to_use']['loss_expression_reg']:.2f}_det"
+    # experiment_name = "vae_exp_det"
+    # experiment_name = "vae_exp_det"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
     experiment_name = time + "_" + experiment_name
+    print("Running experiment: " + experiment_name)
     out_folder = str(Path(out_folder) / experiment_name)
 
     # loss_keywords = ["emotion",

@@ -24,6 +24,23 @@ def load_segmentation(filename):
     return seg_image, seg_type
 
 
+def save_emotion(filename, emotion_features, emotion_type, version=0):
+    with open(filename, "wb") as f:
+        # for some reason compressed pickle can only load one object (EOF bug)
+        # so put it in the list
+        cpkl.dump([version, emotion_type, emotion_features], f, compression='gzip')
+
+
+def load_emotion(filename):
+    with open(filename, "rb") as f:
+        emo = cpkl.load(f, compression='gzip')
+        version = emo[0]
+        emotion_type = emo[1]
+        emotion_features = emo[2]
+    return emotion_features, emotion_type
+
+
+
 face_parsing_labels = {
     0: 'background',  # no
     1: 'skin',
