@@ -118,6 +118,7 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
     # filename_list = []
     status_array_path = path_to_cache(dm) / (emotion_feature + "_status.memmap")
     if not status_array_path.is_file():
+        print(f"Status array file is not present. Creating: {status_array_path}")
         status_array = np.memmap(status_array_path,
                                  dtype=np.bool,
                                  mode='w+',
@@ -126,6 +127,7 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
         status_array[...] = False
         del status_array
     else:
+        print(f"Status array file found. Checking if everything is processed.")
         status_array = np.memmap(status_array_path,
                                  dtype=np.bool,
                                  mode='r+',
