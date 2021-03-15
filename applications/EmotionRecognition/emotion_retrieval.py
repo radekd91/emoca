@@ -108,7 +108,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
     # return data, samples
 
 
-def fill_data_array(dm, data, sample_counts, emotion_feature):
+def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
     print(f"Loading emotion feataures '{emotion_feature}' into a large array.")
     # filename_list = []
     status_array_path = path_to_cache(dm) / (emotion_feature + "_status.memmap")
@@ -131,15 +131,19 @@ def fill_data_array(dm, data, sample_counts, emotion_feature):
         if all_processed:
             print("Every sequence already processed. The data array is ready")
 
-    for vi, video in enumerate(auto.tqdm(dm.video_list)):
-        first_idx = sum(sample_counts[0:vi])
-        last_idx = sum(sample_counts[0:(vi+1)])
-        print(f"Processing sequence {vi}")
-        # data, filenames = \
-        fill_data_array_single_sequence(dm, data, vi, emotion_feature, first_idx, last_idx)
-        # filename_list += filenames
-    with open(path_to_cache(dm) / f"{emotion_feature}_status.pkl", "wb") as f:
-        pkl.dump("finished", f)
+    if seq_id is None:
+        for vi, video in enumerate(auto.tqdm(dm.video_list)):
+            first_idx = sum(sample_counts[0:vi])
+            last_idx = sum(sample_counts[0:(vi+1)])
+            print(f"Processing sequence {vi}")
+            fill_data_array_single_sequence(dm, data, vi, emotion_feature, first_idx, last_idx)
+        with open(path_to_cache(dm) / f"{emotion_feature}_status.pkl", "wb") as f:
+            pkl.dump("finished", f)
+    else:
+        first_idx = sum(sample_counts[0:seq_id])
+        last_idx = sum(sample_counts[0:(seq_id + 1)])
+        print(f"Processing sequence {seq_id}")
+        fill_data_array_single_sequence(dm, data, seq_id, emotion_feature, first_idx, last_idx)
     return data#, filename_list
 
 
