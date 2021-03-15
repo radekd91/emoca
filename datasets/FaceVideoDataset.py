@@ -2647,7 +2647,7 @@ def main():
     # # dm._detect_faces_in_sequence(i)
     # # dm._segment_faces_in_sequence(i)
 
-    dm._extract_emotion_from_faces_in_sequence(0)
+    # dm._extract_emotion_from_faces_in_sequence(0)
 
     # rpoblematic indices
     # dm._segment_faces_in_sequence(30)
