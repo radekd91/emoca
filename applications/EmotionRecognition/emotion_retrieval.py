@@ -88,7 +88,9 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         processed = status_array[vid_id]
         if processed:
             del status_array
+            print(f"Sequence {vid_id} is already processed. Skipping")
             return
+        print(f"Sequence {vid_id} is not processed. Processing ...")
     else:
         raise RuntimeError(f"Status array not found in {status_array_path}")
 
@@ -134,6 +136,8 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
         if all_processed:
             print("Every sequence already processed. The data array is ready")
             return data
+        else:
+            print("Not every sequence already processed. Processing ...")
 
     if seq_id is None:
         for vi, video in enumerate(auto.tqdm(dm.video_list)):
