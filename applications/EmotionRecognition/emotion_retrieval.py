@@ -133,6 +133,7 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
         del status_array
         if all_processed:
             print("Every sequence already processed. The data array is ready")
+            return data
 
     if seq_id is None:
         for vi, video in enumerate(auto.tqdm(dm.video_list)):
@@ -185,7 +186,7 @@ def main():
     emotion_feature = "emo_feat_2"
     if not (path_to_cache(dm) / f"{emotion_feature}_status.pkl").is_file():
         data, sample_counts, filename_list = create_data_array(dm, emotion_feature)
-        sys.exit(0)
+        # sys.exit(0)
         fill_data_array(dm, data, sample_counts, emotion_feature)
     # else:
     data, filename_list = load_data_array(dm, emotion_feature)
