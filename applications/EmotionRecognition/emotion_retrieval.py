@@ -102,6 +102,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         emotion_features, emotion_type = load_emotion(sample_path)
         feat = emotion_features[emotion_feature]
         data[first_idx + i, ...] = feat
+    data.flush()
 
     status_array = np.memmap(status_array_path,
                      dtype=np.bool,
@@ -109,6 +110,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
                      shape=(dm.num_sequences,)
                      )
     status_array[vid_id] = True
+    status_array.flush()
     del status_array
     # return data, samples
 
@@ -125,6 +127,7 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
                                  shape=(dm.num_sequences,)
                                  )
         status_array[...] = False
+        status_array.flush()
         del status_array
     else:
         print(f"Status array file found. Checking if everything is processed.")
