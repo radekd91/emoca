@@ -15,6 +15,7 @@ def path_to_cache(dm : FaceVideoDataModule):
 def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", force_cache_load=False):
     cache_file = path_to_cache(dm) / f"{emotion_feature}_meta.pkl"
     if not cache_file.is_file():
+        print(f"Meta data not cached in {cache_file}. Starting from scratch")
         if force_cache_load:
             raise RuntimeError(f"Cache file '{cache_file}' not found and force_cache_load is set to True")
         cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -43,12 +44,14 @@ def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", fo
             pkl.dump(sample_counts, f)
             pkl.dump(file_list, f)
     else:
+        print(f"Meta data cached in {cache_file}. Loading")
         with open(cache_file, "rb") as f:
             num_samples = pkl.load(f)
             feature_size = pkl.load(f)
             feature_dtype = pkl.load(f)
             sample_counts = pkl.load(f)
             file_list = pkl.load(f)
+    print("Meta data loaded.")
 
     if num_samples == 0 or feature_size is None:
         raise RuntimeError(f"No emotion features found. num_samples={num_samples}")
@@ -90,7 +93,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         raise RuntimeError(f"Status array not found in {status_array_path}")
 
 
-    for i, sample_path in auto.tqdm(samples):
+    for i, sample_path in enumerate(auto.tqdm(samples)):
         if first_idx + i == end_idx:
             raise RuntimeError("We were about to write to next video's slots. This should not happen."
                                f"Video = {video_emotion_folder}, first_idx={first_idx}, end_idx={end_idx}")
