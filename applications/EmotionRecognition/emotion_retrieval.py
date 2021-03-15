@@ -35,6 +35,7 @@ def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", fo
             sample_counts += [num_samples_video]
             num_samples += num_samples_video
 
+        feature_dtype = feat.dtype
         with open(cache_file, "wb") as f:
             pkl.dump(num_samples, f)
             pkl.dump(feature_size, f)
@@ -57,6 +58,10 @@ def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", fo
 
     array_path = data_path / (emotion_feature + ".memmap")
 
+    if array_path.is_file():
+        print(f"Opening array file {array_path}")
+    else:
+        print(f"Creating array file {array_path}")
     data = np.memmap(array_path,
                      dtype=feature_dtype,
                      mode='w+',
@@ -110,11 +115,21 @@ def fill_data_array(dm, data, sample_counts, emotion_feature):
     if not status_array_path.is_file():
         status_array = np.memmap(status_array_path,
                                  dtype=np.bool,
-                                 mode='r+',
+                                 mode='w+',
                                  shape=(dm.num_sequences,)
                                  )
         status_array[...] = False
         del status_array
+    else:
+        status_array = np.memmap(status_array_path,
+                                 dtype=np.bool,
+                                 mode='r+',
+                                 shape=(dm.num_sequences,)
+                                 )
+        all_processed = status_array.all()
+        del status_array
+        if all_processed:
+            print("Every sequence already processed. The data array is ready")
 
     for vi, video in enumerate(auto.tqdm(dm.video_list)):
         first_idx = sum(sample_counts[0:vi])
