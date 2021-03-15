@@ -12,9 +12,11 @@ def path_to_cache(dm : FaceVideoDataModule):
     return data_path
 
 
-def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2"):
+def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", force_cache_load=False):
     cache_file = path_to_cache(dm) / f"{emotion_feature}_meta.pkl"
     if not cache_file.is_file():
+        if force_cache_load:
+            raise RuntimeError(f"Cache file '{cache_file}' not found and force_cache_load is set to True")
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         num_samples = 0
         feature_size = None
@@ -91,7 +93,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         feat = emotion_features[emotion_feature]
         data[first_idx + i, ...] = feat
 
-    data = np.memmap(status_array_path,
+    status_array = np.memmap(status_array_path,
                      dtype=np.bool,
                      mode='w+',
                      shape=(dm.num_sequences,)
