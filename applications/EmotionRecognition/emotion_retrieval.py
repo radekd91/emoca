@@ -87,12 +87,12 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
     if status_array_path.is_file():
         status_array = np.memmap(status_array_path,
                          dtype=np.bool,
-                         mode='r+',
+                         mode='r',
                          shape=(dm.num_sequences,)
                          )
         processed = status_array[vid_id]
+        del status_array
         if processed:
-            del status_array
             print(f"Sequence {vid_id} is already processed. Skipping")
             return
         print(f"Sequence {vid_id} is not processed. Processing ...")
@@ -138,7 +138,7 @@ def fill_data_array(dm, data, sample_counts, emotion_feature, seq_id=None):
         print(f"Status array file found. Checking if everything is processed.")
         status_array = np.memmap(status_array_path,
                                  dtype=np.bool,
-                                 mode='r+',
+                                 mode='r',
                                  shape=(dm.num_sequences,)
                                  )
         all_processed = status_array.all()
