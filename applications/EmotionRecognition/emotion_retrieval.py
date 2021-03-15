@@ -63,13 +63,18 @@ def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", fo
 
     if array_path.is_file():
         print(f"Opening array file {array_path}")
+        data = np.memmap(array_path,
+                         dtype=feature_dtype,
+                         mode='r+',
+                         shape=(num_samples, feature_size)
+                         )
     else:
         print(f"Creating array file {array_path}")
-    data = np.memmap(array_path,
-                     dtype=feature_dtype,
-                     mode='w+',
-                     shape=(num_samples, feature_size)
-                     )
+        data = np.memmap(array_path,
+                         dtype=feature_dtype,
+                         mode='w+',
+                         shape=(num_samples, feature_size)
+                         )
     return data, sample_counts, file_list
 
 
@@ -106,7 +111,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
 
     status_array = np.memmap(status_array_path,
                      dtype=np.bool,
-                     mode='w+',
+                     mode='r+',
                      shape=(dm.num_sequences,)
                      )
     status_array[vid_id] = True
@@ -172,7 +177,7 @@ def load_data_array(dm, emotion_feature):
     array_path = data_path / (emotion_feature + ".memmap")
     data = np.memmap(array_path,
                      dtype=feature_dtype,
-                     mode='r+',
+                     mode='r',
                      shape=(num_samples, feature_size)
                      )
     return data, file_list
