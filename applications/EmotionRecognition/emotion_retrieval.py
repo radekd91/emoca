@@ -269,11 +269,16 @@ def create_visualization(image_fnames, indices, captions, title, path_prefix, sa
 
     for i in range(n):
         im = imread(path_prefix / image_fnames[i])
-        axs[i].imshow(im)
-        axs[i].set_title(captions[i], fontsize=4)
-        axs[i].get_xaxis().set_visible(False)
-        axs[i].get_yaxis().set_visible(False)
-
+        if n > 1:
+            axs[i].imshow(im)
+            axs[i].set_title(captions[i], fontsize=4)
+            axs[i].get_xaxis().set_visible(False)
+            axs[i].get_yaxis().set_visible(False)
+        else:
+            axs.imshow(im)
+            axs.set_title(captions[i], fontsize=4)
+            axs.get_xaxis().set_visible(False)
+            axs.get_yaxis().set_visible(False)
 
     if save_path is not None:
         plt.savefig(save_path, dpi=300)
@@ -296,14 +301,14 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
     save_path = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/"
                      f"emotion_retrieval/{'_'.join(emotion_feature)}/plots")
     save_path.mkdir(exist_ok=True, parents=True)
-    for i_ in range(N):
+    for i_ in auto.tqdm(range(N)):
         i = i_ * sampling_rate
-        print(f" --- Sample {i} --- ")
-        print(f"Name: {filename_list[i]}")
-        print(f"Min distance: {distances[i].min()}")
-        print(f"Max distance: {distances[i].max()}")
-        print(f"Mean distance: {distances[i].mean()}")
-        print(f"Std distance: {distances[i].std()}")
+        # print(f" --- Sample {i} --- ")
+        # print(f"Name: {filename_list[i]}")
+        # print(f"Min distance: {distances[i].min()}")
+        # print(f"Max distance: {distances[i].max()}")
+        # print(f"Mean distance: {distances[i].mean()}")
+        # print(f"Std distance: {distances[i].std()}")
         qry_image_fname = fix_path(Path(str(filename_list[i]).replace("emotions", "detections")))
         qry_image_fname = qry_image_fname.parent / (qry_image_fname.stem + ".png")
 
@@ -319,7 +324,7 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
         neighbor_captions = [caption]
         for j in range(nn_freq):
             j_ = nn_freq*j
-            print(f"Neighbor {j_}:")
+            # print(f"Neighbor {j_}:")
             idx = indices[i, j_]
             dist = distances[i, j_]
             fname = filename_list[idx]
@@ -333,12 +338,12 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
             name = str(im_fname)
             neighbor_captions += [#f"name={name}\n"
                                  f"n={j_}\n"
-                                 f"d={dist:.03f}"
+                                 f"d={dist:.03f}\n"
                                  f"frame={im_fname.stem}\n"
                                  f"vid={im_fname.parent.name}\n"
                                  f"set={im_fname.parents[1].stem}\n"
                                  f"split={im_fname.parents[3].stem}\n"]
-            print(neighbor_captions[-1])
+            # print(neighbor_captions[-1])
 
         file_path = save_path / f"{i:08d}_all.png"
         create_visualization(neighbor_images, neighbor_indices, neighbor_captions,
@@ -370,7 +375,7 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
             name = str(im_fname)
             neighbor_captions += [#f"name={name}\n"
                                  f"n={j}\n"
-                                 f"d={dist:.03f}"
+                                 f"d={dist:.03f}\n"
                                  f"frame={im_fname.stem}\n"
                                  f"vid={video_name}\n"
                                  f"set={im_fname.parents[1].stem}\n"
