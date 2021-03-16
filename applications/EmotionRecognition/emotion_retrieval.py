@@ -121,7 +121,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         # feat = emotion_features[emotion_feature]
         feats = []
         for f in emotion_feature:
-            feats += [emotion_features[f]]
+            feats += [np.array([emotion_features[f]])]
         feat = np.concatenate(feats)
         data[first_idx + i, ...] = feat
     data.flush()
