@@ -301,8 +301,8 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
     save_path = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/"
                      f"emotion_retrieval/{'_'.join(emotion_feature)}/plots")
     save_path.mkdir(exist_ok=True, parents=True)
-    print("Generating NN visualizations")
-    for i_ in auto.tqdm(range(N)):
+    print(f"Generating NN visualizations into {save_path}")
+    for i_ in auto.tqdm(range(N//sampling_rate)):
         i = i_ * sampling_rate
         # print(f" --- Sample {i} --- ")
         # print(f"Name: {filename_list[i]}")
