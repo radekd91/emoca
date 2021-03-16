@@ -301,6 +301,7 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
     save_path = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/"
                      f"emotion_retrieval/{'_'.join(emotion_feature)}/plots")
     save_path.mkdir(exist_ok=True, parents=True)
+    print("Generating NN visualizations")
     for i_ in auto.tqdm(range(N)):
         i = i_ * sampling_rate
         # print(f" --- Sample {i} --- ")
@@ -410,14 +411,17 @@ def main():
     else:
         data, filename_list = load_data_array(dm, emotion_feature), None
     sampling_rate = 30
+    print("Creating/loading nearest neighbor model")
     nbrs, sampling_rate, distances, indices, filename_list_ = build_database(dm, data,
                                                                              emotion_feature,
                                                                              filename_list,
                                                                              sampling_rate=sampling_rate,
                                                                              overwrite=overwrite_model,
                                                                              )
+    print("Nearest neighbor model ready.")
     data_ = data[::sampling_rate, ...]
     analyze_model(dm, data_, nbrs, sampling_rate, emotion_feature, distances, indices, filename_list_)
+    print("Done")
 
 
 if __name__ == "__main__":
