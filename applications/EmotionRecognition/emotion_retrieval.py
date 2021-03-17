@@ -290,7 +290,8 @@ def create_visualization(image_fnames, indices, captions, title, path_prefix, sa
 
 
 
-def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, indices, filename_list):
+def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, indices, filename_list,
+                  scratch_folder):
     if not isinstance(emotion_feature, list):
         emotion_feature = [emotion_feature,]
 
@@ -298,8 +299,9 @@ def analyze_model(dm, data, nn_model, sampling_rate,emotion_feature, distances, 
     M = distances.shape[1]
     # n_freq = N // 10
     nn_freq = M // 10
-    save_path = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/"
-                     f"emotion_retrieval/{'_'.join(emotion_feature)}/plots")
+    save_path = scratch_folder / f"emoca/emotion_retrieval/{'_'.join(emotion_feature)}/plots"
+    # save_path = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/"
+    #                  f"emotion_retrieval/{'_'.join(emotion_feature)}/plots")
     save_path.mkdir(exist_ok=True, parents=True)
     print(f"Generating NN visualizations into {save_path}")
     for i_ in auto.tqdm(range(N//sampling_rate)):
@@ -396,8 +398,8 @@ def main():
     subfolder = 'processed_2021_Jan_19_20-25-10'
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
-    emotion_feature = ["emo_feat_2"]
-    # emotion_feature = ["valence", "arousal"]
+    # emotion_feature = ["emo_feat_2"]
+    emotion_feature = ["valence", "arousal"]
     if not (path_to_cache(dm) / f"{'_'.join(emotion_feature)}_status.pkl").is_file():
         data, sample_counts, filename_list = create_data_array(dm, emotion_feature)
         # sys.exit(0)
@@ -420,7 +422,10 @@ def main():
                                                                              )
     print("Nearest neighbor model ready.")
     data_ = data[::sampling_rate, ...]
-    analyze_model(dm, data_, nbrs, sampling_rate, emotion_feature, distances, indices, filename_list_)
+
+    scratch = Path(f"/home/rdanecek/Workspace/mount/scratch/rdanecek/")
+    # scratch = Path(f"/ps/scratch/rdanecek/")
+    analyze_model(dm, data_, nbrs, sampling_rate, emotion_feature, distances, indices, filename_list_, scratch)
     print("Done")
 
 
