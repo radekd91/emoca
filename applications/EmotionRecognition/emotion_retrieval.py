@@ -38,7 +38,7 @@ def create_data_array(dm : FaceVideoDataModule, emotion_feature="emo_feat_2", fo
                 emotion_features, emotion_type = load_emotion(samples[0])
                 feats = []
                 for f in emotion_feature:
-                    feats += [np.array([emotion_features[f]]).squeeze()]
+                    feats += [np.array([emotion_features[f]]).reshape((-1,))]
                 feat = np.concatenate(feats)
                 feature_size = feat.size
 
@@ -121,7 +121,7 @@ def fill_data_array_single_sequence(dm, data, vid_id, emotion_feature, first_idx
         # feat = emotion_features[emotion_feature]
         feats = []
         for f in emotion_feature:
-            feats += [np.array([emotion_features[f]]).squeeze()]
+            feats += [np.array([emotion_features[f]]).reshape((-1,))]
         feat = np.concatenate(feats)
         data[first_idx + i, ...] = feat
     data.flush()
