@@ -409,14 +409,18 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     if start_i > 0 or force_new_location:
         if resume_from_previous:
             resume_i = start_i - 1
+            print(f"Resuming checkpoint from stage {resume_i} (and will start from the next stage {start_i})")
         else:
             resume_i = start_i
+            print(f"Resuming checkpoint from stage {resume_i} (and will start from the same stage {start_i})")
         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i])
     else:
         checkpoint, checkpoint_kwargs = None, None
 
     old_run_dir = None
     if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
+        if force_new_location:
+            print("The run will be resumed in a new foler (forked)")
         if cfg_coarse.inout.full_run_dir != 'todo':
             old_run_dir = cfg_coarse.inout.full_run_dir
             cfg_coarse.inout.full_run_dir_previous = old_run_dir
@@ -489,6 +493,11 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
             val_K_policy=cfg.learning.val_K_policy,
             test_K_policy=cfg.learning.test_K_policy,
         )
+        print(f"STARTING STAGE {i}")
+        print(f" stage - {stages[i]}")
+        print(f" prefix - {stages_prefixes[i]}")
+        print(f" mode - {cfg.model.mode}")
+
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger,
                                       data_preparation_function=prepare_data,
                                       checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
