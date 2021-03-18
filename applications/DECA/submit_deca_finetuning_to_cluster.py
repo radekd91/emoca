@@ -119,7 +119,7 @@ test_videos = [
 
 test_video_dict = {
     # 6 :' 74-25-1920x1080.mp4', # Ewan McGregor
-    148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
+    # 148: '119-30-848x480.mp4', # Octavia Spencer crying out of happiness at Oscars
     # 399: '9-15-1920x1080.mp4', # smiles, sadness, tears, girl with glasses
     # # 169: '19-24-1920x1080.mp4', # angry young black guy on stage
     # # 167: '17-24-1920x1080.mp4', # black guy on stage, difficult light
@@ -139,7 +139,7 @@ test_video_dict = {
     # # 404: '95-24-1920x1080.mp4', # white guy explaining stuff, mostly neutral
     # 151: '122-60-1920x1080-1.mp4', # crazy white youtuber, lots of overexaggerated expressiosn
     # 161: '135-24-1920x1080.mp4', # a couple watching a video, smiles, sadness, tears
-    # 393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
+    393: '82-25-854x480.mp4', # Rachel McAdams, sadness, anger
     # 145: '111-25-1920x1080.mp4', # disgusted white guy
     # 150: '121-24-1920x1080.mp4', # white guy scared and happy faces
 }
@@ -159,10 +159,10 @@ def finetune_on_selected_sequences():
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
 
-        [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
 
-        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-        #     ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+            ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
 
         # [['model.useSeg=true', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
