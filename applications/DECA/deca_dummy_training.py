@@ -67,7 +67,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
 
     wandb_logger = WandbLogger(name=experiment_name,
                                project="EmotionalDeca",
-                               config=dict(conf),
+                               config=OmegaConf.to_container(conf),
                                version=time,
                                save_dir=full_run_dir)
 

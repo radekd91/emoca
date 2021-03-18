@@ -1,4 +1,4 @@
-from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, locate_checkpoint
+from applications.DECA.test_and_finetune_deca import single_stage_deca_pass#, locate_checkpoint
 from datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -148,7 +148,7 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
 
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
-                         config=dict(conf),
+                         config=OmegaConf.to_container(conf),
                          version=time + "_" + experiment_name,
                          save_dir=full_run_dir)
 

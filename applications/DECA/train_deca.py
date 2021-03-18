@@ -84,7 +84,7 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, force_
 
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
-                         config=dict(conf),
+                         config=OmegaConf.to_container(conf),
                          version=time,
                          save_dir=full_run_dir)
 

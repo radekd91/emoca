@@ -472,7 +472,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
 
     wandb_logger = WandbLogger(name=experiment_name,
                          project=project_name,
-                         config=dict(conf),
+                         config=OmegaConf.to_container(conf),
                          version=time + "_" + experiment_name,
                          save_dir=full_run_dir)
 
