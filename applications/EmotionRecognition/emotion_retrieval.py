@@ -399,7 +399,8 @@ def main():
     dm = FaceVideoDataModule(str(root_path), str(output_path), processed_subfolder=subfolder)
     dm.prepare_data()
     # emotion_feature = ["emo_feat_2"]
-    emotion_feature = ["valence", "arousal"]
+    # emotion_feature = ["valence", "arousal"]
+    emotion_feature = ["valence", "arousal", "expression"]
     if not (path_to_cache(dm) / f"{'_'.join(emotion_feature)}_status.pkl").is_file():
         data, sample_counts, filename_list = create_data_array(dm, emotion_feature)
         # sys.exit(0)

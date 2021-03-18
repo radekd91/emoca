@@ -389,7 +389,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, force_new_location = False):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_from_previous = True, force_new_location = False):
     # configs = [cfg_coarse, cfg_detail]
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
@@ -405,7 +405,11 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, force_new_
     dm.setup()
 
     if start_i > 0 or force_new_location:
-        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[start_i - 1], stages_prefixes[start_i - 1])
+        if resume_from_previous:
+            resume_i = start_i - 1
+        else:
+            resume_i = start_i
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i])
     else:
         checkpoint, checkpoint_kwargs = None, None
 
@@ -494,12 +498,13 @@ def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_defa
     finetune_deca(cfg_coarse, cfg_detail)
 
 
-def resume_training(run_path, start_at_stage):
+def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
     cfg_coarse = conf.coarse
     cfg_detail = conf.detail
-    finetune_deca(cfg_coarse, cfg_detail, start_i=start_at_stage)
+    finetune_deca(cfg_coarse, cfg_detail, start_i=start_at_stage, resume_from_previous=resume_from_previous,
+                  force_new_location=force_new_location)
 
 
 def configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
