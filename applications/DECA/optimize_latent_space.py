@@ -1,14 +1,18 @@
+from venv import create
+
 import torch
 import torch.functional as F
-from applications.DECA.interactive_deca_decoder import load_deca_and_data, test, plot_results
+from applications.DECA.interactive_deca_decoder import load_deca_and_data, test #, plot_results
 import copy
 from layers.losses.EmoNetLoss import EmoNetLoss
 from models.DECA import DecaModule, DECA, DecaMode
 from skimage.io import imread, imsave
+from skimage.transform import resize, rescale
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import sys, os
+from tqdm import auto
 
 
 def load_image_to_batch(image):
@@ -126,7 +130,98 @@ class CriterionWrapper(torch.nn.Module):
         return self.criterion.name
 
 
-def save_visualization(deca, values, title, save_path=None, show=False):
+import matplotlib.pyplot as plt
+
+
+def plot_single_status(input_image, coarse_prediction, detail_prediction, coarse_image, detail_image, title,
+                       show=False, save_path=None):
+    fig, axs = plt.subplots(1,5, figsize=(5, 1.25))
+    fig.suptitle(title, fontsize=8)
+
+    images = [input_image, coarse_prediction, detail_prediction, coarse_image, detail_image]
+    titles = ["Input", "Coarse shape", "Detail shape", "Coarse output", "Detail output"]
+
+    for i in range(len(images)):
+        if images[i] is not None:
+            axs[i].imshow(images[i])
+            axs[i].set_title(titles[i], fontsize=4)
+        axs[i].get_xaxis().set_visible(False)
+        axs[i].get_yaxis().set_visible(False)
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300)
+    if show:
+        fig.show()
+    plt.close()
+
+
+
+def plot_results(vis_dict, title, detail=True, show=False, save_path=None):
+    pass
+    #1) Input image
+    #2) Input coarse prediction
+    #3) Input detail prediction
+    #4) Input coarse image
+    #5) Input detail image
+
+    #6) Target image
+    #7) Target coarse prediction
+    #8) Target detail prediction
+    #9) Target coarse image
+    #10) Target detail image
+
+    #11) Starting iteration coarse
+    #12) Starting iteration detail
+    #13) Starting iteration coarse image
+    #14) Starting iteration detail image
+
+    # 15) Current iteration coarse
+    # 17) Current iteration detail
+    # 18) Current iteration coarse image
+    # 19) Current iteration detail image
+
+    # 11) Best iteration coarse
+    # 12) Best iteration detail
+    # 13) Best iteration coarse image
+    # 14) Best iteration detail image
+
+    # 11) Loss total
+    # 12) Loss components
+    # 13) Best iteration coarse image
+    # 14) Best iteration detail image
+
+
+def extract_images(vis_dict, detail=True):
+    prefix = None
+
+    for key in list(vis_dict.keys()):
+        if 'detail__inputs' in key:
+            start_idx = key.rfind('detail__inputs')
+            prefix = key[:start_idx]
+            # print(f"Prefix was found to be: '{prefix}'")
+            break
+
+    if prefix is None:
+        print(vis_dict.keys())
+        raise RuntimeError(f"Uknown disctionary content. Available keys {vis_dict.keys()}")
+
+    if detail:
+        input = vis_dict[f'{prefix}detail__inputs']
+        geom_coarse = vis_dict[f'{prefix}detail__geometry_coarse']
+        geom_detail = vis_dict[f'{prefix}detail__geometry_detail']
+        image_coarse = vis_dict[f'{prefix}detail__output_images_coarse']
+        image_detail = vis_dict[f'{prefix}detail__output_images_detail']
+    else:
+        input = vis_dict[f'{prefix}coarsel__inputs']
+        geom_coarse = vis_dict[f'{prefix}coarse__geometry_coarse']
+        geom_detail = None
+        image_coarse = vis_dict[f'{prefix}coarse__output_images_coarse']
+        image_detail = None
+
+    return input, geom_coarse, geom_detail, image_coarse, image_detail
+
+
+def save_visualization(deca, values, title, save_path=None, show=False, with_input=True, detail=True):
     uv_detail_normals = None
     if 'uv_detail_normals' in values.keys():
         uv_detail_normals = values['uv_detail_normals']
@@ -140,8 +235,22 @@ def save_visualization(deca, values, title, save_path=None, show=False):
                                                                 "",
                                                                 save=False)
     vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
-    plot_results(vis_dict, title, detail=True, show=show, save_path=save_path)
+    # input, geom_coarse, geom_detail, image_coarse, image_detail = extract_images(vis_dict, detail=detail)
+    # if not with_input:
+    #     input = None
+    # plot_single_status(input, geom_coarse, geom_detail, image_coarse, image_detail, title,
+    #                    show=show, save_path=save_path)
+    save_visualization_step(vis_dict, title, save_path, show, with_input, detail)
     return vis_dict
+
+
+def save_visualization_step(visdict, title, save_path=None, show=False, with_input=True, detail=True):
+    input, geom_coarse, geom_detail, image_coarse, image_detail = extract_images(visdict, detail=detail)
+    if not with_input:
+        input = None
+    plot_single_status(input, geom_coarse, geom_detail, image_coarse, image_detail, title,
+                       show=show, save_path=save_path)
+    return visdict
 
 
 def copy_values(values):
@@ -158,6 +267,140 @@ def copy_values(values):
                 copied_values[key] = {k: v.detach().clone() if torch.is_tensor(v) else copy.deepcopy(v)
                                     for k, v in values[key].items()}
     return copied_values
+
+
+def plot_optimization(losses_by_step, logs, iter=None, save_path=None):
+    suffix = ''
+    if iter is not None:
+        suffix = f"_{iter:04d}"
+
+    plt.figure()
+    plt.title("Optimization")
+    plt.plot(losses_by_step)
+    if save_path is not None:
+        plt.savefig(save_path / f"optimization{suffix}.png", dpi=200)
+    plt.close()
+
+    # print(logs)
+    for term in logs.keys():
+        plt.figure()
+        plt.title(f"{term}")
+        plt.plot(logs[term])
+        if save_path is not None:
+            plt.savefig(save_path / f"term_{term}{suffix}.png", dpi=200)
+    plt.close()
+
+def create_video(term_names, save_path, clean_up=True):
+    save_path = Path(save_path)
+    optimization_files = sorted(list(save_path.glob("optimization*.png")))
+
+    iteration_files = sorted(list(save_path.glob("step_*.png")))
+
+    optimization_term_files = {}
+    for key in term_names:
+        optimization_term_files[key] = sorted(list(save_path.glob(f"term_{key}*.png")))
+
+    optimization_images = []
+    print("Loading images")
+    for f in auto.tqdm(optimization_files):
+        optimization_images += [imread(f)]
+
+    term_images = {}
+    for key in term_names:
+        term_images[key] = []
+        for f in auto.tqdm(optimization_term_files[key]):
+            term_images[key] += [imread(f)]
+
+    iteration_images = []
+    for f in auto.tqdm(iteration_files):
+        iteration_images += [imread(f)]
+
+    start_image = imread(save_path / "source.png")
+    best_image = imread(save_path / "best.png")
+    target_image = imread(save_path / "target.png")
+
+    num_iters = len(optimization_images)
+
+    import cv2
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
+    #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
+    fps = 10
+    video_writer = None
+
+    target_width = start_image.shape[1]
+    target_height = None
+
+    print("Creating video")
+    for i in auto.tqdm(range(num_iters)):
+        iteration_im = iteration_images[i]
+        width = iteration_im.shape[1]
+        scale = target_width / width
+        iteration_im = rescale(iteration_im, (scale, scale, 1))
+        iteration_im = (iteration_im * 255).astype(np.uint8)
+
+        frame = np.concatenate([start_image, target_image, iteration_im, best_image], axis=0)
+        if i == 0:
+            target_height = frame.shape[0]
+
+
+        opt_im = optimization_images[i]
+        # resize opt_im to frame width
+        # scale = target_width / opt_im.shape[1]
+        scale = target_height / opt_im.shape[0]
+        opt_im = rescale(opt_im, (scale, scale, 1))
+        opt_im = (opt_im * 255).astype(np.uint8)
+
+        term_im = []
+        for key in term_names:
+            term_im += [term_images[key][i]]
+        term_im = np.concatenate(term_im, axis=1)
+
+        # scale = target_width / term_im.shape[1]
+        scale = opt_im.shape[1] / term_im.shape[1]
+        # scale = target_height / term_im.shape[0]
+        term_im = rescale(term_im, (scale, scale, 1))
+        term_im = (term_im * 255).astype(np.uint8)
+        # resize term_im to frame width
+        frame_optim = np.concatenate([opt_im, term_im], axis=0)
+
+        scale = target_height / frame_optim.shape[0]
+        frame_optim = rescale(frame_optim, (scale, scale, 1))
+        frame_optim = (frame_optim * 255).astype(np.uint8)
+
+        frame_final = np.concatenate([frame, frame_optim], axis=1)
+
+
+        if i == 0:
+            video_writer = cv2.VideoWriter(str(save_path / "video.mp4"), cv2.CAP_FFMPEG,
+                                           fourcc, fps,
+                                           (frame_final.shape[1], frame_final.shape[0]), True)
+
+        frame_bgr = frame_final[:,:, [2, 1, 0]]
+        video_writer.write(frame_bgr)
+
+
+    # the last frame for two more seconds
+    for i in range(fps*2):
+        video_writer.write(frame_bgr)
+
+    video_writer.release()
+    if clean_up:
+        print("Cleaning up")
+        optimization_files = sorted(list(save_path.glob("optimization_*.png")))
+        for f in auto.tqdm(optimization_files):
+            os.remove(str(f))
+
+        iteration_files = sorted(list(save_path.glob("step_*.png")))
+        for f in auto.tqdm(iteration_files):
+            os.remove(str(f))
+
+        optimization_term_files = {}
+        for key in term_names:
+            optimization_term_files[key] = sorted(list(save_path.glob(f"term_{key}_*.png")))
+            for f in auto.tqdm(optimization_term_files[key]):
+                os.remove(str(f))
 
 def optimize(deca,
              values,
@@ -252,19 +495,19 @@ def optimize(deca,
         total_loss = 0
         for i, loss in enumerate(losses_to_use):
             if isinstance(loss, str):
-                term = losses_and_metrics[loss] * loss_weights[i]
+                term = losses_and_metrics[loss]
                 if logs is not None:
                     if loss not in logs.keys():
                         logs[loss] = []
                     logs[loss] += [term.item()]
-                total_loss = total_loss + term
+                total_loss = total_loss + (term*loss_weights[i])
             else:
-                term = loss(vals) * loss_weights[i]
+                term = loss(vals)
                 if logs is not None:
                     if loss.name not in logs.keys():
                         logs[loss.name] = []
                     logs[loss.name] += [term.item()]
-                total_loss = total_loss + term
+                total_loss = total_loss + (term * loss_weights[i])
 
         return total_loss
 
@@ -283,9 +526,11 @@ def optimize(deca,
     losses_by_step += [loss.item()]
 
     save_visualization(deca, values,
-                       save_path=save_path / f"start.png" if save_path is not None else None,
+                       save_path=save_path / f"step_00.png" if save_path is not None else None,
                        title=f"Start, loss={loss:.10f}",
-                       show=visualize_result)
+                       show=visualize_result,
+                       detail=deca.mode == DecaMode.DETAIL,
+                       with_input=False)
 
     # optimizer = torch.optim.Adam(parameters, lr=0.01)
     # optimizer = torch.optim.SGD(parameters, lr=0.001)
@@ -294,20 +539,16 @@ def optimize(deca,
     optimizer_class = getattr(torch.optim, optimizer_type)
     optimizer = optimizer_class(parameters, lr=lr)
 
-
     best_loss = 99999999999999.
     eps = 1e-6
 
     stopping_condition_hit = False
-
-
 
     since_last_improvement = 0
     for i in range(1,max_iters+1):
 
         def closure():
             optimizer.zero_grad()
-
             values_ = deca._decode(values, training=False)
             # losses_and_metrics = deca.compute_loss(values_, training=False)
             losses_and_metrics = deca.compute_loss(values_, training=True)
@@ -331,7 +572,10 @@ def optimize(deca,
             save_visualization(deca, values,
                                save_path=save_path / f"step_{i:04d}.png" if save_path is not None else None,
                                title=f"Iter {i:04d}, loss={loss:.10f}",
-                               show=visualize_progress)
+                               show=visualize_progress,
+                               detail=deca.mode == DecaMode.DETAIL,
+                               with_input=False)
+            plot_optimization(losses_by_step, logs, iter=i, save_path=save_path)
 
         losses_by_step += [loss.item()]
 
@@ -366,21 +610,11 @@ def optimize(deca,
     save_visualization(deca, values,
                        save_path=save_path / f"best.png" if save_path is not None else None,
                        title=f"Best iter {best_iter:04d}, loss={best_loss:.10f}",
-                       show=visualize_progress)
-    plt.figure()
-    plt.plot(losses_by_step)
-    if save_path is not None:
-        plt.savefig(save_path / "optimization.png", dpi=100)
-    plt.title("Optimization")
+                       show=visualize_progress,
+                       detail=deca.mode == DecaMode.DETAIL,
+                       with_input=False)
 
-
-    print(logs)
-    for term in logs.keys():
-        plt.figure()
-        plt.plot(logs[term])
-        if save_path is not None:
-            plt.savefig(save_path / f"{term}.png", dpi=100)
-        plt.title(f"{term}")
+    plot_optimization(losses_by_step, logs, save_path=save_path)
 
     if save_path or visualize_result:
         for i, loss in enumerate(losses_to_use):
@@ -399,6 +633,9 @@ def optimize(deca,
     #     plt.savefig(save_path / "optimization.png", dpi=100)
     if visualize_result:
         plt.show()
+
+    if save_path:
+        create_video(list(logs.keys()), save_path)
 
     return values
 
@@ -695,6 +932,9 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
             # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
             save_path = Path(out_folder) / key / f"{i:02d}"
             save_path.mkdir(parents=True, exist_ok=True)
+            print(f"Saving to '{save_path}'")
+            save_visualization_step(visdict_input, "Source", save_path / "source.png")
+            save_visualization_step(visdict_target, "Target", save_path / "target.png")
             optimize(deca,
                      copy_values(values),  #important to copy
                      losses_to_use=losses_to_use,
@@ -731,6 +971,7 @@ def optimization_with_different_losses(path_to_models,
                             loss_list,
                             num_repeats,
                             **optim_kwargs)
+
 
 def optimization_with_specified_loss(path_to_models,
                                        relative_to_path,
@@ -826,7 +1067,15 @@ def main():
 from omegaconf import OmegaConf, DictConfig
 
 
+def probe_video():
+    save_path = Path('/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion/2021_03_19_16-11-58_emotion_vae_1.00_loss_expression_reg_10.00_SGD_0.01/General1/119-30-848x480/000640_000/from_input/00')
+    terms = ['EmotionLoss', 'loss_expression_reg']
+    create_video(terms, save_path)
+
+
 if __name__ == "__main__":
+    # probe_video()
+
     print("Running:" + __file__)
     for i, arg in enumerate(sys.argv):
         print(f"arg[{i}] = {arg}")

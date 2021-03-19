@@ -142,7 +142,7 @@ def plot_results(vis_dict, title, detail=True, show=True, save_path=None):
                 break
         if prefix is None:
             print(vis_dict.keys())
-            raise RuntimeError(f"Uknown disctionary content. Avaliable keys {vis_dict.keys()}")
+            raise RuntimeError(f"Uknown disctionary content. Available keys {vis_dict.keys()}")
         axs[0].imshow(vis_dict[f'{prefix}detail__inputs'])
         if f'{prefix}detail__landmarks_gt'in vis_dict.keys():
             axs[1].imshow(vis_dict[f'{prefix}detail__landmarks_gt'])

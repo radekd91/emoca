@@ -161,21 +161,21 @@ def optimization_with_different_losses(path_to_models,
 
 
 def main():
-    # cluster
-    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = None
-    replace_root_path = None
-    out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
-    target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
+    # # cluster
+    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    # relative_to_path = None
+    # replace_root_path = None
+    # out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
+    # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # submit = True
 
-    ## not on cluster
-    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    # relative_to_path = '/ps/scratch/'
-    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = False
+    # not on cluster
+    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    relative_to_path = '/ps/scratch/'
+    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    submit = False
 
     deca_models = {}
     # deca_models["Octavia"] = \
@@ -218,7 +218,7 @@ def main():
         "optimize_texture": False,
         "optimize_cam": False,
         "optimize_light": False,
-        "lr": 0.01,
+        "lr": 0.1,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
         "max_iters": 1000,
