@@ -161,31 +161,31 @@ def optimization_with_different_losses(path_to_models,
 
 
 def main():
-    # # cluster
-    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    # relative_to_path = None
-    # replace_root_path = None
-    # out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
-    # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = True
+    # cluster
+    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    relative_to_path = None
+    replace_root_path = None
+    out_folder = '/ps/scratch/rdanecek/emoca/optimize_emotion'
+    target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    submit = True
 
-    # not on cluster
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = '/ps/scratch/'
-    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = False
+    # # not on cluster
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    # relative_to_path = '/ps/scratch/'
+    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # submit = False
 
     deca_models = {}
-    # deca_models["Octavia"] = \
-    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
-    # deca_models["Rachel"] = \
-    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
-    deca_models["General1"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
-    deca_models["General2"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
+    deca_models["Octavia"] = \
+        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
+    deca_models["Rachel"] = \
+        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
+    # deca_models["General1"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
+    # deca_models["General2"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
 
 
     target_images = [
@@ -248,11 +248,13 @@ def main():
     kw = copy.deepcopy(optim_kwargs)
     kw["optimize_detail"] = True
     kw["optimize_expression"] = True
+    # kw["optimize_neck_pose"] = True
+    # kw["optimize_jaw_pose"] = True
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
-        # "emotion_f2": 1.,
+        "emotion_f2": 1.,
         # "emotion_va": 1.,
-        "emotion_vae": 1.,
+        # "emotion_vae": 1.,
         # "emotion_e": 1.,
         # "emotion_f12vae": 1.,
         # "loss_shape_reg": 100.,
