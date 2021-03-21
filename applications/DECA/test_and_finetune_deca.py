@@ -42,7 +42,7 @@ def get_checkpoint(cfg):
 
 def locate_checkpoint(cfg, mode='latest'):
     print(f"Looking for checkpoint in '{cfg.inout.checkpoint_dir}'")
-    checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).glob("*.ckpt")))
+    checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).rglob("*.ckpt")))
     if len(checkpoints) == 0:
         print(f"Did not found checkpoints. Looking in subfolders")
         checkpoints = sorted(list(Path(cfg.inout.checkpoint_dir).rglob("*.ckpt")))
