@@ -35,7 +35,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     bid = 10
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = 12 * 1024
+    gpu_mem_requirement_mb = 10 * 1024
     # gpu_mem_requirement_mb = None
     cpus = 1
     gpus = 1
