@@ -300,26 +300,26 @@ def create_video(term_names, save_path, clean_up=True):
     for key in term_names:
         optimization_term_files[key] = sorted(list(save_path.glob(f"term_{key}*.png")))
 
-    optimization_images = []
-    print("Loading images")
-    for f in auto.tqdm(optimization_files):
-        optimization_images += [imread(f)]
-
-    term_images = {}
-    for key in term_names:
-        term_images[key] = []
-        for f in auto.tqdm(optimization_term_files[key]):
-            term_images[key] += [imread(f)]
-
-    iteration_images = []
-    for f in auto.tqdm(iteration_files):
-        iteration_images += [imread(f)]
+    # optimization_images = []
+    # print("Loading images")
+    # for f in auto.tqdm(optimization_files):
+    #     optimization_images += [imread(f)]
+    #
+    # term_images = {}
+    # for key in term_names:
+    #     term_images[key] = []
+    #     for f in auto.tqdm(optimization_term_files[key]):
+    #         term_images[key] += [imread(f)]
+    #
+    # iteration_images = []
+    # for f in auto.tqdm(iteration_files):
+    #     iteration_images += [imread(f)]
 
     start_image = imread(save_path / "source.png")
     best_image = imread(save_path / "best.png")
     target_image = imread(save_path / "target.png")
 
-    num_iters = len(optimization_images)
+    num_iters = len(optimization_files)
 
     import cv2
 
@@ -334,7 +334,8 @@ def create_video(term_names, save_path, clean_up=True):
 
     print("Creating video")
     for i in auto.tqdm(range(num_iters)):
-        iteration_im = iteration_images[i]
+        # iteration_im = iteration_images[i]
+        iteration_im = imread(iteration_files[i])
         width = iteration_im.shape[1]
         scale = target_width / width
         iteration_im = rescale(iteration_im, (scale, scale, 1))
@@ -345,7 +346,8 @@ def create_video(term_names, save_path, clean_up=True):
             target_height = frame.shape[0]
 
 
-        opt_im = optimization_images[i]
+        # opt_im = optimization_images[i]
+        opt_im = imread(optimization_files[i])
         # resize opt_im to frame width
         # scale = target_width / opt_im.shape[1]
         scale = target_height / opt_im.shape[0]
@@ -354,7 +356,8 @@ def create_video(term_names, save_path, clean_up=True):
 
         term_im = []
         for key in term_names:
-            term_im += [term_images[key][i]]
+            # term_im += [term_images[key][i]]
+            term_im += [imread(optimization_term_files[key][i])]
         term_im = np.concatenate(term_im, axis=1)
 
         # scale = target_width / term_im.shape[1]
