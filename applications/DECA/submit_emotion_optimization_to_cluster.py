@@ -218,7 +218,8 @@ def main():
         "optimize_texture": False,
         "optimize_cam": False,
         "optimize_light": False,
-        "lr": 0.1,
+        # "lr": 0.1,
+        "lr": 0.01,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
         "max_iters": 1000,
@@ -248,8 +249,8 @@ def main():
     kw = copy.deepcopy(optim_kwargs)
     kw["optimize_detail"] = True
     kw["optimize_expression"] = True
-    # kw["optimize_neck_pose"] = True
-    # kw["optimize_jaw_pose"] = True
+    kw["optimize_neck_pose"] = True
+    kw["optimize_jaw_pose"] = True
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
         "emotion_f2": 1.,

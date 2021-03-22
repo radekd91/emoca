@@ -834,8 +834,9 @@ def replace_codes(values_from, values_to,
     if optimize_detail:
         values_to['detailcode'] = values_from['detailcode'].detach().clone()
 
-    if optimize_identity:
-        values_to['shapecode'] = values_from['shapecode'].detach().clone()
+    # always copy identity
+    # if optimize_identity:
+    values_to['shapecode'] = values_from['shapecode'].detach().clone()
 
     if optimize_expression:
         values_to['expcode'] = values_from['expcode'].detach().clone()
@@ -851,14 +852,14 @@ def replace_codes(values_from, values_to,
         jaw_pose = posecode[:, 3:]
         values_to['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
 
-    if optimize_texture:
-        values_to['texcode'] = values_from['texcode'].detach().clone()
+    # if optimize_texture:
+    values_to['texcode'] = values_from['texcode'].detach().clone()
 
-    if optimize_cam:
-        values_to['cam'] = values_from['cam'].detach().clone()
+    # if optimize_cam:
+    values_to['cam'] = values_from['cam'].detach().clone()
 
-    if optimize_light:
-        values_to['lightcode'] = values_from['lightcode'].detach().clone()
+    # if optimize_light: # always copy light
+    values_to['lightcode'] = values_from['lightcode'].detach().clone()
     return values_to
 
 
