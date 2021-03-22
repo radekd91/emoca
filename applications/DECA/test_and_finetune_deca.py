@@ -68,7 +68,12 @@ def locate_checkpoint(cfg, mode='latest'):
             if ckpt.stem == 'last':
                 continue
             end_idx = str(ckpt.stem).rfind('=') + 1
-            loss_value = float(str(ckpt.stem)[end_idx:])
+            loss_str = str(ckpt.stem)[end_idx:]
+            try:
+                loss_value = float(loss_str)
+            except ValueError as e:
+                print(f"Unable to convert '{loss_value}' to float. Skipping this checkpoint.")
+                continue
             if loss_value <= min_value:
                 min_value = loss_value
                 min_idx = idx
