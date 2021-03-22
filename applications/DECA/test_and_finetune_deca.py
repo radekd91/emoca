@@ -436,7 +436,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     else:
         experiment_name = cfg_coarse.inout.name
         len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        if hasattr(cfg_coarse.inout, 'time'):
+        if hasattr(cfg_coarse.inout, 'time') and cfg_coarse.inout.time is not None:
             time = cfg_coarse.inout.time
         else:
             time = experiment_name[:len_time_str]

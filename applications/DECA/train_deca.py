@@ -40,7 +40,10 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, force_
     else:
         experiment_name = cfg_coarse.inout.name
         len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
-        time = experiment_name[:len_time_str]
+        if hasattr(cfg_coarse.inout, 'time') and cfg_coarse.inout.time is not None:
+            time = cfg_coarse.inout.time
+        else:
+            time = experiment_name[:len_time_str]
         full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
         exist_ok = True # a path for an old experiment should exist
 
