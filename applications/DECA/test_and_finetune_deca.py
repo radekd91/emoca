@@ -72,7 +72,7 @@ def locate_checkpoint(cfg, mode='latest'):
             try:
                 loss_value = float(loss_str)
             except ValueError as e:
-                print(f"Unable to convert '{loss_value}' to float. Skipping this checkpoint.")
+                print(f"Unable to convert '{loss_str}' to float. Skipping this checkpoint.")
                 continue
             if loss_value <= min_value:
                 min_value = loss_value
