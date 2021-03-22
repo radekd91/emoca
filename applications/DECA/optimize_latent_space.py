@@ -915,9 +915,8 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
     batch["image"] = load_image_to_batch(target_image)
     values_target, visdict_target = test(deca, dm, batch=batch)
     values_target = replace_codes(values_input, values_target, **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["from_target"] = [values_target, visdict_target]
-
-
     # TODO: possibly add an option for randomized
 
     # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
