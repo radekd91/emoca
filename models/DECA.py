@@ -345,12 +345,12 @@ class DecaModule(LightningModule):
         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
         # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
         segmentation_type = None
-        if type(self.deca.config.useSeg, bool):
+        if isinstance(self.deca.config.useSeg, bool):
             if self.deca.config.useSeg:
                 segmentation_type = 'gt'
             else:
                 segmentation_type = 'rend'
-        elif type(self.deca.config.useSeg, str):
+        elif isinstance(self.deca.config.useSeg, str):
             segmentation_type = self.deca.config.useSeg
         else:
             raise RuntimeError(f"Invalid 'useSeg' type: '{type(self.deca.config.useSeg)}'")

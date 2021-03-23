@@ -171,14 +171,17 @@ def finetune_on_selected_sequences():
         #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
         #
         [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true',
+          'model.useSeg=rend']],  # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
 
         [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=gt', 'model.useSeg=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true', 'model.useSeg=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
 
         [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=intersection',
-          'model.useSeg=true']],
+         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true', 'model.useSeg=gt']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        [['model.useSeg=gt', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true', 'model.useSeg=intersection']],
         # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
 
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
