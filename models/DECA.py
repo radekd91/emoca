@@ -344,10 +344,35 @@ class DecaModule(LightningModule):
         # images
         predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
         # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
-        if self.deca.config.useSeg and (masks is not None ):
-            masks = masks[:, None, :, :]
+        segmentation_type = None
+        if type(self.deca.config.useSeg, bool):
+            if self.deca.config.useSeg:
+                segmentation_type = 'gt'
+            else:
+                segmentation_type = 'rend'
+        elif type(self.deca.config.useSeg, str):
+            segmentation_type = self.deca.config.useSeg
         else:
+            raise RuntimeError(f"Invalid 'useSeg' type: '{type(self.deca.config.useSeg)}'")
+
+        if segmentation_type not in ["gt", "rend", "intersection", "union"]:
+            raise ValueError(f"Invalid segmentation type for masking '{segmentation_type}'")
+
+        if masks is None: # if mask not provided, the only mask available is the rendered one
+            segmentation_type = 'rend'
+
+
+        if segmentation_type == "gt":
+            masks = masks[:, None, :, :]
+        elif segmentation_type == "rend":
             masks = mask_face_eye * ops['alpha_images']
+        elif segmentation_type == "intersection":
+            masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
+        elif segmentation_type == "union":
+            masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
+        else:
+            raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
+
 
         if self.deca.config.background_from_input:
             predicted_images = (1. - masks) * images + masks * predicted_images

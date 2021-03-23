@@ -161,8 +161,8 @@ def finetune_on_selected_sequences():
 
         # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
 
-        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-            ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+        #     ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
 
         # [['model.useSeg=true', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
@@ -170,9 +170,17 @@ def finetune_on_selected_sequences():
         # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
         #
-        # [['model.useSeg=true', 'data/augmentations=default'],
-        #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
-        #
+        [['model.useSeg=gt', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+
+        [['model.useSeg=gt', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=gt', 'model.useSeg=true']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        [['model.useSeg=gt', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=intersection',
+          'model.useSeg=true']],
+        # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
