@@ -349,6 +349,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
             else:
                 experiment_name += '_DeSegRend'
 
+        if cfg_detail.model.useSeg:
+            experiment_name += f'_DeSeg{cfg_detail.model.useSeg}'
+        else:
+            experiment_name += f'_DeSeg{cfg_detail.model.useSeg}'
+
         if not cfg_detail.model.use_detail_l1:
             experiment_name += '_NoDetL1'
         if not cfg_detail.model.use_detail_mrf:
