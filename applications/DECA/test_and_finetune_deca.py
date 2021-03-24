@@ -387,12 +387,13 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
             if cfg_detail.learning.learning_rate != 0.0001:
                 experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
 
-        if cfg_coarse.model.use_photometric:
-            experiment_name += 'CoPhoto'
-        if cfg_coarse.model.use_landmarks:
-            experiment_name += 'CoLMK'
-        if cfg_coarse.model.idw:
-            experiment_name += f'_IDW-{cfg_coarse.model.idw}'
+        if version == 0:
+            if cfg_coarse.model.use_photometric:
+                experiment_name += 'CoPhoto'
+            if cfg_coarse.model.use_landmarks:
+                experiment_name += 'CoLMK'
+            if cfg_coarse.model.idw:
+                experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
         if cfg_coarse.model.shape_constrain_type != 'exchange':
             experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
