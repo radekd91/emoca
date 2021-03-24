@@ -170,19 +170,37 @@ def finetune_on_selected_sequences():
         # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet, no detail constraint
         #
-        [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true',
-          'model.useSeg=rend']],  # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
 
-        [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true', 'model.useSeg=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+        ## BEGIN PASS MASKED OUT IMAGES TO EMO_NET
+        # [['model.useSeg=true', 'data/augmentations=default', 'model.background_from_input=false'],
+        #  ['data/augmentations=default', 'model.background_from_input=false']], ## without emonet as loss
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default',
+          'model.background_from_input=false'],
+         ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.background_from_input=false']], ## with emonet as loss
+        ## END PASS MASKED OUT IMAGES TO EMO_NET
 
-        [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true', 'model.useSeg=gt']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
-
-        [['model.useSeg=gt', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true', 'model.useSeg=intersection']],
+        # ## BEGIN JOINT DETAIL and COARSE FINETUNING
+        # [['model.useSeg=gt', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=exchange', 'model.train_coarse=true',
+        #   'model.useSeg=rend']],  # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+        #
+        # [['model.useSeg=gt', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true', 'model.useSeg=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
+        #
+        # [['model.useSeg=gt', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=none',
+        #   'model.train_coarse=true', 'model.useSeg=gt', 'learning.early_stopping.patience=20']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+        # #
+        # [['model.useSeg=gt', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true',
+        #   'model.useSeg=intersection', 'learning.early_stopping.patience=20']],
         # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        # [['model.useSeg=gt', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true',
+        #   'model.useSeg=union', 'learning.early_stopping.patience=20']],
+        # # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, union mask
+        # ## END JOINT DETAIL and COARSE FINETUNING
 
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'],
         #     ['model/settings=default_detail_emonet', 'model.use_detail_l1=false', 'model.use_detail_mrf=false']], # without other detail losses, emo only

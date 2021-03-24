@@ -156,6 +156,19 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
                          config=OmegaConf.to_container(conf),
                          version=time + "_" + experiment_name,
                          save_dir=full_run_dir)
+    max_tries = 100
+    tries = 0
+    while True:
+        try:
+            ex = wandb_logger.experiment
+            break
+        except Exception as e:
+            wandb_logger._experiment = None
+            print("Reinitiliznig wandb because it failed")
+            if max_tries <= max_tries:
+                print("WANDB Initialization unsuccessful")
+                break
+            tries += 1
 
     deca = None
     if start_i > 0 or force_new_location:
