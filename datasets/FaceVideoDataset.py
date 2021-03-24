@@ -126,7 +126,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         self.face_detector_type = face_detector
         self.face_detector_threshold = face_detector_threshold
 
-        self._instantiate_detector()
+        # self._instantiate_detector()
         self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
         self.image_size = image_size
@@ -147,8 +147,10 @@ class FaceVideoDataModule(pl.LightningDataModule):
 
 
     # @profile
-    def _instantiate_detector(self):
+    def _instantiate_detector(self, overwrite = False):
         if hasattr(self, 'face_detector'):
+            if not overwrite:
+                return
             del self.face_detector
         if self.face_detector_type == 'fan':
             self.face_detector = FAN(self.device, threshold=self.face_detector_threshold)
@@ -332,7 +334,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
         for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
 
             # if fid % detector_instantion_frequency == 0:
-            #     self._instantiate_detector()
+            #     self._instantiate_detector(overwrite=True)
 
             self._detect_faces_in_image_wrapper(frame_list, fid, out_detection_folder, out_landmark_folder, out_file,
                                            centers_all, sizes_all, detection_fnames_all, landmark_fnames_all)
@@ -609,6 +611,7 @@ class FaceVideoDataModule(pl.LightningDataModule):
             image = image[:, :, :3]
 
         h, w, _ = image.shape
+        self._instantiate_detector()
         bounding_boxes, bbox_type, landmarks = self.face_detector.run(image, with_landmarks=True)
         image = image / 255.
         detection_images = []
