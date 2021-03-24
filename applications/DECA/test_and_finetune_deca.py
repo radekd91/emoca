@@ -13,6 +13,7 @@ from models.DECA import DecaModule
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 import datetime
+import time as t
 # import hydra
 from omegaconf import DictConfig, OmegaConf
 import copy
@@ -187,7 +188,8 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                 break
             except Exception as e:
                 logger._experiment = None
-                print("Reinitiliznig wandb because it failed")
+                print("Reinitiliznig wandb because it failed in 10s")
+                t.sleep(10)
                 if max_tries <= max_tries:
                     print("WANDB Initialization unsuccessful")
                     break
@@ -506,7 +508,8 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
             break
         except Exception as e:
             wandb_logger._experiment = None
-            print("Reinitiliznig wandb because it failed")
+            print("Reinitiliznig wandb because it failed in 10s")
+            t.sleep(10)
             if max_tries <= max_tries:
                 print("WANDB Initialization unsuccessful")
                 break

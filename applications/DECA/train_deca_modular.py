@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from pytorch_lightning.loggers import WandbLogger
 import datetime
+import time as t
 
 
 project_name = 'EmotionalDeca'
@@ -164,7 +165,8 @@ def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_nam
             break
         except Exception as e:
             wandb_logger._experiment = None
-            print("Reinitiliznig wandb because it failed")
+            print("Reinitiliznig wandb because it failed in 10s")
+            t.sleep(10)
             if max_tries <= max_tries:
                 print("WANDB Initialization unsuccessful")
                 break
