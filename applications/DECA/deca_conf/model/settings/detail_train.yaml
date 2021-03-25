@@ -21,6 +21,7 @@ lipd: 0.1 # used only when train_coarse is true
 use_photometric: True # used only when train_coarse is true
 photow: 2
 idw: 0.12 # used only when train_coarse is true
+use_landmarks: True
 useWlmk: true
 shape_reg: 0.0001
 exp_reg: 0.0001

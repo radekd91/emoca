@@ -174,9 +174,9 @@ def finetune_on_selected_sequences():
         ## BEGIN PASS MASKED OUT IMAGES TO EMO_NET
         # [['model.useSeg=true', 'data/augmentations=default', 'model.background_from_input=false'],
         #  ['data/augmentations=default', 'model.background_from_input=false']], ## without emonet as loss
-        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default',
-          'model.background_from_input=false'],
-         ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.background_from_input=false']], ## with emonet as loss
+        # [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default',
+        #   'model.background_from_input=false'],
+        #  ['data/augmentations=default', 'model/settings=default_detail_emonet', 'model.background_from_input=false']], ## with emonet as loss
         ## END PASS MASKED OUT IMAGES TO EMO_NET
 
         # ## BEGIN JOINT DETAIL and COARSE FINETUNING
@@ -187,9 +187,27 @@ def finetune_on_selected_sequences():
         # [['model.useSeg=gt', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true', 'model.useSeg=rend']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together
         #
-        # [['model.useSeg=gt', 'data/augmentations=default'],
+
+        [['model.useSeg=gt',  'model/settings=default_coarse_emonet', 'data/augmentations=default', 'learning.early_stopping.patience=10'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none',
+          'model.train_coarse=true', 'model.useSeg=gt',  'model/settings=default_detail_emonet', 'learning.early_stopping.patience=20']],
+        # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        [['model.useSeg=gt', 'data/augmentations=default', 'learning.early_stopping.patience=10'],
+         ['data/augmentations=default', 'model.detail_constrain_type=none',
+          'model.train_coarse=true', 'model.useSeg=gt', 'learning.early_stopping.patience=20']],
+        # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        # [['model.useSeg=gt', 'data/augmentations=default', 'learning.early_stopping.patience=10'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none',
-        #   'model.train_coarse=true', 'model.useSeg=gt', 'learning.early_stopping.patience=20']], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+        #   'model.train_coarse=true', 'model.useSeg=gt', 'learning.early_stopping.patience=20', "learning.learning_rate=0.000001"]], # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
+        # [['model.useSeg=gt', 'data/augmentations=default', 'learning.early_stopping.patience=10'],
+        #  ['data/augmentations=default', 'model.detail_constrain_type=none',
+        #   'model.train_coarse=true', 'model.useSeg=gt', 'learning.early_stopping.patience=20',
+        #   "learning.learning_rate=0.00001"]],
+        # segmentation coarse, DATA AUGMENTATION , train detail and coarse together, intersection mask
+
         # #
         # [['model.useSeg=gt', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none', 'model.train_coarse=true',

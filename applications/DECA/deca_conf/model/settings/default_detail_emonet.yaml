@@ -25,6 +25,7 @@ lipd: 0.1 # used only when train_coarse is true
 use_photometric: True # used only when train_coarse is true
 photow: 2
 idw: 0.12 # used only when train_coarse is true
+use_landmarks: True
 useWlmk: true
 shape_reg: 0.0001
 exp_reg: 0.0001
@@ -47,8 +48,8 @@ use_detail_mrf: True
 use_detailed_photo: False
 
 use_emonet_loss: True # if this one is false, the following are considered false as well
-use_emonet_feat_1: True
-#use_emonet_feat_1: False
+#use_emonet_feat_1: True
+use_emonet_feat_1: False
 use_emonet_feat_2: True
 #use_emonet_feat_2: False
 use_emonet_valence: True
@@ -57,8 +58,8 @@ use_emonet_arousal: True
 #use_emonet_arousal: False
 use_emonet_expression: True
 #use_emonet_expression: False
-use_emonet_combined: True
-#use_emonet_combined: False
+#use_emonet_combined: True
+use_emonet_combined: False
 
 emonet_weight: 0.0015
 use_gt_emotion_loss: False
