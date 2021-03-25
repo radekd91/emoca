@@ -158,7 +158,7 @@ def configure_and_resume(run_path,
 
     train_deca(cfg_coarse_pretrain, cfg_coarse, cfg_detail,
                start_i=start_at_stage,
-               resume_from_previous=False,
+               resume_from_previous=True, #important, resume from previous stage's checkpoint
                force_new_location=True)
 
 
