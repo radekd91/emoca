@@ -549,12 +549,48 @@ def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_defa
     finetune_deca(cfg_coarse, cfg_detail)
 
 
+def load_configs(run_path):
+    with open(Path(run_path) / "cfg.yaml", "r") as f:
+        conf = OmegaConf.load(f)
+    cfg_coarse = conf.coarse
+    cfg_detail = conf.detail
+    return cfg_coarse, cfg_detail
+
+
+def configure_and_resume(run_path,
+                         coarse_cfg_default, coarse_overrides,
+                         detail_cfg_default, detail_overrides,
+                         start_at_stage):
+    cfg_coarse, cfg_detail = configure(
+                                       coarse_cfg_default, coarse_overrides,
+                                       detail_cfg_default, detail_overrides)
+
+    cfg_coarse_, cfg_detail_ = load_configs(run_path)
+
+    if start_at_stage < 4:
+        raise RuntimeError("Resuming before stage 2 makes no sense, that would be training from scratch")
+    if start_at_stage == 4:
+        cfg_coarse = cfg_coarse_
+    elif start_at_stage == 5:
+        raise RuntimeError("Resuming for stage 3 makes no sense, that is a testing stage")
+    else:
+        raise RuntimeError(f"Cannot resume at stage {start_at_stage}")
+
+    finetune_deca(cfg_coarse, cfg_detail,
+               start_i=start_at_stage,
+               resume_from_previous=False,
+               force_new_location=True)
+
+
+
 def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
     cfg_coarse = conf.coarse
     cfg_detail = conf.detail
-    finetune_deca(cfg_coarse, cfg_detail, start_i=start_at_stage, resume_from_previous=resume_from_previous,
+    finetune_deca(cfg_coarse, cfg_detail,
+                  start_i=start_at_stage,
+                  resume_from_previous=resume_from_previous,
                   force_new_location=force_new_location)
 
 
