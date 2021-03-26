@@ -73,6 +73,9 @@ class EmoNetLoss(torch.nn.Module):
             # for p in self.emonet.parameters():
             #     p.requires_grad = False
 
+    def forward(self, images):
+        return self.emonet_out(images)
+
     def emonet_out(self, images):
         images = F.interpolate(images, self.size, mode='bilinear')
         # images = self.transform(images)

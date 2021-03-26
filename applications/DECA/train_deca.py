@@ -9,14 +9,108 @@ import datetime
 
 project_name = 'EmotionalDeca'
 
+
 def prepare_data(cfg):
     dm = DecaDataModule(cfg)
     sequence_name = "ClassicDECA"
     return dm, sequence_name
 
 
-def create_experiment_name():
-    return "DECA_training"
+def create_experiment_name(cfg_coarse_pre, cfg_coarse, cfg_detail, version=1):
+    experiment_name = "DECA_"
+    if version <= 1:
+        experiment_name = experiment_name.replace("/", "_")
+        if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
+            experiment_name += '_EmoLossB'
+        elif cfg_coarse.model.use_emonet_loss:
+            experiment_name += '_EmoLossC'
+        elif cfg_detail.model.use_emonet_loss:
+            experiment_name += '_EmoLossD'
+        if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
+            experiment_name += '_'
+            if cfg_coarse.model.use_emonet_feat_1:
+                experiment_name += 'F1'
+            if cfg_coarse.model.use_emonet_feat_2:
+                experiment_name += 'F2'
+            if cfg_coarse.model.use_emonet_valence:
+                experiment_name += 'V'
+            if cfg_coarse.model.use_emonet_arousal:
+                experiment_name += 'A'
+            if cfg_coarse.model.use_emonet_expression:
+                experiment_name += 'E'
+            if cfg_coarse.model.use_emonet_combined:
+                experiment_name += 'C'
+
+        if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
+            experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
+
+
+
+        if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossB'
+        elif cfg_coarse.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossC'
+        elif cfg_detail.model.use_gt_emotion_loss:
+            experiment_name += '_SupervisedEmoLossD'
+
+        if version == 0:
+            if cfg_coarse.model.useSeg:
+                experiment_name += '_CoSegGT'
+            else:
+                experiment_name += '_CoSegRend'
+
+            if cfg_detail.model.useSeg:
+                experiment_name += '_DeSegGT'
+            else:
+                experiment_name += '_DeSegRend'
+
+        if cfg_detail.model.useSeg:
+            experiment_name += f'_DeSeg{cfg_detail.model.useSeg}'
+        else:
+            experiment_name += f'_DeSeg{cfg_detail.model.useSeg}'
+
+        if not cfg_detail.model.use_detail_l1:
+            experiment_name += '_NoDetL1'
+        if not cfg_detail.model.use_detail_mrf:
+            experiment_name += '_NoMRF'
+
+        if not cfg_coarse.model.background_from_input and not cfg_detail.model.background_from_input:
+            experiment_name += '_BackBlackB'
+        elif not cfg_coarse.model.background_from_input:
+            experiment_name += '_BackBlackC'
+        elif not cfg_detail.model.background_from_input:
+            experiment_name += '_BackBlackD'
+
+        if version == 0:
+            if cfg_coarse.learning.learning_rate != 0.0001:
+                experiment_name += f'CoLR-{cfg_coarse.learning.learning_rate}'
+            if cfg_detail.learning.learning_rate != 0.0001:
+                experiment_name += f'DeLR-{cfg_detail.learning.learning_rate}'
+
+        if version == 0:
+            if cfg_coarse.model.use_photometric:
+                experiment_name += 'CoPhoto'
+            if cfg_coarse.model.use_landmarks:
+                experiment_name += 'CoLMK'
+            if cfg_coarse.model.idw:
+                experiment_name += f'_IDW-{cfg_coarse.model.idw}'
+
+        if cfg_coarse.model.shape_constrain_type != 'exchange':
+            experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
+        if cfg_detail.model.detail_constrain_type != 'exchange':
+            experiment_name += f'_De{cfg_coarse.model.detail_constrain_type}'
+
+        if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
+            experiment_name += "_Aug"
+
+        if cfg_detail.model.train_coarse:
+            experiment_name += "_DwC"
+
+        if hasattr(cfg_coarse.learning, 'early_stopping') and cfg_coarse.learning.early_stopping \
+            and hasattr(cfg_detail.learning, 'early_stopping') and cfg_detail.learning.early_stopping:
+            experiment_name += "_early"
+
+    return experiment_name
 
 
 def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True,

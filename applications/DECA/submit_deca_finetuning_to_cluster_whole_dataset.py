@@ -41,7 +41,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     max_price = 8000
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
-    mem_gb = 20
+    mem_gb = 30
     args = f"{coarse_file.name} {detail_file.name}"
 
     execute_on_cluster(str(cluster_script_path),
@@ -79,7 +79,14 @@ def finetune_on_all_sequences():
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
 
-        # [['model.useSeg=true', 'data/augmentations=default'], ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+        [['model.useSeg=true', 'data/augmentations=default'],
+         ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+
+        [['model.useSeg=true', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.train_coarse=true']],  # segmentation coarse, DATA AUGMENTATION
+
+        [['model.useSeg=true', 'data/augmentations=default'],
+         ['data/augmentations=default', 'model.train_coarse=true',  'model.detail_constrain_type=none',]],  # segmentation coarse, DATA AUGMENTATION
 
         [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
             ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
@@ -114,12 +121,12 @@ def finetune_on_all_sequences():
     # test_vis_frequency: 30
     # val_vis_frequency: 200
     # train_vis_frequency: 100
-    fixed_overrides_coarse = ["model.val_check_interval=50000",
+    fixed_overrides_coarse = ["model.val_check_interval=0.2",
                               "model.val_vis_frequency=3000",
                               "model.train_vis_frequency=500",
                               "model.test_vis_frequency=1000"]
 
-    fixed_overrides_detail = ["model.val_check_interval=50000",
+    fixed_overrides_detail = ["model.val_check_interval=0.2",
                               "model.val_vis_frequency=3000",
                               "model.train_vis_frequency=500",
                               "model.test_vis_frequency=1000"]
