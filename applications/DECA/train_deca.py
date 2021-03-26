@@ -133,9 +133,11 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, resume
     else:
         checkpoint, checkpoint_kwargs = None, None
 
-    if cfg_coarse.inout.full_run_dir == 'todo':
+    if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
+        if force_new_location:
+            print("The run will be resumed in a new foler (forked)")
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-        experiment_name = create_experiment_name()
+        experiment_name = create_experiment_name(cfg_coarse_pretraining, cfg_coarse, cfg_detail)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
     else:
