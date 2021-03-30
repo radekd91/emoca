@@ -552,7 +552,7 @@ def optimize(deca,
 
         def closure():
             optimizer.zero_grad()
-            values_ = deca._decode(values, training=False)
+            values_ = deca.decode(values, training=False)
             # losses_and_metrics = deca.compute_loss(values_, training=False)
             losses_and_metrics = deca.compute_loss(values_, training=True)
             loss = criterion(values_, losses_and_metrics)
@@ -561,7 +561,7 @@ def optimize(deca,
 
         optimizer.zero_grad()
 
-        values = deca._decode(values, training=False)
+        values = deca.decode(values, training=False)
         # losses_and_metrics = deca.compute_loss(values, training=False)
         losses_and_metrics = deca.compute_loss(values, training=True)
 
@@ -607,7 +607,7 @@ def optimize(deca,
         print(f"[WARNING] Optimization terminated after max number of iterations, not becaused it reached the desired tolerance")
 
 
-    values = deca._decode(best_values, training=False)
+    values = deca.decode(best_values, training=False)
     losses_and_metrics = deca.compute_loss(values, training=False)
 
     save_visualization(deca, values,

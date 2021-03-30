@@ -14,6 +14,6 @@ n_detail: 128
 # input data size
 image_size: 224
 uv_size: 256
-scale_min: 1.4
-scale_max: 1.8
-trans_scale: 0
+#scale_min: 1.4
+#scale_max: 1.8
+#trans_scale: 0

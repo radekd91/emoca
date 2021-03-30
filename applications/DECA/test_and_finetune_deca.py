@@ -242,7 +242,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     callbacks = []
     checkpoint_callback = ModelCheckpoint(
         monitor=loss_to_monitor,
-        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.4f}',
+        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}',
         save_top_k=3,
         save_last=True,
         mode='min',

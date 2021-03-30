@@ -12,22 +12,10 @@ import cv2
 from pathlib import Path
 from skimage.io import imsave
 
-# add DECA's repo
-# sys.path += [str(Path(__file__).parent.parent.parent.absolute() / 'DECA-training')]
-# from lib.utils.renderer import SRenderY
-# from lib.models.encoders import ResnetEncoder
-# from lib.models.decoders import Generator
-# from lib.models.FLAME import FLAME, FLAMETex
 from .Renderer import SRenderY
 from .DecaEncoder import ResnetEncoder
 from .DecaDecoder import Generator
 from .DecaFLAME import FLAME, FLAMETex
-
-# from lib.utils import lossfunc, util
-# from . import datasets
-# from lib.datasets.datasets import VoxelDataset, TestData
-# import lib.utils.util as util
-# import lib.utils.lossfunc as lossfunc
 
 import layers.losses.DecaLosses as lossfunc
 import utils.DecaUtils as util
@@ -74,15 +62,6 @@ class DecaModule(LightningModule):
         self.train(mode=train)
         print(f"DECA MODE RECONFIGURED TO: {self.mode}")
 
-    # should not be necessary now that the the buffers are registered
-    # def _move_extra_params_to_correct_device(self):
-    #     if self.deca.uv_face_eye_mask.device != self.device:
-    #         self.deca.uv_face_eye_mask = self.deca.uv_face_eye_mask.to(self.device)
-    #     if self.deca.fixed_uv_dis.device != self.device:
-    #         self.deca.fixed_uv_dis = self.deca.fixed_uv_dis.to(self.device)
-    #     if self.emonet_loss is not None:
-    #         self.emonet_loss.to(device=self.device)
-
     def train(self, mode: bool = True):
         # super().train(mode) # not necessary
         if mode:
@@ -126,27 +105,22 @@ class DecaModule(LightningModule):
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
-        # if 'device' in kwargs.keys():
-        # self._move_extra_params_to_correct_device()
         return self
 
     def cuda(self, device=None):
         super().cuda(device)
-        # self._move_extra_params_to_correct_device()
         return self
 
     def cpu(self):
         super().cpu()
-        # self._move_extra_params_to_correct_device()
         return self
 
-    # def forward(self, image):
-    #     codedict = self.deca.encode(image)
-    #     opdict, visdict = self.deca.decode(codedict)
-    #     opdict = dict_tensor2npy(opdict)
+    def forward(self, batch):
+        values = self.encode(batch, training=False)
+        values = self.decode(values, training=False)
+        return values
 
-
-    def _encode(self, batch, training=True) -> dict:
+    def encode(self, batch, training=True) -> dict:
         codedict = {}
         original_batch_size = batch['image'].shape[0]
 
@@ -308,7 +282,7 @@ class DecaModule(LightningModule):
         return codedict
 
 
-    def _decode(self, codedict, training=True) -> dict:
+    def decode(self, codedict, training=True) -> dict:
         shapecode = codedict['shapecode']
         expcode = codedict['expcode']
         posecode = codedict['posecode']
@@ -422,6 +396,7 @@ class DecaModule(LightningModule):
         codedict['trans_verts'] = trans_verts
         codedict['ops'] = ops
         codedict['masks'] = masks
+        codedict['normals'] = ops['normals']
 
         if self.mode == DecaMode.DETAIL:
             codedict['uv_texture_gt'] = uv_texture_gt
@@ -430,6 +405,7 @@ class DecaModule(LightningModule):
             codedict['uv_z'] = uv_z
             codedict['uv_shading'] = uv_shading
             codedict['uv_vis_mask'] = uv_vis_mask
+            codedict['displacement_map'] = uv_z + self.deca.fixed_uv_dis[None, None, :, :]
 
         return codedict
 
@@ -715,8 +691,8 @@ class DecaModule(LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         with torch.no_grad():
-            values = self._encode(batch, training=False)
-            values = self._decode(values, training=False)
+            values = self.encode(batch, training=False)
+            values = self.decode(values, training=False)
             losses_and_metrics = self.compute_loss(values, training=False)
         #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         # prefix = str(self.mode.name).lower()
@@ -775,8 +751,8 @@ class DecaModule(LightningModule):
         stage_str = dataloader_str + 'test_'
 
         with torch.no_grad():
-            values = self._encode(batch, training=False)
-            values = self._decode(values, training=False)
+            values = self.encode(batch, training=False)
+            values = self.decode(values, training=False)
             if 'mask' in batch.keys():
                 losses_and_metrics = self.compute_loss(values, training=False)
                 # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
@@ -809,8 +785,8 @@ class DecaModule(LightningModule):
         return None
 
     def training_step(self, batch, batch_idx): #, debug=True):
-        values = self._encode(batch, training=True)
-        values = self._decode(values, training=True)
+        values = self.encode(batch, training=True)
+        values = self.decode(values, training=True)
         losses_and_metrics = self.compute_loss(values, training=True)
 
         uv_detail_normals = None
@@ -1193,8 +1169,12 @@ class DECA(torch.nn.Module):
         uv_coarse_normals = self.render.world2uv(coarse_normals).detach()
 
         uv_z = uv_z * self.uv_face_eye_mask
-        uv_detail_vertices = uv_coarse_vertices + uv_z * uv_coarse_normals + self.fixed_uv_dis[None, None, :,
-                                                                             :] * uv_coarse_normals.detach()
+
+        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
+        uv_detail_vertices = uv_coarse_vertices + \
+                             uv_z * uv_coarse_normals + \
+                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals.detach()
+
         dense_vertices = uv_detail_vertices.permute(0, 2, 3, 1).reshape([batch_size, -1, 3])
         uv_detail_normals = util.vertex_normals(dense_vertices, self.render.dense_faces.expand(batch_size, -1, -1))
         uv_detail_normals = uv_detail_normals.reshape(
@@ -1216,3 +1196,59 @@ class DECA(torch.nn.Module):
         grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
         cv2.imwrite(savepath, grid_image)
         return grid_image
+
+    def create_mesh(self, opdict, dense_template):
+        '''
+        vertices: [nv, 3], tensor
+        texture: [3, h, w], tensor
+        '''
+        i = 0
+        vertices = opdict['verts'][i].cpu().numpy()
+        faces = self.render.faces[0].cpu().numpy()
+        texture = util.tensor2image(opdict['uv_texture_gt'][i])
+        uvcoords = self.render.raw_uvcoords[0].cpu().numpy()
+        uvfaces = self.render.uvfaces[0].cpu().numpy()
+        # save coarse mesh, with texture and normal map
+        normal_map = util.tensor2image(opdict['uv_detail_normals'][i]*0.5 + 0.5)
+
+        # upsample mesh, save detailed mesh
+        texture = texture[:,:,[2,1,0]]
+        normals = opdict['normals'][i].cpu().numpy()
+        displacement_map = opdict['displacement_map'][i].detach().cpu().numpy().squeeze()
+        dense_vertices, dense_colors, dense_faces = util.upsample_mesh(vertices, normals, faces,
+                                                                       displacement_map, texture, dense_template)
+        return vertices, faces, texture, uvcoords, uvfaces, normal_map, dense_vertices, dense_faces, dense_colors
+
+
+    def save_obj(self, filename, opdict, dense_template, mode ='detail'):
+        if mode not in ['coarse', 'detail', 'both']:
+            raise ValueError(f"Invalid mode '{mode}. Expected modes are: 'coarse', 'detail', 'both'")
+
+        vertices, faces, texture, uvcoords, uvfaces, normal_map, dense_vertices, dense_faces, dense_colors \
+            = self.create_mesh(opdict, dense_template)
+
+        if mode == 'both':
+            if isinstance(filename, list):
+                filename_coarse = filename[0]
+                filename_detail = filename[1]
+            else:
+                filename_coarse = filename
+                filename_detail = filename.replace('.obj', '_detail.obj')
+        elif mode == 'coarse':
+            filename_coarse = filename
+        else:
+            filename_detail = filename
+
+        if mode in ['coarse', 'both']:
+            util.write_obj(str(filename_coarse), vertices, faces,
+                            texture=texture,
+                            uvcoords=uvcoords,
+                            uvfaces=uvfaces,
+                            normal_map=normal_map)
+
+        if mode in ['detail', 'both']:
+            util.write_obj(str(filename_detail),
+                            dense_vertices,
+                            dense_faces,
+                            colors = dense_colors,
+                            inverse_face_order=True)

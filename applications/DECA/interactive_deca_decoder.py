@@ -18,9 +18,38 @@ def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
         cfg.model.fixed_displacement_path = str(Path(replace_root_path) / Path(cfg.model.fixed_displacement_path).relative_to(relative_to_path))
         cfg.model.pretrained_vgg_face_path = str(Path(replace_root_path) / Path(cfg.model.pretrained_vgg_face_path).relative_to(relative_to_path))
         cfg.model.pretrained_modelpath = '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
-        cfg.data.data_root = str(Path(replace_root_path) / Path(cfg.data.data_root).relative_to(relative_to_path))
+        if cfg.data.data_root is not None:
+            cfg.data.data_root = str(Path(replace_root_path) / Path(cfg.data.data_root).relative_to(relative_to_path))
 
     return cfg
+
+
+def load_deca(conf,
+              stage,
+              mode,
+              relative_to_path=None,
+              replace_root_path=None,
+              ):
+    print(f"Taking config of stage '{stage}'")
+    print(conf.keys())
+    cfg = conf[stage]
+    if relative_to_path is not None and replace_root_path is not None:
+        cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+    cfg.model.resume_training = False
+
+    checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+    print(f"Loading checkpoint '{checkpoint}'")
+    # if relative_to_path is not None and replace_root_path is not None:
+    #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+
+    checkpoint_kwargs = {
+        "model_params": cfg.model,
+        "learning_params": cfg.learning,
+        "inout_params": cfg.inout,
+        "stage_name": "testing",
+    }
+    deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+    return deca
 
 
 def load_deca_and_data(path_to_models=None,
@@ -43,25 +72,33 @@ def load_deca_and_data(path_to_models=None,
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, "testing")
         deca.deca._load_old_checkpoint()
     else:
-        print(f"Taking config of stage '{stage}'")
-        print(conf.keys())
-        cfg = conf[stage]
-        if relative_to_path is not None and replace_root_path is not None:
-            cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
-        cfg.model.resume_training = False
-
-        checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
-        print(f"Loading checkpoint '{checkpoint}'")
+        # print(f"Taking config of stage '{stage}'")
+        # print(conf.keys())
+        # cfg = conf[stage]
         # if relative_to_path is not None and replace_root_path is not None:
         #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+        # cfg.model.resume_training = False
+        #
+        # checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+        # print(f"Loading checkpoint '{checkpoint}'")
+        # # if relative_to_path is not None and replace_root_path is not None:
+        # #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+        #
+        # checkpoint_kwargs = {
+        #     "model_params": cfg.model,
+        #     "learning_params": cfg.learning,
+        #     "inout_params": cfg.inout,
+        #     "stage_name": "testing",
+        # }
+        # deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+        deca = load_deca(
+            conf,
+            stage,
+            mode,
+            relative_to_path,
+            replace_root_path
+        )
 
-        checkpoint_kwargs = {
-            "model_params": cfg.model,
-            "learning_params": cfg.learning,
-            "inout_params": cfg.inout,
-            "stage_name": "testing",
-        }
-        deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
 
     train_or_test = 'test'
     if train_or_test == 'train':
@@ -95,10 +132,10 @@ def test(deca, dm, image_index = None, values = None, batch=None):
 
     if batch is not None:
         with torch.no_grad():
-            values = deca._encode(batch, training=False)
+            values = deca.encode(batch, training=False)
 
     with torch.no_grad():
-        values = deca._decode(values, training=False)
+        values = deca.decode(values, training=False)
         losses_and_metrics = deca.compute_loss(values, training=False)
 
     uv_detail_normals = None
