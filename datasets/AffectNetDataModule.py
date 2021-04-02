@@ -94,8 +94,9 @@ class AffectNetDataModule(FaceDataModuleBase):
             detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
 
             out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
-            detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
+            # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
             out_detection_fname.parent.mkdir(exist_ok=True)
+            detection_fnames += [out_detection_fname]
             imsave(out_detection_fname, detection[0])
 
             out_segmentation_folders += [self._path_to_landmarks() / Path(im_file).parent]
@@ -106,21 +107,30 @@ class AffectNetDataModule(FaceDataModuleBase):
             # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
             save_landmark(out_landmark_fname, landmarks[0], bbox_type)
 
-            detection_fnames += [out_detection_fname]
 
         self._segment_images(detection_fnames, out_segmentation_folders)
+        status_array = np.memmap(self.status_array_path,
+                                 dtype=np.bool,
+                                 mode='r+',
+                                 shape=(dm.num_subsets,)
+                                 )
+        status_array[start_i // self.subset_size] = True
+
+    @property
+    def status_array_path(self):
+        return self.output_dir / "status.memmap"
 
     def prepare_data(self):
-        status_array_path = self.output_dir / "status.memmap"
-        if not status_array_path.isfile():
-            status_array = np.memmap(status_array_path,
+        if not self.status_array_path.isfile():
+            status_array = np.memmap(self.status_array_path,
                                      dtype=np.bool,
                                      mode='w+',
                                      shape=(dm.num_subsets,)
                                      )
+            status_array[...] = False
             del status_array
 
-        status_array = np.memmap(status_array_path,
+        status_array = np.memmap(self.status_array_path,
                                  dtype=np.bool,
                                  mode='r+',
                                  shape=(dm.num_subsets,)
@@ -241,7 +251,7 @@ if __name__ == "__main__":
     #     d.visualize_sample(sample)
 
     dm = AffectNetDataModule(
-             "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet//",
+             "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              processed_subfolder="processed_2021_Apr_02_03-13-33",
              mode="manual",
