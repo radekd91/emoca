@@ -118,7 +118,7 @@ class AffectNetDataModule(FaceDataModuleBase):
 
     @property
     def status_array_path(self):
-        return self.output_dir / "status.memmap"
+        return Path(self.output_dir) / "status.memmap"
 
     def prepare_data(self):
         if not self.status_array_path.isfile():
