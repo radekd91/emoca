@@ -44,12 +44,12 @@ class FAN(FaceDetector):
                                                   face_detector_kwargs=self.face_detector_kwargs)
 
     # @profile
-    def run(self, image, with_landmarks=False):
+    def run(self, image, with_landmarks=False, detected_faces=None):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]
         return: detected box list
         '''
-        out = self.model.get_landmarks(image)
+        out = self.model.get_landmarks(image, detected_faces=detected_faces)
         torch.cuda.empty_cache()
         if out is None:
             del out

@@ -7,6 +7,7 @@ from torch.utils.data._utils.collate import default_collate
 # from datasets.FaceVideoDataset import FaceVideoDataModule
 from transforms.keypoints import KeypointScale, KeypointNormalization
 from utils.FaceDetector import load_landmark
+from utils.image import numpy_image_to_torch
 from .IO import load_segmentation, process_segmentation
 
 # from timeit import default_timer as timer
@@ -185,14 +186,109 @@ class EmotionalImageDatasetOld(torch.utils.data.Dataset):
         return combined_batch
 
 
+class EmotionalImageDatasetBase(torch.utils.data.Dataset):
 
 
-def numpy_image_to_torch(img : np.ndarray) -> torch.Tensor:
-    img = img.transpose([2, 0, 1])
-    return torch.from_numpy(img)
+    def _augment(self, img, seg_image, landmark, input_img_shape=None):
+
+        if self.transforms is not None:
+            res = self.transforms(image=img,
+                                  segmentation_maps=seg_image,
+                                  keypoints=landmark)
+            if seg_image is not None and landmark is not None:
+                img, seg_image, landmark = res
+            elif seg_image is not None:
+                img, seg_image = res
+            elif landmark is not None:
+                img, _, landmark = res
+            else:
+                img = res
+
+            img = img.astype(np.float32) / 255.0
+
+        if seg_image is not None:
+            seg_image = np.squeeze(seg_image)[..., np.newaxis].astype(np.float32)
+
+        if landmark is not None:
+            landmark = np.squeeze(landmark)
+            if isinstance(self.landmark_normalizer, KeypointScale):
+                self.landmark_normalizer.set_scale(
+                    img.shape[0] / input_img_shape[0],
+                    img.shape[1] / input_img_shape[1])
+            elif isinstance(self.landmark_normalizer, KeypointNormalization):
+                self.landmark_normalizer.set_scale(img.shape[0], img.shape[1])
+                # self.landmark_normalizer.set_scale(input_img_shape[0], input_img_shape[1])
+            else:
+                raise ValueError(f"Unsupported landmark normalizer type: {type(self.landmark_normalizer)}")
+            landmark = self.landmark_normalizer(landmark)
+
+        return img, seg_image, landmark
 
 
-class EmotionalImageDataset(torch.utils.data.Dataset):
+
+    def visualize_sample(self, sample):
+
+        import matplotlib.pyplot as plt
+        num_images = 1
+        if 'mask' in sample.keys():
+            num_images += 1
+
+        if 'landmark' in sample.keys():
+            num_images += 1
+
+        if len(sample["image"].shape) > 4:
+            K = sample["image"].shape[0]
+            fig, axs = plt.subplots(K, num_images)
+        else:
+            K = None
+            fig, axs = plt.subplots(1, num_images)
+
+        # if K is not None:
+        for k in range(K or 1):
+            self._plot(axs, K, k, sample)
+        plt.show()
+
+    def _plot(self, axs, K, k, sample):
+
+        from utils.DecaUtils import tensor_vis_landmarks
+
+        def index_axis(i, k):
+            if K==1 or K is None:
+                return axs[i]
+            return axs[k,i]
+
+        im = sample["image"][k, ...] if K is not None else sample["image"]
+        im_expanded = im[np.newaxis, ...]
+
+
+        i = 0
+        index_axis(i, k).imshow(im.numpy().transpose([1, 2, 0]))
+        i += 1
+        if 'landmark' in sample.keys():
+            lmk = sample["landmark"][k, ...] if K is not None else sample["landmark"]
+            lmk_expanded = lmk[np.newaxis, ...]
+            lmk_im = tensor_vis_landmarks(im_expanded,
+                                          self.landmark_normalizer.inv(lmk_expanded),
+                                          isScale=False, rgb2bgr=False, scale_colors=True).numpy()[0] \
+                .transpose([1, 2, 0])
+            index_axis(i, k).imshow(lmk_im)
+            i += 1
+
+        if 'mask' in sample.keys():
+            mask = sample["mask"][k, ...] if K is not None else sample["mask"]
+            index_axis(i, k).imshow(mask.numpy().transpose([1, 2, 0]), cmap='gray')
+            i += 1
+
+        if K is None:
+            print(f"Path = {sample['path']}")
+            print(f"Label = {sample['label']}")
+        else:
+            print(f"Path {k} = {sample['path'][k]}")
+            print(f"Label {k} = {sample['label'][k]}")
+
+
+
+class EmotionalImageDataset(EmotionalImageDatasetBase):
 
     def __init__(self,
                  image_list : list,
@@ -295,33 +391,7 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         else:
             seg_image = None
 
-        res = self.transforms(image=img,
-                              segmentation_maps=seg_image,
-                              keypoints=landmark)
-        if seg_image is not None and landmark is not None:
-            img, seg_image, landmark = res
-        elif seg_image is not None:
-            img, seg_image = res
-        elif landmark is not None:
-            img, landmark = res
-        else:
-            img = res
-
-        img = img.astype(np.float32) / 255.0
-
-        if seg_image is not None:
-            seg_image = np.squeeze(seg_image)[..., np.newaxis].astype(np.float32)
-
-        if landmark is not None:
-            landmark = np.squeeze(landmark)
-            if isinstance(self.landmark_normalizer, KeypointScale):
-                self.landmark_normalizer.set_scale(
-                    img.shape[0] / input_img_shape[0],
-                    img.shape[1] / input_img_shape[1])
-            elif isinstance(self.landmark_normalizer, KeypointNormalization):
-                self.landmark_normalizer.set_scale(img.shape[0], img.shape[1])
-                # self.landmark_normalizer.set_scale(input_img_shape[0], input_img_shape[1])
-            landmark = self.landmark_normalizer(landmark)
+        img, seg_image, landmark = self._augment(img, seg_image, landmark, input_img_shape)
 
         sample = {
             "image": numpy_image_to_torch(img),
@@ -365,7 +435,6 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         # start = timer()
-
         if self.K is None:
             return self._get_sample(index)
         # multiple identity samples in a single batch
@@ -429,45 +498,4 @@ class EmotionalImageDataset(torch.utils.data.Dataset):
         # print(f"Reading sample {index} took {end - start}s")
         return combined_batch
 
-
-    def visualize_sample(self, sample):
-        import matplotlib.pyplot as plt
-        from utils.DecaUtils import tensor_vis_landmarks
-
-        num_images = 1
-        if 'mask' in sample.keys():
-            num_images += 1
-
-        if 'landmark' in sample.keys():
-            num_images += 1
-
-        K = sample["image"].shape[0]
-        fig, axs = plt.subplots(K, num_images)
-
-        def index_axis(k, i):
-            if K==1:
-                return axs[i]
-            return axs[k,i]
-
-        for k in range(K):
-            i = 0
-            index_axis(k, i).imshow(sample["image"][k, ...].numpy().transpose([1,2,0]))
-            i += 1
-            if 'landmark' in sample.keys():
-                lmk_im = tensor_vis_landmarks(sample['image'][k:k+1, ...],
-                                              self.landmark_normalizer.inv(sample['landmark'][k:k+1, ...]),
-                                              isScale=False, rgb2bgr=False, scale_colors=True).numpy()[0]\
-                    .transpose([1,2,0])
-                index_axis(k, i).imshow(lmk_im)
-                i += 1
-
-            if 'mask' in sample.keys():
-                index_axis(k, i).imshow(sample["mask"][k, ...].numpy().transpose([1,2,0]), cmap='gray')
-                i += 1
-
-            print(f"Path {k} = {sample['path'][k]}")
-            print(f"Label {k} = {sample['label'][k]}")
-
-
-        plt.show()
 

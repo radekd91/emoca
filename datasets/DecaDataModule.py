@@ -100,33 +100,33 @@ def build_dataset(config, dataset_list=None, concat=True):
         data_list.append(
             VoxelDataset(K=config.learning.train_K, image_size=config.model.image_size, scale=[config.data.scale_min, config.data.scale_max],
                          n_train=config.data.n_train,
-                         path=config.data.path
+                         path=config.data.output_path
                          )
                          # isSingle=config.isSingle)
         )
     if 'vox2' in dataset_list:
         data_list.append(VoxelDataset(dataname='vox2', K=config.learning.train_K, image_size=config.model.image_size,
                                       scale=[config.data.scale_min, config.data.scale_max], n_train=config.data.n_train,
-                                      path=config.data.path)
+                                      path=config.data.output_path)
                                       # isSingle=config.isSingle)
                          )
     if 'vggface2' in dataset_list:
         data_list.append(
             VGGFace2Dataset(K=config.learning.train_K, image_size=config.model.image_size, scale=[config.data.scale_min, config.data.scale_max],
                             trans_scale=config.data.trans_scale,
-                            path=config.data.path)
+                            path=config.data.output_path)
             # , isSingle=config.isSingle)
         )
     if 'vggface2hq' in dataset_list:
         data_list.append(
             VGGFace2HQDataset(K=config.learning.train_K, image_size=config.model.image_size, scale=[config.data.scale_min, config.data.scale_max],
                               trans_scale=config.data.trans_scale,
-                              path=config.data.path)) #, isSingle=config.isSingle))
+                              path=config.data.output_path)) #, isSingle=config.isSingle))
     if 'ethnicity' in dataset_list:
         data_list.append(
             EthnicityDataset(K=config.learning.train_K, image_size=config.model.image_size, scale=[config.data.scale_min, config.data.scale_max],
                              trans_scale=config.data.trans_scale,
-                             path=config.data.path
+                             path=config.data.output_path
                              )
         )#, isSingle=config.isSingle))
     if 'coco' in dataset_list:
@@ -136,7 +136,7 @@ def build_dataset(config, dataset_list=None, concat=True):
         data_list.append(CelebAHQDataset(image_size=config.model.image_size, scale=[config.data.scale_min, config.data.scale_max],
                                          trans_scale=config.data.trans_scale))
     if 'now_eval' in dataset_list:
-        data_list.append(NoWVal(path=config.data.path))
+        data_list.append(NoWVal(path=config.data.output_path))
     if 'aflw2000' in dataset_list:
         data_list.append(AFLW2000())
 
@@ -147,7 +147,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path = config.data.path
+            path = config.data.output_path
         )
         data_list.append(now)
 
@@ -157,7 +157,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path = config.data.path
+            path = config.data.output_path
         )
         data_list.append(ffhq)
 
@@ -168,7 +168,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path = config.data.path
+            path = config.data.output_path
         )
         data_list.append(gif)
 
@@ -179,7 +179,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path=config.data.path,
+            path=config.data.output_path,
         )
         data_list.append(now)
 
@@ -189,7 +189,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path=config.data.path
+            path=config.data.output_path
         )
         data_list.append(papers)
 
@@ -200,7 +200,7 @@ def build_dataset(config, dataset_list=None, concat=True):
             # ring_elements=config.ring_elements,
             ring_elements=1,
             crop_size=config.model.image_size,
-            path=config.data.path
+            path=config.data.output_path
         )
         data_list.append(celeb)
     if concat:

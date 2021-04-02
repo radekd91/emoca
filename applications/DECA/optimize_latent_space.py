@@ -234,7 +234,7 @@ def save_visualization(deca, values, title, save_path=None, show=False, with_inp
                                                                 "",
                                                                 "",
                                                                 save=False)
-    vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
+    vis_dict = deca._create_visualizations_to_log("", visualizations, values, 0, indices=0)
     # input, geom_coarse, geom_detail, image_coarse, image_detail = extract_images(vis_dict, detail=detail)
     # if not with_input:
     #     input = None

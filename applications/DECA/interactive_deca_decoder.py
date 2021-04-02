@@ -153,7 +153,7 @@ def test(deca, dm, image_index = None, values = None, batch=None):
         save=False
     )
 
-    vis_dict = deca._log_visualizations("", visualizations, values, 0, indices=0)
+    vis_dict = deca._create_visualizations_to_log("", visualizations, values, 0, indices=0)
 
     return values, vis_dict
 

@@ -723,7 +723,7 @@ class DecaModule(LightningModule):
                 uv_detail_normals = values['uv_detail_normals']
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx, stage_str[:-1], prefix)
-            vis_dict = self._log_visualizations(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+            vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
             # image = Image(grid_image, caption="full visualization")
             # vis_dict[prefix + '_val_' + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
@@ -775,7 +775,7 @@ class DecaModule(LightningModule):
         if batch_idx % self.deca.config.test_vis_frequency == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, self.global_step, stage_str[:-1], prefix)
-            visdict = self._log_visualizations(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+            visdict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
             # image = Image(grid_image, caption="full visualization")
             # visdict[ prefix + '_' + stage_str + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
@@ -799,8 +799,10 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
+        losses_and_metrics_to_log[prefix + '_train_' + 'batch_idx'] = batch_idx
         losses_and_metrics_to_log['train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         losses_and_metrics_to_log['train_' + 'step'] = self.global_step
+        losses_and_metrics_to_log['train_' + 'batch_idx'] = batch_idx
 
         # log loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log['loss'] = losses_and_metrics_to_log[prefix + '_train_loss']
@@ -808,7 +810,7 @@ class DecaModule(LightningModule):
         if self.global_step % self.deca.config.train_vis_frequency == 0:
             visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
                                            uv_detail_normals, values, batch_idx, "train", prefix)
-            visdict = self._log_visualizations('train', visualizations, values, batch_idx, indices=0)
+            visdict = self._create_visualizations_to_log('train', visualizations, values, batch_idx, indices=0)
             # image = Image(grid_image, caption="full visualization")
             # visdict[prefix + '_test_' + "visualization"] = image
             if isinstance(self.logger, WandbLogger):
@@ -889,7 +891,7 @@ class DecaModule(LightningModule):
             imsave(path, image)
         return image
 
-    def _log_visualizations(self, stage, visdict, values, step, indices=None, dataloader_idx=None):
+    def _create_visualizations_to_log(self, stage, visdict, values, step, indices=None, dataloader_idx=None):
         mode_ = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
 
@@ -1099,10 +1101,10 @@ class DECA(torch.nn.Module):
         self.render = SRenderY(self.config.image_size, obj_filename=self.config.topology_path,
                                uv_size=self.config.uv_size)  # .to(self.device)
         # face mask for rendering details
-        mask = imread(self.config.face_mask_path).astype(np.float32) / 255.;
+        mask = imread(self.config.face_mask_path).astype(np.float32) / 255.
         mask = torch.from_numpy(mask[:, :, 0])[None, None, :, :].contiguous()
         self.uv_face_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
-        mask = imread(self.config.face_eye_mask_path).astype(np.float32) / 255.;
+        mask = imread(self.config.face_eye_mask_path).astype(np.float32) / 255.
         mask = torch.from_numpy(mask[:, :, 0])[None, None, :, :].contiguous()
         # self.uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
