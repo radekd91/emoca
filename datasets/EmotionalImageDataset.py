@@ -279,12 +279,14 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
             index_axis(i, k).imshow(mask.numpy().transpose([1, 2, 0]), cmap='gray')
             i += 1
 
-        if K is None:
-            print(f"Path = {sample['path']}")
-            print(f"Label = {sample['label']}")
-        else:
-            print(f"Path {k} = {sample['path'][k]}")
-            print(f"Label {k} = {sample['label'][k]}")
+
+        if 'path' in sample.keys() and 'label' in sample.keys():
+            if K is None:
+                print(f"Path = {sample['path']}")
+                print(f"Label = {sample['label']}")
+            else:
+                print(f"Path {k} = {sample['path'][k]}")
+                print(f"Label {k} = {sample['label'][k]}")
 
 
 
@@ -333,6 +335,8 @@ class EmotionalImageDataset(EmotionalImageDatasetBase):
 
         self.labels_set = sorted(list(set(self.labels)))
         self.label2index = {}
+
+        self.include_strings_samples = False
 
         for label in self.labels_set:
             self.label2index[label] = [i for i in range(len(self.labels))
@@ -394,10 +398,12 @@ class EmotionalImageDataset(EmotionalImageDatasetBase):
         img, seg_image, landmark = self._augment(img, seg_image, landmark, input_img_shape)
 
         sample = {
-            "image": numpy_image_to_torch(img),
-            "path": str(self.image_list[index]),
-            "label": str(self.labels[index]),
+            "image": numpy_image_to_torch(img)
         }
+
+        if self.include_strings_samples:
+            sample["path"] = str(self.image_list[index])
+            sample["label"] = str(self.labels[index])
 
         for key in self.annotations.keys():
             annotation = self.annotations[key][index]
