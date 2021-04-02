@@ -103,7 +103,7 @@ class AffectNetDataModule(FaceDataModuleBase):
             # save landmarks
             out_landmark_fname = self._path_to_landmarks() / Path(im_file).parent / (Path(im_file).stem + ".pkl")
             out_landmark_fname.parent.mkdir(exist_ok=True)
-            landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
+            # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
             save_landmark(out_landmark_fname, landmarks[0], bbox_type)
 
             detection_fnames += [out_detection_fname]
