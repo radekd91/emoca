@@ -95,7 +95,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                 detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
             except ValueError as e:
                 print(f"Failed to load file:")
-                print(f"{im_fullfile}}")
+                print(f"{im_fullfile}")
                 continue
 
             out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
