@@ -112,7 +112,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         status_array = np.memmap(self.status_array_path,
                                  dtype=np.bool,
                                  mode='r+',
-                                 shape=(dm.num_subsets,)
+                                 shape=(self.num_subsets,)
                                  )
         status_array[start_i // self.subset_size] = True
 
@@ -125,7 +125,7 @@ class AffectNetDataModule(FaceDataModuleBase):
             status_array = np.memmap(self.status_array_path,
                                      dtype=np.bool,
                                      mode='w+',
-                                     shape=(dm.num_subsets,)
+                                     shape=(self.num_subsets,)
                                      )
             status_array[...] = False
             del status_array
@@ -133,7 +133,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         status_array = np.memmap(self.status_array_path,
                                  dtype=np.bool,
                                  mode='r+',
-                                 shape=(dm.num_subsets,)
+                                 shape=(self.num_subsets,)
                                  )
         all_processed = status_array.all()
         del status_array
