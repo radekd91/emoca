@@ -22,6 +22,7 @@ from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 from datasets.IO import load_segmentation, save_segmentation, save_emotion, load_emotion
 import hashlib
+import shutil
 # import zlib
 
 # from memory_profiler import profile
@@ -147,7 +148,6 @@ class FaceDataModuleBase(pl.LightningDataModule):
     def _detect_faces_in_image(self, image_path, detected_faces=None):
         # imagepath = self.imagepath_list[index]
         # imagename = imagepath.split('/')[-1].split('.')[0]
-
         image = np.array(imread(image_path))
         if len(image.shape) == 2:
             image = image[:, :, None].repeat(1, 1, 3)

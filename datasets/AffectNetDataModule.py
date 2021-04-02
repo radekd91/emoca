@@ -91,7 +91,12 @@ class AffectNetDataModule(FaceDataModuleBase):
             bb = np.array([top, left, bottom, right])
 
             im_fullfile = Path(self.input_dir) / im_file
-            detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
+            try:
+                detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
+            except ValueError as e:
+                print(f"Failed to load file:")
+                print(f"{im_fullfile}}")
+                continue
 
             out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
             # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
@@ -121,7 +126,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         return Path(self.output_dir) / "status.memmap"
 
     def prepare_data(self):
-        if not self.status_array_path.isfile():
+        if not self.status_array_path.is_file():
             status_array = np.memmap(self.status_array_path,
                                      dtype=np.bool,
                                      mode='w+',
@@ -257,5 +262,6 @@ if __name__ == "__main__":
              mode="manual",
              scale=1.25)
     print(dm.num_subsets)
-    dm._detect_faces()
+    dm.prepare_data()
+    # dm._detect_faces()
 
