@@ -1,7 +1,7 @@
 from models.DECA import DecaModule
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
-from applications.DECA.train_deca_modular import find_checkpoint
+from applications.DECA.train_deca_modular import locate_checkpoint
 from applications.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
@@ -39,7 +39,7 @@ def load_data(path_to_models=None,
     cfg = conf[stage]
 
     if relative_to_path is not None and replace_root_path is not None:
-        checkpoint = find_checkpoint(cfg, replace_root_path, relative_to_path, mode=ckpt_index)
+        checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=ckpt_index)
         print(f"Loading checkpoint '{checkpoint}'")
         cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
 
@@ -135,12 +135,17 @@ def plot_results(vis_dict, title, detail=True):
 def main():
     path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     # run_name = '2021_03_01_11-31-57_VA_Set_videos_Train_Set_119-30-848x480.mp4_EmoNetLossB_F1F2VAECw-0.00150_CoSegmentGT_DeSegmentRend'
-    run_name =  '2021_03_01_11-31-57_VA_Set_videos_Train_Set_119-30-848x480.mp4_EmoNetLossB_F1F2VAECw-0.00150_CoSegmentGT_DeSegmentRend'
+    run_name = '2021_03_25_18-32-46_VA_Set_videos_Train_Set_82-25-854x480.mp4_EmoLossB_F2VAEw-0.00150_DeSeggt_DeNone_Aug_DwC_early'
     stage = 'detail'
     relative_to_path = '/ps/scratch/'
     replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
     dm = load_data(path_to_models, run_name, stage, relative_to_path, replace_root_path)
     image_index = 390*4
+
+    dl = dm.train_dataloader()
+
+    for batch in auto.tqdm(dl):
+        pass
 
     values = test( dm, image_index)
 

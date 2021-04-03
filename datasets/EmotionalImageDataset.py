@@ -464,6 +464,7 @@ class EmotionalImageDataset(EmotionalImageDatasetBase):
         elif self.K_policy == 'sequential':
             indices = []
             idx = label_indices.index(index) + 1
+            idx = idx % len(label_indices)
             while len(indices) != self.K-1:
                 # if self.labels[idx] == label:
                 indices += [label_indices[idx]]
