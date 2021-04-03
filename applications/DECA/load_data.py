@@ -132,6 +132,9 @@ def plot_results(vis_dict, title, detail=True):
     #
 
 
+import os
+import psutil
+
 def main():
     path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     # run_name = '2021_03_01_11-31-57_VA_Set_videos_Train_Set_119-30-848x480.mp4_EmoNetLossB_F1F2VAECw-0.00150_CoSegmentGT_DeSegmentRend'
@@ -144,8 +147,15 @@ def main():
 
     dl = dm.train_dataloader()
 
-    for batch in auto.tqdm(dl):
-        pass
+    process = psutil.Process(os.getpid())
+
+    for batch_idx, batch in enumerate(auto.tqdm(dl)):
+        if batch_idx < 10:
+            print(batch.keys())
+            for key in batch.keys():
+                print(type(batch[key]))
+        if batch_idx % 100 == 0:
+            print(process.memory_info().rss)  # in bytes
 
     values = test( dm, image_index)
 

@@ -13,6 +13,7 @@ from datasets.FaceVideoDataset import bbpoint_warp, bbox2point, FaceDataModuleBa
 from datasets.EmotionalImageDataset import EmotionalImageDatasetBase
 from utils.FaceDetector import save_landmark
 from tqdm import auto
+import traceback
 
 
 class AffectNetDataModule(FaceDataModuleBase):
@@ -82,44 +83,54 @@ class AffectNetDataModule(FaceDataModuleBase):
         detection_fnames = []
         out_segmentation_folders = []
 
-        for i in auto.tqdm(range(start_i, end_i)):
-            im_file = self.df.loc[i]["subDirectory_filePath"]
-            left = self.df.loc[i]["face_x"]
-            top = self.df.loc[i]["face_y"]
-            right = left + self.df.loc[i]["face_width"]
-            bottom = top + self.df.loc[i]["face_height"]
-            bb = np.array([top, left, bottom, right])
-
-            im_fullfile = Path(self.input_dir) / im_file
-            try:
-                detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
-            except ValueError as e:
-                print(f"Failed to load file:")
-                print(f"{im_fullfile}")
-                continue
-
-            out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
-            # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
-            out_detection_fname.parent.mkdir(exist_ok=True)
-            detection_fnames += [out_detection_fname]
-            imsave(out_detection_fname, detection[0])
-
-            out_segmentation_folders += [self._path_to_landmarks() / Path(im_file).parent]
-
-            # save landmarks
-            out_landmark_fname = self._path_to_landmarks() / Path(im_file).parent / (Path(im_file).stem + ".pkl")
-            out_landmark_fname.parent.mkdir(exist_ok=True)
-            # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
-            save_landmark(out_landmark_fname, landmarks[0], bbox_type)
-
-
-        self._segment_images(detection_fnames, out_segmentation_folders)
         status_array = np.memmap(self.status_array_path,
                                  dtype=np.bool,
                                  mode='r+',
                                  shape=(self.num_subsets,)
                                  )
-        status_array[start_i // self.subset_size] = True
+
+        completed = status_array[start_i // self.subset_size]
+        if not completed:
+            for i in auto.tqdm(range(start_i, end_i)):
+                im_file = self.df.loc[i]["subDirectory_filePath"]
+                left = self.df.loc[i]["face_x"]
+                top = self.df.loc[i]["face_y"]
+                right = left + self.df.loc[i]["face_width"]
+                bottom = top + self.df.loc[i]["face_height"]
+                bb = np.array([top, left, bottom, right])
+
+                im_fullfile = Path(self.input_dir) / im_file
+                try:
+                    detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
+                except ValueError as e:
+                    print(f"Failed to load file:")
+                    print(f"{im_fullfile}")
+                    print(traceback.print_exc())
+                    continue
+                except SyntaxError as e:
+                    print(f"Failed to load file:")
+                    print(f"{im_fullfile}")
+                    print(traceback.print_exc())
+                    continue
+
+                out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+                # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
+                out_detection_fname.parent.mkdir(exist_ok=True)
+                detection_fnames += [out_detection_fname]
+                imsave(out_detection_fname, detection[0])
+
+                out_segmentation_folders += [self._path_to_landmarks() / Path(im_file).parent]
+
+                # save landmarks
+                out_landmark_fname = self._path_to_landmarks() / Path(im_file).parent / (Path(im_file).stem + ".pkl")
+                out_landmark_fname.parent.mkdir(exist_ok=True)
+                # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
+                save_landmark(out_landmark_fname, landmarks[0], bbox_type)
+
+
+            self._segment_images(detection_fnames, out_segmentation_folders)
+
+            status_array[start_i // self.subset_size] = True
 
     @property
     def status_array_path(self):
