@@ -1,2 +1,2 @@
 # @package learning
-logger: WandbLogger
+logger_type: WandbLogger

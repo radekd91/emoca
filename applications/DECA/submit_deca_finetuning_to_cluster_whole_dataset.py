@@ -79,17 +79,17 @@ def finetune_on_all_sequences():
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
 
-        [['model.useSeg=true', 'data/augmentations=default'],
-         ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+        # [['model.useSeg=true', 'data/augmentations=default'],
+        #  ['data/augmentations=default']], # segmentation coarse, DATA AUGMENTATION
+        #
+        # [['model.useSeg=true', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.train_coarse=true']],  # segmentation coarse, DATA AUGMENTATION
+        #
+        # [['model.useSeg=true', 'data/augmentations=default'],
+        #  ['data/augmentations=default', 'model.train_coarse=true',  'model.detail_constrain_type=none',]],  # segmentation coarse, DATA AUGMENTATION
 
-        [['model.useSeg=true', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.train_coarse=true']],  # segmentation coarse, DATA AUGMENTATION
-
-        [['model.useSeg=true', 'data/augmentations=default'],
-         ['data/augmentations=default', 'model.train_coarse=true',  'model.detail_constrain_type=none',]],  # segmentation coarse, DATA AUGMENTATION
-
-        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
-            ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default', 'learning/logging=none'],
+            ['data/augmentations=default', 'model/settings=default_detail_emonet',  'learning/logging=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
 
         # [['model.useSeg=true', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
@@ -121,15 +121,25 @@ def finetune_on_all_sequences():
     # test_vis_frequency: 30
     # val_vis_frequency: 200
     # train_vis_frequency: 100
+    # fixed_overrides_coarse = ["model.val_check_interval=0.2",
+    #                           "model.val_vis_frequency=3000",
+    #                           "model.train_vis_frequency=500",
+    #                           "model.test_vis_frequency=1000"]
+    #
+    # fixed_overrides_detail = ["model.val_check_interval=0.2",
+    #                           "model.val_vis_frequency=3000",
+    #                           "model.train_vis_frequency=500",
+    #                           "model.test_vis_frequency=1000"]
+
     fixed_overrides_coarse = ["model.val_check_interval=0.2",
-                              "model.val_vis_frequency=3000",
-                              "model.train_vis_frequency=500",
-                              "model.test_vis_frequency=1000"]
+                              "model.val_vis_frequency=-1",
+                              "model.train_vis_frequency=-1",
+                              "model.test_vis_frequency=-1"]
 
     fixed_overrides_detail = ["model.val_check_interval=0.2",
-                              "model.val_vis_frequency=3000",
-                              "model.train_vis_frequency=500",
-                              "model.test_vis_frequency=1000"]
+                              "model.val_vis_frequency=-1",
+                              "model.train_vis_frequency=-1",
+                              "model.test_vis_frequency=-1"]
 
     emonet_weights = [0.15/100,] # new default
     # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]

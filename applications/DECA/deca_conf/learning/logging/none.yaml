@@ -1,2 +1,2 @@
 # @package learning
-logger: False
+logger_type: False
