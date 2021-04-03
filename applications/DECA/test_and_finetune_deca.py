@@ -166,10 +166,13 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
     if logger_type is None:
         # legacy reasons
         logger_type = "WandbLogger"
+        print(f"Logger type is not set. Defaulting to {logger_type}")
 
     if not logger_type:
+        print(f"No logger instantiated.")
         return None
     if logger_type == "WandbLogger":
+        print(f"Creating logger: {logger_type}")
         logger = WandbLogger(name=name,
                              project=project_name,
                              version=version,
