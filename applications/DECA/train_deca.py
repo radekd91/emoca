@@ -1,4 +1,4 @@
-from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs
+from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -188,8 +188,15 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, resume
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=conf, f=outfile)
 
-    wandb_logger = WandbLogger(name=experiment_name,
-                         project=project_name,
+    # wandb_logger = WandbLogger(name=experiment_name,
+    #                      project=project_name,
+    #                      config=OmegaConf.to_container(conf),
+    #                      version=time,
+    #                      save_dir=full_run_dir)
+    wandb_logger = create_logger(
+                         cfg_coarse_pretraining.learning.logger_type,
+                         name=experiment_name,
+                         project_name=project_name,
                          config=OmegaConf.to_container(conf),
                          version=time,
                          save_dir=full_run_dir)

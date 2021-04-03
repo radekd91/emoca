@@ -718,18 +718,19 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[stage_str + 'step'] = self.global_step
         losses_and_metrics_to_log[stage_str + 'batch_idx'] = batch_idx
         # self._val_to_be_logged(losses_and_metrics_to_log)
-        if batch_idx % self.deca.config.val_vis_frequency == 0:
-            uv_detail_normals = None
-            if 'uv_detail_normals' in values.keys():
-                uv_detail_normals = values['uv_detail_normals']
-            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                           uv_detail_normals, values, batch_idx, stage_str[:-1], prefix)
-            vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
-            # image = Image(grid_image, caption="full visualization")
-            # vis_dict[prefix + '_val_' + "visualization"] = image
-            if isinstance(self.logger, WandbLogger):
-                self.logger.log_metrics(vis_dict)
-            # self.logger.experiment.log(vis_dict) #, step=self.global_step)
+        if self.deca.config.val_vis_frequency > 0:
+            if batch_idx % self.deca.config.val_vis_frequency == 0:
+                uv_detail_normals = None
+                if 'uv_detail_normals' in values.keys():
+                    uv_detail_normals = values['uv_detail_normals']
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, batch_idx, stage_str[:-1], prefix)
+                vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+                # image = Image(grid_image, caption="full visualization")
+                # vis_dict[prefix + '_val_' + "visualization"] = image
+                if isinstance(self.logger, WandbLogger):
+                    self.logger.log_metrics(vis_dict)
+                # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
@@ -779,14 +780,15 @@ class DecaModule(LightningModule):
         if 'uv_detail_normals' in values.keys():
             uv_detail_normals = values['uv_detail_normals']
 
-        if batch_idx % self.deca.config.test_vis_frequency == 0:
-            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                           uv_detail_normals, values, self.global_step, stage_str[:-1], prefix)
-            visdict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
-            # image = Image(grid_image, caption="full visualization")
-            # visdict[ prefix + '_' + stage_str + "visualization"] = image
-            if isinstance(self.logger, WandbLogger):
-                self.logger.log_metrics(visdict)#, step=self.global_step)
+        if self.deca.config.test_vis_frequency > 0:
+            if batch_idx % self.deca.config.test_vis_frequency == 0:
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, self.global_step, stage_str[:-1], prefix)
+                visdict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+                # image = Image(grid_image, caption="full visualization")
+                # visdict[ prefix + '_' + stage_str + "visualization"] = image
+                if isinstance(self.logger, WandbLogger):
+                    self.logger.log_metrics(visdict)#, step=self.global_step)
         if self.logger is not None:
             self.logger.log_metrics(losses_and_metrics_to_log)
         return None
@@ -817,14 +819,15 @@ class DecaModule(LightningModule):
         # log loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log['loss'] = losses_and_metrics_to_log[prefix + '_train_loss']
 
-        if self.global_step % self.deca.config.train_vis_frequency == 0:
-            visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                           uv_detail_normals, values, batch_idx, "train", prefix)
-            visdict = self._create_visualizations_to_log('train', visualizations, values, batch_idx, indices=0)
-            # image = Image(grid_image, caption="full visualization")
-            # visdict[prefix + '_test_' + "visualization"] = image
-            if isinstance(self.logger, WandbLogger):
-                self.logger.log_metrics(visdict)#, step=self.global_step)
+        if self.deca.config.train_vis_frequency > 0:
+            if self.global_step % self.deca.config.train_vis_frequency == 0:
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, batch_idx, "train", prefix)
+                visdict = self._create_visualizations_to_log('train', visualizations, values, batch_idx, indices=0)
+                # image = Image(grid_image, caption="full visualization")
+                # visdict[prefix + '_test_' + "visualization"] = image
+                if isinstance(self.logger, WandbLogger):
+                    self.logger.log_metrics(visdict)#, step=self.global_step)
 
 
         self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch, # recommended
