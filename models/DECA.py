@@ -706,9 +706,10 @@ class DecaModule(LightningModule):
         stage_str = dataloader_str + 'val_'
 
         # losses_and_metrics_to_log = {prefix + dataloader_str +'_val_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
-        losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach() for key, value in losses_and_metrics.items()}
-        # losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = self.current_epoch
-        losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = self.current_epoch
+        # losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         # log val_loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log[stage_str + 'loss'] = losses_and_metrics_to_log[prefix + '_' + stage_str + 'loss']
 
@@ -756,17 +757,23 @@ class DecaModule(LightningModule):
             if 'mask' in batch.keys():
                 losses_and_metrics = self.compute_loss(values, training=False)
                 # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
-                losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach() for key, value in losses_and_metrics.items()}
+                losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
             else:
                 losses_and_metric = None
 
         # losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = self.current_epoch
-        losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
-        losses_and_metrics_to_log[prefix + '_' + stage_str + 'step'] = torch.tensor(self.global_step, device=self.device)
-        losses_and_metrics_to_log[prefix + '_' + stage_str + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
-        losses_and_metrics_to_log[stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
-        losses_and_metrics_to_log[stage_str + 'step'] = torch.tensor(self.global_step, device=self.device)
-        losses_and_metrics_to_log[stage_str + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
+        # losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # losses_and_metrics_to_log[prefix + '_' + stage_str + 'step'] = torch.tensor(self.global_step, device=self.device)
+        # losses_and_metrics_to_log[prefix + '_' + stage_str + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
+        # losses_and_metrics_to_log[stage_str + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # losses_and_metrics_to_log[stage_str + 'step'] = torch.tensor(self.global_step, device=self.device)
+        # losses_and_metrics_to_log[stage_str + 'batch_idx'] = torch.tensor(batch_idx, device=self.device)
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = self.current_epoch
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'step'] = self.global_step
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'batch_idx'] = batch_idx
+        losses_and_metrics_to_log[stage_str + 'epoch'] = self.current_epoch
+        losses_and_metrics_to_log[stage_str + 'step'] = self.global_step
+        losses_and_metrics_to_log[stage_str + 'batch_idx'] = batch_idx
         # if self.global_step % 200 == 0:
         uv_detail_normals = None
         if 'uv_detail_normals' in values.keys():
@@ -796,11 +803,14 @@ class DecaModule(LightningModule):
         # prefix = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
         # losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
-        losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
-        losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach() for key, value in losses_and_metrics.items()}
+        losses_and_metrics_to_log = {prefix + '_train_' + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
+        # losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
         losses_and_metrics_to_log[prefix + '_train_' + 'batch_idx'] = batch_idx
-        losses_and_metrics_to_log['train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        # losses_and_metrics_to_log['train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
+        losses_and_metrics_to_log['train_' + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log['train_' + 'step'] = self.global_step
         losses_and_metrics_to_log['train_' + 'batch_idx'] = batch_idx
 
