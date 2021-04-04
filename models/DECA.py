@@ -717,6 +717,9 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[prefix + '_' + stage_str + 'batch_idx'] = batch_idx
         losses_and_metrics_to_log[stage_str + 'step'] = self.global_step
         losses_and_metrics_to_log[stage_str + 'batch_idx'] = batch_idx
+
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'mem_usage'] = self.process.memory_info().rss
+        losses_and_metrics_to_log[stage_str + 'mem_usage'] = self.process.memory_info().rss
         # self._val_to_be_logged(losses_and_metrics_to_log)
         if self.deca.config.val_vis_frequency > 0:
             if batch_idx % self.deca.config.val_vis_frequency == 0:
@@ -732,7 +735,8 @@ class DecaModule(LightningModule):
                     self.logger.log_metrics(vis_dict)
                 # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
+        if self.logger is not None:
+            self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics
@@ -772,9 +776,12 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[prefix + '_' + stage_str + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log[prefix + '_' + stage_str + 'step'] = self.global_step
         losses_and_metrics_to_log[prefix + '_' + stage_str + 'batch_idx'] = batch_idx
+        losses_and_metrics_to_log[prefix + '_' + stage_str + 'mem_usage'] = self.process.memory_info().rss
         losses_and_metrics_to_log[stage_str + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log[stage_str + 'step'] = self.global_step
         losses_and_metrics_to_log[stage_str + 'batch_idx'] = batch_idx
+        losses_and_metrics_to_log[stage_str + 'mem_usage'] = self.process.memory_info().rss
+
         # if self.global_step % 200 == 0:
         uv_detail_normals = None
         if 'uv_detail_normals' in values.keys():
@@ -792,6 +799,14 @@ class DecaModule(LightningModule):
         if self.logger is not None:
             self.logger.log_metrics(losses_and_metrics_to_log)
         return None
+
+    @property
+    def process(self):
+        if not hasattr(self,"process_"):
+            import psutil
+            self.process_ = psutil.Process(os.getpid())
+        return self.process_
+
 
     def training_step(self, batch, batch_idx): #, debug=True):
         values = self.encode(batch, training=True)
@@ -816,6 +831,9 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log['train_' + 'step'] = self.global_step
         losses_and_metrics_to_log['train_' + 'batch_idx'] = batch_idx
 
+        losses_and_metrics_to_log[prefix + '_' + "train_" + 'mem_usage'] = self.process.memory_info().rss
+        losses_and_metrics_to_log["train_" + 'mem_usage'] = self.process.memory_info().rss
+
         # log loss also without any prefix for a model checkpoint to track it
         losses_and_metrics_to_log['loss'] = losses_and_metrics_to_log[prefix + '_train_loss']
 
@@ -829,8 +847,8 @@ class DecaModule(LightningModule):
                 if isinstance(self.logger, WandbLogger):
                     self.logger.log_metrics(visdict)#, step=self.global_step)
 
-
-        self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch, # recommended
+        if self.logger is not None:
+            self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch, # recommended
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=True) # log per both
         # return losses_and_metrics
@@ -982,7 +1000,7 @@ class DecaModule(LightningModule):
         return log_dict
 
     def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx, stage, prefix,
-                                  save=True):
+                                  save=False):
         batch_size = verts.shape[0]
         visind = np.arange(batch_size)
         shape_images = self.deca.render.render_shape(verts, trans_verts)

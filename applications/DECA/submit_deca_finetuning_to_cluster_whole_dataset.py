@@ -88,8 +88,8 @@ def finetune_on_all_sequences():
         # [['model.useSeg=true', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.train_coarse=true',  'model.detail_constrain_type=none',]],  # segmentation coarse, DATA AUGMENTATION
 
-        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default', 'learning/logging=none'],
-            ['data/augmentations=default', 'model/settings=default_detail_emonet',  'learning/logging=none']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
+        [['model.useSeg=true', 'model/settings=default_coarse_emonet', 'data/augmentations=default'],
+            ['data/augmentations=default', 'model/settings=default_detail_emonet']], # segmentation coarse, DATA AUGMENTATION , with EmoNet
 
         # [['model.useSeg=true', 'data/augmentations=default'],
         #  ['data/augmentations=default', 'model.detail_constrain_type=none']], # segmentation coarse, DATA AUGMENTATION , no detail constraint
