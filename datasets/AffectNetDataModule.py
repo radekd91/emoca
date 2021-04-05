@@ -52,6 +52,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.df = pd.concat([train, val], ignore_index=True, sort=False)
         self.face_detector_type = 'fan'
         self.scale = scale
+        self.use_processed = True
 
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
@@ -96,7 +97,7 @@ class AffectNetDataModule(FaceDataModuleBase):
 
         status_array = np.memmap(self.status_array_path,
                                  dtype=np.bool,
-                                 mode='r+',
+                                 mode='r',
                                  shape=(self.num_subsets,)
                                  )
 
@@ -131,7 +132,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                 detection_fnames += [out_detection_fname]
                 imsave(out_detection_fname, detection[0])
 
-                out_segmentation_folders += [self._path_to_landmarks() / Path(im_file).parent]
+                out_segmentation_folders += [self._path_to_segmentations() / Path(im_file).parent]
 
                 # save landmarks
                 out_landmark_fname = self._path_to_landmarks() / Path(im_file).parent / (Path(im_file).stem + ".pkl")
@@ -141,55 +142,61 @@ class AffectNetDataModule(FaceDataModuleBase):
 
             self._segment_images(detection_fnames, out_segmentation_folders)
 
+            status_array = np.memmap(self.status_array_path,
+                                     dtype=np.bool,
+                                     mode='r+',
+                                     shape=(self.num_subsets,)
+                                     )
             status_array[start_i // self.subset_size] = True
+            status_array.flush()
+            del status_array
             print(f"Processing subset {start_i // self.subset_size} finished")
         else:
             print(f"Subset {start_i // self.subset_size} is already processed")
-
-        status_array.flush()
-        del status_array
 
     @property
     def status_array_path(self):
         return Path(self.output_dir) / "status.memmap"
 
     def prepare_data(self):
-        if not self.status_array_path.is_file():
+        if self.use_processed:
+            if not self.status_array_path.is_file():
+                print(f"Status file does not exist. Creating '{self.status_array_path}'")
+                self.status_array_path.parent.mkdir(exist_ok=True, parents=True)
+                status_array = np.memmap(self.status_array_path,
+                                         dtype=np.bool,
+                                         mode='w+',
+                                         shape=(self.num_subsets,)
+                                         )
+                status_array[...] = False
+                del status_array
+
             status_array = np.memmap(self.status_array_path,
                                      dtype=np.bool,
-                                     mode='w+',
+                                     mode='r',
                                      shape=(self.num_subsets,)
                                      )
-            status_array[...] = False
+            all_processed = status_array.all()
             del status_array
+            if not all_processed:
+                self._detect_faces()
 
-        status_array = np.memmap(self.status_array_path,
-                                 dtype=np.bool,
-                                 mode='r+',
-                                 shape=(self.num_subsets,)
-                                 )
-        all_processed = status_array.all()
-        del status_array
-        if not all_processed:
-            self._detect_faces()
-
-
-    def setup(self, stage):
-        self.train_dataframe_path = self.root_dir / "Manually_Annotated" / "training.csv"
-        self.val_dataframe_path = self.root_dir / "Manually_Annotated" / "validation.csv"
+    def setup(self, stage=None):
+        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "training.csv"
+        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation.csv"
 
         if self.use_processed:
-            image_path = self.output_dir / "detections"
+            self.image_path = Path(self.output_dir) / "detections"
             # self.training_set = AffectNetOriginal(image_path, self.train_dataframe_path, self.image_size, self.scale,
             #                                       self.train_augmenter)
             # self.validation_set = AffectNetOriginal(image_path, self.val_dataframe_path, self.image_size, self.scale,
             #                                       self.val_augmenter)
         else:
-            image_path = self.output_dir / "Manually_Annotated" / "Manually_Annotated_Images"
-        self.training_set = AffectNet(image_path, self.train_dataframe_path, self.image_size, self.scale,
-                                      self.train_augmenter)
-        self.validation_set = AffectNet(image_path, self.val_dataframe_path, self.image_size, self.scale,
-                                        self.val_augmenter)
+            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.training_set = AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
+                                      None)
+        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                        None)
 
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
@@ -245,16 +252,16 @@ class AffectNet(EmotionalImageDatasetBase):
         arousal = self.df.loc[index]["arousal"]
 
         try:
-            im_file = self.df.loc[index]["subDirectory_filePath"]
-            im_file = Path(self.image_path) / im_file
+            im_rel_path = self.df.loc[index]["subDirectory_filePath"]
+            im_file = Path(self.image_path) / im_rel_path
             input_img = imread(im_file)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
             while True:
                 index += 1
                 index = index % len(self)
-                im_file = self.df.loc[index]["subDirectory_filePath"]
-                im_file = Path(self.image_path) / im_file
+                im_rel_path = self.df.loc[index]["subDirectory_filePath"]
+                im_file = Path(self.image_path) / im_rel_path
                 try:
                     input_img = imread(im_file)
                     success = True
@@ -286,14 +293,14 @@ class AffectNet(EmotionalImageDatasetBase):
             # the image has already been cropped in preprocessing (make sure the input root path
             # is specificed to the processed folder and not the original one
 
-            landmark_path = Path(self.image_path).parent / "landmarks" / im_file
+            landmark_path = Path(self.image_path).parent / "landmarks" / im_rel_path
             landmark_path = landmark_path.parent / (landmark_path.stem + ".pkl")
 
             landmark_type, landmark = load_landmark(
                 landmark_path)
             landmark = landmark[np.newaxis, ...]
 
-            segmentation_path = Path(self.image_path).parent / "landmarks" / im_file
+            segmentation_path = Path(self.image_path).parent / "segmentations" / im_rel_path
             segmentation_path = landmark_path.parent / (landmark_path.stem + ".pkl")
 
             seg_image, seg_type = load_segmentation(
@@ -321,6 +328,37 @@ class AffectNet(EmotionalImageDatasetBase):
         return sample
 
 
+def sample_representative_set(dataset, output_file, sample_step=0.2):
+    va_array = []
+    size = int(2 / sample_step)
+    for i in range(size):
+        va_array += [[]]
+        for j in range(size):
+            va_array[i] += [[]]
+
+    print("Binning dataset")
+    for i in auto.tqdm(range(len(dataset.df))):
+        v = max(-1., min(1., dataset.df.loc[i]["valence"]))
+        a = max(-1., min(1., dataset.df.loc[i]["arousal"]))
+        row_ = int((v + 1) / sample_step)
+        col_ = int((a + 1) / sample_step)
+        va_array[row_][ col_] += [i]
+
+
+    selected_indices = []
+    for i in range(len(va_array)):
+        for j in range(len(va_array[i])):
+            if len(va_array[i][j]) > 0:
+                selected_indices += [va_array[i][j][0]]
+            else:
+                print(f"No value for {i} and {j}")
+
+    selected_samples = dataset.df.loc[selected_indices]
+    selected_samples.to_csv(output_file)
+    print(f"Selected samples saved to '{output_file}'")
+
+
+
 if __name__ == "__main__":
     # d = AffectNetOriginal(
     #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/Manually_Annotated_Images",
@@ -335,10 +373,28 @@ if __name__ == "__main__":
     dm = AffectNetDataModule(
              "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
-             processed_subfolder="processed_2021_Apr_02_03-13-33",
+             # processed_subfolder="processed_2021_Apr_02_03-13-33",
+             processed_subfolder=None,
              mode="manual",
              scale=1.25)
     print(dm.num_subsets)
     dm.prepare_data()
+    dm.setup()
+    # dl = dm.val_dataloader()
+    print(f"len training set: {len(dm.training_set)}")
+    print(f"len validation set: {len(dm.validation_set)}")
+
+    out_path = Path(dm.output_dir )/ "validation_representative_selection_.csv"
+    # sample_representative_set(dm.validation_set, out_path)
+
+    validation_set = AffectNet(dm.image_path, out_path, dm.image_size, dm.scale, None)
+    for i in range(len(validation_set)):
+        sample = validation_set[i]
+        validation_set.visualize_sample(sample)
+
+    # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
+
+    "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
+
     # dm._detect_faces()
 

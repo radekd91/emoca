@@ -227,6 +227,8 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
 
 
     def visualize_sample(self, sample):
+        if isinstance(sample, int):
+            sample = self[sample]
 
         import matplotlib.pyplot as plt
         num_images = 1
