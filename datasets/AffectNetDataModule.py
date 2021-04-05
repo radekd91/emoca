@@ -11,9 +11,10 @@ from transforms.keypoints import KeypointNormalization
 import imgaug
 from datasets.FaceVideoDataset import bbpoint_warp, bbox2point, FaceDataModuleBase
 from datasets.EmotionalImageDataset import EmotionalImageDatasetBase
-from utils.FaceDetector import save_landmark
+from utils.FaceDetector import save_landmark, load_landmark
 from tqdm import auto
 import traceback
+from torch.utils.data.dataloader import DataLoader
 
 
 class AffectNetDataModule(FaceDataModuleBase):
@@ -27,7 +28,12 @@ class AffectNetDataModule(FaceDataModuleBase):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
-                 device=None):
+                 device=None,
+                 train_batch_size=64,
+                 val_batch_size=64,
+                 test_batch_size=64,
+                 num_workers=0,
+                 ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
                          face_detector_threshold=face_detector_threshold,
@@ -46,6 +52,11 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.df = pd.concat([train, val], ignore_index=True, sort=False)
         self.face_detector_type = 'fan'
         self.scale = scale
+
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
+        self.test_batch_size = test_batch_size
+        self.num_workers = num_workers
 
     @property
     def subset_size(self):
@@ -91,6 +102,7 @@ class AffectNetDataModule(FaceDataModuleBase):
 
         completed = status_array[start_i // self.subset_size]
         if not completed:
+            print(f"Processing subset {start_i // self.subset_size}")
             for i in auto.tqdm(range(start_i, end_i)):
                 im_file = self.df.loc[i]["subDirectory_filePath"]
                 left = self.df.loc[i]["face_x"]
@@ -127,10 +139,15 @@ class AffectNetDataModule(FaceDataModuleBase):
                 # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
                 save_landmark(out_landmark_fname, landmarks[0], bbox_type)
 
-
             self._segment_images(detection_fnames, out_segmentation_folders)
 
             status_array[start_i // self.subset_size] = True
+            print(f"Processing subset {start_i // self.subset_size} finished")
+        else:
+            print(f"Subset {start_i // self.subset_size} is already processed")
+
+        status_array.flush()
+        del status_array
 
     @property
     def status_array_path(self):
@@ -160,6 +177,20 @@ class AffectNetDataModule(FaceDataModuleBase):
     def setup(self, stage):
         self.train_dataframe_path = self.root_dir / "Manually_Annotated" / "training.csv"
         self.val_dataframe_path = self.root_dir / "Manually_Annotated" / "validation.csv"
+
+        if self.use_processed:
+            image_path = self.output_dir / "detections"
+            # self.training_set = AffectNetOriginal(image_path, self.train_dataframe_path, self.image_size, self.scale,
+            #                                       self.train_augmenter)
+            # self.validation_set = AffectNetOriginal(image_path, self.val_dataframe_path, self.image_size, self.scale,
+            #                                       self.val_augmenter)
+        else:
+            image_path = self.output_dir / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.training_set = AffectNet(image_path, self.train_dataframe_path, self.image_size, self.scale,
+                                      self.train_augmenter)
+        self.validation_set = AffectNet(image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                        self.val_augmenter)
+
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
         #     self.dataframe = pd.load_csv(self.path / "Manually_Annotated" / "Manually_Annotated.csv")
@@ -169,17 +200,18 @@ class AffectNetDataModule(FaceDataModuleBase):
         #         self.path / "Automatically_Annotated" / "Automatically_annotated_file_list.csv")
 
     def train_dataloader(self):
-        pass
+        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers, batch_size=self.train_batch_size)
+        return dl
 
     def val_dataloader(self):
-        pass
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.val_batch_size)
 
     def test_dataloader(self):
         pass
 
 
-
-class AffectNetOriginal(EmotionalImageDatasetBase):
+class AffectNet(EmotionalImageDatasetBase):
 
     def __init__(self,
                  image_path,
@@ -197,12 +229,12 @@ class AffectNetOriginal(EmotionalImageDatasetBase):
         self.transforms = transforms or imgaug.augmenters.Identity()
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
+        self.use_processed = True
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, index):
-        im_file = self.df.loc[index]["subDirectory_filePath"]
         left = self.df.loc[index]["face_x"]
         top = self.df.loc[index]["face_y"]
         right = left + self.df.loc[index]["face_width"]
@@ -212,30 +244,64 @@ class AffectNetOriginal(EmotionalImageDatasetBase):
         valence = self.df.loc[index]["valence"]
         arousal = self.df.loc[index]["arousal"]
 
-        im_file = Path(self.image_path) / im_file
-
-        input_img = imread(im_file)
+        try:
+            im_file = self.df.loc[index]["subDirectory_filePath"]
+            im_file = Path(self.image_path) / im_file
+            input_img = imread(im_file)
+        except Exception as e:
+            # if the image is corrupted or missing (there is a few :-/), find some other one
+            while True:
+                index += 1
+                index = index % len(self)
+                im_file = self.df.loc[index]["subDirectory_filePath"]
+                im_file = Path(self.image_path) / im_file
+                try:
+                    input_img = imread(im_file)
+                    success = True
+                except Exception as e2:
+                    success = False
+                if success:
+                    break
         input_img_shape = input_img.shape
 
-        old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
-        size = int(old_size * self.scale)
+        if not self.use_processed:
+            # Use AffectNet as is provided (their bounding boxes, and landmarks, no segmentation)
+            old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
+            size = int(old_size * self.scale)
+            input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
+            img, landmark = bbpoint_warp(input_img, center, size, self.image_size, landmarks=input_landmarks)
+            img *= 255.
 
-        input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
-        img, landmark = bbpoint_warp(input_img, center, size, self.image_size, landmarks=input_landmarks)
-        img *= 255.
-        if not self.use_gt_bb:
-            raise NotImplementedError()
-            # landmark_type, landmark = load_landmark(
-            #     self.path_prefix / self.landmark_list[index])
-        landmark = landmark[np.newaxis, ...]
+            if not self.use_gt_bb:
+                raise NotImplementedError()
+                # landmark_type, landmark = load_landmark(
+                #     self.path_prefix / self.landmark_list[index])
+            landmark = landmark[np.newaxis, ...]
+            seg_image = None
+        else:
+            # use AffectNet processed by me. I used their bounding boxes (to not have to worry about detecting
+            # the correct face in case there's more) and I ran our FAN and segmentation over it
+            img = input_img
 
-        # seg_image, seg_type = load_segmentation(
-        #     self.path_prefix / self.segmentation_list[index])
-        # seg_image = seg_image[np.newaxis, :, :, np.newaxis]
-        #
-        # seg_image = process_segmentation(
-        #     seg_image, seg_type).astype(np.uint8)
-        seg_image=None
+            # the image has already been cropped in preprocessing (make sure the input root path
+            # is specificed to the processed folder and not the original one
+
+            landmark_path = Path(self.image_path).parent / "landmarks" / im_file
+            landmark_path = landmark_path.parent / (landmark_path.stem + ".pkl")
+
+            landmark_type, landmark = load_landmark(
+                landmark_path)
+            landmark = landmark[np.newaxis, ...]
+
+            segmentation_path = Path(self.image_path).parent / "landmarks" / im_file
+            segmentation_path = landmark_path.parent / (landmark_path.stem + ".pkl")
+
+            seg_image, seg_type = load_segmentation(
+                segmentation_path)
+            seg_image = seg_image[np.newaxis, :, :, np.newaxis]
+
+            seg_image = process_segmentation(
+                seg_image, seg_type).astype(np.uint8)
 
         img, seg_image, landmark = self._augment(img, seg_image, landmark)
 
