@@ -57,7 +57,7 @@ def main():
 
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
-    conf[mode].inout.name = "affectnet_test"
+    # conf[mode].inout.name = "affectnet_test"
     print("Beginning testing...")
     single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net", dm=dm)
     print("We're done y'all")
