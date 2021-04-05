@@ -232,7 +232,7 @@ class FaceDataModuleBase(pl.LightningDataModule):
             FaceVideoDataModule.save_detections(bb_outfile, detection_fnames_all, landmark_fnames_all,
                                                 centers_all, sizes_all, fid)
 
-    def _segment_images(self, detection_fnames, out_segmentation_folder):
+    def _segment_images(self, detection_fnames, out_segmentation_folder, path_depth = 0):
         import time
 
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -272,8 +272,10 @@ class FaceDataModuleBase(pl.LightningDataModule):
             start = time.time()
             for j in range(out.size()[0]):
                 image_path = batch['path'][j]
-                if isinstance(out_segmentation_folder, list):
-                    segmentation_path = out_segmentation_folder[j] / (Path(image_path).stem + ".pkl")
+                # if isinstance(out_segmentation_folder, list):
+                if path_depth > 0:
+                    rel_path = Path(image_path.parent).relative_to(Path(image_path).parents[path_depth])
+                    segmentation_path = out_segmentation_folder / rel_path / (Path(image_path).stem + ".pkl")
                 else:
                     segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
                 segmentation_path.parent.mkdir(exist_ok=True, parents=True)

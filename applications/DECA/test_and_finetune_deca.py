@@ -217,26 +217,6 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                     project_name=project_name,
                     version=version,
                     save_dir=cfg.inout.full_run_dir)
-        #
-        # logger = WandbLogger(name=cfg.inout.name,
-        #             project=project_name,
-        #             version=version,
-        #             save_dir=cfg.inout.full_run_dir)
-        # max_tries = 100
-        # tries = 0
-        # if logger is not None:
-        #     while True:
-        #         try:
-        #             ex = logger.experiment
-        #             break
-        #         except Exception as e:
-        #             logger._experiment = None
-        #             print("Reinitiliznig wandb because it failed in 10s")
-        #             t.sleep(10)
-        #             if max_tries <= max_tries:
-        #                 print("WANDB Initialization unsuccessful")
-        #                 break
-        #             tries += 1
 
     if deca is None:
         if logger is not None:

@@ -133,7 +133,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                 detection_fnames += [out_detection_fname]
                 imsave(out_detection_fname, detection[0])
 
-                out_segmentation_folders += [self._path_to_segmentations() / Path(im_file).parent]
+                # out_segmentation_folders += [self._path_to_segmentations() / Path(im_file).parent]
 
                 # save landmarks
                 out_landmark_fname = self._path_to_landmarks() / Path(im_file).parent / (Path(im_file).stem + ".pkl")
@@ -141,7 +141,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                 # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
                 save_landmark(out_landmark_fname, landmarks[0], bbox_type)
 
-            self._segment_images(detection_fnames, out_segmentation_folders)
+            self._segment_images(detection_fnames, self._path_to_segmentations(), path_depth=1)
 
             status_array = np.memmap(self.status_array_path,
                                      dtype=np.bool,
@@ -159,6 +159,16 @@ class AffectNetDataModule(FaceDataModuleBase):
     def status_array_path(self):
         return Path(self.output_dir) / "status.memmap"
 
+    @property
+    def is_processed(self):
+        status_array = np.memmap(self.status_array_path,
+                                 dtype=np.bool,
+                                 mode='r',
+                                 shape=(self.num_subsets,)
+                                 )
+        all_processed = status_array.all()
+        return all_processed
+
     def prepare_data(self):
         if self.use_processed:
             if not self.status_array_path.is_file():
@@ -172,13 +182,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                 status_array[...] = False
                 del status_array
 
-            status_array = np.memmap(self.status_array_path,
-                                     dtype=np.bool,
-                                     mode='r',
-                                     shape=(self.num_subsets,)
-                                     )
-            all_processed = status_array.all()
-            del status_array
+            all_processed = self.is_processed
             if not all_processed:
                 self._detect_faces()
 
@@ -219,6 +223,29 @@ class AffectNetDataModule(FaceDataModuleBase):
         pass
 
 
+class AffectNetTestModule(AffectNetDataModule):
+
+    def prepare_data(self):
+        if not self.is_processed:
+            raise RuntimeError("The dataset should have been processed but is not")
+
+    def setup(self, stage=None):
+        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+
+        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None)
+
+    def train_dataloader(self):
+        raise NotImplementedError()
+
+    def val_dataloader(self):
+        raise NotImplementedError()
+
+    def test_dataloader(self):
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.test_batch_size)
+
+
 class AffectNet(EmotionalImageDatasetBase):
 
     def __init__(self,
@@ -255,6 +282,7 @@ class AffectNet(EmotionalImageDatasetBase):
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
+            im_file = im_file.parent / (im_file.stem + ".png")
             input_img = imread(im_file)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
@@ -263,6 +291,7 @@ class AffectNet(EmotionalImageDatasetBase):
                 index = index % len(self)
                 im_rel_path = self.df.loc[index]["subDirectory_filePath"]
                 im_file = Path(self.image_path) / im_rel_path
+                im_file = im_file.parent / (im_file.stem + ".png")
                 try:
                     input_img = imread(im_file)
                     success = True
@@ -302,7 +331,7 @@ class AffectNet(EmotionalImageDatasetBase):
             landmark = landmark[np.newaxis, ...]
 
             segmentation_path = Path(self.image_path).parent / "segmentations" / im_rel_path
-            segmentation_path = landmark_path.parent / (landmark_path.stem + ".pkl")
+            segmentation_path = segmentation_path.parent / (segmentation_path.stem + ".pkl")
 
             seg_image, seg_type = load_segmentation(
                 segmentation_path)
@@ -375,7 +404,7 @@ if __name__ == "__main__":
              "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # processed_subfolder="processed_2021_Apr_02_03-13-33",
-             processed_subfolder=None,
+             processed_subfolder="processed_2021_Apr_05_15-22-18",
              mode="manual",
              scale=1.25)
     print(dm.num_subsets)
@@ -386,7 +415,7 @@ if __name__ == "__main__":
     print(f"len validation set: {len(dm.validation_set)}")
 
     out_path = Path(dm.output_dir )/ "validation_representative_selection_.csv"
-    # sample_representative_set(dm.validation_set, out_path)
+    sample_representative_set(dm.validation_set, out_path)
 
     validation_set = AffectNet(dm.image_path, out_path, dm.image_size, dm.scale, None)
     for i in range(len(validation_set)):
