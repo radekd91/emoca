@@ -6,6 +6,9 @@ def main():
     path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
 
+    path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
+    path_to_processed_affectnet = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/"
+
     run_names = []
     run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
     # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
@@ -27,7 +30,7 @@ def main():
 
         deca.eval()
 
-        dm = data_preparation_function(conf[mode])
+        dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
         conf[mode].model.test_vis_frequency = 1
         # conf[mode].inout.name = "affectnet_test"
         single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net", dm=dm)

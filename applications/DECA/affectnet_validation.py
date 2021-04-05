@@ -26,10 +26,10 @@ def load_model(path_to_models,
 
 
 
-def data_preparation_function(cfg):
+def data_preparation_function(cfg,path_to_affectnet, path_to_processed_affectnet):
     dm = AffectNetTestModule(
-            "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-             "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+            path_to_affectnet,
+             path_to_processed_affectnet,
              # processed_subfolder="processed_2021_Apr_02_03-13-33",
              processed_subfolder="processed_2021_Apr_05_15-22-18",
              mode="manual",
@@ -41,8 +41,9 @@ def data_preparation_function(cfg):
 
 
 def main():
-    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
+    path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
     run_name = sys.argv[1]
 
     mode = 'detail'
@@ -54,9 +55,10 @@ def main():
 
     deca.eval()
 
-    dm = data_preparation_function(conf[mode])
+    dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
     conf[mode].inout.name = "affectnet_test"
+    print("Beginning testing...")
     single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net", dm=dm)
     print("We're done y'all")
 
