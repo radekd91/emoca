@@ -274,7 +274,7 @@ class FaceDataModuleBase(pl.LightningDataModule):
                 image_path = batch['path'][j]
                 # if isinstance(out_segmentation_folder, list):
                 if path_depth > 0:
-                    rel_path = Path(image_path.parent).relative_to(Path(image_path).parents[path_depth])
+                    rel_path = Path(image_path).parent.relative_to(Path(image_path).parents[path_depth])
                     segmentation_path = out_segmentation_folder / rel_path / (Path(image_path).stem + ".pkl")
                 else:
                     segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
