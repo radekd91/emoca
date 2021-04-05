@@ -115,16 +115,17 @@ class AffectNetDataModule(FaceDataModuleBase):
                 im_fullfile = Path(self.input_dir) / im_file
                 try:
                     detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
-                except ValueError as e:
+                except Exception as e:
+                # except ValueError as e:
                     print(f"Failed to load file:")
                     print(f"{im_fullfile}")
                     print(traceback.print_exc())
                     continue
-                except SyntaxError as e:
-                    print(f"Failed to load file:")
-                    print(f"{im_fullfile}")
-                    print(traceback.print_exc())
-                    continue
+                # except SyntaxError as e:
+                #     print(f"Failed to load file:")
+                #     print(f"{im_fullfile}")
+                #     print(traceback.print_exc())
+                #     continue
 
                 out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
                 # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
