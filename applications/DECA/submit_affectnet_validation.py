@@ -5,7 +5,7 @@ import datetime
 from omegaconf import OmegaConf
 
 
-def submit(cfg, model_folder_name, bid=10):
+def submit(cfg, model_folder_name, mode, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
     submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
@@ -33,7 +33,7 @@ def submit(cfg, model_folder_name, bid=10):
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
     mem_gb = 12
-    args = f"{model_folder_name}"
+    args = f"{model_folder_name} {mode}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -60,16 +60,19 @@ def main():
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
 
     run_names = []
-    run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
+    # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
+    run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet
     # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
     # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
     # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
+
+    mode = 'coarse'
 
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
-        submit(conf, run_name)
+        submit(conf, run_name, mode)
 
 
 if __name__ == "__main__":

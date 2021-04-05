@@ -46,7 +46,10 @@ def main():
     path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
     run_name = sys.argv[1]
 
-    mode = 'detail'
+    if len(sys.argv) > 2:
+        mode = sys.argv[2]
+    else:
+        mode = 'detail'
     deca, conf = load_model(path_to_models, run_name, mode)
 
     # deca.deca.config.resume_training = True
