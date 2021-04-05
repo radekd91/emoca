@@ -231,7 +231,10 @@ class AffectNetTestModule(AffectNetDataModule):
 
     def setup(self, stage=None):
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
-
+        if self.use_processed:
+            self.image_path = Path(self.output_dir) / "detections"
+        else:
+            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None)
 
@@ -239,10 +242,11 @@ class AffectNetTestModule(AffectNetDataModule):
         raise NotImplementedError()
 
     def val_dataloader(self):
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        return None
 
     def test_dataloader(self):
-        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
+        return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
                           batch_size=self.test_batch_size)
 
 
@@ -345,7 +349,7 @@ class AffectNet(EmotionalImageDatasetBase):
         sample = {
             "image": numpy_image_to_torch(img),
             "path": str(im_file),
-            "expr7": torch.tensor([expression, ]),
+            "affectnetexp": torch.tensor([expression, ]),
             "va": torch.tensor([valence, arousal]),
             "label": str(im_file.stem),
         }
@@ -354,11 +358,11 @@ class AffectNet(EmotionalImageDatasetBase):
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
             sample["mask"] = numpy_image_to_torch(seg_image)
-        print(self.df.loc[index])
+        # print(self.df.loc[index])
         return sample
 
 
-def sample_representative_set(dataset, output_file, sample_step=0.2):
+def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin=2):
     va_array = []
     size = int(2 / sample_step)
     for i in range(size):
@@ -379,7 +383,8 @@ def sample_representative_set(dataset, output_file, sample_step=0.2):
     for i in range(len(va_array)):
         for j in range(len(va_array[i])):
             if len(va_array[i][j]) > 0:
-                selected_indices += [va_array[i][j][0]]
+                # selected_indices += [va_array[i][j][0:num_per_bin]]
+                selected_indices += va_array[i][j][0:num_per_bin]
             else:
                 print(f"No value for {i} and {j}")
 

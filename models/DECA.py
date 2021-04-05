@@ -967,6 +967,10 @@ class DecaModule(LightningModule):
                                 caption += "\n" + self.vae_2_str(
                                     expr7=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
                                     prefix="gt") + "\n"
+                            if 'affectnetexp' in values.keys():
+                                caption += "\n" + self.vae_2_str(
+                                    affnet_expr=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
+                                    prefix="gt") + "\n"
                         elif key == 'output_images_' + mode_:
                             if mode_ + "_valence_output" in values.keys():
                                 caption += self.vae_2_str(values[mode_ + "_valence_output"][i].detach().cpu().item(),
