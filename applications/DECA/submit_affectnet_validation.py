@@ -60,13 +60,14 @@ def main():
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
 
     run_names = []
-    # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
-    run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet
-    # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
-    # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
-    # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
+    run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
+    # run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet
+    run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
+    run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
+    run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
 
     mode = 'coarse'
+    # mode = 'detail'
 
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
