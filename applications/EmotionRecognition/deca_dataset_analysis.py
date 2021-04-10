@@ -66,10 +66,11 @@ def main():
     d['arousal'] = []
     d['expression'] = []
 
-    for idx, batch in enumerate(tqdm(dl)):
-    # for idx in tqdm(range(len(dm.train_dataset))):
+    # for idx, batch in enumerate(tqdm(dl)):
+    for idx in tqdm(range(len(dm.train_dataset))):
     # for idx in tqdm(range(10)):
-    #     batch = dm.train_dataset[idx]
+        batch = dm.train_dataset[idx]
+
         images = batch['image'].view(-1, 3, config.model.image_size, config.model.image_size)
         images = images.cuda()
         with torch.no_grad():
@@ -106,7 +107,7 @@ def main():
         # if idx > 10:
         #     break
 
-        if idx % 200:
+        if idx % 2000 == 0:
             print(f"Processing batch {idx}")
             df = pd.DataFrame(data=d)
             df.to_csv(out_file_path / "vae.csv")

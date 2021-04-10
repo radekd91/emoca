@@ -9,6 +9,7 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 import os, sys
+import torch.nn.functional as F
 
 
 def main():
@@ -16,37 +17,44 @@ def main():
     if len(sys.argv) > 1:
         scratch = sys.argv[1]
     else:
-        scratch = "/ps/scratch/"
+        # scratch = "/ps/scratch/"
+        scratch = "/home/rdanecek/Workspace/mount/scratch/"
 
     if len(sys.argv) > 2:
         project = sys.argv[2]
     else:
-        project = "/ps/project/"
+        # project = "/ps/project/"
+        project = "/home/rdanecek/Workspace/mount/project/"
 
-    print(f"Analyzing dataset {dataset}")
+    if len(sys.argv) > 3:
+        dataset = sys.argv[3]
+    else:
+        dataset = "train"
 
-    config = DictConfig({})
-    config.data = DictConfig({})
-    config.data.split_ratio = 1.
-    config.data.split_style = 'sequential'
-    # config.data.datasets = ['vggface2', 'vox2', 'ethnicity']
-    # config.data.datasets = ['vggface2hq', 'vox2']
-    config.data.datasets = [dataset]
-    config.data.scale_min = 1.3
-    config.data.scale_max = 1.3
-    config.data.trans_scale = 0.0
-    config.model = DictConfig({})
-    config.model.image_size = 256
-    # config.model.train_K = 4
-    config.learning = DictConfig({})
-    config.learning.batch_size_train = 64
-    config.learning.train_K = 'max'
-    config.data.num_workers = 6
-    # config.data.output_path = "/home/rdanecek/Workspace/mount/scratch/face2d3d"
-    config.data.output_path = scratch + "face2d3d"
+    print(f"Analyzing dataset AffectNet {dataset} data")
+    #
+    # config = DictConfig({})
+    # config.data = DictConfig({})
+    # config.data.split_ratio = 1.
+    # config.data.split_style = 'sequential'
+    # # config.data.datasets = ['vggface2', 'vox2', 'ethnicity']
+    # # config.data.datasets = ['vggface2hq', 'vox2']
+    # config.data.datasets = [dataset]
+    # config.data.scale_min = 1.3
+    # config.data.scale_max = 1.3
+    # config.data.trans_scale = 0.0
+    # config.model = DictConfig({})
+    # config.model.image_size = 256
+    # # config.model.train_K = 4
+    # config.learning = DictConfig({})
+    # config.learning.batch_size_train = 64
+    # config.learning.train_K = 'max'
+    # config.data.num_workers = 6
+    # # config.data.output_path = "/home/rdanecek/Workspace/mount/scratch/face2d3d"
+    # config.data.output_path = scratch + "face2d3d"
 
     # out_file_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/") / dataset
-    out_file_path = Path(scratch) / "rdanecek" / "data" / dataset
+    out_file_path = Path(scratch) / "rdanecek" / "data" / "affectnet"
     out_file_path.mkdir(exist_ok=True, parents=True)
 
     dm = AffectNetDataModule(
@@ -63,10 +71,17 @@ def main():
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
 
-    dl = DataLoader(dm.training_set,
-                  batch_size=config.learning.batch_size_train, shuffle=False,
-                  num_workers=config.data.num_workers)
+    if dataset == 'train':
+        dset = dm.training_set
+    else:
+        dset = dm.validation_set
+
+    dl = DataLoader(dset,
+                  batch_size=32, shuffle=False,
+                  num_workers=4)
     # # dl = dm.train_dataloader()
+
+    image_size = 224
 
     emonet = get_emonet()
 
@@ -76,13 +91,14 @@ def main():
     d['arousal'] = []
     d['expression'] = []
 
-    for idx, batch in enumerate(tqdm(dl)):
-    # for idx in tqdm(range(len(dm.train_dataset))):
-    # for idx in tqdm(range(10)):
-    #     batch = dm.training_set[idx]
-        images = batch['image'].view(-1, 3, config.model.image_size, config.model.image_size)
+    # for idx, batch in enumerate(tqdm(dl)):
+    # for idx in tqdm(range(len(dset))):
+    for idx in tqdm(range(10)):
+        batch = dm.training_set[idx]
+        images = batch['image'].view(-1, 3, image_size, image_size)
         images = images.cuda()
         with torch.no_grad():
+            images = F.interpolate(images, 256, mode='bilinear')
             result = emonet(images, intermediate_features=True)
         # self.emonet(images, intermediate_features=True)
 
@@ -99,7 +115,10 @@ def main():
                 paths += plist
         else:
             paths = batch['path']
-        paths = [str(Path(p).relative_to(config.data.output_path)) for p in paths]
+
+        if isinstance(paths, str):
+            paths = [paths]
+        paths = [str(Path(p).relative_to(Path(scratch) / "rdanecek/data/affectnet")) for p in paths]
 
         d['path'] += paths
         d['valence'] += v.cpu().numpy().tolist()
@@ -116,7 +135,7 @@ def main():
         # if idx > 10:
         #     break
 
-        if idx % 200:
+        if idx % 2000 == 0:
             print(f"Processing batch {idx}")
             df = pd.DataFrame(data=d)
             df.to_csv(out_file_path / "vae.csv")

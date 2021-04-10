@@ -3,7 +3,7 @@ from pathlib import Path
 import deca_dataset_analysis
 import datetime
 from omegaconf import OmegaConf
-
+import time as t
 
 def submit(deca_dataset_name, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -18,6 +18,7 @@ def submit(deca_dataset_name, bid=10):
     cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
                           / local_script_path.parents[0].name / local_script_path.name
 
+    t.sleep(1)
     submission_folder_local.mkdir(parents=True)
 
     # python_bin = 'python'
