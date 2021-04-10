@@ -106,9 +106,15 @@ def main():
         # if idx > 10:
         #     break
 
-    df = pd.DataFrame(data=d)
+        if idx % 200:
+            print(f"Processing batch {idx}")
+            df = pd.DataFrame(data=d)
+            df.to_csv(out_file_path / "vae.csv")
 
+    print("Done processing. Saving ...")
+    df = pd.DataFrame(data=d)
     df.to_csv(out_file_path / "vae.csv")
+    print("Data saved.")
 
 
 if __name__ == "__main__":

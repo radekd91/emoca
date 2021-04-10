@@ -65,7 +65,9 @@ class DecaDataModule(LightningDataModule):
     def setup(self, stage=None):
         dataset = build_dataset(self.config, self.config.data.training_datasets, concat=True)
         self.train_dataset = DatasetSplitter(dataset, self.split_ratio, self.split_style)
-        self.validation_dataset = [self.train_dataset.complementary_set(), ]
+        self.validation_dataset = []
+        if self.split_ratio < 1.:
+            self.validation_dataset += [self.train_dataset.complementary_set(), ]
         self.validation_dataset += build_dataset(self.config, self.config.data.validation_datasets, concat=False)
         self.test_dataset = build_dataset(self.config, self.config.data.testing_datasets, concat=False)
 
@@ -293,6 +295,7 @@ class VoxelDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
+        self.include_image_path = True
 
     def __len__(self):
         return len(self.face_list)
@@ -303,10 +306,11 @@ class VoxelDataset(Dataset):
         name_list = self.face_dict[key]
         ind = np.random.randint(low=0, high=len(name_list))
 
-        images_list = [];
-        kpt_list = [];
-        fullname_list = [];
+        images_list = []
+        kpt_list = []
+        fullname_list = []
         mask_list = []
+        image_path_list = []
         if self.isTemporal:
             random_start = np.random.randint(low=0, high=len(name_list) - self.K)
             sample_list = range(random_start, random_start + self.K)
@@ -337,6 +341,7 @@ class VoxelDataset(Dataset):
             images_list.append(cropped_image.transpose(2, 0, 1))
             kpt_list.append(cropped_kpt)
             mask_list.append(cropped_mask)
+            image_path_list.append(image_path)
 
         ###
         images_array = torch.from_numpy(np.array(images_list)).type(dtype=torch.float32)  # K,224,224,3
@@ -353,6 +358,9 @@ class VoxelDataset(Dataset):
             'landmark': kpt_array,
             'mask': mask_array
         }
+
+        if self.include_image_path:
+            data_dict['path'] = image_path_list
 
         return data_dict
 
@@ -404,7 +412,6 @@ class VGGFace2Dataset(Dataset):
         K must be less than 6
         '''
         self.path = path or '/ps/scratch/face2d3d'
-        self.K = K
         self.image_size = image_size
         self.imagefolder =  self.path + '/train'
         self.kptfolder =  self.path + '/train_annotated_torch7'
@@ -413,23 +420,30 @@ class VGGFace2Dataset(Dataset):
         # datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_bbx_size_bigger_than_400_train_list_max_normal_100_ring_5_1_serial.npy'
         datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_train_list_max_normal_100_ring_5_1_serial.npy'
         self.data_lines = np.load(datafile).astype('str')
-
+        if K == 'max':
+            self.K = self.data_lines.shape[1] -1 # WARNING THE LAST COLUMN OF DATA LINES IS A DIFFERENT PERSON! (RingNet residual?)
+        else:
+            self.K = K
         self.isTemporal = isTemporal
         self.scale = scale  # [scale_min, scale_max]
         self.trans_scale = trans_scale  # [dx, dy]
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
+        self.include_image_path = True
 
     def __len__(self):
         return len(self.data_lines)
 
     def __getitem__(self, idx):
-        images_list = [];
-        kpt_list = [];
+        images_list = []
+        kpt_list = []
         mask_list = []
+        image_path_list = []
 
         random_ind = np.random.permutation(5)[:self.K]
+        # random_ind = np.random.permutation(6)[:self.K]
+        # random_ind = np.arange(self.data_lines.shape[1])[:self.K]
         for i in random_ind:
             name = self.data_lines[idx, i]
             image_path = os.path.join(self.imagefolder, name + '.jpg')
@@ -454,6 +468,7 @@ class VGGFace2Dataset(Dataset):
             images_list.append(cropped_image.transpose(2, 0, 1))
             kpt_list.append(cropped_kpt)
             mask_list.append(cropped_mask)
+            image_path_list.append(image_path)
 
         ###
         images_array = torch.from_numpy(np.array(images_list)).type(dtype=torch.float32)  # K,224,224,3
@@ -471,7 +486,11 @@ class VGGFace2Dataset(Dataset):
             'mask': mask_array
         }
 
+        if self.include_image_path:
+            data_dict['path'] = image_path_list
+
         return data_dict
+
 
     def crop(self, image, kpt):
         left = np.min(kpt[:, 0]);
@@ -520,7 +539,7 @@ class VGGFace2HQDataset(Dataset):
         K must be less than 6
         '''
         self.path = path or '/ps/scratch/face2d3d'
-        self.K = K
+
         self.image_size = image_size
         self.imagefolder =  self.path + '/train'
         self.kptfolder =  self.path + '/train_annotated_torch7'
@@ -529,21 +548,27 @@ class VGGFace2HQDataset(Dataset):
         # datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_bbx_size_bigger_than_400_train_list_max_normal_100_ring_5_1_serial.npy'
         datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_bbx_size_bigger_than_400_train_list_max_normal_100_ring_5_1_serial.npy'
         self.data_lines = np.load(datafile).astype('str')
-
+        if K == 'max':
+            self.K = self.data_lines.shape[1]
+        else:
+            self.K = K
         self.isTemporal = isTemporal
         self.scale = scale  # [scale_min, scale_max]
         self.trans_scale = trans_scale  # [dx, dy]
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
+        self.include_image_path = True
+
 
     def __len__(self):
         return len(self.data_lines)
 
     def __getitem__(self, idx):
-        images_list = [];
-        kpt_list = [];
+        images_list = []
+        kpt_list = []
         mask_list = []
+        image_path_list = []
 
         for i in range(self.K):
             name = self.data_lines[idx, i]
@@ -569,6 +594,7 @@ class VGGFace2HQDataset(Dataset):
             images_list.append(cropped_image.transpose(2, 0, 1))
             kpt_list.append(cropped_kpt)
             mask_list.append(cropped_mask)
+            image_path_list.append(image_path)
 
         ###
         images_array = torch.from_numpy(np.array(images_list)).type(dtype=torch.float32)  # K,224,224,3
@@ -586,6 +612,8 @@ class VGGFace2HQDataset(Dataset):
             'mask': mask_array
         }
 
+        if self.include_image_path:
+            data_dict['path'] = image_path_list
         return data_dict
 
     def crop(self, image, kpt):
@@ -635,7 +663,6 @@ class EthnicityDataset(Dataset):
         K must be less than 6
         '''
         self.path = path or '/ps/scratch/face2d3d'
-        self.K = K
         self.image_size = image_size
         self.imagefolder =  self.path + '/train'
         self.kptfolder =  self.path + '/train_annotated_torch7/'
@@ -644,10 +671,14 @@ class EthnicityDataset(Dataset):
         # datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_bbx_size_bigger_than_400_train_list_max_normal_100_ring_5_1_serial.npy'
         datafile =  self.path + '/texture_in_the_wild_code/VGGFace2_cleaning_codes/ringnetpp_training_lists/second_cleaning/vggface2_and_race_per_7000_african_asian_2d_train_list_max_normal_100_ring_5_1_serial.npy'
         self.data_lines = np.load(datafile).astype('str')
-
+        if K == 'max':
+            self.K = self.data_lines.shape[1]
+        else:
+            self.K = K
         self.isTemporal = isTemporal
         self.scale = scale  # [scale_min, scale_max]
         self.trans_scale = trans_scale  # [dx, dy]
+        self.include_image_path = True
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
@@ -659,6 +690,7 @@ class EthnicityDataset(Dataset):
         images_list = []
         kpt_list = []
         mask_list = []
+        image_path_list = []
         for i in range(self.K):
             name = self.data_lines[idx, i]
             if name[0] == 'n':
@@ -692,6 +724,7 @@ class EthnicityDataset(Dataset):
             images_list.append(cropped_image.transpose(2, 0, 1))
             kpt_list.append(cropped_kpt)
             mask_list.append(cropped_mask)
+            image_path_list.append(image_path)
 
         ###
         images_array = torch.from_numpy(np.array(images_list)).type(dtype=torch.float32)  # K,224,224,3
@@ -706,15 +739,18 @@ class EthnicityDataset(Dataset):
         data_dict = {
             'image': images_array,
             'landmark': kpt_array,
-            'mask': mask_array
+            'mask': mask_array,
         }
+
+        if self.include_image_path:
+            data_dict['path'] = image_path_list
 
         return data_dict
 
     def crop(self, image, kpt):
-        left = np.min(kpt[:, 0]);
-        right = np.max(kpt[:, 0]);
-        top = np.min(kpt[:, 1]);
+        left = np.min(kpt[:, 0])
+        right = np.max(kpt[:, 0])
+        top = np.min(kpt[:, 1])
         bottom = np.max(kpt[:, 1])
 
         h, w, _ = image.shape
