@@ -1,5 +1,5 @@
 from omegaconf import DictConfig, OmegaConf
-from datasets.DecaDataModule import DecaDataModule
+from datasets.AffectNetDataModule import AffectNetDataModule
 from tqdm.auto import tqdm
 from layers.losses.EmoNetLoss import get_emonet
 from torch.utils.data import DataLoader
@@ -14,14 +14,14 @@ import os, sys
 def main():
 
     if len(sys.argv) > 1:
-        dataset = sys.argv[1]
-    else:
-        dataset = 'vggface2hq'
-
-    if len(sys.argv) > 2:
-        scratch = sys.argv[2]
+        scratch = sys.argv[1]
     else:
         scratch = "/ps/scratch/"
+
+    if len(sys.argv) > 2:
+        project = sys.argv[2]
+    else:
+        project = "/ps/project/"
 
     print(f"Analyzing dataset {dataset}")
 
@@ -49,11 +49,21 @@ def main():
     out_file_path = Path(scratch) / "rdanecek" / "data" / dataset
     out_file_path.mkdir(exist_ok=True, parents=True)
 
-    dm = DecaDataModule(config)
-
+    dm = AffectNetDataModule(
+        str(Path(project) / "EmotionalFacialAnimation/data/affectnet/"),
+        str(Path(scratch) / "rdanecek/data/affectnet"),
+        # processed_subfolder="processed_2021_Apr_02_03-13-33",
+        processed_subfolder="processed_2021_Apr_05_15-22-18",
+        mode="manual",
+        scale=1.25)
+    print(dm.num_subsets)
+    dm.prepare_data()
     dm.setup()
+    # dl = dm.val_dataloader()
+    print(f"len training set: {len(dm.training_set)}")
+    print(f"len validation set: {len(dm.validation_set)}")
 
-    dl = DataLoader(dm.train_dataset,
+    dl = DataLoader(dm.training_set,
                   batch_size=config.learning.batch_size_train, shuffle=False,
                   num_workers=config.data.num_workers)
     # # dl = dm.train_dataloader()
@@ -69,7 +79,7 @@ def main():
     for idx, batch in enumerate(tqdm(dl)):
     # for idx in tqdm(range(len(dm.train_dataset))):
     # for idx in tqdm(range(10)):
-    #     batch = dm.train_dataset[idx]
+    #     batch = dm.training_set[idx]
         images = batch['image'].view(-1, 3, config.model.image_size, config.model.image_size)
         images = images.cuda()
         with torch.no_grad():

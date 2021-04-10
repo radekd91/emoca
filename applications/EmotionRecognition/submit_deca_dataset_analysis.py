@@ -32,7 +32,7 @@ def submit(deca_dataset_name, bid=10):
     max_price = 8000
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
-    mem_gb = 4
+    mem_gb = 8
     args = f"{deca_dataset_name}"
 
     execute_on_cluster(str(cluster_script_path),
