@@ -13,23 +13,22 @@ import torch.nn.functional as F
 
 
 def main():
-
     if len(sys.argv) > 1:
-        scratch = sys.argv[1]
-    else:
-        # scratch = "/ps/scratch/"
-        scratch = "/home/rdanecek/Workspace/mount/scratch/"
-
-    if len(sys.argv) > 2:
-        project = sys.argv[2]
-    else:
-        # project = "/ps/project/"
-        project = "/home/rdanecek/Workspace/mount/project/"
-
-    if len(sys.argv) > 3:
-        dataset = sys.argv[3]
+        dataset = sys.argv[1]
     else:
         dataset = "train"
+
+    if len(sys.argv) > 2:
+        scratch = sys.argv[2]
+    else:
+        scratch = "/ps/scratch/"
+        # scratch = "/home/rdanecek/Workspace/mount/scratch/"
+
+    if len(sys.argv) > 3:
+        project = sys.argv[3]
+    else:
+        project = "/ps/project/"
+        # project = "/home/rdanecek/Workspace/mount/project/"
 
     print(f"Analyzing dataset AffectNet {dataset} data")
     #
@@ -92,8 +91,8 @@ def main():
     d['expression'] = []
 
     # for idx, batch in enumerate(tqdm(dl)):
-    # for idx in tqdm(range(len(dset))):
-    for idx in tqdm(range(10)):
+    for idx in tqdm(range(len(dset))):
+    # for idx in tqdm(range(10)):
         batch = dm.training_set[idx]
         images = batch['image'].view(-1, 3, image_size, image_size)
         images = images.cuda()
@@ -138,11 +137,11 @@ def main():
         if idx % 2000 == 0:
             print(f"Processing batch {idx}")
             df = pd.DataFrame(data=d)
-            df.to_csv(out_file_path / "vae.csv")
+            df.to_csv(out_file_path / f"{dataset}_vae.csv")
 
     print("Done processing. Saving ...")
     df = pd.DataFrame(data=d)
-    df.to_csv(out_file_path / "vae.csv")
+    df.to_csv(out_file_path / f"{dataset}_vae.csv")
     print("Data saved.")
 
 
