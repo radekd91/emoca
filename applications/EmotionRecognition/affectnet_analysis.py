@@ -93,7 +93,7 @@ def main():
     # for idx, batch in enumerate(tqdm(dl)):
     for idx in tqdm(range(len(dset))):
     # for idx in tqdm(range(10)):
-        batch = dm.training_set[idx]
+        batch = dset
         images = batch['image'].view(-1, 3, image_size, image_size)
         images = images.cuda()
         with torch.no_grad():

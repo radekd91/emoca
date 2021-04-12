@@ -57,7 +57,8 @@ def submit(dataset_name, bid=10):
 
 
 def main():
-    datasets = ['train', 'validation']
+    # datasets = ['train', 'validation']
+    datasets = ['validation']
     for d in datasets:
         submit(d)
 
