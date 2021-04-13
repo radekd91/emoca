@@ -171,9 +171,10 @@ def main():
 
     run_names = []
     # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
-    run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
-    run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
-    run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
+    run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet 2
+    # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
+    # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
+    # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
 
     for run_name in run_names:
 
@@ -214,6 +215,7 @@ def main():
             with torch.no_grad():
                 values = deca.encode(sample, training=False)
                 values['expcode'] = torch.zeros_like(values['expcode'])
+                values['posecode'] = torch.zeros_like(values['posecode'])
                 result_dict = deca.decode(values)
 
             res_folder = savefolder / sample["subject"] / sample["challenge"]

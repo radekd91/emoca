@@ -21,14 +21,14 @@ def main():
     if len(sys.argv) > 2:
         scratch = sys.argv[2]
     else:
-        scratch = "/ps/scratch/"
-        # scratch = "/home/rdanecek/Workspace/mount/scratch/"
+        # scratch = "/ps/scratch/"
+        scratch = "/home/rdanecek/Workspace/mount/scratch/"
 
     if len(sys.argv) > 3:
         project = sys.argv[3]
     else:
-        project = "/ps/project/"
-        # project = "/home/rdanecek/Workspace/mount/project/"
+        # project = "/ps/project/"
+        project = "/home/rdanecek/Workspace/mount/project/"
 
     print(f"Analyzing dataset AffectNet {dataset} data")
     #
@@ -93,7 +93,7 @@ def main():
     # for idx, batch in enumerate(tqdm(dl)):
     for idx in tqdm(range(len(dset))):
     # for idx in tqdm(range(10)):
-        batch = dset
+        batch = dset[idx]
         images = batch['image'].view(-1, 3, image_size, image_size)
         images = images.cuda()
         with torch.no_grad():

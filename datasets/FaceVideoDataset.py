@@ -56,6 +56,10 @@ class AffectNetExpressions(Enum):
     Anger = 6
     Contempt = 7
     None_ = 8
+    Uncertain = 9
+    Occluded = 10
+    xxx = 11
+
 
     @staticmethod
     def from_str(string : str):

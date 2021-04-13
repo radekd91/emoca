@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from datasets.FaceVideoDataset import AffectNetExpressions
 
 
 def main():
@@ -12,8 +13,8 @@ def main():
     # dataset_name = "vggface2hq"
     # dataset_name = "ethnicity"
     dataset_name = "affectnet"
-    # prefix = "training"
-    prefix = "validation"
+    prefix = "training"
+    # prefix = "validation"
     dataset_path = Path(project) / "EmotionalFacialAnimation/data/affectnet/Manually_Annotated"
     processed_dataset_path = Path(scratch) / "rdanecek" / "data" / dataset_name
 
@@ -23,6 +24,7 @@ def main():
 
     v = df["valence"].to_numpy()
     a = df["arousal"].to_numpy()
+    e = df["expression"].to_numpy()
 
 
 
@@ -32,16 +34,30 @@ def main():
     cmap.set_under(color='black')
 
     # np.histogram2d(v,a, bins=10)
+    #
+    # plt.hist2d(v, a, bins=20, range=((-1,1), (-1,1)), cmap=cmap, density=True, cmin=0.001)
+    # plt.xlabel("valence")
+    # plt.ylabel("arousal")
+    # cb = plt.colorbar()
+    # cb.set_label('density')
+    # plt.title(dataset_name + f" {prefix}")
+    # plt.savefig(processed_dataset_path / f"{prefix}_gt_hist.png")
+    # plt.show()
 
-    plt.hist2d(v, a, bins=20, range=((-1,1), (-1,1)), cmap=cmap, density=True, cmin=0.001)
-    plt.xlabel("valence")
-    plt.ylabel("arousal")
-    cb = plt.colorbar()
-    cb.set_label('density')
+
+    plt.figure(figsize=(12, 6), dpi=80)
+    plt.hist(e, bins=list(range(len(AffectNetExpressions))), density=True, rwidth=0.9)
+    plt.xlabel("emotion")
+    plt.ylabel("density")
+    x_pos = np.arange(len(AffectNetExpressions), dtype=np.float32)
+    bars = [AffectNetExpressions(int(i)).name for i in x_pos]
+    x_pos += 0.5
+    plt.xticks(x_pos, bars)
+    # cb = plt.colorbar()
+    # cb.set_label('density')
     plt.title(dataset_name + f" {prefix}")
-    plt.savefig(processed_dataset_path / f"{prefix}_gt_hist.png")
+    plt.savefig(processed_dataset_path / f"{prefix}_gt_hist_expression.png")
     plt.show()
-
 
 
 

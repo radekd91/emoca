@@ -16,11 +16,11 @@ def main():
     # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
     # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
 
-    # mode = 'detail'
-    mode = 'coarse'
+    mode = 'detail'
+    # mode = 'coarse'
 
     for run_name in run_names:
-
+        print(f"Beginning testing for '{run_name}' in mode '{mode}'")
         relative_to_path = '/ps/scratch/'
         replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
         deca, conf = load_model(path_to_models, run_name, mode, relative_to_path, replace_root_path)
