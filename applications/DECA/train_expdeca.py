@@ -1,50 +1,24 @@
-import os, sys
-from pathlib import Path
-sys.path += [str(Path(__file__).parent.parent)]
-
-import numpy as np
-from models.DECA import DecaModule
-from datasets.AffectNetDataModule import AffectNetDataModule
-from test_and_finetune_deca import create_logger, get_checkpoint_with_kwargs, \
-    get_checkpoint, locate_checkpoint, single_stage_deca_pass
-import wandb
-import datetime
-import time as t
-# import hydra
+from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
+from datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
-import copy
+import sys
+from pathlib import Path
+from pytorch_lightning.loggers import WandbLogger
+import datetime
 
 
 project_name = 'EmotionalDeca'
 
 
-
 def prepare_data(cfg):
-
-    dm = AffectNetDataModule(
-        cfg.data.input_dir,
-        cfg.data.output_dir,
-        processed_subfolder=None,
-        mode="manual",
-        face_detector='fan',
-        face_detector_threshold=0.9,
-        image_size=cfg.model.image_size,
-        scale=1.25,
-        num_workers=cfg.data.num_workers,
-        train_batch_size=cfg.learning.batch_size_train,
-        val_batch_size=cfg.learning.batch_size_val,
-        test_batch_size=cfg.learning.batch_size_test
-    )
-
+    dm = DecaDataModule(cfg)
+    sequence_name = "ExpDECA"
     return dm, sequence_name
 
 
-
-
-
-def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
+def create_experiment_name(cfg_coarse, cfg_detail, version=1):
+    experiment_name = "ExpDECA_"
     if version <= 1:
-        experiment_name = sequence_name
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
             experiment_name += '_EmoLossB'
@@ -69,8 +43,6 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
 
         if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
             experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
-
-
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'
@@ -136,27 +108,17 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
             and hasattr(cfg_detail.learning, 'early_stopping') and cfg_detail.learning.early_stopping:
             experiment_name += "_early"
 
-
-    else:
-        raise NotImplementedError("Unsupported naming version")
-
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_from_previous = True, force_new_location = False):
+def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True,
+               force_new_location=False):
+    configs = [cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
+    stages = ["train", "test", "train", "test"]
+    stages_prefixes = ["", "", "", ""]
     # configs = [cfg_coarse, cfg_detail]
-    configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
-    stages = ["test", "test", "train", "test", "train", "test"]
-    stages_prefixes = ["start", "start", "", "", "", ""]
-
-    if not test_first:
-        num_test_stages = 2
-        configs = configs[num_test_stages:]
-        stages = stages[num_test_stages:]
-        stages_prefixes = stages_prefixes[num_test_stages:]
-
-    dm, sequence_name = prepare_data(configs[0])
-    dm.setup()
+    # stages = ["train", "train",]
+    # stages_prefixes = ["", ""]
 
     if start_i > 0 or force_new_location:
         if resume_from_previous:
@@ -169,15 +131,11 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     else:
         checkpoint, checkpoint_kwargs = None, None
 
-    old_run_dir = None
     if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
-        if cfg_coarse.inout.full_run_dir != 'todo':
-            old_run_dir = cfg_coarse.inout.full_run_dir
-            cfg_coarse.inout.full_run_dir_previous = old_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-        experiment_name = create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
+        experiment_name = create_experiment_name(cfg_coarse, cfg_detail)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
     else:
@@ -199,8 +157,6 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_coarse.inout.full_run_dir = str(coarse_checkpoint_dir.parent)
-    if old_run_dir is not None:
-        cfg_coarse.inout.full_run_dir_previous = old_run_dir
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
     cfg_coarse.inout.time = time
@@ -210,12 +166,11 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
 
     cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
-    if old_run_dir is not None:
-        cfg_detail.inout.full_run_dir_previous = old_run_dir
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
     cfg_detail.inout.time = time
 
+    # save config to target folder
     conf = DictConfig({})
     conf.coarse = cfg_coarse
     conf.detail = cfg_detail
@@ -223,32 +178,12 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
         OmegaConf.save(config=conf, f=outfile)
 
     wandb_logger = create_logger(
-                         conf.coarse.learning.logger_type,
+                         cfg_coarse.learning.logger_type,
                          name=experiment_name,
                          project_name=project_name,
                          config=OmegaConf.to_container(conf),
-                         version=time + "_" + experiment_name,
+                         version=time,
                          save_dir=full_run_dir)
-
-        # WandbLogger(name=experiment_name,
-        #                  project=project_name,
-        #                  config=OmegaConf.to_container(conf),
-        #                  version=time + "_" + experiment_name,
-        #                  save_dir=full_run_dir)
-    # max_tries = 100
-    # tries = 0
-    # while True:
-    #     try:
-    #         ex = wandb_logger.experiment
-    #         break
-    #     except Exception as e:
-    #         wandb_logger._experiment = None
-    #         print("Reinitiliznig wandb because it failed in 10s")
-    #         t.sleep(10)
-    #         if max_tries <= max_tries:
-    #             print("WANDB Initialization unsuccessful")
-    #             break
-    #         tries += 1
 
     deca = None
     if start_i > 0 or force_new_location:
@@ -256,39 +191,26 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
 
     for i in range(start_i, len(configs)):
         cfg = configs[i]
-        dm.reconfigure(
-            train_batch_size=cfg.learning.batch_size_train,
-            val_batch_size=cfg.learning.batch_size_val,
-            test_batch_size=cfg.learning.batch_size_test,
-            train_K=cfg.learning.train_K,
-            val_K=cfg.learning.val_K,
-            test_K=cfg.learning.test_K,
-            train_K_policy=cfg.learning.train_K_policy,
-            val_K_policy=cfg.learning.val_K_policy,
-            test_K_policy=cfg.learning.test_K_policy,
-        )
-        print(f"STARTING STAGE {i}")
-        print(f" stage - {stages[i]}")
-        print(f" prefix - {stages_prefixes[i]}")
-        print(f" mode - {cfg.model.mode}")
-
-        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger,
+        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=wandb_logger,
                                       data_preparation_function=prepare_data,
                                       checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
         checkpoint = None
 
 
-def configure_and_finetune(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
-    cfg_coarse, cfg_detail = configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides)
-    finetune_deca(cfg_coarse, cfg_detail)
-
-
-def load_configs(run_path):
-    with open(Path(run_path) / "cfg.yaml", "r") as f:
-        conf = OmegaConf.load(f)
-    cfg_coarse = conf.coarse
-    cfg_detail = conf.detail
+def configure(coarse_cfg_default, coarse_overrides,
+              detail_cfg_default, detail_overrides):
+    from hydra.experimental import compose, initialize
+    initialize(config_path="deca_conf", job_name="train_deca")
+    cfg_coarse = compose(config_name=coarse_cfg_default, overrides=coarse_overrides)
+    cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
     return cfg_coarse, cfg_detail
+
+
+def configure_and_train(coarse_cfg_default, coarse_overrides,
+                        detail_cfg_default, detail_overrides):
+    cfg_coarse, cfg_detail = configure(coarse_cfg_default, coarse_overrides,
+                                       detail_cfg_default, detail_overrides)
+    train_expdeca(cfg_coarse, cfg_detail)
 
 
 def configure_and_resume(run_path,
@@ -301,71 +223,66 @@ def configure_and_resume(run_path,
 
     cfg_coarse_, cfg_detail_ = load_configs(run_path)
 
-    if start_at_stage < 4:
+    if start_at_stage < 2:
         raise RuntimeError("Resuming before stage 2 makes no sense, that would be training from scratch")
-    if start_at_stage == 4:
+    elif start_at_stage == 2:
         cfg_coarse = cfg_coarse_
-    elif start_at_stage == 5:
+    elif start_at_stage == 3:
         raise RuntimeError("Resuming for stage 3 makes no sense, that is a testing stage")
     else:
         raise RuntimeError(f"Cannot resume at stage {start_at_stage}")
 
-    finetune_deca(cfg_coarse, cfg_detail,
+    train_expdeca(cfg_coarse, cfg_detail,
                start_i=start_at_stage,
                resume_from_previous=True, #important, resume from previous stage's checkpoint
                force_new_location=True)
 
 
-
-def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
+def load_configs(run_path):
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
     cfg_coarse = conf.coarse
     cfg_detail = conf.detail
-    finetune_deca(cfg_coarse, cfg_detail,
-                  start_i=start_at_stage,
-                  resume_from_previous=resume_from_previous,
-                  force_new_location=force_new_location)
-
-
-def configure(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides):
-    from hydra.experimental import compose, initialize
-    initialize(config_path="deca_conf", job_name="finetune_deca")
-    cfg_coarse = compose(config_name=coarse_cfg_default, overrides=coarse_overrides)
-    cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
     return cfg_coarse, cfg_detail
 
+
+def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
+    cfg_coarse, cfg_detail = load_configs(run_path)
+    train_expdeca(cfg_coarse, cfg_detail,
+               start_i=start_at_stage,
+               resume_from_previous=resume_from_previous,
+               force_new_location=force_new_location)
 
 # @hydra.main(config_path="deca_conf", config_name="deca_finetune")
 # def main(cfg : DictConfig):
 def main():
     configured = False
-    if len(sys.argv) >= 3:
+    if len(sys.argv) > 2:
         if Path(sys.argv[1]).is_file():
             configured = True
             with open(sys.argv[1], 'r') as f:
                 coarse_conf = OmegaConf.load(f)
             with open(sys.argv[2], 'r') as f:
                 detail_conf = OmegaConf.load(f)
-
         else:
             coarse_conf = sys.argv[1]
             detail_conf = sys.argv[2]
     else:
-        coarse_conf = "deca_finetune_coarse_emonet"
-        detail_conf = "deca_finetune_detail_emonet"
+        coarse_conf = "deca_finetune_coarse_cluster"
+        detail_conf = "deca_finetune_detail_cluster"
 
-    if len(sys.argv) >= 5:
+    if len(sys.argv) > 4:
         coarse_override = sys.argv[3]
         detail_override = sys.argv[4]
     else:
         coarse_override = []
         detail_override = []
     if configured:
-        finetune_deca(coarse_conf, detail_conf)
+        train_expdeca(coarse_conf, detail_conf)
     else:
-        configure_and_finetune(coarse_conf, coarse_override, detail_conf, detail_override)
+        configure_and_train(coarse_conf, coarse_override, detail_conf, detail_override)
 
 
 if __name__ == "__main__":
     main()
+
