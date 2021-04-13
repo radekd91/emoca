@@ -20,12 +20,45 @@ class ResnetEncoder(nn.Module):
         )
         self.last_op = last_op
 
-    def forward(self, inputs):
+    def forward(self, inputs, output_features=False):
         features = self.encoder(inputs)
         parameters = self.layers(features)
         if self.last_op:
             parameters = self.last_op(parameters)
-        return parameters
+        if not output_features:
+            return parameters
+        return parameters, features
+
+
+class SecondHeadResnet(nn.Module):
+
+    def __init__(self, resnet : ResnetEncoder, outsize, last_op=None):
+        super().__init__()
+        self.resnet = resnet
+        feature_size = 2048
+        self.layers = nn.Sequential(
+            nn.Linear(feature_size, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, outsize)
+        )
+        if last_op == 'same':
+            self.last_op = self.resnet.last_op
+        else:
+            self.last_op = last_op
+
+
+    def forward(self, inputs):
+        out1, features = self.resnet(inputs, output_features=True)
+        out2 = self.layers(features)
+        if self.last_op:
+            out2 = self.last_op(out2)
+        return out1, out2
+
+
+    def train(self, mode: bool = True):
+        #here we NEVER modify the eval/train status of the resnet backbone, only the FC layers of the second head
+        self.layers.train(mode)
+
 
 # class ResnetEncoder(nn.Module):
 #     def __init__(self, append_layers = None):

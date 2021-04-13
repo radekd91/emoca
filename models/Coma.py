@@ -185,7 +185,7 @@ class Coma(torch.nn.Module):
                                                          dtype=torch.int64).reshape((1, batch_size, 1))
                 self._D_edge_batch += [(repeated_edges + edge_steps).reshape(2, -1)]
                 self._D_norm_batch += [self.downsample_matrices[i]._values().repeat(batch_size)]
-                self._D_sizes += [[self.downsample_matrices[i].size()[j]*batch_size for j in range(self.downsample_matrices[i].ndim)]]
+                self._D_sizes += [[self.downsample_matrices[i].size()[j] * batch_size for j in range(self.downsample_matrices[i].ndim)]]
 
             self._U_edge_batch = []
             self._U_norm_batch = []
@@ -198,7 +198,7 @@ class Coma(torch.nn.Module):
                                                          dtype=torch.int64).reshape((1, batch_size, 1))
                 self._U_edge_batch += [(repeated_edges + edge_steps).reshape(2, -1)]
                 self._U_norm_batch += [self.upsample_matrices[i]._values().repeat(batch_size)]
-                self._U_sizes += [[self.upsample_matrices[i].size()[j]*batch_size for j in range(self.upsample_matrices[i].ndim)]]
+                self._U_sizes += [[self.upsample_matrices[i].size()[j] * batch_size for j in range(self.upsample_matrices[i].ndim)]]
         else:
             self._A_edge_index_batch = self.A_edge_index
             self._A_norm_batch = self.A_norm

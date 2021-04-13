@@ -13,7 +13,7 @@ from pathlib import Path
 from skimage.io import imsave
 
 from .Renderer import SRenderY
-from .DecaEncoder import ResnetEncoder
+from .DecaEncoder import ResnetEncoder, SecondHeadResnet
 from .DecaDecoder import Generator
 from .DecaFLAME import FLAME, FLAMETex
 
@@ -23,6 +23,7 @@ from wandb import Image
 from datasets.FaceVideoDataset import AffectNetExpressions, Expression7, expr7_to_affect_net
 torch.backends.cudnn.benchmark = True
 from enum import Enum
+from utils.other import class_from_str
 
 
 class DecaMode(Enum):
@@ -36,7 +37,13 @@ class DecaModule(LightningModule):
         super().__init__()
         self.learning_params = learning_params
         self.inout_params = inout_params
-        self.deca = DECA(config=model_params)
+        if model_params.deca_class is None:
+            print(f"Deca class is not specified. Defaulting to {DECA.__class__.__name__}")
+            deca_class = DECA
+        else:
+            deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+
+        self.deca = deca_class(config=model_params)
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.stage_name = stage_name
         if self.stage_name is None:
@@ -64,42 +71,15 @@ class DecaModule(LightningModule):
 
     def train(self, mode: bool = True):
         # super().train(mode) # not necessary
-        if mode:
-            if self.mode == DecaMode.COARSE:
-                self.deca.E_flame.train()
-                # print("Setting E_flame to train")
-                self.deca.E_detail.eval()
-                # print("Setting E_detail to eval")
-                self.deca.D_detail.eval()
-                # print("Setting D_detail to eval")
-            elif self.mode == DecaMode.DETAIL:
-                if self.deca.config.train_coarse:
-                    # print("Setting E_flame to train")
-                    self.deca.E_flame.train()
-                else:
-                    # print("Setting E_flame to eval")
-                    self.deca.E_flame.eval()
-                self.deca.E_detail.train()
-                # print("Setting E_detail to train")
-                self.deca.D_detail.train()
-                # print("Setting D_detail to train")
-        else:
-            self.deca.E_flame.eval()
-            # print("Setting E_flame to eval")
-            self.deca.E_detail.eval()
-            # print("Setting E_detail to eval")
-            self.deca.D_detail.eval()
-            # print("Setting D_detail to eval")
+        self.deca.train(mode)
 
-        # these are set to eval no matter what, they're never being trained
         if self.emonet_loss is not None:
             self.emonet_loss.eval()
 
-        self.deca.flame.eval()
-        self.deca.flametex.eval()
-
-        self.deca.perceptual_loss.eval()
-        self.deca.id_loss.eval()
+        if self.deca.perceptual_loss is not None:
+            self.deca.perceptual_loss.eval()
+        if self.deca.id_loss is not None:
+            self.deca.id_loss.eval()
 
         return self
 
@@ -119,6 +99,19 @@ class DecaModule(LightningModule):
         values = self.encode(batch, training=False)
         values = self.decode(values, training=False)
         return values
+
+    def _encode_flame(self, images):
+        if self.mode == DecaMode.COARSE or \
+                (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
+            parameters = self.deca._encode_flame(images)
+        elif self.mode == DecaMode.DETAIL:
+            with torch.no_grad():
+                parameters = self.deca._encode_flame(images)
+        else:
+            raise ValueError(f"Invalid DECA Mode {self.mode}")
+        code_list = self.deca.decompose_code(parameters)
+        shapecode, texcode, expcode, posecode, cam, lightcode = code_list
+        return shapecode, texcode, expcode, posecode, cam, lightcode
 
     def encode(self, batch, training=True) -> dict:
         codedict = {}
@@ -158,17 +151,7 @@ class DecaModule(LightningModule):
         else:
             expr7 = None
 
-        if self.mode == DecaMode.COARSE or \
-                (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
-            parameters = self.deca.E_flame(images)
-        elif self.mode == DecaMode.DETAIL:
-            with torch.no_grad():
-                parameters = self.deca.E_flame(images)
-        else:
-            raise ValueError(f"Invalid DECA Mode {self.mode}")
-
-        code_list = self.deca.decompose_code(parameters)
-        shapecode, texcode, expcode, posecode, cam, lightcode = code_list
+        shapecode, texcode, expcode, posecode, cam, lightcode = self._encode_flame(images)
 
         # #TODO: figure out if we want to keep this code block:
         # if self.config.model.jaw_type == 'euler':
@@ -477,6 +460,13 @@ class DecaModule(LightningModule):
         #     metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
 
 
+    def _metric_or_loss(self, loss_dict, metric_dict, is_loss):
+        if is_loss:
+            d = loss_dict
+        else:
+            d = metric_dict
+        return d
+
 
     def _compute_loss(self, codedict, training=True) -> (dict, dict):
         #### ----------------------- Losses
@@ -527,16 +517,18 @@ class DecaModule(LightningModule):
             # landmark losses (only useful if coarse model is being trained
             # if training or lmk is not None:
             if lmk is not None:
-                if self.deca.config.use_landmarks:
-                    d = losses
-                else:
-                    d = metrics
+                # if self.deca.config.use_landmarks:
+                #     d = losses
+                # else:
+                #     d = metrics
+                d = self._metric_or_loss(losses, metrics, self.deca.config.use_landmarks)
 
                 if self.deca.config.useWlmk:
-                    d['landmark'] = lossfunc.weighted_landmark_loss(predicted_landmarks,
-                                                                              lmk) * self.deca.config.lmk_weight
+                    d['landmark'] = \
+                        lossfunc.weighted_landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
                 else:
-                    d['landmark'] = lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
+                    d['landmark'] = \
+                        lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
                 d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
                 d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
@@ -546,13 +538,16 @@ class DecaModule(LightningModule):
             # photometric loss
             # if training or masks is not None:
             if masks is not None:
-                if self.deca.config.use_photometric:
-                    d = losses
-                else:
-                    d = metrics
-                d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
+                # if self.deca.config.use_photometric:
+                #     d = losses
+                # else:
+                #     d = metrics
+                # d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
+                self._metric_or_loss(losses, metrics, self.deca.config.use_photometric)['photometric_texture'] = \
+                    (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
 
-            if self.deca.config.idw > 1e-3:
+            # if self.deca.config.idw > 1e-3:
+            if self.deca.id_loss is not None:
                 shading_images = self.deca.render.add_SHlight(ops['normal_images'], lightcode.detach())
                 albedo_images = F.grid_sample(albedo.detach(), ops['grid'], align_corners=False)
                 overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
@@ -612,39 +607,40 @@ class DecaModule(LightningModule):
                     codedict["detail_expression_gt"] = expr7
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
-                # if pi==0:
-                new_size = 256
-                # else:
-                #     new_size = 128
-                # if self.deca.config.uv_size != 256:
-                #     new_size = 128
-                uv_texture_patch = F.interpolate(
-                    uv_texture[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-                    self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
-                    [new_size, new_size], mode='bilinear')
-                uv_texture_gt_patch = F.interpolate(
-                    uv_texture_gt[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-                    self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]], [new_size, new_size],
-                    mode='bilinear')
-                uv_vis_mask_patch = F.interpolate(
-                    uv_vis_mask[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
-                    self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
-                    [new_size, new_size], mode='bilinear')
+                if self.deca.config.sfsw[pi] != 0:
+                    # if pi==0:
+                    new_size = 256
+                    # else:
+                    #     new_size = 128
+                    # if self.deca.config.uv_size != 256:
+                    #     new_size = 128
+                    uv_texture_patch = F.interpolate(
+                        uv_texture[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
+                        [new_size, new_size], mode='bilinear')
+                    uv_texture_gt_patch = F.interpolate(
+                        uv_texture_gt[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]], [new_size, new_size],
+                        mode='bilinear')
+                    uv_vis_mask_patch = F.interpolate(
+                        uv_vis_mask[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
+                        [new_size, new_size], mode='bilinear')
 
-                detail_l1 = (uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
-                                                    self.deca.config.sfsw[pi]
-                if self.deca.config.use_detail_l1:
-                    losses['detail_l1_{}'.format(pi)] = detail_l1
-                else:
-                    metrics['detail_l1_{}'.format(pi)] = detail_l1
+                    detail_l1 = (uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
+                                                        self.deca.config.sfsw[pi]
+                    if self.deca.config.use_detail_l1:
+                        losses['detail_l1_{}'.format(pi)] = detail_l1
+                    else:
+                        metrics['detail_l1_{}'.format(pi)] = detail_l1
 
-                mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
-                                                                               uv_texture_gt_patch * uv_vis_mask_patch) * \
-                                                     self.deca.config.sfsw[pi] * self.deca.config.mrfwr
-                if self.deca.config.use_detail_mrf:
-                    losses['detail_mrf_{}'.format(pi)] = mrf
-                else:
-                    metrics['detail_mrf_{}'.format(pi)] = mrf
+                    mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                                                                                   uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                                         self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                    if self.deca.config.use_detail_mrf:
+                        losses['detail_mrf_{}'.format(pi)] = mrf
+                    else:
+                        metrics['detail_mrf_{}'.format(pi)] = mrf
 
                 # if pi == 2:
                 #     uv_texture_gt_patch_ = uv_texture_gt_patch
@@ -826,12 +822,13 @@ class DecaModule(LightningModule):
         losses_and_metrics_to_log[prefix + '_train_' + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log[prefix + '_train_' + 'step'] = self.global_step
         losses_and_metrics_to_log[prefix + '_train_' + 'batch_idx'] = batch_idx
+        losses_and_metrics_to_log[prefix + '_' + "train_" + 'mem_usage'] = self.process.memory_info().rss
+
         # losses_and_metrics_to_log['train_' + 'epoch'] = torch.tensor(self.current_epoch, device=self.device)
         losses_and_metrics_to_log['train_' + 'epoch'] = self.current_epoch
         losses_and_metrics_to_log['train_' + 'step'] = self.global_step
         losses_and_metrics_to_log['train_' + 'batch_idx'] = batch_idx
 
-        losses_and_metrics_to_log[prefix + '_' + "train_" + 'mem_usage'] = self.process.memory_info().rss
         losses_and_metrics_to_log["train_" + 'mem_usage'] = self.process.memory_info().rss
 
         # log loss also without any prefix for a model checkpoint to track it
@@ -1113,6 +1110,7 @@ class DecaModule(LightningModule):
 
 
 class DECA(torch.nn.Module):
+
     def __init__(self, config):
         super().__init__()
         self._reconfigure(config)
@@ -1123,13 +1121,21 @@ class DECA(torch.nn.Module):
         self.n_param = config.n_shape + config.n_tex + config.n_exp + config.n_pose + config.n_cam + config.n_light
         self.n_detail = config.n_detail
         self.n_cond = 3 + config.n_exp
+        self.mode = DecaMode[str(config.mode).upper()]
 
     def _reinitialize(self):
         self._create_model()
         self._setup_renderer()
 
-        self.perceptual_loss = lossfunc.IDMRFLoss().eval()
-        self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
+        if 'mrfwr' not in self.config.keys() or self.config.mrfwr == 0:
+            self.perceptual_loss = None
+        else:
+            self.perceptual_loss = lossfunc.IDMRFLoss().eval()
+
+        if 'idw' not in self.config.keys() or self.config.idw == 0:
+            self.id_loss = None
+        else:
+            self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
         self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
 
     def _setup_renderer(self):
@@ -1165,6 +1171,41 @@ class DECA(torch.nn.Module):
                                   sample_mode='bilinear')
         # self._load_old_checkpoint()
 
+    def train(self, mode: bool = True):
+        if mode:
+            if self.mode == DecaMode.COARSE:
+                self.E_flame.train()
+                # print("Setting E_flame to train")
+                self.E_detail.eval()
+                # print("Setting E_detail to eval")
+                self.D_detail.eval()
+                # print("Setting D_detail to eval")
+            elif self.mode == DecaMode.DETAIL:
+                if self.config.train_coarse:
+                    # print("Setting E_flame to train")
+                    self.E_flame.train()
+                else:
+                    # print("Setting E_flame to eval")
+                    self.E_flame.eval()
+                self.E_detail.train()
+                # print("Setting E_detail to train")
+                self.D_detail.train()
+                # print("Setting D_detail to train")
+            else:
+                raise ValueError(f"Invalid mode '{self.mode}'")
+        else:
+            self.E_flame.eval()
+            # print("Setting E_flame to eval")
+            self.E_detail.eval()
+            # print("Setting E_detail to eval")
+            self.D_detail.eval()
+            # print("Setting D_detail to eval")
+
+        # these are set to eval no matter what, they're never being trained
+        self.flame.eval()
+        self.flametex.eval()
+
+
     def _load_old_checkpoint(self):
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
@@ -1184,6 +1225,9 @@ class DECA(torch.nn.Module):
             print('Start training from scratch')
             self.start_epoch = 0
             self.start_iter = 0
+
+    def _encode_flame(self, images):
+        return self.E_flame(images)
 
     def decompose_code(self, code):
         '''
@@ -1289,3 +1333,103 @@ class DECA(torch.nn.Module):
                             dense_faces,
                             colors = dense_colors,
                             inverse_face_order=True)
+
+
+from models.EmoNetRegressor import EmoNetRegressor, EmonetRegressorStatic
+
+class ExpDECA(DECA):
+
+    def _create_model(self):
+        super()._create_model()
+        if self.config.expression_backbone == 'deca_parallel':
+            ## Attach a parallel flow of FCs onto deca coarse backbone
+            self.E_expression = SecondHeadResnet(self.E_flame, self.n_exp_param, 'same')
+        elif self.config.expression_backbone == 'deca_clone':
+            self.E_expression = ResnetEncoder(self.n_exp_param)
+            # clone parameters of the ResNet
+            self.E_expression.encoder.load_state_dict(self.E_flame.encoder.state_dict())
+        elif self.config.expression_backbone == 'emonet_trainable':
+            self.E_expression = EmoNetRegressor(self.n_exp_param)
+        elif self.config.expression_backbone == 'emonet_static':
+            self.E_expression = EmonetRegressorStatic(self.n_exp_param)
+        else:
+            raise ValueError(f"Invalid expression backbone: '{self.config.expression_backbone}'")
+
+    def _reconfigure(self, config):
+        super()._reconfigure(config)
+        self.n_exp_param = self.config.n_exp
+
+        if self.config.exp_deca_global_pose and self.config.exp_deca_jaw_pose:
+            self.n_exp_param += self.config.n_pose
+        elif self.config.exp_deca_global_pose or self.config.exp_deca_jaw_pose:
+            self.n_exp_param += 3
+
+    def _encode_flame(self, images):
+        if self.config.expression_backbone == 'deca_parallel':
+            #SecondHeadResnet does the forward pass for shape and expression at the same time
+            return self.E_expression(images)
+        # other regressors have to do a separate pass over the image
+        deca_code = super()._encode_flame(images)
+        exp_deca_code = self.E_expression(images)
+        return deca_code, exp_deca_code
+
+    def decompose_code(self, code):
+        deca_code = code[0]
+        expdeca_code = code[1]
+
+        deca_code_list = super().decompose_code(deca_code)
+        # shapecode, texcode, expcode, posecode, cam, lightcode = deca_code_list
+        exp_idx = 2
+        pose_idx = 3
+
+        if self.config.exp_deca_global_pose and self.config.exp_deca_jaw_pose:
+            exp_code = expdeca_code[:, :self.config.n_exp]
+            pose_code = expdeca_code[:, self.config.n_exp:]
+            deca_code_list[exp_idx] = exp_code
+            deca_code_list[pose_idx] = pose_code
+        elif self.config.exp_deca_global_pose:
+            # global pose from ExpDeca, jaw pose from DECA
+            pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
+            pose_code_deca = deca_code_list[pose_idx]
+            deca_code_list[pose_idx] = torch.cat([pose_code_exp_deca, pose_code_deca[:,3:]], dim=1)
+        elif self.config.exp_deca_jaw_pose:
+            # global pose from DECA, jaw pose from ExpDeca
+            pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
+            pose_code_deca = deca_code_list[pose_idx]
+            deca_code_list[pose_idx] = torch.cat([pose_code_deca[:, :3], pose_code_exp_deca], dim=1)
+        else:
+            exp_code = expdeca_code
+            deca_code_list[exp_idx] = exp_code
+
+        return deca_code_list
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+
+        # for expression deca, we are not training teh resnet feature extractor plus the identity/light/texture regressor
+        self.E_flame.eval()
+
+        if mode:
+            if self.mode == DecaMode.COARSE:
+                self.E_expression.train()
+                # print("Setting E_expression to train")
+                self.E_detail.eval()
+                # print("Setting E_detail to eval")
+                self.D_detail.eval()
+                # print("Setting D_detail to eval")
+            elif self.mode == DecaMode.DETAIL:
+                if self.config.train_coarse:
+                    # print("Setting E_flame to train")
+                    self.E_expression.train()
+                else:
+                    # print("Setting E_flame to eval")
+                    self.E_expression.eval()
+                self.E_detail.train()
+                # print("Setting E_detail to train")
+                self.D_detail.train()
+            else:
+                raise ValueError(f"Invalid mode '{self.mode}'")
+        else:
+            self.E_expression.eval()
+            self.E_detail.eval()
+            self.D_detail.eval()

@@ -158,7 +158,8 @@ def prepare_data(cfg):
                            num_workers=cfg.data.num_workers,
                            train_batch_size=cfg.learning.batch_size_train,
                            val_batch_size=cfg.learning.batch_size_val,
-                           test_batch_size=cfg.learning.batch_size_test)
+                           test_batch_size=cfg.learning.batch_size_test
+                           )
     return dm, sequence_name
 
 

@@ -11,10 +11,11 @@ def main():
 
     run_names = {}
     run_names['Original_DECA'] = "Paper DECA" # Original DECA from Yao
-    run_names['2021_03_18_21-10-25_DECA_training'] = "My retrained DECA" # Basic DECA
-    run_names['2021_03_25_19-42-13_DECA_training'] = "My retrained with EmoNet loss" # DECA EmoNet
-    run_names['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] = "Detail with coarse jointly" # Detail with coarse
-    run_names['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] = "DECA no detail exchange" # No detail exchange
+    run_names['2021_03_18_21-10-25_DECA_training'] = "Basic DECA (trained by me)" # Basic DECA
+    # run_names['2021_03_25_19-42-13_DECA_training'] = "My retrained with EmoNet loss" # DECA EmoNet
+    run_names['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] = "Deca with EmoNetLoss" # DECA EmoNet
+    # run_names['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] = "Detail with coarse jointly" # Detail with coarse
+    # run_names['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] = "DECA no detail exchange" # No detail exchange
 
     use_dense_topology = False
     # use_dense_topology = True
