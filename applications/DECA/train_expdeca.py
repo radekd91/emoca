@@ -19,6 +19,22 @@ def prepare_data(cfg):
 def create_experiment_name(cfg_coarse, cfg_detail, version=1):
     experiment_name = "ExpDECA_"
     if version <= 1:
+
+        if cfg_coarse.model.expression_backbone == 'deca_parallel':
+            experiment_name += '_para'
+        elif cfg_coarse.model.expression_backbone == 'deca_clone':
+            experiment_name += '_clone'
+        elif cfg_coarse.model.expression_backbone == 'emonet_trainable':
+            experiment_name += '_EmoTrain'
+        elif cfg_coarse.model.expression_backbone == 'emonet_static':
+            experiment_name += '_EmoStat'
+
+        if cfg_coarse.model.exp_deca_global_pose:
+            experiment_name += '_Glob'
+        if cfg_coarse.model.exp_deca_jaw_pose:
+            experiment_name += '_Jaw'
+
+
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
             experiment_name += '_EmoLossB'
@@ -50,17 +66,6 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
             experiment_name += '_SupervisedEmoLossC'
         elif cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossD'
-
-        if version == 0:
-            if cfg_coarse.model.useSeg:
-                experiment_name += '_CoSegGT'
-            else:
-                experiment_name += '_CoSegRend'
-
-            if cfg_detail.model.useSeg:
-                experiment_name += '_DeSegGT'
-            else:
-                experiment_name += '_DeSegRend'
 
         if cfg_detail.model.useSeg:
             experiment_name += f'_DeSeg{cfg_detail.model.useSeg}'
