@@ -47,7 +47,7 @@ def submit(
     job_name = "train_deca"
     cuda_capability_requirement = 6
     mem_gb = 40
-    args = f"{resume_folder} {stage} {int(resume_from_previous)} {int(force_new_location)}"
+    args = f"{str(Path(result_dir_cluster_side) / resume_folder)} {stage} {int(resume_from_previous)} {int(force_new_location)}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,

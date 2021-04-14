@@ -34,6 +34,8 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
         if cfg_coarse.model.exp_deca_jaw_pose:
             experiment_name += '_Jaw'
 
+        if cfg_coarse.learning.train_K == 1:
+            experiment_name += '_NoRing'
 
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
