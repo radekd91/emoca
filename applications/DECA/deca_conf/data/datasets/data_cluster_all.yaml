@@ -1,4 +1,5 @@
 # @package data
+data_class: EmotionDataModule
 data_root: /ps/scratch/rdanecek/data/aff-wild2/
 processed_subfolder: processed_2021_Jan_19_20-25-10
 num_workers: 6

@@ -203,6 +203,9 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None)
 
+        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None)
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
         #     self.dataframe = pd.load_csv(self.path / "Manually_Annotated" / "Manually_Annotated.csv")
@@ -220,7 +223,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                           batch_size=self.val_batch_size)
 
     def test_dataloader(self):
-        pass
+        return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.test_batch_size)
 
 
 class AffectNetTestModule(AffectNetDataModule):
@@ -419,7 +423,7 @@ if __name__ == "__main__":
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
 
-    out_path = Path(dm.output_dir )/ "validation_representative_selection_.csv"
+    out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
     sample_representative_set(dm.validation_set, out_path)
 
     validation_set = AffectNet(dm.image_path, out_path, dm.image_size, dm.scale, None)

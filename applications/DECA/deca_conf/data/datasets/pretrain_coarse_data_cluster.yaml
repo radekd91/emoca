@@ -1,4 +1,5 @@
 # @package data
+data_class: DecaDataModule
 path: /ps/scratch/face2d3d/
 #path: /home/rdanecek/Workspace/mount/scratch/face2d3d/
 training_datasets:

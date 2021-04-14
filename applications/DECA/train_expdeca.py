@@ -1,5 +1,6 @@
 from applications.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from datasets.DecaDataModule import DecaDataModule
+from datasets.AffectNetDataModule import AffectNetDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
 from pathlib import Path
@@ -11,13 +12,36 @@ project_name = 'EmotionalDeca'
 
 
 def prepare_data(cfg):
-    dm = DecaDataModule(cfg)
-    sequence_name = "ExpDECA"
+    if 'data_class' in cfg.data.keys():
+        data_class = cfg.data.data_class
+    else:
+        data_class = 'DecaDataModule'
+    if data_class == 'DecaDataModule':
+        dm = DecaDataModule(cfg)
+        sequence_name = "DecaData"
+    elif data_class == 'AffectNetDataModule':
+        dm = AffectNetDataModule(
+            input_dir=cfg.data.input_dir,
+            output_dir=cfg.data.output_dir,
+            processed_subfolder=cfg.data.processed_subfolder,
+            mode=cfg.data.mode,
+            face_detector=cfg.data.face_detector,
+            face_detector_threshold=cfg.data.face_detector_threshold,
+            image_size=cfg.data.image_size,
+            scale=cfg.data.scale,
+            train_batch_size=cfg.learning.batch_size_train,
+            val_batch_size=cfg.learning.batch_size_val,
+            test_batch_size=cfg.learning.batch_size_test,
+            num_workers=cfg.data.num_workers,
+        )
+        sequence_name = "AffNet"
+    else:
+        raise ValueError(f"Invalid data_class '{data_class}'")
     return dm, sequence_name
 
 
 def create_experiment_name(cfg_coarse, cfg_detail, version=1):
-    experiment_name = "ExpDECA_"
+    experiment_name = "ExpDECA"
     if version <= 1:
 
         if cfg_coarse.model.expression_backbone == 'deca_parallel':
