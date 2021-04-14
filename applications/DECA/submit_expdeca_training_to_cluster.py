@@ -92,15 +92,26 @@ def train_on_selected_sequences():
         #      'model.detail_constrain_type=None', ]
         # ],
 
-        # AffectNet, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
+        # # AffectNet, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
+        # [
+        #     ['model.useSeg=gt', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None', 'data/datasets=affectnet_cluster',
+        #      'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'data/datasets=affectnet_cluster',
+        #      'learning.batch_size_test=1']
+        # ],
+
+        # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
         [
             ['model.useSeg=gt', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
              'model.shape_constrain_type=None', 'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1'],
+             'learning.batch_size_test=1', 'data/augmentations=default'],
             ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None', 'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1']
+             'learning.batch_size_test=1', 'data/augmentations=default']
         ],
 
         # # DEFAULT but train coarse with detail

@@ -20,6 +20,10 @@ def prepare_data(cfg):
         dm = DecaDataModule(cfg)
         sequence_name = "DecaData"
     elif data_class == 'AffectNetDataModule':
+        if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
+            augmentation = OmegaConf.to_container(cfg.data.augmentation)
+        else:
+            augmentation = None
         dm = AffectNetDataModule(
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
@@ -33,6 +37,7 @@ def prepare_data(cfg):
             val_batch_size=cfg.learning.batch_size_val,
             test_batch_size=cfg.learning.batch_size_test,
             num_workers=cfg.data.num_workers,
+            augmentation=augmentation
         )
         sequence_name = "AffNet"
     else:

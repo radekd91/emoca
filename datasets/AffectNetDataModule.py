@@ -15,6 +15,7 @@ from utils.FaceDetector import save_landmark, load_landmark
 from tqdm import auto
 import traceback
 from torch.utils.data.dataloader import DataLoader
+from transforms.imgaug import create_image_augmenter
 
 
 class AffectNetDataModule(FaceDataModuleBase):
@@ -29,6 +30,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                  image_size=224,
                  scale=1.25,
                  device=None,
+                 augmentation=None,
                  train_batch_size=64,
                  val_batch_size=64,
                  test_batch_size=64,
@@ -58,6 +60,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
+        self.augmentation = augmentation
 
     @property
     def subset_size(self):
@@ -198,8 +201,10 @@ class AffectNetDataModule(FaceDataModuleBase):
             #                                       self.val_augmenter)
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+
+        im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
         self.training_set = AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
-                                      None)
+                                      im_transforms_train)
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None)
 
@@ -267,7 +272,6 @@ class AffectNet(EmotionalImageDatasetBase):
         self.image_path = image_path
         self.df = pd.read_csv(dataframe_path)
         self.image_size = image_size
-        self.transforms = transforms
         self.use_gt_bb = use_gt_bb
         self.transforms = transforms or imgaug.augmenters.Identity()
         self.scale = scale
