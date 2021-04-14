@@ -3,7 +3,7 @@ from pathlib import Path
 import train_expdeca
 import datetime
 from omegaconf import OmegaConf
-
+import time as t
 
 def submit(cfg_coarse, cfg_detail, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -62,6 +62,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
+    t.sleep(1)
 
 
 def train_on_selected_sequences():
@@ -71,16 +72,47 @@ def train_on_selected_sequences():
     detail_conf = "deca_train_detail_cluster"
 
     finetune_modes = [
+        # # DEFAULT without jaw
+        # [
+        #     ['model.useSeg=gt', 'model.exp_deca_jaw_pose=False'],
+        #     ['model.useSeg=rend']
+        # ],
+        # # DEFAULT
         # [
         #     ['model.useSeg=gt'],
         #     ['model.useSeg=rend']
         # ],
 
-        # DEFAULT
+        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
         [
-            ['model.useSeg=gt'],
-            ['model.useSeg=rend']
+            ['model.useSeg=gt', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse', 'model.shape_constrain_type=None'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+                'model.shape_constrain_type=None', 'model.detail_constrain_type=None']
         ],
+
+        # # DEFAULT but train coarse with detail
+        # [
+        #     ['model.useSeg=gt'],
+        #     ['model.useSeg=rend', 'model.train_coarse=true']
+        # ],
+
+        # # DEFAULT but cloned ResNet backbone
+        # [
+        #     ['model.useSeg=gt', 'model.expression_backbone=deca_clone'],
+        #     ['model.useSeg=rend', 'model.expression_backbone=deca_clone']
+        # ],
+        #
+        # # DEFAULT but static EmoNet backbone
+        # [
+        #     ['model.useSeg=gt', 'model.expression_backbone=emonet_static'],
+        #     ['model.useSeg=rend', 'model.expression_backbone=emonet_static']
+        # ],
+        #
+        # # DEFAULT but trainable EmoNet backbone
+        # [
+        #     ['model.useSeg=gt', 'model.expression_backbone=emonet_trainable'],
+        #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable']
+        # ]
     ]
     fixed_overrides_coarse = ['model/settings=coarse_train_expdeca',
                               'model.resume_training=True', # load the original DECA model
