@@ -1127,7 +1127,7 @@ class DECA(torch.nn.Module):
         self._create_model()
         self._setup_renderer()
 
-        if 'mrfw' not in self.config.keys() or self.config.mrfwr == 0:
+        if 'mrfwr' not in self.config.keys() or self.config.mrfwr == 0:
             self.perceptual_loss = None
         else:
             self.perceptual_loss = lossfunc.IDMRFLoss().eval()
