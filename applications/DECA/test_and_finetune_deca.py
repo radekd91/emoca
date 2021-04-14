@@ -21,8 +21,8 @@ import copy
 project_name = 'EmotionalDeca'
 
 
-def get_checkpoint_with_kwargs(cfg, prefix):
-    checkpoint = get_checkpoint(cfg)
+def get_checkpoint_with_kwargs(cfg, prefix, checkpoint_mode=None):
+    checkpoint = get_checkpoint(cfg, checkpoint_mode)
     cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
     checkpoint_kwargs = {
         "model_params": cfg.model,
@@ -33,10 +33,12 @@ def get_checkpoint_with_kwargs(cfg, prefix):
     return checkpoint, checkpoint_kwargs
 
 
-def get_checkpoint(cfg):
-    checkpoint_mode = 'latest'
-    if hasattr(cfg.learning, 'checkpoint_after_training'):
-        checkpoint_mode = cfg.learning.checkpoint_after_training
+def get_checkpoint(cfg, checkpoint_mode=None):
+    if checkpoint_mode is None:
+        if hasattr(cfg.learning, 'checkpoint_after_training'):
+            checkpoint_mode = cfg.learning.checkpoint_after_training
+        else:
+            checkpoint_mode = 'latest'
     checkpoint = locate_checkpoint(cfg, checkpoint_mode)
     return checkpoint
 
@@ -58,11 +60,9 @@ def locate_checkpoint(cfg, mode='latest'):
 
     if isinstance(mode, int):
         checkpoint = str(checkpoints[mode])
-        return checkpoint
-    if mode == 'latest':
+    elif mode == 'latest':
         checkpoint = str(checkpoints[-1])
-        return checkpoint
-    if mode == 'best':
+    elif mode == 'best':
         min_value = 999999999999999.
         min_idx = -1
         for idx, ckpt in enumerate(checkpoints):
@@ -81,8 +81,10 @@ def locate_checkpoint(cfg, mode='latest'):
         if min_idx == -1:
             raise RuntimeError("Finding the best checkpoint failed")
         checkpoint = str(checkpoints[min_idx])
-        return checkpoint
-    raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
+    else:
+        raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
+    print(f"Selecting checkpoint '{checkpoint}'")
+    return checkpoint
 
 
 def prepare_data(cfg):

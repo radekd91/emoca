@@ -64,11 +64,9 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
 
     if isinstance(mode, int):
         checkpoint = str(checkpoints[mode])
-        return checkpoint
-    if mode == 'latest':
+    elif mode == 'latest':
         checkpoint = str(checkpoints[-1])
-        return checkpoint
-    if mode == 'best':
+    elif mode == 'best':
         min_value = 999999999999999.
         min_idx = -1
         for idx, ckpt in enumerate(checkpoints):
@@ -87,8 +85,10 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
         if min_idx == -1:
             raise RuntimeError("Finding the best checkpoint failed")
         checkpoint = str(checkpoints[min_idx])
-        return checkpoint
-    raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
+    else:
+        raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
+    print(f"Selecting checkpoint '{checkpoint}'")
+    return checkpoint
 
 
 def train_deca(configs: list, stage_types: list, stage_prefixes: list, stage_names: list, start_i=0, prepare_data=None, force_new_location=False):

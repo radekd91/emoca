@@ -44,7 +44,7 @@ def submit(cfg_coarse_pretrain, cfg_coarse, cfg_detail, bid=10):
     max_price = 10000
     job_name = "train_deca"
     cuda_capability_requirement = 6
-    mem_gb = 12
+    mem_gb = 40
     args = f"{pretrain_coarse_file.name} {coarse_file.name} {detail_file.name}"
 
     execute_on_cluster(str(cluster_script_path),

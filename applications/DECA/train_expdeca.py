@@ -128,11 +128,13 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
     if start_i > 0 or force_new_location:
         if resume_from_previous:
             resume_i = start_i - 1
+            checkpoint_mode = None # loads latest or best based on cfg
             print(f"Resuming checkpoint from stage {resume_i} (and will start from the next stage {start_i})")
         else:
             resume_i = start_i
             print(f"Resuming checkpoint from stage {resume_i} (and will start from the same stage {start_i})")
-        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i])
+            checkpoint_mode = 'latest' # resuminng in the same stage, we want to pick up where we left of
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i], checkpoint_mode)
     else:
         checkpoint, checkpoint_kwargs = None, None
 

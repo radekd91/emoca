@@ -41,7 +41,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     max_price = 10000
     job_name = "train_deca"
     cuda_capability_requirement = 6
-    mem_gb = 12
+    mem_gb = 40
     args = f"{coarse_file.name} {detail_file.name}"
 
     execute_on_cluster(str(cluster_script_path),
@@ -166,11 +166,11 @@ def default_main():
     detail_conf = "deca_train_detail_cluster"
     detail_overrides = []
 
-    cfg_coarse_pretrain, cfg_coarse, cfg_detail = train_expdeca.configure(
+    cfg_coarse, cfg_detail = train_expdeca.configure(
         coarse_conf, coarse_overrides,
         detail_conf, detail_overrides)
 
-    submit(cfg_coarse_pretrain, cfg_coarse, cfg_detail)
+    submit(cfg_coarse, cfg_detail)
 
 
 if __name__ == "__main__":
