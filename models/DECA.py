@@ -1113,6 +1113,8 @@ class DECA(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
+        self.perceptual_loss = None
+        self.id_loss = None
         self._reconfigure(config)
         self._reinitialize()
 
@@ -1122,21 +1124,26 @@ class DECA(torch.nn.Module):
         self.n_detail = config.n_detail
         self.n_cond = 3 + config.n_exp
         self.mode = DecaMode[str(config.mode).upper()]
+        self._init_deep_losses()
 
     def _reinitialize(self):
         self._create_model()
         self._setup_renderer()
+        self._init_deep_losses()
+        self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
 
+    def _init_deep_losses(self):
         if 'mrfwr' not in self.config.keys() or self.config.mrfwr == 0:
             self.perceptual_loss = None
         else:
-            self.perceptual_loss = lossfunc.IDMRFLoss().eval()
+            if self.perceptual_loss is None:
+                self.perceptual_loss = lossfunc.IDMRFLoss().eval()
 
         if 'idw' not in self.config.keys() or self.config.idw == 0:
             self.id_loss = None
         else:
-            self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
-        self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
+            if self.id_loss is None:
+                self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
 
     def _setup_renderer(self):
         self.render = SRenderY(self.config.image_size, obj_filename=self.config.topology_path,
