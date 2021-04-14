@@ -231,7 +231,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                 deca.deca._load_old_checkpoint()
         else:
             checkpoint_kwargs = checkpoint_kwargs or {}
-            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
             if stage == 'train':
                 mode = True
             else:
