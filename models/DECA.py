@@ -1456,3 +1456,4 @@ def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None
         else:
             mode = False
         deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
+    return deca
