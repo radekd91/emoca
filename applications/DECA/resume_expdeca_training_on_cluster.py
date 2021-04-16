@@ -80,9 +80,13 @@ def main():
     # resume_folders += ['2021_04_13_19-02-11_ExpDECA__EmoStat_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_19-02-31_ExpDECA__clone_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_18-54-34_ExpDECA__para_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
-    # resume_folders += ['2021_04_13_18-47-00_ExpDECA__para_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
+    # resume_folders += ['2021_04_13_18-47-00_ExpDECA__para_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again, was resumed again
     # resume_folders += ['2021_04_13_18-39-24_ExpDECA__para_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
-    resume_folders += ['2021_04_14_14-00-16_ExpDECA__para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early'] #
+    # resume_folders += ['2021_04_14_14-00-16_ExpDECA__para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
+    # resume_folders += ['2021_04_14_17-39-46_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
+    # resume_folders += ['2021_04_14_18-10-36_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_Aug_early']
+    # resume_folders += ['2021_04_14_22-49-50_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
+    # resume_folders += ['2021_04_14_23-02-10_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)

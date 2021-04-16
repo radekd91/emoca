@@ -1,0 +1,3 @@
+# @package learning
+early_stopping: False
+checkpoint_after_training: latest # 'best' vs 'latest'

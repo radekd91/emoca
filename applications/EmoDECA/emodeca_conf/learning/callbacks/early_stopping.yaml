@@ -1,0 +1,4 @@
+# @package learning
+early_stopping:
+  patience: 5
+checkpoint_after_training: best # 'best' vs 'latest'

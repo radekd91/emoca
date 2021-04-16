@@ -1,0 +1,11 @@
+# @package model
+predict_expression: true
+predict_valence: true
+predict_arousal: true
+va_loss: mse_loss
+exp_loss: cross_entropy
+expression_balancing: false
+use_expression: true
+use_global_pose: false
+use_jaw_pose: true
+use_detail_code: false

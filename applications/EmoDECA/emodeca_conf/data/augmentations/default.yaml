@@ -1,0 +1,32 @@
+# @package data
+augmentation:
+  - Affine:
+      - scale:
+          - 0.9
+          - 1.1
+      - rotate:
+          - -10.0
+          - 10.0
+      - translate_percent:
+          - -0.05
+          - 0.05
+  - OneOf:
+      - JpegCompression:
+          - compression:
+              - 50
+              - 90
+      - AdditiveGaussianNoise:
+          - scale:
+            - 0
+            - 10
+      - GaussianBlur:
+          - sigma:
+              - 0.0
+              - 1.5
+      - Sharpen:
+          - lightness: 1.0
+          - alpha:
+              - 0.0
+              - 0.5
+      - Identity:
+          - name: identity

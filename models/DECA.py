@@ -1440,3 +1440,19 @@ class ExpDECA(DECA):
             self.E_expression.eval()
             self.E_detail.eval()
             self.D_detail.eval()
+
+
+def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None):
+    if checkpoint is None:
+        deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
+        if cfg.model.resume_training:
+            print("[WARNING] Loading DECA checkpoint pretrained by the old code")
+            deca.deca._load_old_checkpoint()
+    else:
+        checkpoint_kwargs = checkpoint_kwargs or {}
+        deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
+        if stage == 'train':
+            mode = True
+        else:
+            mode = False
+        deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)

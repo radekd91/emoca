@@ -2,16 +2,13 @@ import os, sys
 from pathlib import Path
 sys.path += [str(Path(__file__).parent.parent)]
 
-import numpy as np
-from datasets.FaceVideoDataset import FaceVideoDataModule, \
-    AffectNetExpressions, Expression7, AU8, expr7_to_affect_net
+from datasets.FaceVideoDataset import FaceVideoDataModule
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-from models.DECA import DecaModule
+from models.DECA import DecaModule, instantiate_deca
 from pytorch_lightning.loggers import WandbLogger
-import wandb
 import datetime
 import time as t
 # import hydra
@@ -200,6 +197,7 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
         raise ValueError(f"Invalid logger_type: '{logger_type}")
     return logger
 
+
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
                            checkpoint=None, checkpoint_kwargs=None):
@@ -221,22 +219,11 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                     version=version,
                     save_dir=cfg.inout.full_run_dir)
 
+    if logger is not None:
+        logger.finalize("")
+
     if deca is None:
-        if logger is not None:
-            logger.finalize("")
-        if checkpoint is None:
-            deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
-            if cfg.model.resume_training:
-                print("[WARNING] Loading DECA checkpoint pretrained by the old code")
-                deca.deca._load_old_checkpoint()
-        else:
-            checkpoint_kwargs = checkpoint_kwargs or {}
-            deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
-            if stage == 'train':
-                mode = True
-            else:
-                mode = False
-            deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
+        deca = instantiate_deca(cfg, stage, prefix, checkpoint, checkpoint_kwargs)
     else:
         if stage == 'train':
             mode = True
