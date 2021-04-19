@@ -84,14 +84,14 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend']
         # ],
 
-        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
-        [
-            ['model.useSeg=gt', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', ]
-        ],
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
+        # [
+        #     ['model.useSeg=gt', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', ]
+        # ],
 
         # EmonetStatic backbone, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
         # [
@@ -121,19 +121,19 @@ def train_on_selected_sequences():
                 #'model.shape_constrain_type=None',
              'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
         ],
-        #
-        # # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
-        # # DETAIL WITH COARSE, no landmarks for detail stage
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-        #      'model.shape_constrain_type=None',
-        #      'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-        #      # 'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None',
-        #      'learning.batch_size_test=1', 'model.train_coarse=true',
-        #      'model.use_landmarks=False']
-        # ],
+
+        # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
+        # DETAIL WITH COARSE, no landmarks for detail stage
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None',
+             'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+             # 'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
+             'learning.batch_size_test=1', 'model.train_coarse=true',
+             'model.use_landmarks=False']
+        ],
 
 
         # # # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
