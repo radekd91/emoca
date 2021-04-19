@@ -133,7 +133,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
                 experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
-            experiment_name += "NoPhoto"
+            experiment_name += "NoLmk"
 
         if cfg_coarse.learning.train_K > 1:
             if cfg_coarse.model.shape_constrain_type != 'exchange':

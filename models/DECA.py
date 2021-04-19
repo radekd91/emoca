@@ -40,7 +40,7 @@ class DecaModule(LightningModule):
         self.learning_params = learning_params
         self.inout_params = inout_params
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
-            print(f"Deca class is not specified. Defaulting to {DECA.__class__.__name__}")
+            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__)}")
             deca_class = DECA
         else:
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
