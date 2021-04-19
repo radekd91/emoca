@@ -312,10 +312,14 @@ class AffectNet(EmotionalImageDatasetBase):
             # filter invalid classes
             ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
             self.df = self.df[self.df["expression"].isin(ignored_classes) == False]
+            # self.df = self.df.drop(self.df[self.df["expression"].isin(ignored_classes)].index)
 
             # filter invalid va values
             self.df = self.df[self.df.valence != -2.]
+            # self.df = self.df.drop(self.df.valence == -2.)
             self.df = self.df[self.df.arousal != -2.]
+            # self.df = self.df.drop(self.df.arousal == -2.)
+            self.df = self.df.reset_index(drop=True)
 
 
     def __len__(self):
