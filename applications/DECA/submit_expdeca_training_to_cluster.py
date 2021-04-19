@@ -184,6 +184,12 @@ def train_on_selected_sequences():
 
         # # DEFAULT but train coarse with detail
         # [
+        #     ['model.useSeg=rend'],
+        #     ['model.useSeg=rend']
+        # ],
+
+        # # DEFAULT but train coarse with detail
+        # [
         #     ['model.useSeg=gt'],
         #     ['model.useSeg=rend', 'model.train_coarse=true']
         # ],
@@ -224,22 +230,30 @@ def train_on_selected_sequences():
         #     ['model.useSeg=gt', 'model.expression_backbone=emonet_static', 'model.exp_deca_jaw_pose=False'],
         #     ['model.useSeg=rend', 'model.expression_backbone=emonet_static']
         # ],
-        #
+
         # # DEFAULT but trainable EmoNet backbone
         # [
         #     ['model.useSeg=gt', 'model.expression_backbone=emonet_trainable'],
         #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable']
         # ]
+
+        # DEFAULT but trainable EmoNet backbone, rendered mask
+        # [
+        #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable'],
+        #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable']
+        # ]
     ]
     fixed_overrides_coarse = [
-        # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
+        'model/settings=coarse_train_expdeca',
+        # 'model/settings=coarse_train_expdeca_emonet',
+        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
                               ]
     fixed_overrides_detail = [
-        # 'model/settings=detail_train_expdeca',
-        'model/settings=detail_train_expdeca_emonet',
+        'model/settings=detail_train_expdeca',
+        # 'model/settings=detail_train_expdeca_emonet',
+        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
                               ]
 
