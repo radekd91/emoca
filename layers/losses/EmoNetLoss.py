@@ -37,6 +37,7 @@ class EmoNetLoss(torch.nn.Module):
     def __init__(self, device, emonet=None):
         super().__init__()
         self.emonet = emonet or get_emonet(device).eval()
+        self.emonet.requires_grad_(False)
         # self.emonet.eval()
         # self.emonet = self.emonet.requires_grad_(False)
         # self.transforms = Resize((256, 256))

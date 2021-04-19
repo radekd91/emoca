@@ -34,7 +34,10 @@ def load_deca(conf,
               ):
     print(f"Taking config of stage '{stage}'")
     print(conf.keys())
-    cfg = conf[stage]
+    if stage is not None:
+        cfg = conf[stage]
+    else:
+        cfg = conf
     if relative_to_path is not None and replace_root_path is not None:
         cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
     cfg.model.resume_training = False
@@ -100,7 +103,7 @@ def load_deca_and_data(path_to_models=None,
             relative_to_path,
             replace_root_path
         )
-
+        cfg = conf[stage]
 
     train_or_test = 'test'
     if train_or_test == 'train':

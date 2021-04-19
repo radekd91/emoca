@@ -40,9 +40,12 @@ class EmonetRegressorStatic(EmoNetRegressor):
 
     def __init__(self, outsize, last_op=None):
         super().__init__(outsize, last_op)
+        self.emonet.requires_grad_(False)
+        self.emonet.eval()
 
     def train(self, mode=True):
         # this one only trains the FC layers
         self.emonet.eval()
         self.layers.train(mode)
+        return self
 

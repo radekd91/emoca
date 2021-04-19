@@ -1138,12 +1138,14 @@ class DECA(torch.nn.Module):
         else:
             if self.perceptual_loss is None:
                 self.perceptual_loss = lossfunc.IDMRFLoss().eval()
+                self.perceptual_loss.requires_grad_(False)  # TODO, move this to the constructor
 
         if 'idw' not in self.config.keys() or self.config.idw == 0:
             self.id_loss = None
         else:
             if self.id_loss is None:
                 self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
+                self.id_loss.requires_grad_(False) # TODO, move this to the constructor
 
     def _setup_renderer(self):
         self.render = SRenderY(self.config.image_size, obj_filename=self.config.topology_path,
@@ -1226,6 +1228,7 @@ class DECA(torch.nn.Module):
         # these are set to eval no matter what, they're never being trained
         self.flame.eval()
         self.flametex.eval()
+        return self
 
 
     def _load_old_checkpoint(self):
@@ -1363,6 +1366,8 @@ class ExpDECA(DECA):
 
     def _create_model(self):
         super()._create_model()
+        # E_flame should be fixed for expression DECA
+        self.E_flame.requires_grad_(False)
         if self.config.expression_backbone == 'deca_parallel':
             ## Attach a parallel flow of FCs onto deca coarse backbone
             self.E_expression = SecondHeadResnet(self.E_flame, self.n_exp_param, 'same')
@@ -1459,6 +1464,7 @@ class ExpDECA(DECA):
             self.E_expression.eval()
             self.E_detail.eval()
             self.D_detail.eval()
+        return self
 
 
 def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None):

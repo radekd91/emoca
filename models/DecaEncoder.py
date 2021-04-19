@@ -58,6 +58,7 @@ class SecondHeadResnet(nn.Module):
     def train(self, mode: bool = True):
         #here we NEVER modify the eval/train status of the resnet backbone, only the FC layers of the second head
         self.layers.train(mode)
+        return self
 
 
 # class ResnetEncoder(nn.Module):
