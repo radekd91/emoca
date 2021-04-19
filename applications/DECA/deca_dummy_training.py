@@ -4,7 +4,8 @@ sys.path += [str(Path(__file__).parent.parent)]
 
 import numpy as np
 from datasets.FaceVideoDataset import FaceVideoDataModule, \
-    AffectNetExpressions, Expression7, AU8, expr7_to_affect_net
+    Expression7, AU8, expr7_to_affect_net
+from datasets.AffectNetDataModule import AffectNetExpressions
 from datasets.EmotionalDataModule import EmotionDataModule
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.loggers import WandbLogger

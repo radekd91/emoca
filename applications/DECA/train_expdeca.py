@@ -28,6 +28,7 @@ def prepare_data(cfg):
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
             processed_subfolder=cfg.data.processed_subfolder,
+            ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
             mode=cfg.data.mode,
             face_detector=cfg.data.face_detector,
             face_detector_threshold=cfg.data.face_detector_threshold,

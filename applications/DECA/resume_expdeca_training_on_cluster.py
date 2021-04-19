@@ -88,6 +88,18 @@ def main():
     # resume_folders += ['2021_04_14_22-49-50_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
     # resume_folders += ['2021_04_14_23-02-10_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_early']
 
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+
+    stage = 2
+    resume_from_previous = False
+    force_new_location = False
+
+    resume_folders = []
+    # resume_folders += ['2021_04_18_13-43-32_ExpDECA_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_CoNone_DeNone_DwC_early'] # resumed
+    # resume_folders += ['2021_04_18_13-43-46_ExpDECA_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_CoNone_DeNone_DwC_early'] # resumed
+    # resume_folders += ['2021_04_18_13-43-55_ExpDECA_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_CoNone_DeNone_Aug_early'] # resumed
+    # resume_folders += ['2021_04_18_12-47-40_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_DwC_early'] # resumed
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
 

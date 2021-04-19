@@ -5,6 +5,8 @@ output_dir: /ps/scratch/rdanecek/data/affectnet/
 processed_subfolder: processed_2021_Apr_05_15-22-18
 num_workers: 6
 
+ignore_invalid: true # enable this later
+#ignore_invalid: false
 # default parameters:
 mode: manual # the original AffectNet train/val split
 image_size: 224

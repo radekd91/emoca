@@ -1,5 +1,6 @@
 from pathlib import Path
-from datasets.FaceVideoDataset import FaceVideoDataModule, bbpoint_warp, point2bbox
+from datasets.FaceVideoDataset import FaceVideoDataModule
+from datasets.ImageDatasetHelpers import point2bbox, bbpoint_warp
 import sys
 import argparse
 import os

@@ -1,4 +1,5 @@
 import os, sys
+from enum import Enum
 from pathlib import Path
 import numpy as np
 import torch
@@ -9,7 +10,8 @@ from datasets.IO import load_segmentation, process_segmentation
 from utils.image import numpy_image_to_torch
 from transforms.keypoints import KeypointNormalization
 import imgaug
-from datasets.FaceVideoDataset import bbpoint_warp, bbox2point, FaceDataModuleBase
+from datasets.FaceDataModuleBase import FaceDataModuleBase
+from datasets.ImageDatasetHelpers import bbox2point, bbpoint_warp
 from datasets.EmotionalImageDataset import EmotionalImageDatasetBase
 from utils.FaceDetector import save_landmark, load_landmark
 from tqdm import auto
@@ -18,12 +20,36 @@ from torch.utils.data.dataloader import DataLoader
 from transforms.imgaug import create_image_augmenter
 
 
+class AffectNetExpressions(Enum):
+    Neutral = 0
+    Happy = 1
+    Sad = 2
+    Surprise = 3
+    Fear = 4
+    Disgust = 5
+    Anger = 6
+    Contempt = 7
+    None_ = 8
+    Uncertain = 9
+    Occluded = 10
+    xxx = 11
+
+
+    @staticmethod
+    def from_str(string : str):
+        string = string[0].upper() + string[1:]
+        return AffectNetExpressions[string]
+
+    # _expressions = {0: 'neutral', 1:'happy', 2:'sad', 3:'surprise', 4:'fear', 5:'disgust', 6:'anger', 7:'contempt', 8:'none'}
+
+
 class AffectNetDataModule(FaceDataModuleBase):
 
     def __init__(self,
                  input_dir,
                  output_dir,
                  processed_subfolder = None,
+                 ignore_invalid = False,
                  mode="manual",
                  face_detector='fan',
                  face_detector_threshold=0.9,
@@ -55,6 +81,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.face_detector_type = 'fan'
         self.scale = scale
         self.use_processed = True
+        self.ignore_invalid = ignore_invalid
 
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
@@ -204,13 +231,13 @@ class AffectNetDataModule(FaceDataModuleBase):
 
         im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
         self.training_set = AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
-                                      im_transforms_train)
+                                      im_transforms_train, ignore_invalid=self.ignore_invalid)
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
-                                        None)
+                                        None, ignore_invalid=self.ignore_invalid)
 
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None)
+                                    None, ignore_invalid= self.ignore_invalid)
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
         #     self.dataframe = pd.load_csv(self.path / "Manually_Annotated" / "Manually_Annotated.csv")
@@ -245,7 +272,7 @@ class AffectNetTestModule(AffectNetDataModule):
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None)
+                                    None, self.ignore_invalid)
 
     def train_dataloader(self):
         raise NotImplementedError()
@@ -267,7 +294,9 @@ class AffectNet(EmotionalImageDatasetBase):
                  image_size,
                  scale = 1.4,
                  transforms : imgaug.augmenters.Augmenter = None,
-                 use_gt_bb=True,):
+                 use_gt_bb=True,
+                 ignore_invalid=False,
+                 ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
         self.df = pd.read_csv(dataframe_path)
@@ -277,6 +306,17 @@ class AffectNet(EmotionalImageDatasetBase):
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
         self.use_processed = True
+        self.ignore_invalid = ignore_invalid
+
+        if ignore_invalid:
+            # filter invalid classes
+            ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
+            self.df = self.df[self.df["expression"].isin(ignored_classes) == False]
+
+            # filter invalid va values
+            self.df = self.df[self.df.valence != -2.]
+            self.df = self.df[self.df.arousal != -2.]
+
 
     def __len__(self):
         return len(self.df)
@@ -419,7 +459,9 @@ if __name__ == "__main__":
              # processed_subfolder="processed_2021_Apr_02_03-13-33",
              processed_subfolder="processed_2021_Apr_05_15-22-18",
              mode="manual",
-             scale=1.25)
+             scale=1.25,
+             ignore_invalid=True
+            )
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
@@ -440,4 +482,3 @@ if __name__ == "__main__":
     "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
 
     # dm._detect_faces()
-

@@ -9,3 +9,6 @@ use_expression: true
 use_global_pose: false
 use_jaw_pose: true
 use_detail_code: false
+deca_checkpoint: todo
+deca_cfg: todo
+num_mlp_layers: 4

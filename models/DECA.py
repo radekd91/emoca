@@ -20,7 +20,9 @@ from .DecaFLAME import FLAME, FLAMETex
 import layers.losses.DecaLosses as lossfunc
 import utils.DecaUtils as util
 from wandb import Image
-from datasets.FaceVideoDataset import AffectNetExpressions, Expression7, expr7_to_affect_net
+from datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
+from datasets.AffectNetDataModule import AffectNetExpressions
+
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 from utils.other import class_from_str
@@ -1066,24 +1068,22 @@ class DecaModule(LightningModule):
             visualization_image = None
             return visdict, None
 
+    def _get_trainable_parameters(self):
+        trainable_params = []
+        if self.mode == DecaMode.COARSE:
+            trainable_params += self.deca._get_coarse_trainable_parameters()
+        elif self.mode == DecaMode.DETAIL:
+            trainable_params += self.deca._get_detail_trainable_parameters()
+        else:
+            raise ValueError(f"Invalid deca mode: {self.mode}")
+        return trainable_params
+
 
     def configure_optimizers(self):
         # optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         print("Configuring optimizer")
-        trainable_params = []
-        if self.mode == DecaMode.COARSE:
-            trainable_params += list(self.deca.E_flame.parameters())
-            print("Add E_flame.parameters() to the optimizer")
-        elif self.mode == DecaMode.DETAIL:
-            if self.deca.config.train_coarse:
-                trainable_params += list(self.deca.E_flame.parameters())
-                print("Add E_flame.parameters() to the optimizer")
-            trainable_params += list(self.deca.E_detail.parameters())
-            print("Add E_detail.parameters() to the optimizer")
-            trainable_params += list(self.deca.D_detail.parameters())
-            print("Add D_detail.parameters() to the optimizer")
-        else:
-            raise ValueError(f"Invalid deca mode: {self.mode}")
+
+        trainable_params = self._get_trainable_parameters()
 
         if self.learning_params.optimizer == 'Adam':
             self.deca.opt = torch.optim.Adam(
@@ -1177,6 +1177,21 @@ class DECA(torch.nn.Module):
         self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
                                   sample_mode='bilinear')
         # self._load_old_checkpoint()
+
+    def _get_coarse_trainable_parameters(self):
+        print("Add E_flame.parameters() to the optimizer")
+        return list(self.E_flame.parameters())
+
+    def _get_detail_trainable_parameters(self):
+        trainable_params = []
+        if self.config.train_coarse:
+            trainable_params += self._get_coarse_trainable_parameters()
+            print("Add E_flame.parameters() to the optimizer")
+        trainable_params += list(self.E_detail.parameters())
+        print("Add E_detail.parameters() to the optimizer")
+        trainable_params += list(self.D_detail.parameters())
+        print("Add D_detail.parameters() to the optimizer")
+        return trainable_params
 
     def train(self, mode: bool = True):
         if mode:
@@ -1361,6 +1376,10 @@ class ExpDECA(DECA):
             self.E_expression = EmonetRegressorStatic(self.n_exp_param)
         else:
             raise ValueError(f"Invalid expression backbone: '{self.config.expression_backbone}'")
+
+    def _get_coarse_trainable_parameters(self):
+        print("Add E_expression.parameters() to the optimizer")
+        return list(self.E_expression.parameters())
 
     def _reconfigure(self, config):
         super()._reconfigure(config)

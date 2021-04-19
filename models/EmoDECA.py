@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import numpy as np
 from utils.other import class_from_str
 import torch.nn.functional as F
-
+from omegaconf import DictConfig, OmegaConf
 
 
 class EmoDECA(pl.LightningModule):
@@ -17,20 +17,31 @@ class EmoDECA(pl.LightningModule):
         # learning_params = config.model.deca_cfg.learning
         # inout_params = config.model.deca_cfg.inout
         deca_checkpoint = config.model.deca_checkpoint
-        self.deca = instantiate_deca(config.mode.deca_cfg, "test", deca_checkpoint )
+        self.config = config
+        self.deca = instantiate_deca(config.model.deca_cfg, "test", deca_checkpoint )
 
-        # if deca_checkpoint is not None:
-        #     self.deca = DecaModule.load_from_checkpoint(checkpoint_path=deca_checkpoint,
-        #                                                 model_params=model_params,
-        #                                                 learning_params=learning_params,
-        #                                                 inout_params=inout_params
-        #                                                 )
-        # else:
-        #     self.deca = DecaModule(model_params=model_params,
-        #                            learning_params=learning_params,
-        #                            inout_params=inout_params
-        #                            )
-        self.mlp = MLP(config)
+        in_size = 0
+        if self.config.model.use_expression:
+            in_size += config.model.deca_cfg.model.n_exp
+        if self.config.model.use_global_pose:
+            in_size += 3
+        if self.config.model.use_jaw_pose:
+            in_size += 3
+        if self.config.model.use_detail_code:
+            in_size += config.model.deca_cfg.model.n_detail
+
+        hidden_layer_sizes = config.model.num_mlp_layers * [in_size]
+
+        out_size = 0
+        if self.config.model.predict_expression:
+            num_classes = 6
+            out_size += num_classes
+        if self.config.model.predict_valence:
+            out_size += 1
+        if self.config.model.predict_arousal:
+            out_size += 1
+
+        self.mlp = MLP(in_size, out_size, hidden_layer_sizes)
 
         self.va_loss = class_from_str(self.config.model.va_loss, F)
         self.exp_loss = class_from_str(self.config.model.exp_loss, F)

@@ -2,7 +2,9 @@ import os, sys
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from datasets.AffectNetDataModule import AffectNetDataModule
-from train_expdeca import prepare_data, create_logger
+from applications.DECA.train_expdeca import prepare_data, create_logger
+from applications.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+
 from models.EmoDECA import EmoDECA
 import datetime
 from pytorch_lightning import Trainer
@@ -12,8 +14,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 project_name = 'EmotionalDeca'
 
 
-def create_experiment_name(cfg_coarse, cfg_detail, version=1):
+def create_experiment_name(cfg, version=1):
     experiment_name = "EmoDECA"
+
+    return experiment_name
 
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
@@ -42,25 +46,25 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             logger.finalize("")
         if checkpoint is None:
             deca = EmoDECA(cfg)
-            if cfg.model.resume_training:
-                print("[WARNING] Loading DECA checkpoint pretrained by the old code")
-                deca.deca._load_old_checkpoint()
+            # if cfg.model.resume_training:
+            #     print("[WARNING] Loading DECA checkpoint pretrained by the old code")
+            #     deca.deca._load_old_checkpoint()
         else:
             checkpoint_kwargs = checkpoint_kwargs or {}
             deca = EmoDECA.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
-            if stage == 'train':
-                mode = True
-            else:
-                mode = False
-            deca.reconfigure(cfg)
-    else:
-        if stage == 'train':
-            mode = True
-        else:
-            mode = False
+            # if stage == 'train':
+            #     mode = True
+            # else:
+            #     mode = False
+            # deca.reconfigure(cfg)
+    # else:
+        # if stage == 'train':
+        #     mode = True
+        # else:
+        #     mode = False
         # if checkpoint is not None:
         #     deca.load_from_checkpoint(checkpoint_path=checkpoint)
-        deca.reconfigure(cfg)
+        # deca.reconfigure(cfg)
 
 
 
@@ -160,9 +164,144 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     return deca
 
 
+def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = None, checkpoint_mode=None):
+    checkpoint = get_checkpoint(cfg, replace_root = replace_root,
+                                relative_to = relative_to, checkpoint_mode=checkpoint_mode)
+    cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
+    checkpoint_kwargs = {
+        "model_params": cfg.model,
+        "learning_params": cfg.learning,
+        "inout_params": cfg.inout,
+        "stage_name": prefix
+    }
+    return checkpoint, checkpoint_kwargs
+
+
+def train_expdeca(cfg, start_i=0, resume_from_previous = True,
+               force_new_location=False):
+    configs = [cfg, cfg]
+    stages = ["train", "test"]
+    stages_prefixes = ["", ""]
+
+    if start_i > 0 or force_new_location:
+        if resume_from_previous:
+            resume_i = start_i - 1
+            checkpoint_mode = None # loads latest or best based on cfg
+            print(f"Resuming checkpoint from stage {resume_i} (and will start from the next stage {start_i})")
+        else:
+            resume_i = start_i
+            print(f"Resuming checkpoint from stage {resume_i} (and will start from the same stage {start_i})")
+            checkpoint_mode = 'latest' # resuminng in the same stage, we want to pick up where we left of
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i], checkpoint_mode)
+    else:
+        checkpoint, checkpoint_kwargs = None, None
+
+    if cfg.inout.full_run_dir == 'todo' or force_new_location:
+        if force_new_location:
+            print("The run will be resumed in a new foler (forked)")
+        time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        experiment_name = create_experiment_name(cfg)
+        full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
+        exist_ok = False # a path for a new experiment should not yet exist
+    else:
+        experiment_name = cfg.inout.name
+        len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
+        if hasattr(cfg.inout, 'time') and cfg.inout.time is not None:
+            time = cfg.inout.time
+        else:
+            time = experiment_name[:len_time_str]
+        full_run_dir = Path(cfg.inout.full_run_dir).parent
+        exist_ok = True # a path for an old experiment should exist
+
+    full_run_dir.mkdir(parents=True, exist_ok=exist_ok)
+    print(f"The run will be saved  to: '{str(full_run_dir)}'")
+    with open("out_folder.txt", "w") as f:
+        f.write(str(full_run_dir))
+
+    checkpoint_dir = full_run_dir / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
+
+    cfg.inout.full_run_dir = str(checkpoint_dir.parent)
+    cfg.inout.checkpoint_dir = str(checkpoint_dir)
+    cfg.inout.name = experiment_name
+    cfg.inout.time = time
+
+    # # if cfg_detail.inout.full_run_dir == 'todo':
+    # detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
+    # detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
+    #
+    # cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
+    # cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
+    # cfg_detail.inout.name = experiment_name
+    # cfg_detail.inout.time = time
+
+    # # save config to target folder
+    # conf = DictConfig({})
+    # conf.coarse = cfg_coarse
+    # conf.detail = cfg_detail
+    with open(full_run_dir / "cfg.yaml", 'w') as outfile:
+        OmegaConf.save(config=cfg, f=outfile)
+
+    logger = create_logger(
+                         cfg.learning.logger_type,
+                         name=experiment_name,
+                         project_name=project_name,
+                         config=OmegaConf.to_container(cfg),
+                         version=time,
+                         save_dir=full_run_dir)
+
+    deca = None
+    if start_i > 0 or force_new_location:
+        print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+
+    for i in range(start_i, len(configs)):
+        cfg = configs[i]
+        deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=logger,
+                                      data_preparation_function=prepare_data,
+                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
+        checkpoint = None
+
+
+def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides):
+    from hydra.experimental import compose, initialize
+    from hydra.core.global_hydra import GlobalHydra
+    initialize(config_path="emodeca_conf", job_name="train_deca")
+    cfg = compose(config_name=emo_deca_default, overrides=emodeca_overrides)
+
+    GlobalHydra.instance().clear()
+    initialize(config_path="../DECA/deca_conf", job_name="train_deca")
+    deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
+    cfg.model.deca_checkpoint = None
+    cfg.model.deca_cfg = deca_cfg
+    return cfg
+
 
 def main():
-    pass
+    emodeca_default = "emodeca_coarse"
+    emodeca_overrides = []
+
+    deca_default = "deca_train_coarse_cluster"
+    # AffectNet, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+    # [
+    deca_overrides = [
+        'model/settings=coarse_train_expdeca',
+        'model/paths=desktop',
+        'model/flame_tex=bfm_desktop',
+        'model.resume_training=True',  # load the original DECA model
+        'model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+         'model.shape_constrain_type=None', 'data/datasets=affectnet_cluster',
+         'learning.batch_size_test=1']
+    # deca_overrides = [
+    # 'model/settings=detail_train_expdeca',
+    # 'model.resume_training=True',  # load the original DECA model
+    # 'model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+    #      # 'model.shape_constrain_type=None',
+    #      'model.detail_constrain_type=None', 'data/datasets=affectnet_cluster',
+    #      'learning.batch_size_test=1', 'model.train_coarse=true']
+    # ],
+
+    cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
+    train_expdeca(cfg, 0)
 
 
 if __name__ == "__main__":

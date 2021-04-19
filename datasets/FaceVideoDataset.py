@@ -1,7 +1,5 @@
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
-import pytorch_lightning as pl
-from PIL import Image
 import glob, os, sys
 from pathlib import Path
 import numpy as np
@@ -10,19 +8,20 @@ import torch
 # from enum import Enum
 from typing import Optional, Union, List
 import pickle as pkl
-import compress_pickle as cpkl
 # from collections import OrderedDict
 from tqdm import tqdm, auto
 # import subprocess
-from torchvision.transforms import Resize, Compose, Normalize
+from torchvision.transforms import Resize, Compose
+
+from datasets.AffectNetDataModule import AffectNetExpressions
 from datasets.EmotionalImageDataset import EmotionalImageDataset
+from datasets.FaceDataModuleBase import FaceDataModuleBase
+from datasets.ImageDatasetHelpers import bbox2point, point2bbox, bbpoint_warp
 from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
-from utils.FaceDetector import FAN, MTCNN, save_landmark
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
-from datasets.IO import load_segmentation, save_segmentation, save_emotion, load_emotion
+from datasets.IO import save_emotion
 import hashlib
-import shutil
 # import zlib
 
 # from memory_profiler import profile
@@ -45,28 +44,6 @@ class Expression7(Enum):
     Sadness = 5
     Surprise = 6
     None_ = 7
-
-class AffectNetExpressions(Enum):
-    Neutral = 0
-    Happy = 1
-    Sad = 2
-    Surprise = 3
-    Fear = 4
-    Disgust = 5
-    Anger = 6
-    Contempt = 7
-    None_ = 8
-    Uncertain = 9
-    Occluded = 10
-    xxx = 11
-
-
-    @staticmethod
-    def from_str(string : str):
-        string = string[0].upper() + string[1:]
-        return AffectNetExpressions[string]
-
-    # _expressions = {0: 'neutral', 1:'happy', 2:'sad', 3:'surprise', 4:'fear', 5:'disgust', 6:'anger', 7:'contempt', 8:'none'}
 
 
 def affect_net_to_expr7(aff : AffectNetExpressions) -> Expression7:
@@ -104,242 +81,6 @@ class AU8(Enum):
     AU15 = 5
     AU20 = 6
     AU25 = 7
-
-
-class FaceDataModuleBase(pl.LightningDataModule):
-
-    def __init__(self, root_dir, output_dir, processed_subfolder, device=None,
-                 face_detector='fan',
-                 face_detector_threshold=0.9,
-                 image_size=224,
-                 scale=1.25,
-                 ):
-        super().__init__()
-        self.root_dir = root_dir
-        self.output_dir = output_dir
-
-        if processed_subfolder is None:
-            import datetime
-            date = datetime.datetime.now()
-            processed_folder = os.path.join(output_dir, "processed_%s" % date.strftime("%Y_%b_%d_%H-%M-%S"))
-        else:
-            processed_folder = os.path.join(output_dir, processed_subfolder)
-        self.output_dir = processed_folder
-
-        self.device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-        self.face_detector_type = face_detector
-        self.face_detector_threshold = face_detector_threshold
-
-        self.image_size = image_size
-        self.scale = scale
-
-
-    # @profile
-    def _instantiate_detector(self, overwrite = False):
-        if hasattr(self, 'face_detector'):
-            if not overwrite:
-                return
-            del self.face_detector
-        if self.face_detector_type == 'fan':
-            self.face_detector = FAN(self.device, threshold=self.face_detector_threshold)
-        elif self.face_detector_type == 'mtcnn':
-            self.face_detector = MTCNN(self.device)
-        else:
-            raise ValueError("Invalid face detector specifier '%s'" % self.face_detector)
-
-    # @profile
-    def _detect_faces_in_image(self, image_path, detected_faces=None):
-        # imagepath = self.imagepath_list[index]
-        # imagename = imagepath.split('/')[-1].split('.')[0]
-        image = np.array(imread(image_path))
-        if len(image.shape) == 2:
-            image = image[:, :, None].repeat(1, 1, 3)
-        if len(image.shape) == 3 and image.shape[2] > 3:
-            image = image[:, :, :3]
-
-        h, w, _ = image.shape
-        self._instantiate_detector()
-        bounding_boxes, bbox_type, landmarks = self.face_detector.run(image,
-                                                                      with_landmarks=True,
-                                                                      detected_faces=detected_faces)
-        image = image / 255.
-        detection_images = []
-        detection_centers = []
-        detection_sizes = []
-        detection_landmarks = []
-        # detection_embeddings = []
-        if len(bounding_boxes) == 0:
-            # print('no face detected! run original image')
-            return detection_images, detection_centers, detection_images, \
-                   bbox_type, detection_landmarks
-            # left = 0
-            # right = h - 1
-            # top = 0
-            # bottom = w - 1
-            # bounding_boxes += [[left, right, top, bottom]]
-
-        for bi, bbox in enumerate(bounding_boxes):
-            left = bbox[0]
-            right = bbox[2]
-            top = bbox[1]
-            bottom = bbox[3]
-            old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
-            size = int(old_size * self.scale)
-
-            dst_image, dts_landmark = bbpoint_warp(image, center, size, self.image_size, landmarks=landmarks[bi])
-
-            # dst_image = dst_image.transpose(2, 0, 1)
-            #
-            detection_images += [(dst_image*255).astype(np.uint8)]
-            detection_centers += [center]
-            detection_sizes += [size]
-
-            # to be checked
-            detection_landmarks += [dts_landmark]
-
-        del image
-        return detection_images, detection_centers, detection_sizes, bbox_type, detection_landmarks
-
-    # @profile
-    def _detect_faces_in_image_wrapper(self, frame_list, fid, out_detection_folder, out_landmark_folder, bb_outfile,
-                                       centers_all, sizes_all, detection_fnames_all, landmark_fnames_all):
-
-        frame_fname = frame_list[fid]
-        # detect faces in each frames
-        detection_ims, centers, sizes, bbox_type, landmarks = self._detect_faces_in_image(Path(self.output_dir) / frame_fname)
-        # self.detection_lists[sequence_id][fid] += [detections]
-        centers_all += [centers]
-        sizes_all += [sizes]
-
-        # save detections
-        detection_fnames = []
-        landmark_fnames = []
-        for di, detection in enumerate(detection_ims):
-            # save detection
-            stem = frame_fname.stem + "_%.03d" % di
-            out_detection_fname = out_detection_folder / (stem + ".png")
-            detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
-            imsave(out_detection_fname, detection)
-
-            # save landmarks
-            out_landmark_fname = out_landmark_folder / (stem + ".pkl")
-            landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
-            save_landmark(out_landmark_fname, landmarks[di], bbox_type)
-
-        detection_fnames_all += [detection_fnames]
-        landmark_fnames_all += [landmark_fnames]
-
-        torch.cuda.empty_cache()
-        checkpoint_frequency = 100
-        if fid % checkpoint_frequency == 0:
-            FaceVideoDataModule.save_detections(bb_outfile, detection_fnames_all, landmark_fnames_all,
-                                                centers_all, sizes_all, fid)
-
-    def _segment_images(self, detection_fnames, out_segmentation_folder, path_depth = 0):
-        import time
-
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        print(device)
-        net, seg_type = self._get_segmentation_net(device)
-        
-        ref_im = imread(detection_fnames[0])
-        ref_size = Resize((ref_im.shape[0], ref_im.shape[1]), interpolation=Image.NEAREST)
-
-        transforms = Compose([
-            Resize((512, 512)),
-            Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ])
-        batch_size = 64
-
-        dataset = UnsupervisedImageDataset(detection_fnames, image_transforms=transforms,
-                                           im_read='pil')
-        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
-
-        # import matplotlib.pyplot as plt
-
-        for i, batch in enumerate(tqdm(loader)):
-            # facenet_pytorch expects this stanadrization for the input to the net
-            # images = fixed_image_standardization(batch['image'].to(device))
-            images = batch['image'].cuda()
-            start = time.time()
-            with torch.no_grad():
-                out = net(images)[0]
-            end = time.time()
-            print(f" Inference batch {i} took : {end - start}")
-            segmentation = out.cpu().argmax(1)
-            segmentation = ref_size(segmentation)
-            segmentation = segmentation.numpy()
-            # images = ref_size(images.cpu())
-            # images = images.numpy()
-
-            start = time.time()
-            for j in range(out.size()[0]):
-                image_path = batch['path'][j]
-                # if isinstance(out_segmentation_folder, list):
-                if path_depth > 0:
-                    rel_path = Path(image_path).parent.relative_to(Path(image_path).parents[path_depth])
-                    segmentation_path = out_segmentation_folder / rel_path / (Path(image_path).stem + ".pkl")
-                else:
-                    segmentation_path = out_segmentation_folder / (Path(image_path).stem + ".pkl")
-                segmentation_path.parent.mkdir(exist_ok=True, parents=True)
-                # im = images[j]
-                # im = im.transpose([1,2,0])
-                # seg = process_segmentation(segmentation[j], seg_type)
-                # imsave("seg.png", seg)
-                # imsave("im.png", im)
-                # FaceVideoDataModule.vis_parsing_maps(im, segmentation[j], stride=1, save_im=True,
-                #                  save_path='overlay.png')
-                # plt.figure()
-                # plt.imshow(im)
-                # plt.show()
-                # plt.figure()
-                # plt.imshow(seg)
-                # plt.show()
-                save_segmentation(segmentation_path, segmentation[j], seg_type)
-            end = time.time()
-            print(f" Saving batch {i} took: {end - start}")
-
-
-    def _get_segmentation_net(self, device):
-
-        path_to_segnet = Path(__file__).parent.parent.parent / "face-parsing.PyTorch"
-        if not(str(path_to_segnet) in sys.path  or str(path_to_segnet.absolute()) in sys.path):
-            sys.path += [str(path_to_segnet)]
-
-        from model import BiSeNet
-        n_classes = 19
-        net = BiSeNet(n_classes=n_classes)
-        # net.cuda()
-        save_pth = path_to_segnet / 'res' / 'cp' / '79999_iter.pth'
-        net.load_state_dict(torch.load(save_pth))
-        # net.eval()
-        net.eval().to(device)
-
-        # labels = {
-        #     0: 'background',
-        #     1: 'skin',
-        #     2: 'nose',
-        #     3: 'eye_g',
-        #     4: 'l_eye',
-        #     5: 'r_eye',
-        #     6: 'l_brow',
-        #     7: 'r_brow',
-        #     8: 'l_ear',
-        #     9: 'r_ear',
-        #     10: 'mouth',
-        #     11: 'u_lip',
-        #     12: 'l_lip',
-        #     13: 'hair',
-        #     14: 'hat',
-        #     15: 'ear_r',
-        #     16: 'neck_l',
-        #     17: 'neck',
-        #     18: 'cloth'
-        # }
-
-        return net, "face_parsing"
-
 
 
 class FaceVideoDataModule(FaceDataModuleBase):
@@ -527,31 +268,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
                                             detection_fnames_all, landmark_fnames_all, centers_all, sizes_all, fid)
         print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
 
-    @staticmethod
-    def save_detections(fname, detection_fnames, landmark_fnames, centers, sizes, last_frame_id):
-        with open(fname, "wb" ) as f:
-            pkl.dump(detection_fnames, f)
-            pkl.dump(centers, f)
-            pkl.dump(sizes, f)
-            pkl.dump(last_frame_id, f)
-            pkl.dump(landmark_fnames, f)
 
-    @staticmethod
-    def load_detections(fname):
-        with open(fname, "rb" ) as f:
-            detection_fnames = pkl.load(f)
-            centers = pkl.load(f)
-            sizes = pkl.load(f)
-            try:
-                last_frame_id = pkl.load(f)
-            except:
-                last_frame_id = -1
-            try:
-                landmark_fnames = pkl.load(f)
-            except:
-                landmark_fnames = [None]*len(detection_fnames)
-
-        return detection_fnames, landmark_fnames, centers, sizes, last_frame_id
 
 
     def _get_emotion_net(self, device):
@@ -581,7 +298,6 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
 
     def _extract_emotion_from_faces_in_sequence(self, sequence_id):
-        import time
 
         video_file = self.video_list[sequence_id]
         print("Extracting emotion fetures from faces in sequence: '%s'" % video_file)
@@ -2469,7 +2185,7 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
 
 import cv2
 import scipy
-from skimage.io import imread, imsave
+from skimage.io import imread
 from skimage.transform import estimate_transform, warp
 from glob import glob
 import scipy.io
@@ -2492,51 +2208,6 @@ def video2sequence(video_path):
         imagepath_list.append(imagepath)
     print('video frames are stored in {}'.format(videofolder))
     return imagepath_list
-
-
-def bbox2point(left, right, top, bottom, type='bbox'):
-    ''' bbox from detector and landmarks are different
-    '''
-    if type == 'kpt68':
-        old_size = (right - left + bottom - top) / 2 * 1.1
-        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
-    elif type == 'bbox':
-        old_size = (right - left + bottom - top) / 2
-        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size * 0.12])
-    else:
-        raise NotImplementedError
-    return old_size, center
-
-
-def point2bbox(center, size):
-    size2 = size / 2
-
-    src_pts = np.array(
-        [[center[0] - size2, center[1] - size2], [center[0] - size2, center[1] + size2],
-         [center[0] + size2, center[1] - size2]])
-    return src_pts
-
-
-def point2transform(center, size, target_size_height, target_size_width):
-    target_size_width = target_size_width or target_size_height
-    src_pts = point2bbox(center, size)
-    dst_pts = np.array([[0, 0], [0, target_size_width - 1], [target_size_height - 1, 0]])
-    tform = estimate_transform('similarity', src_pts, dst_pts)
-    return tform
-
-
-def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True, landmarks=None):
-    target_size_width = target_size_width or target_size_height
-    tform = point2transform(center, size, target_size_height, target_size_width)
-    tf = tform.inverse if inv else tform
-    output_shape = output_shape or (target_size_height, target_size_width)
-    dst_image = warp(image, tf, output_shape=output_shape, order=3)
-    if landmarks is None:
-        return dst_image
-    # points need the matrix
-    tf_lmk = tform if inv else tform.inverse
-    dst_landmarks = tf_lmk(landmarks)
-    return dst_image, dst_landmarks
 
 
 class TestData(Dataset):
