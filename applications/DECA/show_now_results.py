@@ -11,11 +11,18 @@ def main():
 
     run_names = {}
     run_names['Original_DECA'] = "Paper DECA" # Original DECA from Yao
-    run_names['2021_03_18_21-10-25_DECA_training'] = "Basic DECA (trained by me)" # Basic DECA
+    # run_names['2021_03_18_21-10-25_DECA_training'] = "Basic DECA (trained by me)" # Basic DECA
     # run_names['2021_03_25_19-42-13_DECA_training'] = "My retrained with EmoNet loss" # DECA EmoNet
-    run_names['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] = "Deca with EmoNetLoss" # DECA EmoNet
+    # run_names['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] = "Deca with EmoNetLoss" # DECA EmoNet
     # run_names['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] = "Detail with coarse jointly" # Detail with coarse
     # run_names['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] = "DECA no detail exchange" # No detail exchange
+
+    # aff-wild 2 models
+    run_names['2021_04_02_18-46-31_va_DeSegFalse_Aug_early'] = "AffWild DECA" # DECA
+    run_names['2021_04_02_18-46-47_va_EmoLossB_F2VAEw-0.00150_DeSegFalse_Aug_early'] = "AffWild with EmoNetLoss" # DECA with EmoNet
+    # run_names['2021_04_02_18-46-34_va_DeSegFalse_Aug_DwC_early'] # DECA detail with coarse
+    # run_names['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
+
 
     use_dense_topology = False
     # use_dense_topology = True

@@ -27,11 +27,13 @@ def main():
     # run_name = '2021_03_01_11-31-57_VA_Set_videos_Train_Set_119-30-848x480.mp4_EmoNetLossB_F1F2VAECw-0.00150_CoSegmentGT_DeSegmentRend'
     # run_name_1 =  "2021_04_18_12-39-46_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_DwC_early"
     # run_name_1 =  "2021_04_19_13-01-34_ExpDECA_EmoTrain_Jaw_DeSegrend_early"
-    run_name_1 =  "2021_04_19_14-01-29_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early"
+    # run_name_1 =  "2021_04_19_14-01-29_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early"
+    run_name_1 =  "2021_04_19_18-57-50_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrendNoLmk_DwC_early"
     # run_name_2 =  "2021_04_14_18-10-36_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_Aug_early"
     # run_name_2 =  "2021_04_16_10-09-30_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_DwC_early"
     # run_name_2 =  "2021_04_19_13-01-48_ExpDECA_clone_Jaw_DeSegrend_early"
-    run_name_2 =  "2021_04_19_14-01-13_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_early"
+    # run_name_2 =  "2021_04_19_14-01-13_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_early"
+    run_name_2 =  "2021_04_19_18-57-31_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_early"
     # stage = 'detail'
     stage = 'coarse'
     relative_to_path = '/ps/scratch/'

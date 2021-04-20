@@ -3,7 +3,7 @@ from pathlib import Path
 import affectnet_validation
 import datetime
 from omegaconf import OmegaConf
-
+import time as t
 
 def submit(cfg, model_folder_name, mode, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -54,7 +54,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-
+    t.sleep(1)
 
 def main():
     path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -62,10 +62,16 @@ def main():
 
     run_names = []
     # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
-    run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet
+    # run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet
     # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
     # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
     # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
+
+    # aff-wild 2 fintuned models
+    # run_names += ['2021_04_02_18-46-31_va_DeSegFalse_Aug_early'] # DECA
+    run_names += ['2021_04_02_18-46-47_va_EmoLossB_F2VAEw-0.00150_DeSegFalse_Aug_early'] # DECA with EmoNet
+    run_names += ['2021_04_02_18-46-34_va_DeSegFalse_Aug_DwC_early'] # DECA detail with coarse
+    run_names += ['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
 
     # mode = 'coarse'
     mode = 'detail'
