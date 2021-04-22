@@ -321,6 +321,10 @@ class AffectNet(EmotionalImageDatasetBase):
             # self.df = self.df.drop(self.df.arousal == -2.)
             self.df = self.df.reset_index(drop=True)
 
+        self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
+        self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
+
+
 
     def __len__(self):
         return len(self.df)
@@ -399,11 +403,13 @@ class AffectNet(EmotionalImageDatasetBase):
         img, seg_image, landmark = self._augment(img, seg_image, landmark)
 
         sample = {
-            "image": numpy_image_to_torch(img),
+            "image": numpy_image_to_torch(img.astype(np.float32)),
             "path": str(im_file),
-            "affectnetexp": torch.tensor([expression, ]),
-            "va": torch.tensor([valence, arousal]),
+            "affectnetexp": torch.tensor([expression, ], dtype=torch.long),
+            "va": torch.tensor([valence, arousal], dtype=torch.float32),
             "label": str(im_file.stem),
+            # "expression_weight": torch.tensor([self.exp_weights[expression], ]),
+            "expression_weight": self.exp_weight_tensor
         }
 
         if landmark is not None:

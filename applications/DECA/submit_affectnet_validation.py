@@ -68,10 +68,33 @@ def main():
     # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
 
     # aff-wild 2 fintuned models
-    run_names += ['2021_04_02_18-46-31_va_DeSegFalse_Aug_early'] # DECA
-    run_names += ['2021_04_02_18-46-47_va_EmoLossB_F2VAEw-0.00150_DeSegFalse_Aug_early'] # DECA with EmoNet
-    run_names += ['2021_04_02_18-46-34_va_DeSegFalse_Aug_DwC_early'] # DECA detail with coarse
-    run_names += ['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
+    # run_names += ['2021_04_02_18-46-31_va_DeSegFalse_Aug_early'] # DECA
+    # run_names += ['2021_04_02_18-46-47_va_EmoLossB_F2VAEw-0.00150_DeSegFalse_Aug_early'] # DECA with EmoNet
+    # run_names += ['2021_04_02_18-46-34_va_DeSegFalse_Aug_DwC_early'] # DECA detail with coarse
+    # run_names += ['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
+
+    ## ExpDeca ablations
+    ## Deca set
+    # run_names += ['2021_04_19_18-57-31_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_early'] # ran
+    # run_names += ['2021_04_19_18-57-50_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrendNoLmk_DwC_early'] # ran
+    # run_names += ['2021_04_19_18-57-53_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_DwC_early'] # ran
+    # run_names += ['2021_04_19_18-58-27_ExpDECA_DecaD_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrendNoLmk_DwC_early'] # ran
+    # run_names += ['2021_04_20_19-09-37_ExpDECA_DecaD_EmoTrain_Jaw_NoRing_DeSegrend_early'] # ran
+    # run_names += ['2021_04_20_19-09-44_ExpDECA_DecaD_clone_Jaw_NoRing_DeSegrend_early'] # ran
+    # # run_names += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # still running
+    # run_names += ['2021_04_19_18-55-46_ExpDECA_DecaD_EmoStat_Jaw_NoRing_DeSegrend_early'] # ran
+    #
+    # # AffectNet
+    # run_names += ['2021_04_19_18-58-39_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_early'] # ran
+    # run_names += ['2021_04_19_18-58-40_ExpDECA_Affec_para_Jaw_NoRing_DeSegrendNoLmk_DwC_early'] # ran
+    # # run_names += ['2021_04_19_18-59-02_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] #still running
+    # run_names += ['2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] # ran
+    # # run_names += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # still running
+    # # run_names += ['2021_04_19_19-05-43_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrendNoLmk_DwC_early'] # still running
+    # # run_names += ['2021_04_20_21-39-59_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early']  # still running
+    # # run_names += ['2021_04_19_18-56-08_ExpDECA_Affec_EmoStat_Jaw_NoRing_DeSegrend_early']  # still running
+
+
 
     # mode = 'coarse'
     mode = 'detail'

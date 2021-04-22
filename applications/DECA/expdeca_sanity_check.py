@@ -33,9 +33,10 @@ def main():
     # run_name_2 =  "2021_04_16_10-09-30_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_DwC_early"
     # run_name_2 =  "2021_04_19_13-01-48_ExpDECA_clone_Jaw_DeSegrend_early"
     # run_name_2 =  "2021_04_19_14-01-13_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_early"
-    run_name_2 =  "2021_04_19_18-57-31_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_early"
-    # stage = 'detail'
-    stage = 'coarse'
+    # run_name_2 =  "2021_04_19_18-57-31_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_early"
+    run_name_2 =  "2021_04_19_19-05-43_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrendNoLmk_DwC_early"
+    stage = 'detail'
+    # stage = 'coarse'
     relative_to_path = '/ps/scratch/'
     replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
     deca = load_deca_and_data(path_to_models, run_name_1, stage, relative_to_path, replace_root_path, load_data=False)

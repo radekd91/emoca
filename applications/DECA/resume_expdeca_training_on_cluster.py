@@ -108,7 +108,8 @@ def main():
     resume_from_previous = True
     force_new_location = False
     resume_folders = []
-    resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
+    # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
+    resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
 

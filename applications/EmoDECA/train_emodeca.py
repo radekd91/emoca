@@ -11,12 +11,22 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 
-project_name = 'EmotionalDeca'
+project_name = 'EmoDECA'
 
 
 def create_experiment_name(cfg, version=1):
     experiment_name = "EmoDECA"
-
+    if cfg.data.data_class:
+        experiment_name += '_' + cfg.data.data_class[:5]
+    experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
+    if cfg.model.use_expression:
+        experiment_name += "_exp"
+    if cfg.model.use_global_pose:
+        experiment_name += "_pose"
+    if cfg.model.use_jaw_pose:
+        experiment_name += "_jaw"
+    if cfg.model.use_detail_code:
+        experiment_name += "_detail"
     return experiment_name
 
 
@@ -114,14 +124,14 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     print(f"Setting val_check_interval to {val_check_interval}")
 
     max_steps = None
-    if hasattr(cfg.model, 'max_steps'):
-        max_steps = cfg.model.max_steps
+    if hasattr(cfg.learning, 'max_steps'):
+        max_steps = cfg.learning.max_steps
         print(f"Setting max steps to {max_steps}")
 
     print(f"After training checkpoint strategy: {cfg.learning.checkpoint_after_training}")
 
     trainer = Trainer(gpus=cfg.learning.num_gpus,
-                      max_epochs=cfg.model.max_epochs,
+                      max_epochs=cfg.learning.max_epochs,
                       max_steps=max_steps,
                       default_root_dir=cfg.inout.checkpoint_dir,
                       logger=logger,
@@ -226,19 +236,6 @@ def train_expdeca(cfg, start_i=0, resume_from_previous = True,
     cfg.inout.name = experiment_name
     cfg.inout.time = time
 
-    # # if cfg_detail.inout.full_run_dir == 'todo':
-    # detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
-    # detail_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
-    #
-    # cfg_detail.inout.full_run_dir = str(detail_checkpoint_dir.parent)
-    # cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
-    # cfg_detail.inout.name = experiment_name
-    # cfg_detail.inout.time = time
-
-    # # save config to target folder
-    # conf = DictConfig({})
-    # conf.coarse = cfg_coarse
-    # conf.detail = cfg_detail
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=cfg, f=outfile)
 
@@ -277,30 +274,30 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides)
 
 
 def main():
-    emodeca_default = "emodeca_coarse"
-    emodeca_overrides = []
+    if len(sys.argv) < 2:
+        emodeca_default = "emodeca_coarse"
+        emodeca_overrides = []
 
-    deca_default = "deca_train_coarse_cluster"
-    # AffectNet, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-    # [
-    deca_overrides = [
-        'model/settings=coarse_train_expdeca',
-        'model/paths=desktop',
-        'model/flame_tex=bfm_desktop',
-        'model.resume_training=True',  # load the original DECA model
-        'model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-         'model.shape_constrain_type=None', 'data/datasets=affectnet_cluster',
-         'learning.batch_size_test=1']
-    # deca_overrides = [
-    # 'model/settings=detail_train_expdeca',
-    # 'model.resume_training=True',  # load the original DECA model
-    # 'model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-    #      # 'model.shape_constrain_type=None',
-    #      'model.detail_constrain_type=None', 'data/datasets=affectnet_cluster',
-    #      'learning.batch_size_test=1', 'model.train_coarse=true']
-    # ],
+        deca_default = "deca_train_coarse_cluster"
+        deca_overrides = [
+            'model/settings=coarse_train_expdeca',
+            'model/paths=desktop',
+            'model/flame_tex=bfm_desktop',
+            'model.resume_training=True',  # load the original DECA model
+            'model.useSeg=rend', 'model.idw=0',
+            'learning/batching=single_gpu_deca_coarse',
+            # 'learning/batching=single_gpu_deca_detail',
+             'model.shape_constrain_type=None',
+            'data/datasets=affectnet_cluster',
+             'learning.batch_size_test=1'
+        ]
+        cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
+    else:
+        cfg_path = sys.argv[1]
+        print(f"Training from config '{cfg_path}'")
+        with open(cfg_path, 'r') as f:
+            cfg = OmegaConf.load(f)
 
-    cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
     train_expdeca(cfg, 0)
 
 

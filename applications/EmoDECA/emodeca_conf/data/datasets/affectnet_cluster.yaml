@@ -3,7 +3,7 @@ data_class: AffectNetDataModule
 input_dir: /ps/project/EmotionalFacialAnimation/data/affectnet
 output_dir: /ps/scratch/rdanecek/data/affectnet/
 processed_subfolder: processed_2021_Apr_05_15-22-18
-num_workers: 6
+num_workers: 8
 
 ignore_invalid: true
 # default parameters:

@@ -1,0 +1,3 @@
+# @package learning
+max_epochs: 20
+max_steps: 1000000

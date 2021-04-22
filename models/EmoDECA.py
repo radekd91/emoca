@@ -19,6 +19,7 @@ class EmoDECA(pl.LightningModule):
         deca_checkpoint = config.model.deca_checkpoint
         self.config = config
         self.deca = instantiate_deca(config.model.deca_cfg, "test", deca_checkpoint )
+        self._setup_deca(False)
 
         in_size = 0
         if self.config.model.use_expression:
@@ -34,8 +35,8 @@ class EmoDECA(pl.LightningModule):
 
         out_size = 0
         if self.config.model.predict_expression:
-            num_classes = 6
-            out_size += num_classes
+            self.num_classes = 9
+            out_size += self.num_classes
         if self.config.model.predict_valence:
             out_size += 1
         if self.config.model.predict_arousal:
@@ -46,6 +47,47 @@ class EmoDECA(pl.LightningModule):
         self.va_loss = class_from_str(self.config.model.va_loss, F)
         self.exp_loss = class_from_str(self.config.model.exp_loss, F)
 
+    def configure_optimizers(self):
+        trainable_params = []
+        if self.config.model.finetune_deca:
+            trainable_params += self.deca._get_trainable_parameters()
+        trainable_params += list(self.mlp.parameters())
+
+        if self.config.learning.optimizer == 'Adam':
+            opt = torch.optim.Adam(
+                trainable_params,
+                lr=self.config.learning.learning_rate,
+                amsgrad=False)
+
+        elif self.config.learning.optimizer == 'SGD':
+            opt = torch.optim.SGD(
+                trainable_params,
+                lr=self.config.learning.learning_rate)
+        else:
+            raise ValueError(f"Unsupported optimizer: '{self.config.learning.optimizer}'")
+
+        optimizers = [opt]
+        schedulers = []
+        if 'learning_rate_decay' in self.config.learning.keys():
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=self.config.learning.learning_rate_decay)
+            schedulers += [scheduler]
+        if len(schedulers) == 0:
+            return opt
+
+        return optimizers, schedulers
+
+    def _setup_deca(self, train : bool):
+        if self.config.model.finetune_deca:
+            self.deca.train(train)
+            self.deca.requires_grad_(True)
+        else:
+            self.deca.train(False)
+            self.deca.requires_grad_(False)
+
+    def train(self, mode=True):
+        self._setup_deca(mode)
+        self.mlp.train(mode)
+
 
     def forward(self, batch):
         values = self.deca.encode(batch)
@@ -53,7 +95,10 @@ class EmoDECA(pl.LightningModule):
         # texcode = values['texcode']
         expcode = values['expcode']
         posecode = values['posecode']
-        detailcode = values['detailcode']
+        if self.config.model.use_detail_code:
+            detailcode = values['detailcode']
+        else:
+            detailcode = None
 
         global_pose = posecode[:, :3]
         jaw_pose = posecode[:, 3:]
@@ -77,9 +122,8 @@ class EmoDECA(pl.LightningModule):
 
         out_idx = 0
         if self.config.model.predict_expression:
-            num_classes = 6
-            expr_classification = output[:, out_idx:(out_idx+num_classes)]
-            out_idx += num_classes
+            expr_classification = output[:, out_idx:(out_idx+self.num_classes)]
+            out_idx += self.num_classes
         else:
             expr_classification = None
 
@@ -128,9 +172,9 @@ class EmoDECA(pl.LightningModule):
             else:
                 weight = torch.ones_like(class_weight)
 
-            losses["expr"] = self.expr_loss(arousal_pred, arousal_gt, weight)
-            metrics["expr_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt, torch.ones_like(class_weight))
-            metrics["expr_weighted_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt, class_weight)
+            losses["expr"] = self.exp_loss(expr_classification_pred, expr_classification_gt[:, 0], weight)
+            metrics["expr_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], torch.ones_like(class_weight))
+            metrics["expr_weighted_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], class_weight)
 
         loss = 0.
         for key, value in losses.items():
@@ -143,10 +187,13 @@ class EmoDECA(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         valence_pred, arousal_pred, expr_classification_pred = self.forward(batch)
-        valence_gt = batch["valence"]
-        arousal_gt = batch["arousal"]
-        expr_classification_gt = batch["expression"]
-        class_weight = batch["expression_weight"]
+        valence_gt = batch["va"][:, 0:1]
+        arousal_gt = batch["va"][:, 1:2]
+        expr_classification_gt = batch["affectnetexp"]
+        if "expression_weight" in batch.keys():
+            class_weight = batch["expression_weight"][0]
+        else:
+            class_weight = None
 
         losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
                           valence_gt, arousal_gt, expr_classification_gt, class_weight)
@@ -158,10 +205,13 @@ class EmoDECA(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         valence_pred, arousal_pred, expr_classification_pred = self.forward(batch)
-        valence_gt = batch["valence"]
-        arousal_gt = batch["arousal"]
-        expr_classification_gt = batch["expression"]
-        class_weight = batch["expression_weight"]
+        valence_gt = batch["va"][:, 0:1]
+        arousal_gt = batch["va"][:, 1:2]
+        expr_classification_gt = batch["affectnetexp"]
+        if "expression_weight" in batch.keys():
+            class_weight = batch["expression_weight"][0]
+        else:
+            class_weight = None
 
         losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
                                             valence_gt, arousal_gt, expr_classification_gt, class_weight)
