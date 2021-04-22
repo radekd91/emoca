@@ -78,8 +78,6 @@ def train_emodeca_on_cluster():
     fixed_overrides_cfg = []
     fixed_overrides_deca = [
         'model/settings=coarse_train_expdeca',
-        'model/paths=desktop',
-        'model/flame_tex=bfm_desktop',
         'model.resume_training=True',  # load the original DECA model
         'model.useSeg=rend', 'model.idw=0',
         'learning/batching=single_gpu_coarse',

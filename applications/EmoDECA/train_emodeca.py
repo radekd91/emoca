@@ -120,7 +120,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
     val_check_interval = 1.0
     if 'val_check_interval' in cfg.model.keys():
-        val_check_interval = cfg.model.val_check_interval
+        val_check_interval = cfg.learning.val_check_interval
     print(f"Setting val_check_interval to {val_check_interval}")
 
     max_steps = None

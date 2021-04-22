@@ -13,3 +13,4 @@ deca_checkpoint: todo
 deca_cfg: todo
 num_mlp_layers: 4
 finetune_deca: false
+

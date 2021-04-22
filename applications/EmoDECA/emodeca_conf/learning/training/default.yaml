@@ -1,3 +1,4 @@
 # @package learning
-max_epochs: 20
 max_steps: 1000000
+max_epochs: 8
+val_check_interval: 0.2
