@@ -27,6 +27,13 @@ def create_experiment_name(cfg, version=1):
         experiment_name += "_jaw"
     if cfg.model.use_detail_code:
         experiment_name += "_detail"
+
+    if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
+        experiment_name += "_Aug"
+
+    if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
+        experiment_name += "_early"
+
     return experiment_name
 
 
