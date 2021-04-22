@@ -87,7 +87,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
         os.environ['LOCAL_RANK'] = '0'
 
-    loss_to_monitor = 'val_loss'
+    loss_to_monitor = 'val_loss_total'
     dm.setup()
     val_data = dm.val_dataloader()
     if isinstance(val_data, list):
