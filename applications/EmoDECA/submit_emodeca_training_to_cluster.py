@@ -68,14 +68,14 @@ def train_emodeca_on_cluster():
 
     training_modes = [
         # DEFAULT
-        [
-            ['model.num_mlp_layers=1'],
-            []
-        ],
-        [
-            ['model.num_mlp_layers=2'],
-            []
-        ],
+        # [
+        #     ['model.num_mlp_layers=1'],
+        #     []
+        # ],
+        # [
+        #     ['model.num_mlp_layers=2'],
+        #     []
+        # ],
         [
             ['model.num_mlp_layers=3'],
             []
