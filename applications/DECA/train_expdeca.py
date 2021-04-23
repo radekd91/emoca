@@ -47,7 +47,8 @@ def prepare_data(cfg):
 
 
 def create_experiment_name(cfg_coarse, cfg_detail, version=1):
-    experiment_name = "ExpDECA"
+    # experiment_name = "ExpDECA"
+    experiment_name = cfg_coarse.model.deca_class
     if version <= 1:
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]

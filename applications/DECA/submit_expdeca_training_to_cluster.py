@@ -235,19 +235,49 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable'],
         #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable']
         # ]
+
+        # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.max_epochs=8',
+             'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.max_epochs=8',
+             'learning/batching=single_gpu_expdeca_detail',
+             # 'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
+        ],
+
+        # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.max_epochs=8',
+             'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.max_epochs=8',
+             'learning/batching=single_gpu_expdeca_detail',
+             # 'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true', 'learning.batch_size_test=1']
+        ],
+
     ]
 
 
     fixed_overrides_coarse = [
+        # 'model/settings=coarse_train',
+        'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
+        # 'model/settings=coarse_train_expdeca_emonet',
         # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
                               ]
     fixed_overrides_detail = [
-        # 'model/settings=detail_train_expdeca',
-        'model/settings=detail_train_expdeca_emonet',
+        # 'model/settings=detail_train',
+        'model/settings=detail_train_emonet',
+        # 'model/settings=detail_train_expdeca_emonet',
         # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
                               ]
