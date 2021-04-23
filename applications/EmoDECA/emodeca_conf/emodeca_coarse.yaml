@@ -8,8 +8,8 @@ defaults:
   - learning/optimizer: adam
   - learning/batching: single_gpu_coarse
   - learning/callbacks: early_stopping
-#  - learning/logging: wandb
-  - learning/logging: none
+  - learning/logging: wandb
+#  - learning/logging: none
   - learning/training: default
   - inout: desktop
 

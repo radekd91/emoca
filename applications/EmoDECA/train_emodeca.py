@@ -18,6 +18,12 @@ def create_experiment_name(cfg, version=1):
     experiment_name = "EmoDECA"
     if cfg.data.data_class:
         experiment_name += '_' + cfg.data.data_class[:5]
+
+    if cfg.model.deca_cfg.model.resume_training and cfg.model.deca_cfg.inout.name == 'todo':
+        experiment_name += "_Orig"
+    else:
+        experiment_name += "_" + cfg.model.deca_cfg.inout.name
+
     experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
     if cfg.model.use_expression:
         experiment_name += "_exp"
@@ -33,6 +39,7 @@ def create_experiment_name(cfg, version=1):
 
     if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
         experiment_name += "_early"
+
 
     return experiment_name
 
@@ -155,10 +162,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             if cfg.learning.checkpoint_after_training == 'best':
                 print(f"Loading the best checkpoint after training '{checkpoint_callback.best_model_path}'.")
                 deca = EmoDECA.load_from_checkpoint(checkpoint_callback.best_model_path,
-                                                       model_params=cfg.model,
-                                                       learning_params=cfg.learning,
-                                                       inout_params=cfg.inout,
-                                                       stage_name=prefix
+                                                       config=cfg,
                                                        )
             elif cfg.learning.checkpoint_after_training == 'latest':
                 print(f"Keeping the lastest weights after training.")
@@ -194,10 +198,11 @@ def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = N
     return checkpoint, checkpoint_kwargs
 
 
-def train_expdeca(cfg, start_i=0, resume_from_previous = True,
-               force_new_location=False):
+def train_emodeca(cfg, start_i=0, resume_from_previous = True,
+                  force_new_location=False):
     configs = [cfg, cfg]
     stages = ["train", "test"]
+    # stages = ["test",]
     stages_prefixes = ["", ""]
 
     if start_i > 0 or force_new_location:
@@ -208,7 +213,7 @@ def train_expdeca(cfg, start_i=0, resume_from_previous = True,
         else:
             resume_i = start_i
             print(f"Resuming checkpoint from stage {resume_i} (and will start from the same stage {start_i})")
-            checkpoint_mode = 'latest' # resuminng in the same stage, we want to pick up where we left of
+            checkpoint_mode = 'latest' # resuming in the same stage, we want to pick up where we left of
         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i], checkpoint_mode)
     else:
         checkpoint, checkpoint_kwargs = None, None
@@ -266,15 +271,21 @@ def train_expdeca(cfg, start_i=0, resume_from_previous = True,
         checkpoint = None
 
 
-def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides):
+def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides, deca_conf_path=None):
     from hydra.experimental import compose, initialize
     from hydra.core.global_hydra import GlobalHydra
     initialize(config_path="emodeca_conf", job_name="train_deca")
     cfg = compose(config_name=emo_deca_default, overrides=emodeca_overrides)
 
-    GlobalHydra.instance().clear()
-    initialize(config_path="../DECA/deca_conf", job_name="train_deca")
-    deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
+    if deca_conf_path is None:
+        GlobalHydra.instance().clear()
+        initialize(config_path="../DECA/deca_conf", job_name="train_deca")
+        deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
+    else:
+        if deca_default is not None:
+            raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
+        with open(deca_conf_path, "r") as f:
+            deca_cfg = OmegaConf.load(f)
     cfg.model.deca_checkpoint = None
     cfg.model.deca_cfg = deca_cfg
     return cfg
@@ -287,14 +298,16 @@ def main():
 
         deca_default = "deca_train_coarse_cluster"
         deca_overrides = [
-            'model/settings=coarse_train_expdeca',
+            # 'model/settings=coarse_train',
+            'model/settings=detail_train',
             'model/paths=desktop',
             'model/flame_tex=bfm_desktop',
             'model.resume_training=True',  # load the original DECA model
             'model.useSeg=rend', 'model.idw=0',
-            'learning/batching=single_gpu_deca_coarse',
-            # 'learning/batching=single_gpu_deca_detail',
-             'model.shape_constrain_type=None',
+            'learning/batching=single_gpu_coarse',
+            # 'learning/batching=single_gpu_detail',
+            #  'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
             'data/datasets=affectnet_cluster',
              'learning.batch_size_test=1'
         ]
@@ -305,7 +318,7 @@ def main():
         with open(cfg_path, 'r') as f:
             cfg = OmegaConf.load(f)
 
-    train_expdeca(cfg, 0)
+    train_emodeca(cfg, 0)
 
 
 if __name__ == "__main__":

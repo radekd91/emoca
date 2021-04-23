@@ -953,10 +953,11 @@ class DecaModule(LightningModule):
                     if self.emonet_loss is not None:
                         if key == 'inputs':
                             if mode_ + "_valence_input" in values.keys():
-                                caption += self.vae_2_str(values[mode_ + "_valence_input"][i].detach().cpu().item(),
-                                                                 values[mode_ + "_arousal_input"][i].detach().cpu().item(),
-                                                                 np.argmax(values[mode_ + "_expression_input"][i].detach().cpu().numpy()),
-                                                                 prefix="emonet") + "\n"
+                                caption += self.vae_2_str(
+                                    values[mode_ + "_valence_input"][i].detach().cpu().item(),
+                                    values[mode_ + "_arousal_input"][i].detach().cpu().item(),
+                                    np.argmax(values[mode_ + "_expression_input"][i].detach().cpu().numpy()),
+                                    prefix="emonet") + "\n"
                             if 'va' in values.keys():
                                 caption += self.vae_2_str(
                                     values[mode_ + "_valence_gt"][i].detach().cpu().item(),

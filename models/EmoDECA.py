@@ -6,6 +6,7 @@ import numpy as np
 from utils.other import class_from_str
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning.loggers import WandbLogger
 
 
 class EmoDECA(pl.LightningModule):
@@ -139,7 +140,10 @@ class EmoDECA(pl.LightningModule):
         else:
             arousal = None
 
-        return valence, arousal, expr_classification
+        values["valence"] = valence
+        values["arousal"] = arousal
+        values["expr_classification"] = expr_classification
+        return values
 
 
     def compute_loss(self,
@@ -186,7 +190,11 @@ class EmoDECA(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        valence_pred, arousal_pred, expr_classification_pred = self.forward(batch)
+        values = self.forward(batch)
+        valence_pred =  values["valence"]
+        arousal_pred = values["arousal"]
+        expr_classification_pred = values["expr_classification"]
+
         valence_gt = batch["va"][:, 0:1]
         arousal_gt = batch["va"][:, 1:2]
         expr_classification_gt = batch["affectnetexp"]
@@ -202,9 +210,12 @@ class EmoDECA(pl.LightningModule):
         total_loss = losses["total"]
         return total_loss
 
-
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
-        valence_pred, arousal_pred, expr_classification_pred = self.forward(batch)
+        values = self.forward(batch)
+        valence_pred = values["valence"]
+        arousal_pred = values["arousal"]
+        expr_classification_pred = values["expr_classification"]
+        
         valence_gt = batch["va"][:, 0:1]
         arousal_gt = batch["va"][:, 1:2]
         expr_classification_gt = batch["affectnetexp"]
@@ -221,16 +232,91 @@ class EmoDECA(pl.LightningModule):
         return total_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=None):
-        pass
+        values = self.forward(batch)
+        valence_pred =  values["valence"]
+        arousal_pred = values["arousal"]
+        expr_classification_pred = values["expr_classification"]
+        if "expression_weight" in batch.keys():
+            class_weight = batch["expression_weight"][0]
+        else:
+            class_weight = None
+
+        if "va" in batch.keys():
+            valence_gt = batch["va"][:, 0:1]
+            arousal_gt = batch["va"][:, 1:2]
+            expr_classification_gt = batch["affectnetexp"]
+            losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
+                                                valence_gt, arousal_gt, expr_classification_gt, class_weight)
+
+
+        if self.config.learning.test_vis_frequency > 0:
+            if batch_idx % self.config.learning.test_vis_frequency == 0:
+                values = self.deca.decode(values)
+
+                self.deca.logger = self.logger
+                mode_ = str(self.deca.mode.name).lower()
+
+                if "uv_detail_normals" in values.keys():
+                    uv_detail_normals = values["uv_detail_normals"]
+                else:
+                    uv_detail_normals = None
+
+                values[f"{mode_}_valence_gt"] = valence_gt
+                values[f"{mode_}_arousal_gt"] = arousal_gt
+                values[f"{mode_}_expression_gt"] = expr_classification_gt
+                values["affectnetexp"] = expr_classification_gt
+
+                visualizations, grid_image = self.deca._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, self.global_step, "test", "")
+                visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
+                                                                  indices=0, dataloader_idx=dataloader_idx)
+                if f"{mode_}_test_landmarks_gt" in visdict.keys():
+                    del visdict[f"{mode_}_test_landmarks_gt"]
+                if f"{mode_}_test_landmarks_predicted" in visdict.keys():
+                    del visdict[f"{mode_}_test_landmarks_predicted"]
+                if f"{mode_}_test_mask" in visdict.keys():
+                    del visdict[f"{mode_}_test_mask"]
+                if f"{mode_}_test_albedo" in visdict.keys():
+                    del visdict[f"{mode_}_test_albedo"]
+                if f"{mode_}_test_mask" in visdict.keys():
+                    del visdict[f"{mode_}_test_mask"]
+                if f"{mode_}_test_uv_detail_normals" in visdict.keys():
+                    del visdict[f"{mode_}_test_uv_detail_normals"]
+                if f"{mode_}_test_uv_texture_gt" in visdict.keys():
+                    del visdict[f"{mode_}_test_uv_texture_gt"]
+
+
+                if isinstance(self.logger, WandbLogger):
+                    caption = self.deca.vae_2_str(
+                            valence=valence_pred.detach().cpu().numpy(),
+                            arousal=arousal_pred.detach().cpu().numpy(),
+                            affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
+                            expr7=None, prefix="pred")
+                    if f"{mode_}_test_geometry_coarse" in visdict.keys():
+                        visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
+                    if f"{mode_}_test_geometry_detail" in visdict.keys():
+                        visdict[f"{mode_}_test_geometry_detail"]._caption += caption
+
+                if isinstance(self.logger, WandbLogger):
+                    self.logger.log_metrics(visdict)
+
+            self._log_losses_and_metrics(losses, metrics, "test")
+            self.logger.log_metrics({f"test_step" : batch_idx})
+
 
     def _log_losses_and_metrics(self, losses, metrics, stage):
         if stage in ["train", "val"]:
             on_epoch = True
             on_step = False
+            self.log_dict({f"{stage}_loss_" + key: value for key, value in losses.items()}, on_epoch=on_epoch,
+                          on_step=on_step)
+            self.log_dict({f"{stage}_metric_" + key: value for key, value in metrics.items()}, on_epoch=on_epoch,
+                          on_step=on_step)
         else:
-            on_epoch = True
+            on_epoch = False
             on_step = True
 
-        self.log_dict({f"{stage}_loss_" + key: value for key,value in losses.items()}, on_epoch=on_epoch, on_step=on_step)
-        self.log_dict({f"{stage}_metric_" + key: value for key,value in metrics.items()}, on_epoch=on_epoch, on_step=on_step)
+            self.logger.log_metrics({f"{stage}_loss_" + key: value for key,value in losses.items()})#, on_epoch=on_epoch, on_step=on_step)
+            #
+            self.logger.log_metrics({f"{stage}_metric_" + key: value for key,value in metrics.items()})#, on_epoch=on_epoch, on_step=on_step)
 

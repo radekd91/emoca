@@ -65,8 +65,6 @@ def submit(cfg, bid=10):
 def train_emodeca_on_cluster():
     from hydra.core.global_hydra import GlobalHydra
 
-    conf = "emodeca_coarse_cluster"
-    deca_conf = "deca_train_detail_cluster"
 
     training_modes = [
         # DEFAULT
@@ -75,18 +73,28 @@ def train_emodeca_on_cluster():
             []
         ]
     ]
+
+    conf = "emodeca_coarse_cluster"
     fixed_overrides_cfg = []
+
+    deca_conf_path = None
+    deca_conf = "deca_train_detail_cluster"
     fixed_overrides_deca = [
-        'model/settings=coarse_train_expdeca',
+        # 'model/settings=coarse_train',
+        'model/settings=detail_train',
         'model.resume_training=True',  # load the original DECA model
         'model.useSeg=rend', 'model.idw=0',
         'learning/batching=single_gpu_coarse',
         # 'learning/batching=single_gpu_detail',
-         'model.shape_constrain_type=None',
+        #  'model.shape_constrain_type=None',
+         'model.detail_constrain_type=None',
         'data/datasets=affectnet_cluster',
         'learning.batch_size_test=1'
     ]
 
+    # deca_conf_path = ""
+    # deca_conf = None
+    # fixed_overrides_deca = None
 
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()
@@ -97,9 +105,9 @@ def train_emodeca_on_cluster():
 
         cfg = train_emodeca.configure(
             conf, conf_overrides,
-            deca_conf, deca_overrides
+            deca_default=deca_conf, deca_overrides=deca_overrides,
+            deca_conf_path=deca_conf_path
         )
-
         GlobalHydra.instance().clear()
 
         submit(cfg)
