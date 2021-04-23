@@ -1,5 +1,5 @@
 # @package model
-
+deca_class: DECA
 max_epochs: 20
 max_steps: 1000000
 val_check_interval: 1000

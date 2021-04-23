@@ -22,7 +22,8 @@ def create_experiment_name(cfg, version=1):
     if cfg.model.deca_cfg.model.resume_training and cfg.model.deca_cfg.inout.name == 'todo':
         experiment_name += "_Orig"
     else:
-        experiment_name += "_" + cfg.model.deca_cfg.inout.name
+        # experiment_name += "_" + cfg.model.deca_cfg.inout.name
+        experiment_name += "_" + cfg.model.deca_cfg.model.deca_class
 
     experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
     if cfg.model.use_expression:

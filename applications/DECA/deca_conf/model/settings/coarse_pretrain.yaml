@@ -1,4 +1,5 @@
 # @package model
+deca_class: DECA
 max_epochs: 4
 #max_epochs: 2 TODO: it seems 2 is more than enough, verify this and then change the default
 val_check_interval: 0.2

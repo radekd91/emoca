@@ -1,4 +1,5 @@
 # @package model
+deca_class: DECA
 max_epochs: 4
 val_check_interval: 0.2
 
