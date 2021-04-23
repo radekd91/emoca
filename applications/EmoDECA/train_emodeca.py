@@ -275,7 +275,7 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
         checkpoint = None
 
 
-def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides, deca_conf_path=None):
+def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides, deca_conf_path=None, deca_stage=None):
     from hydra.experimental import compose, initialize
     from hydra.core.global_hydra import GlobalHydra
     initialize(config_path="emodeca_conf", job_name="train_deca")
@@ -288,8 +288,9 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
     else:
         if deca_default is not None:
             raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
-        with open(deca_conf_path, "r") as f:
+        with open(Path(deca_conf_path) / "cfg.yaml", "r") as f:
             deca_cfg = OmegaConf.load(f)
+        deca_cfg = deca_cfg[deca_stage]
     cfg.model.deca_checkpoint = None
     cfg.model.deca_cfg = deca_cfg
     return cfg
