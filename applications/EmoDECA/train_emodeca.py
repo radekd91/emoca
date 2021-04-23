@@ -35,6 +35,9 @@ def create_experiment_name(cfg, version=1):
     if cfg.model.use_detail_code:
         experiment_name += "_detail"
 
+    if cfg.model.expression_balancing:
+        experiment_name += "_balanced"
+
     if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
         experiment_name += "_Aug"
 

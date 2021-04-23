@@ -69,9 +69,38 @@ def train_emodeca_on_cluster():
     training_modes = [
         # DEFAULT
         [
+            ['model.num_mlp_layers=1'],
+            []
+        ],
+        [
+            ['model.num_mlp_layers=2'],
+            []
+        ],
+        [
+            ['model.num_mlp_layers=3'],
+            []
+        ],
+        [
             [],
             []
-        ]
+        ],
+
+        [
+            ['model.use_detail_code=true'],
+            []
+        ],
+
+        [
+            ['model.expression_balancing=true'],
+            []
+        ],
+
+        [
+            ['model.use_detail_code=true',
+            'model.expression_balancing=true'],
+            []
+        ],
+
     ]
 
     conf = "emodeca_coarse_cluster"
@@ -99,9 +128,10 @@ def train_emodeca_on_cluster():
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()
         deca_overrides = fixed_overrides_deca.copy()
-        # if len(fmode[0]) != "":
+
         conf_overrides += mode[0]
-        deca_overrides += mode[1]
+        if deca_conf_path is None:
+            deca_overrides += mode[1]
 
         cfg = train_emodeca.configure(
             conf, conf_overrides,
