@@ -2,22 +2,26 @@ import os, sys
 from enum import Enum
 from pathlib import Path
 import numpy as np
+import scipy as sp
 import torch
 import pytorch_lightning as pl
 import pandas as pd
 from skimage.io import imread, imsave
-from datasets.IO import load_segmentation, process_segmentation
+from datasets.IO import load_segmentation, process_segmentation, load_emotion, save_emotion
 from utils.image import numpy_image_to_torch
 from transforms.keypoints import KeypointNormalization
 import imgaug
 from datasets.FaceDataModuleBase import FaceDataModuleBase
 from datasets.ImageDatasetHelpers import bbox2point, bbpoint_warp
 from datasets.EmotionalImageDataset import EmotionalImageDatasetBase
+from datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from utils.FaceDetector import save_landmark, load_landmark
 from tqdm import auto
 import traceback
 from torch.utils.data.dataloader import DataLoader
 from transforms.imgaug import create_image_augmenter
+from torchvision.transforms import Resize, Compose
+
 
 
 class AffectNetExpressions(Enum):
@@ -61,6 +65,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                  val_batch_size=64,
                  test_batch_size=64,
                  num_workers=0,
+                 ring_type=None,
+                 ring_size=None
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -89,6 +95,9 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.num_workers = num_workers
         self.augmentation = augmentation
 
+        self.ring_type = ring_type
+        self.ring_size = ring_size
+
     @property
     def subset_size(self):
         return 1000
@@ -108,6 +117,14 @@ class AffectNetDataModule(FaceDataModuleBase):
         for sid in range(self.num_subsets):
             self._detect_landmarks_and_segment_subset(self.subset_size * sid, min((sid + 1) * self.subset_size, len(self.df)))
 
+    def _extract_emotion_features(self):
+        subset_size = 1000
+        num_subsets = len(self.df) // subset_size
+        if len(self.df) % subset_size != 0:
+            num_subsets += 1
+        for sid in range(self.num_subsets):
+            self._extract_emotion_features_from_subset(self.subset_size * sid, min((sid + 1) * self.subset_size, len(self.df)))
+
     def _path_to_detections(self):
         return Path(self.output_dir) / "detections"
 
@@ -116,6 +133,62 @@ class AffectNetDataModule(FaceDataModuleBase):
 
     def _path_to_landmarks(self):
         return Path(self.output_dir) / "landmarks"
+
+    def _path_to_emotions(self):
+        return Path(self.output_dir) / "emotions"
+
+    def _get_emotion_net(self, device):
+        from layers.losses.EmoNetLoss import get_emonet
+
+        net = get_emonet()
+        net = net.to(device)
+
+        return net, "emo_net"
+
+    def _extract_emotion_features_from_subset(self, start_i, end_i):
+        self._path_to_emotions().mkdir(parents=True, exist_ok=True)
+
+        print(f"Processing subset {start_i // self.subset_size}")
+        image_file_list = []
+        for i in auto.tqdm(range(start_i, end_i)):
+            im_file = self.df.loc[i]["subDirectory_filePath"]
+            in_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+            image_file_list += [in_detection_fname]
+
+        transforms = Compose([
+            Resize((256, 256)),
+        ])
+        batch_size = 32
+        dataset = UnsupervisedImageDataset(image_file_list, image_transforms=transforms, im_read='pil')
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print(device)
+        net, emotion_type = self._get_emotion_net(device)
+
+        for i, batch in enumerate(auto.tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            # images = fixed_image_standardization(batch['image'].to(device))
+            images = batch['image'].cuda()
+            # start = time.time()
+            with torch.no_grad():
+                out = net(images, intermediate_features=True)
+            # end = time.time()
+            # print(f" Inference batch {i} took : {end - start}")
+            emotion_features = {key : val.detach().cpu().numpy() for key, val in out.items()}
+
+            # start = time.time()
+            for j in range(images.size()[0]):
+                image_path = batch['path'][j]
+                out_emotion_folder = self._path_to_emotions() / Path(image_path).parent.name
+                out_emotion_folder.mkdir(exist_ok=True, parents=True)
+                emotion_path = out_emotion_folder / (Path(image_path).stem + ".pkl")
+                emotion_feature_j = {key: val[j] for key, val in emotion_features.items()}
+                del emotion_feature_j['emo_feat'] # too large to be stored per frame = (768, 64, 64)
+                del emotion_feature_j['heatmap'] # not too large but probably not usefull = (68, 64, 64)
+                # we are keeping emo_feat_2 (output of last conv layer (before FC) and then the outputs of the FCs - expression, valence and arousal)
+                save_emotion(emotion_path, emotion_feature_j, emotion_type)
+
 
     def _detect_landmarks_and_segment_subset(self, start_i, end_i):
         self._path_to_detections().mkdir(parents=True, exist_ok=True)
@@ -231,13 +304,23 @@ class AffectNetDataModule(FaceDataModuleBase):
 
         im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
         self.training_set = AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
-                                      im_transforms_train, ignore_invalid=self.ignore_invalid)
+                                      im_transforms_train,
+                                      ignore_invalid=self.ignore_invalid,
+                                      ring_type=self.ring_type,
+                                      ring_size=self.ring_size
+                                      )
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
-                                        None, ignore_invalid=self.ignore_invalid)
+                                        None, ignore_invalid=self.ignore_invalid,
+                                        ring_type=None,
+                                        ring_size=None
+                                        )
 
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None, ignore_invalid= self.ignore_invalid)
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=None,
+                                  ring_size=None
+                                  )
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
         #     self.dataframe = pd.load_csv(self.path / "Manually_Annotated" / "Manually_Annotated.csv")
@@ -296,6 +379,8 @@ class AffectNet(EmotionalImageDatasetBase):
                  transforms : imgaug.augmenters.Augmenter = None,
                  use_gt_bb=True,
                  ignore_invalid=False,
+                 ring_type=None,
+                 ring_size=None
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
@@ -324,12 +409,54 @@ class AffectNet(EmotionalImageDatasetBase):
         self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
         self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
 
+        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feat_2", "emonet_va", "emonet_expression"]:
+            raise ValueError(f"Invalid ring type '{ring_type}'")
+
+        self.ring_type = ring_type
+        self.ring_size = ring_size
+
+        if ring_type == "gt_expression":
+            grouped = self.df.groupby(['expression'])
+            self.expr2sample = grouped.groups
+        elif ring_type == "emonet_expression":
+            raise NotImplementedError()
+        else:
+            self.expr2sample = None
+
+        if ring_type == "gt_va":
+            va = self.df[["valence", "arousal"]].to_numpy()
+            sampling_rate = 0.1
+            # bin_1d = np.arange(-1.,1.+sampling_rate, sampling_rate)
+            bin_1d = np.arange(-1.,1., sampling_rate)
+            
+            # def aggregation_fn(array):
+            #     if len(array) == 0 or array.size == 0:
+            #         return float('NaN')
+            #     return [array]
+            # stat, x_ed, y_e, binnumber = sp.stats.binned_statistic_2d(
+            #     va[:, 0], va[:, 1], None, aggregation_fn, [bin_1d, bin_1d], expand_binnumbers=True)
+            stat, x_ed, y_e, binnumber = sp.stats.binned_statistic_2d(
+                va[:, 0], va[:, 1], None, 'count', [bin_1d, bin_1d], expand_binnumbers=False)
+            self.bins_to_samples = {}
+            bin_indices = np.unique(binnumber)
+            for bi in bin_indices:
+                self.bins_to_samples[bi] = np.where(binnumber == bi)[0]
+
+        elif ring_type == "emonet_va":
+            raise NotImplementedError()
+        else:
+            self.bins_to_samples = {}
+
+        if ring_type == "emonet_feat_2":
+            pass
+        else:
+            self.sample_nn_indices = None
 
 
     def __len__(self):
         return len(self.df)
 
-    def __getitem__(self, index):
+    def _get_sample(self, index):
         left = self.df.loc[index]["face_x"]
         top = self.df.loc[index]["face_y"]
         right = left + self.df.loc[index]["face_width"]
@@ -419,6 +546,10 @@ class AffectNet(EmotionalImageDatasetBase):
         # print(self.df.loc[index])
         return sample
 
+    def __getitem__(self, index):
+        if self.ring_type is None or self.ring_size == 1:
+            return self._get_sample(index)
+
 
 def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin=2):
     va_array = []
@@ -470,24 +601,30 @@ if __name__ == "__main__":
              processed_subfolder="processed_2021_Apr_05_15-22-18",
              mode="manual",
              scale=1.25,
-             ignore_invalid=True
+             ignore_invalid=True,
+             # ring_type="gt_expression",
+             ring_type="gt_va",
+             ring_size=4
             )
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
+    dm._extract_emotion_features()
     # dl = dm.val_dataloader()
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
 
-    out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
-    sample_representative_set(dm.validation_set, out_path)
-
-    validation_set = AffectNet(dm.image_path, out_path, dm.image_size, dm.scale, None)
-    for i in range(len(validation_set)):
-        sample = validation_set[i]
-        validation_set.visualize_sample(sample)
-
-    # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
+    # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
+    # sample_representative_set(dm.validation_set, out_path)
+    #
+    # validation_set = AffectNet(
+    #     dm.image_path, out_path, dm.image_size, dm.scale, None,
+    # )
+    # for i in range(len(validation_set)):
+    #     sample = validation_set[i]
+    #     validation_set.visualize_sample(sample)
+    #
+    # # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
 
     "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
 
