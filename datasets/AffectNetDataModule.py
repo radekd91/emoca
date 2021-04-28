@@ -153,7 +153,8 @@ class AffectNetDataModule(FaceDataModuleBase):
         for i in auto.tqdm(range(start_i, end_i)):
             im_file = self.df.loc[i]["subDirectory_filePath"]
             in_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
-            image_file_list += [in_detection_fname]
+            if in_detection_fname.is_file():
+                image_file_list += [in_detection_fname]
 
         transforms = Compose([
             Resize((256, 256)),
