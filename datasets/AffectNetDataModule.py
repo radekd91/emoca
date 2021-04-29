@@ -6,6 +6,7 @@ import scipy as sp
 import torch
 import pytorch_lightning as pl
 import pandas as pd
+import pickle as pkl
 from skimage.io import imread, imsave
 from datasets.IO import load_segmentation, process_segmentation, load_emotion, save_emotion
 from utils.image import numpy_image_to_torch
@@ -21,7 +22,7 @@ import traceback
 from torch.utils.data.dataloader import DataLoader
 from transforms.imgaug import create_image_augmenter
 from torchvision.transforms import Resize, Compose
-
+from sklearn.neighbors import NearestNeighbors
 
 
 class AffectNetExpressions(Enum):
@@ -95,6 +96,8 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.num_workers = num_workers
         self.augmentation = augmentation
 
+        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
+            raise ValueError(f"Invalid ring type '{ring_type}'")
         self.ring_type = ring_type
         self.ring_size = ring_size
 
@@ -290,9 +293,9 @@ class AffectNetDataModule(FaceDataModuleBase):
             if not all_processed:
                 self._detect_faces()
 
-    def setup(self, stage=None):
         self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "training.csv"
         self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation.csv"
+
 
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
@@ -303,13 +306,33 @@ class AffectNetDataModule(FaceDataModuleBase):
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
 
-        im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
-        self.training_set = AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
-                                      im_transforms_train,
-                                      ignore_invalid=self.ignore_invalid,
-                                      ring_type=self.ring_type,
-                                      ring_size=self.ring_size
-                                      )
+
+        if self.ring_type == "emonet_feature":
+            self._prepare_emotion_retrieval()
+
+    def _new_training_set(self, for_training=True):
+        if for_training:
+            im_transforms_train = create_image_augmenter(self.image_size, self.augmentation)
+            return AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
+                      im_transforms_train,
+                      ignore_invalid=self.ignore_invalid,
+                      ring_type=self.ring_type,
+                      ring_size=self.ring_size,
+                      load_emotion_feature=False
+                      )
+
+        return AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
+                         None,
+                         ignore_invalid=self.ignore_invalid,
+                         ring_type=None,
+                         ring_size=None,
+                         load_emotion_feature=True
+                         )
+
+    def setup(self, stage=None):
+
+
+        self.training_set = self._new_training_set()
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
@@ -341,6 +364,71 @@ class AffectNetDataModule(FaceDataModuleBase):
     def test_dataloader(self):
         return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
                           batch_size=self.test_batch_size)
+
+    def _get_retrieval_array(self, name, dataset_size, feature_shape, feature_dtype, modifier='w+'):
+        outfile_name = Path(self.output_dir) / "cache" / (name + ".memmap")
+        if outfile_name.is_file() and modifier != 'r':
+            raise RuntimeError(f"The retrieval array already exists! '{outfile_name}'")
+
+        shape = tuple([dataset_size] + list(feature_shape))
+        outfile_name.parent.mkdir(exist_ok=True, parents=True)
+        array = np.memmap(outfile_name,
+                         dtype=feature_dtype,
+                         mode=modifier,
+                         shape=shape
+                         )
+        return array
+
+    def _prepare_emotion_retrieval(self):
+        dataset = self._new_training_set(for_training=False)
+        dl = DataLoader(dataset, shuffle=False, num_workers=self.num_workers, batch_size=self.train_batch_size)
+
+        array = None
+        if self.ring_type != "emonet_feature":
+            raise ValueError(f"Invalid ring type for emotion retrieval {self.ring_type}")
+
+        prefix = self.mode + "_train_"
+        feature_label = 'emo_net_emo_feat_2'
+        nn_indices_file = Path(self.output_dir) / "cache" /  (prefix + feature_label + "_nn_indices.memmap")
+        nn_distances_file = Path(self.output_dir) / "cache" / ( prefix + feature_label + "_nn_distances.memmap")
+
+        if nn_indices_file.is_file() and nn_distances_file.is_file():
+            print("Precomuted nn arrays found.")
+            return
+
+        for bi, batch in enumerate(auto.tqdm(dl)):
+            feat = batch[feature_label].numpy()
+            feat_size = feat.shape[1:]
+            if array is None:
+                array = self._get_retrieval_array(prefix + feature_label, len(dataset), feat_size, feat.dtype)
+
+            # for i in range(feat.shape[0]):
+            #     idx = bi*self.train_batch_size + i
+            array[bi*self.train_batch_size:bi*self.train_batch_size + feat.shape[0], ...] = feat
+        del array
+
+        array = self._get_retrieval_array(prefix + feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
+
+        nbrs = NearestNeighbors(n_neighbors=30, algorithm='auto', n_jobs=-1).fit(array)
+        distances, indices = nbrs.kneighbors(array, 100)
+
+        indices_array = np.memmap(nn_indices_file,
+                         dtype=indices.dtype,
+                         mode="w+",
+                         shape=indices.shape
+                         )
+        indices_array[...] = indices
+        del indices_array
+
+        distances_array = np.memmap(nn_distances_file,
+                         dtype=distances.dtype,
+                         mode="w+",
+                         shape=distances.shape
+                         )
+        distances_array[...] = distances
+        del distances_array
+
+
 
 
 class AffectNetTestModule(AffectNetDataModule):
@@ -381,7 +469,8 @@ class AffectNet(EmotionalImageDatasetBase):
                  use_gt_bb=True,
                  ignore_invalid=False,
                  ring_type=None,
-                 ring_size=None
+                 ring_size=None,
+                 load_emotion_feature=False
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
@@ -393,6 +482,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.landmark_normalizer = KeypointNormalization()
         self.use_processed = True
         self.ignore_invalid = ignore_invalid
+        self.load_emotion_feature = load_emotion_feature
 
         if ignore_invalid:
             # filter invalid classes
@@ -528,6 +618,13 @@ class AffectNet(EmotionalImageDatasetBase):
             seg_image = process_segmentation(
                 seg_image, seg_type).astype(np.uint8)
 
+            if self.load_emotion_feature:
+                emotion_path = Path(self.image_path).parent / "emotions" / im_rel_path
+                emotion_path = emotion_path.parent / (emotion_path.stem + ".pkl")
+                emotion_features, emotion_type = load_emotion(emotion_path)
+            else:
+                emotion_features = None
+
         img, seg_image, landmark = self._augment(img, seg_image, landmark)
 
         sample = {
@@ -544,6 +641,12 @@ class AffectNet(EmotionalImageDatasetBase):
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
             sample["mask"] = numpy_image_to_torch(seg_image)
+        if emotion_features is not None:
+            for key, value in emotion_features.items():
+                if isinstance(value, np.ndarray):
+                    sample[emotion_type + "_" + key] = torch.from_numpy(value)
+                else:
+                    sample[emotion_type + "_" + key] = torch.tensor([value])
         # print(self.df.loc[index])
         return sample
 
@@ -596,21 +699,25 @@ if __name__ == "__main__":
     #     d.visualize_sample(sample)
 
     dm = AffectNetDataModule(
-             "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-             "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+             # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+             "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+             # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+             # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
+             "/is/cluster/work/rdanecek/data/affectnet/",
              # processed_subfolder="processed_2021_Apr_02_03-13-33",
              processed_subfolder="processed_2021_Apr_05_15-22-18",
              mode="manual",
              scale=1.25,
              ignore_invalid=True,
              # ring_type="gt_expression",
-             ring_type="gt_va",
+             # ring_type="gt_va",
+             ring_type="emonet_feature",
              ring_size=4
             )
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
-    dm._extract_emotion_features()
+    # dm._extract_emotion_features()
     # dl = dm.val_dataloader()
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
