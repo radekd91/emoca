@@ -315,6 +315,8 @@ class AffectNetDataModule(FaceDataModuleBase):
 
             if self.ring_type == "emonet_feature":
                 prefix = self.mode + "_train_"
+                if self.ignore_invalid:
+                    prefix += "valid_only_"
                 feature_label = 'emo_net_emo_feat_2'
                 self._load_retrieval_arrays(prefix, feature_label)
                 nn_indices = self.nn_indices_array
