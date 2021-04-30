@@ -397,7 +397,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         return nn_indices_file
 
     def _path_to_emotion_nn_distances_file(self,  prefix, feature_label):
-        nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_indices.memmap")
+        nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
         return nn_indices_file
 
     def _prepare_emotion_retrieval(self):
