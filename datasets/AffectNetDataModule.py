@@ -316,6 +316,7 @@ class AffectNetDataModule(FaceDataModuleBase):
             if self.ring_type == "emonet_feature":
                 prefix = self.mode + "_train_"
                 feature_label = 'emo_net_emo_feat_2'
+                self._load_retrieval_arrays(prefix, feature_label)
                 nn_indices = self.nn_indices_array
                 nn_distances = self.nn_distances_array
             else:
@@ -400,6 +401,43 @@ class AffectNetDataModule(FaceDataModuleBase):
         outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
         return outfile_name
 
+    def _load_retrieval_arrays(self, prefix, feature_label):
+        # prefix = self.mode + "_train_"
+        # if self.ignore_invalid:
+        #     prefix += "valid_only_"
+        # feature_label = 'emo_net_emo_feat_2'
+        nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
+        nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
+        try:
+            with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
+                indices_array_dtype = pkl.load(f)
+                indices_array_shape = pkl.load(f)
+        except:
+            indices_array_dtype = np.int64,
+            indices_array_shape = (len(dataset), NUM_NEIGHBORS)
+
+        try:
+            with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
+                distances_array_dtype = pkl.load(f)
+                distances_array_shape = pkl.load(f)
+        except:
+            distances_array_dtype = np.float32,
+            distances_array_shape = (len(dataset), NUM_NEIGHBORS)
+
+        self.nn_indices_array = np.memmap(nn_indices_file,
+                                          # dtype=np.int32,
+                                          dtype=indices_array_dtype,
+                                          mode="r",
+                                          shape=indices_array_shape
+                                          )
+
+        self.nn_distances_array = np.memmap(nn_distances_file,
+                                            dtype=distances_array_dtype,
+                                            # dtype=np.float64,
+                                            mode="r",
+                                            shape=distances_array_shape
+                                            )
+
     def _prepare_emotion_retrieval(self):
         prefix = self.mode + "_train_"
         if self.ignore_invalid:
@@ -407,42 +445,11 @@ class AffectNetDataModule(FaceDataModuleBase):
         feature_label = 'emo_net_emo_feat_2'
         nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
         nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
-        dataset = self._new_training_set(for_training=False)
         NUM_NEIGHBORS = 100
         if nn_indices_file.is_file() and nn_distances_file.is_file():
             print("Precomputed nn arrays found.")
-
-            try:
-                with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
-                    indices_array_dtype = pkl.load(f)
-                    indices_array_shape = pkl.load(f)
-            except:
-                indices_array_dtype = np.int64,
-                indices_array_shape = (len(dataset), NUM_NEIGHBORS)
-            try:
-                with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
-                    distances_array_dtype = pkl.load(f)
-                    distances_array_shape = pkl.load(f)
-            except:
-                distances_array_dtype = np.float32,
-                distances_array_shape = (len(dataset), NUM_NEIGHBORS)
-
-            self.nn_indices_array = np.memmap(nn_indices_file,
-                                              # dtype=np.int32,
-                                              dtype=indices_array_dtype,
-                                              mode="r",
-                                              shape=indices_array_shape
-                                              )
-
-            self.nn_distances_array = np.memmap(nn_distances_file,
-                                                dtype=distances_array_dtype,
-                                                # dtype=np.float64,
-                                                mode="r",
-                                                shape=distances_array_shape
-                                                )
             return
-
-
+        dataset = self._new_training_set(for_training=False)
         dl = DataLoader(dataset, shuffle=False, num_workers=self.num_workers, batch_size=self.train_batch_size)
 
         array = None
