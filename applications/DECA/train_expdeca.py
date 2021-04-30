@@ -127,11 +127,15 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
             experiment_name += '_NoMRF'
 
         if not cfg_coarse.model.background_from_input and not cfg_detail.model.background_from_input:
-            experiment_name += '_BackBlackB'
+            experiment_name += '_BlackB'
         elif not cfg_coarse.model.background_from_input:
-            experiment_name += '_BackBlackC'
+            experiment_name += '_BlackC'
         elif not cfg_detail.model.background_from_input:
-            experiment_name += '_BackBlackD'
+            experiment_name += '_BlackD'
+
+        if hasattr(cfg_coarse.model, 'expression_constrain_type'):
+            experiment_name += "_Ex" + cfg_coarse.data.ring_type
+
 
         if version == 0:
             if cfg_coarse.learning.learning_rate != 0.0001:
