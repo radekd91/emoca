@@ -18,7 +18,8 @@ def prepare_data(cfg):
         data_class = 'DecaDataModule'
     if data_class == 'DecaDataModule':
 
-        if 'expression_constrain_type' in cfg.model.keys() and cfg.model.expression_constrain_type is not None:
+        if 'expression_constrain_type' in cfg.model.keys() and \
+                (cfg.model.expression_constrain_type is not None or str(cfg.model.expression_constrain_type).lower() != 'none'):
             raise ValueError("DecaDataModule does not support expression exchange!")
 
         dm = DecaDataModule(cfg)
@@ -32,7 +33,7 @@ def prepare_data(cfg):
         ring_type = cfg.data.ring_type if 'ring_type' in cfg.data.keys() and str(cfg.data.ring_type).lower() != "none" else None
         ring_size = cfg.data.ring_size if 'ring_size' in cfg.data.keys() and str(cfg.data.ring_size).lower() != "none" else None
 
-        if ring_size is not None and 'shape_constrain_type' in cfg.model.keys() and cfg.model.shape_constrain_type is not None:
+        if ring_size is not None and 'shape_constrain_type' in cfg.model.keys() and (cfg.model.shape_constrain_type is not None or str(cfg.model.shape_constrain_type).lower() != 'none'):
             raise ValueError("AffectNet does not support shape exchange!")
 
         dm = AffectNetDataModule(

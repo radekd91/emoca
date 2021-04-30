@@ -72,6 +72,10 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
+    ring_type = "gt_expression"
+    # ring_type = "gt_va"
+    # ring_type = "emonet_feature"
+
     finetune_modes = [
         # # DEFAULT without jaw
         # [
@@ -149,6 +153,58 @@ def train_on_selected_sequences():
         #         #'model.shape_constrain_type=None',
         #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
         # ],
+
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.shape_constrain_type=None',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_coarse_ring',
+             'learning.batch_size_test=1'
+             ],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_detail_ring',
+             # 'model.shape_constrain_type=None',
+             'learning.batch_size_test=1']
+        ],
+        #
+        # #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_coarse_ring',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_detail_ring',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
         # # DETAIL WITH COARSE, no landmarks for detail stage
@@ -236,48 +292,48 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend', 'model.expression_backbone=emonet_trainable']
         # ]
 
-        # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        [
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.max_epochs=8',
-             'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.max_epochs=8',
-             'learning/batching=single_gpu_expdeca_detail',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        ],
-
-        # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        [
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.max_epochs=8',
-             'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.max_epochs=8',
-             'learning/batching=single_gpu_expdeca_detail',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'model.train_coarse=true', 'learning.batch_size_test=1']
-        ],
+        # # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.max_epochs=8',
+        #      'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.max_epochs=8',
+        #      'learning/batching=single_gpu_expdeca_detail',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
+        # ],
+        #
+        # # REGULAR DECA, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.max_epochs=8',
+        #      'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.max_epochs=8',
+        #      'learning/batching=single_gpu_expdeca_detail',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true', 'learning.batch_size_test=1']
+        # ],
 
     ]
 
 
     fixed_overrides_coarse = [
-        'model/settings=coarse_train',
+        # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        # 'model/settings=coarse_train_expdeca_emonet',
+        'model/settings=coarse_train_expdeca_emonet',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
                               ]
     fixed_overrides_detail = [
-        'model/settings=detail_train',
+        # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        # 'model/settings=detail_train_expdeca_emonet',
+        'model/settings=detail_train_expdeca_emonet',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
                               ]

@@ -36,8 +36,10 @@ light_reg: 12
 use_photometric: True
 #use_photometric: False
 photow: 2.
-shape_constrain_type: 'exchange' # None
+#shape_constrain_type: 'exchange' # None
 #shape_constrain_type: 'same' # None
+shape_constrain_type: none
+expression_constrain_type: none
 
 exp_deca_global_pose: False
 #exp_deca_global_pose: True
