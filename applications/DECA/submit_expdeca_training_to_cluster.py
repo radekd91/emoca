@@ -72,9 +72,9 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
-    ring_type = "gt_expression"
+    # ring_type = "gt_expression"
     # ring_type = "gt_va"
-    # ring_type = "emonet_feature"
+    ring_type = "emonet_feature"
 
     finetune_modes = [
         # # DEFAULT without jaw

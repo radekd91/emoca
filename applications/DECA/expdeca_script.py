@@ -68,12 +68,12 @@ def main():
     # configure_and_resume(coarse_cfg_default, coarse_overrides, detail_cfg_default, detail_overrides)
 
 
-    # cfg = configure(coarse_cfg_default, coarse_overrides)
-    cfg = configure(detail_cfg_default, detail_overrides)
+    cfg = configure(coarse_cfg_default, coarse_overrides)
+    # cfg = configure(detail_cfg_default, detail_overrides)
 
+    dm, _ = prepare_data(cfg)
     deca = DecaModule(cfg.model, cfg.learning, cfg.inout, "")
     deca.cuda()
-    dm, _ = prepare_data(cfg)
 
     dm.setup()
     dl = dm.train_dataloader()
