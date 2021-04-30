@@ -852,7 +852,7 @@ class IdentityLoss(nn.Module):
 # from Resnet import ResNet
 # import sys; sys.path.append('nets')
 # from ..models.frnet import resnet50, load_state_dict
-from .FRNet import resnet50, load_state_dict
+# from .FRNet import resnet50, load_state_dict
 
 
 # class VGGFace2Loss(nn.Module):
@@ -929,3 +929,10 @@ class VGGFace2Loss(nn.Module):
         # loss = ((gen_out - tar_out)**2).mean()
         loss = self._cos_metric(gen_out, tar_out).mean()
         return loss
+
+#
+# if __name__ == "__main__":
+#     loss = IDMRFLoss()
+#     dummy = torch.zeros(size=(1,3, 256, 256))
+#     loss(dummy, dummy)
+#     print("ha")

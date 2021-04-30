@@ -266,19 +266,19 @@ def train_on_selected_sequences():
 
 
     fixed_overrides_coarse = [
-        # 'model/settings=coarse_train',
-        'model/settings=coarse_train_emonet',
+        'model/settings=coarse_train',
+        # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
         # 'model/settings=coarse_train_expdeca_emonet',
-        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
+        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
                               ]
     fixed_overrides_detail = [
-        # 'model/settings=detail_train',
-        'model/settings=detail_train_emonet',
+        'model/settings=detail_train',
+        # 'model/settings=detail_train_emonet',
         # 'model/settings=detail_train_expdeca_emonet',
-        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
+        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
                               ]
 

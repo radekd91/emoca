@@ -2,7 +2,8 @@ import os, sys
 from pathlib import Path
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from datasets.FaceVideoDataset import FaceVideoDataModule, load_emotion
+from datasets.FaceVideoDataset import FaceVideoDataModule
+from datasets.IO import load_emotion
 from tqdm import auto
 import pickle as pkl
 import matplotlib.pyplot as plt
