@@ -410,21 +410,36 @@ class AffectNetDataModule(FaceDataModuleBase):
         dataset = self._new_training_set(for_training=False)
         NUM_NEIGHBORS = 100
         if nn_indices_file.is_file() and nn_distances_file.is_file():
-            print("Precomuted nn arrays found.")
+            print("Precomputed nn arrays found.")
+
+            try:
+                with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
+                    indices_array_dtype = pkl.load(f)
+                    indices_array_shape = pkl.load(f)
+            except:
+                indices_array_dtype = np.int64,
+                indices_array_shape = (len(dataset), NUM_NEIGHBORS)
+            try:
+                with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
+                    distances_array_dtype = pkl.load(f)
+                    distances_array_shape = pkl.load(f)
+            except:
+                distances_array_dtype = np.float32,
+                distances_array_shape = (len(dataset), NUM_NEIGHBORS)
+
             self.nn_indices_array = np.memmap(nn_indices_file,
                                               # dtype=np.int32,
-                                              dtype=np.int64,
+                                              dtype=indices_array_dtype,
                                               mode="r",
-                                              shape=(len(dataset), NUM_NEIGHBORS)
+                                              shape=indices_array_shape
                                               )
 
             self.nn_distances_array = np.memmap(nn_distances_file,
-                                                dtype=np.float32,
+                                                dtype=distances_array_dtype,
                                                 # dtype=np.float64,
                                                 mode="r",
-                                                shape=(len(dataset), NUM_NEIGHBORS)
+                                                shape=distances_array_shape
                                                 )
-
             return
 
 
@@ -448,6 +463,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                 #     idx = bi*self.train_batch_size + i
                 array[bi*self.train_batch_size:bi*self.train_batch_size + feat.shape[0], ...] = feat
             del array
+        else:
+            print(f"Feature array found in '{outfile_name}'")
 
         array = self._get_retrieval_array(prefix + feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
 
@@ -461,7 +478,6 @@ class AffectNetDataModule(FaceDataModuleBase):
                          )
         indices_array[...] = indices
         del indices_array
-
         distances_array = np.memmap(nn_distances_file,
                          dtype=distances.dtype,
                          mode="w+",
@@ -469,6 +485,15 @@ class AffectNetDataModule(FaceDataModuleBase):
                          )
         distances_array[...] = distances
         del distances_array
+
+        # save sizes a dtypes
+        with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "wb") as f:
+            pkl.dump(indices.dtype, f)
+            pkl.dump(indices.shape, f)
+
+        with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "wb") as f:
+            pkl.dump(distances.dtype, f)
+            pkl.dump(distances.shape, f)
 
         self.nn_indices_array = np.memmap(nn_indices_file,
                          dtype=indices.dtype,
@@ -552,12 +577,12 @@ class AffectNet(EmotionalImageDatasetBase):
             self.df = self.df[self.df.arousal != -2.]
             # self.df = self.df.drop(self.df.arousal == -2.)
             # valid_indices = np.logical_not(pd.isnull(self.df))
-            valid_indices = self.df.index
+            # valid_indices = self.df.index
             self.df = self.df.reset_index(drop=True)
-            if nn_indices_array is not None and nn_indices_array.shape[0] != len(self.df):
-                nn_indices_array = nn_indices_array[valid_indices, ...]
-            if nn_distances_array is not None and nn_distances_array.shape[0] != len(self.df):
-                nn_distances_array = nn_distances_array[valid_indices, ...]
+            # if nn_indices_array is not None and nn_indices_array.shape[0] != len(self.df):
+            #     nn_indices_array = nn_indices_array[valid_indices, ...]
+            # if nn_distances_array is not None and nn_distances_array.shape[0] != len(self.df):
+            #     nn_distances_array = nn_distances_array[valid_indices, ...]
 
         self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
         self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
