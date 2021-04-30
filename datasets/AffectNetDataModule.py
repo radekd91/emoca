@@ -378,8 +378,8 @@ class AffectNetDataModule(FaceDataModuleBase):
         return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
                           batch_size=self.test_batch_size)
 
-    def _get_retrieval_array(self, name, dataset_size, feature_shape, feature_dtype, modifier='w+'):
-        outfile_name = Path(self.output_dir) / "cache" / (name + ".memmap")
+    def _get_retrieval_array(self, prefix, feature_label, dataset_size, feature_shape, feature_dtype, modifier='w+'):
+        outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
         if outfile_name.is_file() and modifier != 'r':
             raise RuntimeError(f"The retrieval array already exists! '{outfile_name}'")
 
@@ -397,8 +397,12 @@ class AffectNetDataModule(FaceDataModuleBase):
         return nn_indices_file
 
     def _path_to_emotion_nn_distances_file(self,  prefix, feature_label):
-        nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
-        return nn_indices_file
+        nn_distances_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
+        return nn_distances_file
+
+    def _path_to_emotion_nn_retrieval_file(self,  prefix, feature_label):
+        outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
+        return outfile_name
 
     def _prepare_emotion_retrieval(self):
         prefix = self.mode + "_train_"
@@ -449,15 +453,13 @@ class AffectNetDataModule(FaceDataModuleBase):
         if self.ring_type != "emonet_feature":
             raise ValueError(f"Invalid ring type for emotion retrieval {self.ring_type}")
 
-
-
-        outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
+        outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
         if not outfile_name.is_file():
             for bi, batch in enumerate(auto.tqdm(dl)):
                 feat = batch[feature_label].numpy()
                 feat_size = feat.shape[1:]
                 if array is None:
-                    array = self._get_retrieval_array(prefix + feature_label, len(dataset), feat_size, feat.dtype)
+                    array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype)
 
                 # for i in range(feat.shape[0]):
                 #     idx = bi*self.train_batch_size + i
@@ -465,8 +467,12 @@ class AffectNetDataModule(FaceDataModuleBase):
             del array
         else:
             print(f"Feature array found in '{outfile_name}'")
+            for bi, batch in enumerate(dl):
+                feat = batch[feature_label].numpy()
+                feat_size = feat.shape[1:]
+                break
 
-        array = self._get_retrieval_array(prefix + feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
+        array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
 
         nbrs = NearestNeighbors(n_neighbors=30, algorithm='auto', n_jobs=-1).fit(array)
         distances, indices = nbrs.kneighbors(array, NUM_NEIGHBORS)
