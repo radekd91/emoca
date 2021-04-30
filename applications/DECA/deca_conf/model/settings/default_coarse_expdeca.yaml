@@ -39,6 +39,8 @@ photow: 2.
 shape_constrain_type: 'exchange' # None
 #shape_constrain_type: 'same' # None
 
+expression_constrain_type: none
+
 exp_deca_global_pose: False
 #exp_deca_global_pose: True
 exp_deca_jaw_pose: True

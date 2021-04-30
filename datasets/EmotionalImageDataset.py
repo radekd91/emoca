@@ -238,7 +238,7 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
         if 'landmark' in sample.keys():
             num_images += 1
 
-        if len(sample["image"].shape) > 4:
+        if len(sample["image"].shape) >= 4:
             K = sample["image"].shape[0]
             fig, axs = plt.subplots(K, num_images)
         else:

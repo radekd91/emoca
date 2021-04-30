@@ -34,8 +34,12 @@ tex_reg: 1e-5
 light_reg: 12
 use_photometric: True
 photow: 2.
-shape_constrain_type: 'exchange' # None
+#shape_constrain_type: 'exchange' # None
 #shape_constrain_type: 'same' # None
+shape_constrain_type: none # None
+expression_constrain_type: none
+expression_constrain_use_jaw_pose: True
+expression_constrain_use_global_pose: False
 
 exp_deca_global_pose: False
 #exp_deca_global_pose: True

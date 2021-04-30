@@ -71,6 +71,20 @@ class DecaModule(LightningModule):
         self.train(mode=train)
         print(f"DECA MODE RECONFIGURED TO: {self.mode}")
 
+        if 'shape_contrain_type' in self.deca.config.keys() and str(self.deca.config.shape_constrain_type).lower() != 'none':
+            shape_constraint = self.deca.config.shape_constrain_type
+        else:
+            shape_constraint = None
+        if 'expression_constrain_type' in self.deca.config.keys() and str(self.deca.config.expression_constrain_type).lower() != 'none':
+            expression_constraint = self.deca.config.shape_constrain_type
+        else:
+            expression_constraint = None
+
+        if shape_constraint is not None and expression_constraint is not None:
+            raise ValueError("Both shape constraint and expression constraint are active. This is probably not what we want.")
+
+
+
     def train(self, mode: bool = True):
         # super().train(mode) # not necessary
         self.deca.train(mode)
@@ -114,6 +128,61 @@ class DecaModule(LightningModule):
         code_list = self.deca.decompose_code(parameters)
         shapecode, texcode, expcode, posecode, cam, lightcode = code_list
         return shapecode, texcode, expcode, posecode, cam, lightcode
+
+    def _expression_ring_exchange(self, original_batch_size, K,
+                                  expcode, posecode, shapecode, lightcode, texcode,
+                                  images, cam, lmk, masks, va, expr7, detailcode=None):
+        new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
+        new_order = new_order.flatten()
+        expcode_new = expcode[new_order]
+        ## append new shape code data
+        expcode = torch.cat([expcode, expcode_new], dim=0)
+        texcode = torch.cat([texcode, texcode], dim=0)
+        shapecode = torch.cat([shapecode, shapecode], dim=0)
+
+        globpose = posecode[..., :3]
+        jawpose = posecode[..., 3:]
+
+        if self.deca.config.expression_constrain_use_jaw_pose:
+            jawpose_new = jawpose[new_order]
+            jawpose = torch.cat([jawpose, jawpose_new], dim=0)
+        else:
+            jawpose = torch.cat([jawpose, jawpose], dim=0)
+
+        if self.deca.config.expression_constrain_use_global_pose:
+            globpose_new = globpose[new_order]
+            globpose = torch.cat([globpose, globpose_new], dim=0)
+        else:
+            globpose = torch.cat([globpose, globpose], dim=0)
+
+        if self.deca.config.expression_constrain_use_jaw_pose or self.deca.config.expression_constrain_use_global_pose:
+            posecode = torch.cat([globpose, jawpose], dim=-1)
+            # posecode_new = torch.cat([globpose, jawpose], dim=-1)
+        else:
+            # posecode_new = posecode
+            # posecode_new = posecode
+            posecode = torch.cat([posecode, posecode], dim=0)
+
+        cam = torch.cat([cam, cam], dim=0)
+        lightcode = torch.cat([lightcode, lightcode], dim=0)
+        ## append gt
+        images = torch.cat([images, images],
+                           dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+        lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+        masks = torch.cat([masks, masks], dim=0)
+
+        # TODO fix this
+        if va is not None:
+            va = torch.cat([va, va], dim=0)
+        if expr7 is not None:
+            expr7 = torch.cat([expr7, expr7], dim=0)
+
+        if detailcode is not None:
+            detailcode = torch.cat([detailcode, detailcode], dim=0)
+            return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, detailcode
+
+        return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7
+
 
     def encode(self, batch, training=True) -> dict:
         codedict = {}
@@ -187,7 +256,6 @@ class DecaModule(LightningModule):
                     new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
                     new_order = new_order.flatten()
                     shapecode_new = shapecode[new_order]
-                    # import ipdb; ipdb.set_trace()
                     ## append new shape code data
                     shapecode = torch.cat([shapecode, shapecode_new], dim=0)
                     texcode = torch.cat([texcode, texcode], dim=0)
@@ -205,6 +273,67 @@ class DecaModule(LightningModule):
                         va = torch.cat([va, va], dim=0)
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
+
+                elif self.deca.config.expression_constrain_type == 'same':
+                    # reshape shapecode => [B, K, n_shape]
+                    # shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
+                    expcode_idK = expcode.view(original_batch_size, K, -1)
+                    # get mean id
+                    expcode_mean = torch.mean(expcode_idK, dim=[1])
+                    # shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
+                    expcode_new = expcode_mean[:, None, :].repeat(1, K, 1)
+                    expcode = expcode_new.view(-1, self.deca.config.model.n_shape)
+
+                elif self.deca.config.expression_constrain_type == 'exchange':
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7 = \
+                        self._expression_ring_exchange(original_batch_size, K,
+                                  expcode, posecode, shapecode, lightcode, texcode,
+                                  images, cam, lmk, masks, va, expr7)
+                    # new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
+                    # new_order = new_order.flatten()
+                    # expcode_new = expcode[new_order]
+                    # ## append new shape code data
+                    # expcode = torch.cat([expcode, expcode_new], dim=0)
+                    # texcode = torch.cat([texcode, texcode], dim=0)
+                    # shapecode = torch.cat([shapecode, shapecode], dim=0)
+                    #
+                    # globpose = posecode[..., :3]
+                    # jawpose = posecode[..., 3:]
+                    #
+                    # if self.deca.config.expression_constrain_use_jaw_pose:
+                    #     jawpose_new = jawpose[new_order]
+                    #     jawpose = torch.cat([jawpose, jawpose_new], dim=0)
+                    # else:
+                    #     jawpose = torch.cat([jawpose, jawpose], dim=0)
+                    #
+                    # if self.deca.config.expression_constrain_use_global_pose:
+                    #     globpose_new = globpose[new_order]
+                    #     globpose = torch.cat([globpose, globpose_new], dim=0)
+                    # else:
+                    #     globpose = torch.cat([globpose, globpose], dim=0)
+                    #
+                    # if self.deca.config.expression_constrain_use_jaw_pose or self.deca.config.expression_constrain_use_global_pose:
+                    #     posecode = torch.cat([globpose, jawpose], dim=-1)
+                    #     # posecode_new = torch.cat([globpose, jawpose], dim=-1)
+                    # else:
+                    #     # posecode_new = posecode
+                    #     # posecode_new = posecode
+                    #     posecode = torch.cat([posecode, posecode], dim=0)
+                    #
+                    # cam = torch.cat([cam, cam], dim=0)
+                    # lightcode = torch.cat([lightcode, lightcode], dim=0)
+                    # ## append gt
+                    # images = torch.cat([images, images],
+                    #                    dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+                    # lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    # masks = torch.cat([masks, masks], dim=0)
+                    #
+                    # # TODO fix this
+                    # if va is not None:
+                    #     va = torch.cat([va, va], dim=0)
+                    # if expr7 is not None:
+                    #     expr7 = torch.cat([expr7, expr7], dim=0)
+
 
 
         # -- detail
@@ -244,6 +373,12 @@ class DecaModule(LightningModule):
                         va = torch.cat([va, va], dim=0)
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
+
+                elif self.deca.config.expression_constrain_type == 'exchange':
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, detailcode = \
+                        self._expression_ring_exchange(original_batch_size, K,
+                                  expcode, posecode, shapecode, lightcode, texcode,
+                                  images, cam, lmk, masks, va, expr7, detailcode)
 
 
         codedict['shapecode'] = shapecode
@@ -486,6 +621,19 @@ class DecaModule(LightningModule):
         else:
             masks = None
 
+        batch_size = codedict["predicted_images"].shape[0]
+        if training and 'expression_constrain_type' in self.deca.config.keys() \
+            and self.deca.config.expression_constrain_type == 'exchange' \
+            and (self.deca.mode == DecaMode.COARSE or self.deca.config.train_coarse):
+            if batch_size % 2 != 0:
+                raise RuntimeError("The batch size should be even because it should have "
+                                   f"got doubled in expression ring exchange. Instead it was odd: {batch_size}")
+            # THIS IS DONE BECAUSE LANDMARK AND PHOTOMETRIC LOSSES MAKE NO SENSE FOR EXPRESSION EXCHANGE
+            geom_losses_idxs = batch_size // 2
+
+        else:
+            geom_losses_idxs = batch_size
+
         predicted_images = codedict["predicted_images"]
         images = codedict["images"]
         lightcode = codedict["lightcode"]
@@ -527,13 +675,13 @@ class DecaModule(LightningModule):
 
                 if self.deca.config.useWlmk:
                     d['landmark'] = \
-                        lossfunc.weighted_landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
+                        lossfunc.weighted_landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
                 else:
                     d['landmark'] = \
-                        lossfunc.landmark_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight
+                        lossfunc.landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
-                d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.eyed
-                d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lipd
+                d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.eyed
+                d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
                 #TODO: fix this on the next iteration lipd_loss
                 # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
@@ -546,7 +694,7 @@ class DecaModule(LightningModule):
                 #     d = metrics
                 # d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
                 self._metric_or_loss(losses, metrics, self.deca.config.use_photometric)['photometric_texture'] = \
-                    (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
+                    (masks[:geom_losses_idxs, ...] * (predicted_images[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
 
             # if self.deca.config.idw > 1e-3:
             if self.deca.id_loss is not None:
@@ -578,6 +726,7 @@ class DecaModule(LightningModule):
                     codedict["coarse_expression_gt"] = expr7
 
 
+
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
             predicted_detailed_image = codedict["predicted_detailed_image"]
@@ -585,8 +734,8 @@ class DecaModule(LightningModule):
             uv_shading = codedict["uv_shading"]
             uv_vis_mask = codedict["uv_vis_mask"] # uv_mask of what is visible
 
-            photometric_detailed = (masks * (
-                    predicted_detailed_image - images).abs()).mean() * self.deca.config.photow
+            photometric_detailed = (masks[:geom_losses_idxs, ...] * (
+                    predicted_detailed_image[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
 
             if self.deca.config.use_detailed_photo:
                 losses['photometric_detailed_texture'] = photometric_detailed
@@ -617,15 +766,15 @@ class DecaModule(LightningModule):
                     # if self.deca.config.uv_size != 256:
                     #     new_size = 128
                     uv_texture_patch = F.interpolate(
-                        uv_texture[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        uv_texture[:geom_losses_idxs, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
                         self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
                         [new_size, new_size], mode='bilinear')
                     uv_texture_gt_patch = F.interpolate(
-                        uv_texture_gt[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        uv_texture_gt[:geom_losses_idxs, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
                         self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]], [new_size, new_size],
                         mode='bilinear')
                     uv_vis_mask_patch = F.interpolate(
-                        uv_vis_mask[:, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                        uv_vis_mask[:geom_losses_idxs, :, self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
                         self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
                         [new_size, new_size], mode='bilinear')
 
@@ -637,8 +786,8 @@ class DecaModule(LightningModule):
                         metrics['detail_l1_{}'.format(pi)] = detail_l1
 
                     mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
-                                                                                   uv_texture_gt_patch * uv_vis_mask_patch) * \
-                                                         self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                                                    uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                                    self.deca.config.sfsw[pi] * self.deca.config.mrfwr
                     if self.deca.config.use_detail_mrf:
                         losses['detail_mrf_{}'.format(pi)] = mrf
                     else:
@@ -662,6 +811,9 @@ class DecaModule(LightningModule):
         return losses, metrics
 
     def compute_loss(self, values, training=True) -> (dict, dict):
+        """
+        training should be set to true when calling from training_step only
+        """
         losses, metrics = self._compute_loss(values, training=training)
 
         all_loss = 0.
@@ -669,7 +821,7 @@ class DecaModule(LightningModule):
         for key in losses_key:
             all_loss = all_loss + losses[key]
         # losses['all_loss'] = all_loss
-        losses = {'loss_' + key : value for key, value in losses.items()} # add prefix loss for better logging
+        losses = {'loss_' + key: value for key, value in losses.items()} # add prefix loss for better logging
         losses['loss'] = all_loss
 
         # add metrics that do not effect the loss function (if any)

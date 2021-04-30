@@ -27,8 +27,13 @@ useSeg: rend # rendered mask works better for expression-only models because the
 #useSeg: false
 #useSeg: true
 background_from_input: true
-detail_constrain_type: exchange
-#detail_constrain_type: none
+#detail_constrain_type: exchange
+detail_constrain_type: none
+
+expression_constrain_type: none
+expression_constrain_use_jaw_pose: True
+expression_constrain_use_global_pose: False
+
 mode: detail
 
 

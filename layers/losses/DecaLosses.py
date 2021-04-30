@@ -852,7 +852,7 @@ class IdentityLoss(nn.Module):
 # from Resnet import ResNet
 # import sys; sys.path.append('nets')
 # from ..models.frnet import resnet50, load_state_dict
-# from .FRNet import resnet50, load_state_dict
+from .FRNet import resnet50, load_state_dict
 
 
 # class VGGFace2Loss(nn.Module):

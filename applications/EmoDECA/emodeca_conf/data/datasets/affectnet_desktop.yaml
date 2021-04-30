@@ -1,7 +1,8 @@
 # @package data
 data_class: AffectNetDataModule
 input_dir: /home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet
-output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/
+#output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/
+output_dir: /is/cluster/work/rdanecek/data/affectnet/
 processed_subfolder: processed_2021_Apr_05_15-22-18
 num_workers: 8
 

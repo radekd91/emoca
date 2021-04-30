@@ -89,6 +89,17 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.face_detector_type = 'fan'
         self.scale = scale
         self.use_processed = True
+
+
+        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "training.csv"
+        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation.csv"
+
+        if self.use_processed:
+            self.image_path = Path(self.output_dir) / "detections"
+        else:
+            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+
+
         self.ignore_invalid = ignore_invalid
 
         self.train_batch_size = train_batch_size
@@ -294,19 +305,6 @@ class AffectNetDataModule(FaceDataModuleBase):
             if not all_processed:
                 self._detect_faces()
 
-        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "training.csv"
-        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation.csv"
-
-
-        if self.use_processed:
-            self.image_path = Path(self.output_dir) / "detections"
-            # self.training_set = AffectNetOriginal(image_path, self.train_dataframe_path, self.image_size, self.scale,
-            #                                       self.train_augmenter)
-            # self.validation_set = AffectNetOriginal(image_path, self.val_dataframe_path, self.image_size, self.scale,
-            #                                       self.val_augmenter)
-        else:
-            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
-
 
         if self.ring_type == "emonet_feature":
             self._prepare_emotion_retrieval()
@@ -343,8 +341,6 @@ class AffectNetDataModule(FaceDataModuleBase):
                          )
 
     def setup(self, stage=None):
-
-
         self.training_set = self._new_training_set()
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
@@ -773,7 +769,9 @@ class AffectNet(EmotionalImageDatasetBase):
             label = self.va_bin_indices[index]
         elif self.ring_type == "emonet_feature":
             ring_indices = self.nn_indices_array[index].tolist()
-            ring_indices = [n for n in ring_indices if n < len(self)]
+            # ring_indices = [n for n in ring_indices if n < len(self)]
+            max_nn = 10
+            ring_indices = ring_indices[:max_nn]
             if len(ring_indices) > 1:
                 ring_indices.remove(index)
             # label = index
@@ -888,9 +886,9 @@ if __name__ == "__main__":
              mode="manual",
              scale=1.25,
              ignore_invalid=True,
-             # ring_type="gt_expression",
+             ring_type="gt_expression",
              # ring_type="gt_va",
-             ring_type="emonet_feature",
+             # ring_type="emonet_feature",
              ring_size=4
             )
     print(dm.num_subsets)
@@ -901,9 +899,11 @@ if __name__ == "__main__":
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
     dl = dm.train_dataloader()
-    for bi, batch in enumerate(dl):
-        if bi == 10:
-            break
+    # for bi, batch in enumerate(dl):
+        # if bi == 10:
+        #     break
+    for si in range(len(dm.training_set)):
+        dm.training_set.visualize_sample(si)
 
     # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
     # sample_representative_set(dm.validation_set, out_path)

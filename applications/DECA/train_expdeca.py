@@ -17,6 +17,10 @@ def prepare_data(cfg):
     else:
         data_class = 'DecaDataModule'
     if data_class == 'DecaDataModule':
+
+        if 'expression_constrain_type' in cfg.model.keys() and cfg.model.expression_constrain_type is not None:
+            raise ValueError("DecaDataModule does not support expression exchange!")
+
         dm = DecaDataModule(cfg)
         sequence_name = "DecaData"
     elif data_class == 'AffectNetDataModule':
@@ -24,6 +28,13 @@ def prepare_data(cfg):
             augmentation = OmegaConf.to_container(cfg.data.augmentation)
         else:
             augmentation = None
+
+        ring_type = cfg.data.ring_type if 'ring_type' in cfg.data.keys() and str(cfg.data.ring_type).lower() != "none" else None
+        ring_size = cfg.data.ring_size if 'ring_size' in cfg.data.keys() and str(cfg.data.ring_size).lower() != "none" else None
+
+        if ring_size is not None and 'shape_constrain_type' in cfg.model.keys() and cfg.model.shape_constrain_type is not None:
+            raise ValueError("AffectNet does not support shape exchange!")
+
         dm = AffectNetDataModule(
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
@@ -38,7 +49,9 @@ def prepare_data(cfg):
             val_batch_size=cfg.learning.batch_size_val,
             test_batch_size=cfg.learning.batch_size_test,
             num_workers=cfg.data.num_workers,
-            augmentation=augmentation
+            augmentation=augmentation,
+            ring_type=ring_type,
+            ring_size=ring_size,
         )
         sequence_name = "AffNet"
     else:
@@ -299,8 +312,7 @@ def resume_training(run_path, start_at_stage, resume_from_previous, force_new_lo
                resume_from_previous=resume_from_previous,
                force_new_location=force_new_location)
 
-# @hydra.main(config_path="deca_conf", config_name="deca_finetune")
-# def main(cfg : DictConfig):
+
 def main():
     configured = False
     if len(sys.argv) > 2:
