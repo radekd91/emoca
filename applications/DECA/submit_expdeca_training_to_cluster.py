@@ -72,9 +72,9 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
-    # ring_type = "gt_expression"
+    ring_type = "gt_expression"
     # ring_type = "gt_va"
-    ring_type = "emonet_feature"
+    # ring_type = "emonet_feature"
 
     finetune_modes = [
         # # DEFAULT without jaw
@@ -182,8 +182,8 @@ def train_on_selected_sequences():
              # 'model.shape_constrain_type=None',
              'learning.batch_size_test=1']
         ],
-        #
-        # #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
+
+        #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
         [
             ['model.useSeg=rend', 'model.idw=0',
              'model.expression_constrain_type=exchange',

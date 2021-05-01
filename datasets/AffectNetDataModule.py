@@ -770,11 +770,13 @@ class AffectNet(EmotionalImageDatasetBase):
             expression_label = sample["affectnetexp"]
             ring_indices = self.expr2sample[expression_label.item()]
             ring_indices = list(ring_indices)
-            ring_indices.remove(index)
+            if len(ring_indices) > 1:
+                ring_indices.remove(index)
             label = expression_label
         elif self.ring_type == "gt_va" or self.ring_type == "emonet_va":
             ring_indices = self.bins_to_samples[self.va_bin_indices[index]].tolist()
-            ring_indices.remove(index)
+            if len(ring_indices) > 1:
+                ring_indices.remove(index)
             label = self.va_bin_indices[index]
         elif self.ring_type == "emonet_feature":
             ring_indices = self.nn_indices_array[index].tolist()
