@@ -897,9 +897,9 @@ if __name__ == "__main__":
              mode="manual",
              scale=1.25,
              ignore_invalid=True,
-             ring_type="gt_expression",
+             # ring_type="gt_expression",
              # ring_type="gt_va",
-             # ring_type="emonet_feature",
+             ring_type="emonet_feature",
              ring_size=4
             )
     print(dm.num_subsets)

@@ -6,6 +6,8 @@ from applications.DECA.train_expdeca import prepare_data, create_logger
 from applications.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
 
 from models.EmoDECA import EmoDECA
+from models.EmoNetModule import EmoNetModule
+from utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -15,25 +17,28 @@ project_name = 'EmoDECA'
 
 
 def create_experiment_name(cfg, version=1):
-    experiment_name = "EmoDECA"
-    if cfg.data.data_class:
-        experiment_name += '_' + cfg.data.data_class[:5]
+    if cfg.model.emodeca_type == "EmoDECA":
+        experiment_name = "EmoDECA"
+        if cfg.data.data_class:
+            experiment_name += '_' + cfg.data.data_class[:5]
 
-    if cfg.model.deca_cfg.model.resume_training and cfg.model.deca_cfg.inout.name == 'todo':
-        experiment_name += "_Orig"
+        if cfg.model.deca_cfg.model.resume_training and cfg.model.deca_cfg.inout.name == 'todo':
+            experiment_name += "_Orig"
+        else:
+            # experiment_name += "_" + cfg.model.deca_cfg.inout.name
+            experiment_name += "_" + cfg.model.deca_cfg.model.deca_class
+
+        experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
+        if cfg.model.use_expression:
+            experiment_name += "_exp"
+        if cfg.model.use_global_pose:
+            experiment_name += "_pose"
+        if cfg.model.use_jaw_pose:
+            experiment_name += "_jaw"
+        if cfg.model.use_detail_code:
+            experiment_name += "_detail"
     else:
-        # experiment_name += "_" + cfg.model.deca_cfg.inout.name
-        experiment_name += "_" + cfg.model.deca_cfg.model.deca_class
-
-    experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
-    if cfg.model.use_expression:
-        experiment_name += "_exp"
-    if cfg.model.use_global_pose:
-        experiment_name += "_pose"
-    if cfg.model.use_jaw_pose:
-        experiment_name += "_jaw"
-    if cfg.model.use_detail_code:
-        experiment_name += "_detail"
+        experiment_name = "EmoNet"
 
     if cfg.model.expression_balancing:
         experiment_name += "_balanced"
@@ -43,7 +48,6 @@ def create_experiment_name(cfg, version=1):
 
     if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
         experiment_name += "_early"
-
 
     return experiment_name
 
@@ -70,16 +74,21 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                     save_dir=cfg.inout.full_run_dir)
 
     if deca is None:
+        if 'emodeca_type' in cfg.model:
+            deca_class = class_from_str(cfg.model.emodeca_type, sys.modules[__name__])
+        else:
+            deca_class = EmoDECA
+
         if logger is not None:
             logger.finalize("")
         if checkpoint is None:
-            deca = EmoDECA(cfg)
+            deca = deca_class(cfg)
             # if cfg.model.resume_training:
             #     print("[WARNING] Loading DECA checkpoint pretrained by the old code")
             #     deca.deca._load_old_checkpoint()
         else:
             checkpoint_kwargs = checkpoint_kwargs or {}
-            deca = EmoDECA.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
+            deca = deca_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
             # if stage == 'train':
             #     mode = True
             # else:
@@ -205,6 +214,7 @@ def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = N
 def train_emodeca(cfg, start_i=0, resume_from_previous = True,
                   force_new_location=False):
     configs = [cfg, cfg]
+    # configs = [cfg,]
     stages = ["train", "test"]
     # stages = ["test",]
     stages_prefixes = ["", ""]
@@ -281,41 +291,50 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
     initialize(config_path="emodeca_conf", job_name="train_deca")
     cfg = compose(config_name=emo_deca_default, overrides=emodeca_overrides)
 
-    if deca_conf_path is None:
-        GlobalHydra.instance().clear()
-        initialize(config_path="../DECA/deca_conf", job_name="train_deca")
-        deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
-    else:
-        if deca_default is not None:
-            raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
-        with open(Path(deca_conf_path) / "cfg.yaml", "r") as f:
-            deca_cfg = OmegaConf.load(f)
-        deca_cfg = deca_cfg[deca_stage]
-    cfg.model.deca_checkpoint = None
-    cfg.model.deca_cfg = deca_cfg
+    if deca_default is not None or deca_conf_path is not None:
+        if deca_conf_path is None:
+            GlobalHydra.instance().clear()
+            initialize(config_path="../DECA/deca_conf", job_name="train_deca")
+            deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
+        else:
+            if deca_default is not None:
+                raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
+            with open(Path(deca_conf_path) / "cfg.yaml", "r") as f:
+                deca_cfg = OmegaConf.load(f)
+            deca_cfg = deca_cfg[deca_stage]
+        cfg.model.deca_checkpoint = None
+        cfg.model.deca_cfg = deca_cfg
     return cfg
 
 
 def main():
     if len(sys.argv) < 2:
-        emodeca_default = "emodeca_coarse"
+        # emodeca_default = "emodeca_coarse"
+        # emodeca_overrides = []
+        #
+        # deca_default = "deca_train_coarse_cluster"
+        # deca_overrides = [
+        #     # 'model/settings=coarse_train',
+        #     'model/settings=detail_train',
+        #     'model/paths=desktop',
+        #     'model/flame_tex=bfm_desktop',
+        #     'model.resume_training=True',  # load the original DECA model
+        #     'model.useSeg=rend', 'model.idw=0',
+        #     'learning/batching=single_gpu_coarse',
+        #     'learning/logging=none',
+        #     # 'learning/batching=single_gpu_detail',
+        #     #  'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None',
+        #     'data/datasets=affectnet_cluster',
+        #      'learning.batch_size_test=1'
+        # ]
+
+        emodeca_default = "emonet"
         emodeca_overrides = []
 
-        deca_default = "deca_train_coarse_cluster"
-        deca_overrides = [
-            # 'model/settings=coarse_train',
-            'model/settings=detail_train',
-            'model/paths=desktop',
-            'model/flame_tex=bfm_desktop',
-            'model.resume_training=True',  # load the original DECA model
-            'model.useSeg=rend', 'model.idw=0',
-            'learning/batching=single_gpu_coarse',
-            # 'learning/batching=single_gpu_detail',
-            #  'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None',
-            'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1'
-        ]
+        deca_default = None
+        deca_overrides = None
+
         cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
     else:
         cfg_path = sys.argv[1]

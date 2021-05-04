@@ -6,7 +6,7 @@ import inspect
 import torch.nn.functional as F
 
 
-def get_emonet(device=None):
+def get_emonet(device=None, load_pretrained=True):
     device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     path_to_emonet = Path(__file__).absolute().resolve().parent.parent.parent.parent / "emonet"
     if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
@@ -17,16 +17,18 @@ def get_emonet(device=None):
     # n_expression = 5
     n_expression = 8
 
-    # Loading the model
-
-    state_dict_path = Path(inspect.getfile(EmoNet)).parent.parent.parent /'pretrained' / f'emonet_{n_expression}.pth'
-
-    print(f'Loading the EmoNet model from {state_dict_path}.')
-    state_dict = torch.load(str(state_dict_path), map_location='cpu')
-    state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-
+    # Create the model
     net = EmoNet(n_expression=n_expression).to(device)
-    net.load_state_dict(state_dict, strict=False)
+
+    if load_pretrained:
+        state_dict_path = Path(
+            inspect.getfile(EmoNet)).parent.parent.parent / 'pretrained' / f'emonet_{n_expression}.pth'
+        print(f'Loading the EmoNet model from {state_dict_path}.')
+        state_dict = torch.load(str(state_dict_path), map_location='cpu')
+        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+        net.load_state_dict(state_dict, strict=False)
+    else:
+        print("Created an untrained EmoNet instance")
     net.eval()
     return net
 

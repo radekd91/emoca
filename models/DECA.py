@@ -22,6 +22,7 @@ import utils.DecaUtils as util
 from wandb import Image
 from datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
 from datasets.AffectNetDataModule import AffectNetExpressions
+from utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 
 torch.backends.cudnn.benchmark = True
 from enum import Enum
@@ -274,7 +275,8 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
-                elif self.deca.config.expression_constrain_type == 'same':
+                elif 'expression_constrain_type' in self.deca.config.keys() and \
+                        self.deca.config.expression_constrain_type == 'same':
                     # reshape shapecode => [B, K, n_shape]
                     # shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
                     expcode_idK = expcode.view(original_batch_size, K, -1)
@@ -284,7 +286,8 @@ class DecaModule(LightningModule):
                     expcode_new = expcode_mean[:, None, :].repeat(1, K, 1)
                     expcode = expcode_new.view(-1, self.deca.config.model.n_shape)
 
-                elif self.deca.config.expression_constrain_type == 'exchange':
+                elif 'expression_constrain_type' in self.deca.config.keys() and \
+                        self.deca.config.expression_constrain_type == 'exchange':
                     expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7 = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
@@ -374,7 +377,8 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
-                elif self.deca.config.expression_constrain_type == 'exchange':
+                elif 'expression_constrain_type' in self.deca.config.keys() and \
+                        self.deca.config.expression_constrain_type == 'exchange':
                     expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, detailcode = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
@@ -1027,15 +1031,6 @@ class DecaModule(LightningModule):
     #     return loss_dict
 
 
-    def _torch_image2np(self, torch_image):
-        image = torch_image.detach().cpu().numpy()
-        if len(image.shape) == 4:
-            image = image.transpose([0, 2, 3, 1])
-        elif len(image.shape) == 3:
-            image = image.transpose([1, 2, 0])
-        return image
-
-
     def vae_2_str(self, valence=None, arousal=None, affnet_expr=None, expr7=None, prefix=""):
         caption = ""
         if len(prefix) > 0:
@@ -1050,28 +1045,6 @@ class DecaModule(LightningModule):
             caption += prefix +"expression= %s \n" % Expression7(expr7).name
         return caption
 
-    def _fix_image(self, image):
-        if image.max() < 30.:
-            image = image * 255.
-        image = np.clip(image, 0, 255).astype(np.uint8)
-        return image
-
-    def _log_wandb_image(self, path, image, caption=None):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        image = self._fix_image(image)
-        imsave(path, image)
-        if caption is not None:
-            caption_file = Path(path).parent / (Path(path).stem + ".txt")
-            with open(caption_file, "w") as f:
-                f.write(caption)
-        wandb_image = Image(str(path), caption=caption)
-        return wandb_image
-
-    def _log_array_image(self, path, image, caption=None):
-        image = self._fix_image(image)
-        if path is not None:
-            imsave(path, image)
-        return image
 
     def _create_visualizations_to_log(self, stage, visdict, values, step, indices=None, dataloader_idx=None):
         mode_ = str(self.mode.name).lower()
@@ -1079,7 +1052,7 @@ class DecaModule(LightningModule):
 
         log_dict = {}
         for key in visdict.keys():
-            images = self._torch_image2np(visdict[key])
+            images = _torch_image2np(visdict[key])
             if images.dtype == np.float32 or images.dtype == np.float64 or images.dtype == np.float16:
                 images = np.clip(images, 0, 1)
             if indices is None:
@@ -1091,9 +1064,9 @@ class DecaModule(LightningModule):
                 savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
                 # im2log = Image(image, caption=key)
                 if isinstance(self.logger, WandbLogger):
-                    im2log = self._log_wandb_image(savepath, image)
+                    im2log = _log_wandb_image(savepath, image)
                 else:
-                    im2log = self._log_array_image(savepath, image)
+                    im2log = _log_array_image(savepath, image)
                 name = prefix + "_" + stage + "_" + key
                 if dataloader_idx is not None:
                     name += "/dataloader_idx_" + str(dataloader_idx)
@@ -1137,11 +1110,11 @@ class DecaModule(LightningModule):
                     image = images[i]
                     # im2log = Image(image, caption=caption)
                     if isinstance(self.logger, WandbLogger):
-                        im2log = self._log_wandb_image(savepath, image, caption)
+                        im2log = _log_wandb_image(savepath, image, caption)
                     elif self.logger is not None:
-                        im2log = self._log_array_image(savepath, image, caption)
+                        im2log = _log_array_image(savepath, image, caption)
                     else:
-                        im2log = self._log_array_image(None, image, caption)
+                        im2log = _log_array_image(None, image, caption)
                     name = prefix + "_" + stage + "_" + key
                     if dataloader_idx is not None:
                         name += "/dataloader_idx_" + str(dataloader_idx)
