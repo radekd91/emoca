@@ -40,6 +40,9 @@ def create_experiment_name(cfg, version=1):
     else:
         experiment_name = "EmoNet"
 
+    if 'va_loss_scheme' in cfg.model.keys():
+        experiment_name += "_" + cfg.model.va_loss_scheme
+
     if cfg.model.expression_balancing:
         experiment_name += "_balanced"
 

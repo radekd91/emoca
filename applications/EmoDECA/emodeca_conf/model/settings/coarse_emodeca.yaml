@@ -31,7 +31,7 @@ v_activation: none
 exp_activation: log_softmax
 #exp_activation: none
 
-va_loss_scheme: scheme
+va_loss_scheme: shake
 #va_loss_scheme: norm
 #va_loss_scheme: none
 
