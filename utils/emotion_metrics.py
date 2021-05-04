@@ -80,7 +80,7 @@ def ACC_torch(ground_truth, predictions):
     """Evaluates the mean accuracy
     """
     assert ground_truth.shape == predictions.shape
-    return torch.mean( torch.eq(ground_truth.int(), predictions.int()))
+    return torch.mean( torch.eq(ground_truth.int(), predictions.int()).float())
 
 def RMSE_torch(ground_truth, predictions):
     """
@@ -95,7 +95,7 @@ def SAGR_torch(ground_truth, predictions):
         Evaluates the SAGR between estimate and ground truth.
     """
     assert ground_truth.shape == predictions.shape
-    return torch.mean( torch.eq(torch.sign(ground_truth), torch.sign(predictions)))
+    return torch.mean( torch.eq(torch.sign(ground_truth), torch.sign(predictions)).float())
 
 
 def PCC_torch(ground_truth, predictions, batch_first=True):

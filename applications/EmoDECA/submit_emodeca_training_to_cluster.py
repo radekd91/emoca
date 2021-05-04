@@ -59,7 +59,7 @@ def submit(cfg, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-    t.sleep(1)
+    t.sleep(10)
 
 
 def train_emodeca_on_cluster():
@@ -106,26 +106,25 @@ def train_emodeca_on_cluster():
     conf = "emodeca_coarse_cluster"
     fixed_overrides_cfg = []
 
-    # deca_conf_path = None
-    # deca_conf = "deca_train_detail_cluster"
-    # stage = None
-    # fixed_overrides_deca = [
-    #     # 'model/settings=coarse_train',
-    #     'model/settings=detail_train',
-    #     'model.resume_training=True',  # load the original DECA model
-    #     'model.useSeg=rend', 'model.idw=0',
-    #     'learning/batching=single_gpu_coarse',
-    #     # 'learning/batching=single_gpu_detail',
-    #     #  'model.shape_constrain_type=None',
-    #      'model.detail_constrain_type=None',
-    #     'data/datasets=affectnet_cluster',
-    #     'learning.batch_size_test=1'
-    # ]
-
-    deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-    deca_conf = None
-    fixed_overrides_deca = None
-    stage = 'detail'
+    deca_conf_path = None
+    deca_conf = "deca_train_detail_cluster"
+    stage = None
+    fixed_overrides_deca = [
+        # 'model/settings=coarse_train',
+        'model/settings=detail_train',
+        'model.resume_training=True',  # load the original DECA model
+        'model.useSeg=rend', 'model.idw=0',
+        'learning/batching=single_gpu_coarse',
+        # 'learning/batching=single_gpu_detail',
+        #  'model.shape_constrain_type=None',
+         'model.detail_constrain_type=None',
+        'data/datasets=affectnet_cluster',
+        'learning.batch_size_test=1'
+    ]
+    # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+    # deca_conf = None
+    # fixed_overrides_deca = None
+    # stage = 'detail'
 
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()

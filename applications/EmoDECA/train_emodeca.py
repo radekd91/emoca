@@ -309,31 +309,30 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
 def main():
     if len(sys.argv) < 2:
-        # emodeca_default = "emodeca_coarse"
-        # emodeca_overrides = []
-        #
-        # deca_default = "deca_train_coarse_cluster"
-        # deca_overrides = [
-        #     # 'model/settings=coarse_train',
-        #     'model/settings=detail_train',
-        #     'model/paths=desktop',
-        #     'model/flame_tex=bfm_desktop',
-        #     'model.resume_training=True',  # load the original DECA model
-        #     'model.useSeg=rend', 'model.idw=0',
-        #     'learning/batching=single_gpu_coarse',
-        #     'learning/logging=none',
-        #     # 'learning/batching=single_gpu_detail',
-        #     #  'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None',
-        #     'data/datasets=affectnet_cluster',
-        #      'learning.batch_size_test=1'
-        # ]
-
-        emodeca_default = "emonet"
+        emodeca_default = "emodeca_coarse"
         emodeca_overrides = []
 
-        deca_default = None
-        deca_overrides = None
+        deca_default = "deca_train_coarse_cluster"
+        deca_overrides = [
+            # 'model/settings=coarse_train',
+            'model/settings=detail_train',
+            'model/paths=desktop',
+            'model/flame_tex=bfm_desktop',
+            'model.resume_training=True',  # load the original DECA model
+            'model.useSeg=rend', 'model.idw=0',
+            'learning/batching=single_gpu_coarse',
+            'learning/logging=none',
+            # 'learning/batching=single_gpu_detail',
+            #  'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
+            'data/datasets=affectnet_cluster',
+             'learning.batch_size_test=1'
+        ]
+
+        # emodeca_default = "emonet"
+        # emodeca_overrides = []
+        # deca_default = None
+        # deca_overrides = None
 
         cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
     else:

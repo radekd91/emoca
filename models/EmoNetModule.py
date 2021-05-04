@@ -43,12 +43,15 @@ class EmoNetModule(EmotionRecognitionBase):
 
         valence = emotion['valence']
         arousal = emotion['arousal']
-        expression = self.exp_activation(emotion['expression'])
+
+        emotion['expression'] = torch.cat((emotion['expression'], emotion['expression'].min().detach() * torch.ones_like(valence.view(-1,1))), dim=1)
+
+        expression = self.exp_activation(emotion['expression'], dim=1)
 
         values = {}
         values['valence'] = valence.view(-1,1)
         values['arousal'] = arousal.view(-1,1)
-        values['expr_classification'] = torch.cat([expression,  torch.zeros_like(values['valence'])], dim=1)
+        values['expr_classification'] = expression
         return values
 
     def _get_trainable_parameters(self):
@@ -142,7 +145,7 @@ class EmoNetModule(EmotionRecognitionBase):
             caption += self._vae_2_str(
                 valence=valence_gt.cpu().numpy(),
                 arousal=arousal_gt.cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_gt).cpu().numpy().astype(np.int32),
+                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
                 expr7=None, prefix="gt")
 
 
