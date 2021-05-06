@@ -18,6 +18,10 @@ class EmoNetModule(EmotionRecognitionBase):
     def __init__(self, config):
         super().__init__(config)
         self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
+        if not config.model.load_pretrained_emonet:
+            self.emonet.n_expression = 9 # we use all affectnet classes (included none) for now
+            self.emonet._create_Emo() # reinitialize
+
         self.size = (256, 256) # predefined input image size
 
     def emonet_out(self, images):
@@ -43,8 +47,9 @@ class EmoNetModule(EmotionRecognitionBase):
         valence = emotion['valence']
         arousal = emotion['arousal']
 
-        emotion['expression'] = torch.cat((emotion['expression'], emotion['expression'].min().detach() * torch.ones_like(valence.view(-1,1))), dim=1)
+        # emotion['expression'] = emotion['expression']
 
+        classes_probs = F.softmax(emotion['expression'])
         expression = self.exp_activation(emotion['expression'], dim=1)
 
         values = {}

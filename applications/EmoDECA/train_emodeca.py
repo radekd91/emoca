@@ -322,47 +322,50 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
 def main():
     if len(sys.argv) < 2:
-        emodeca_default = "emodeca_coarse"
-        emodeca_overrides = []
+        # emodeca_default = "emodeca_coarse"
+        # emodeca_overrides = []
+        #
+        # deca_default = "deca_train_coarse_cluster"
+        # deca_overrides = [
+        #     # 'model/settings=coarse_train',
+        #     'model/settings=detail_train',
+        #     'model/paths=desktop',
+        #     'model/flame_tex=bfm_desktop',
+        #     'model.resume_training=True',  # load the original DECA model
+        #     'model.useSeg=rend', 'model.idw=0',
+        #     'learning/batching=single_gpu_coarse',
+        #     'learning/logging=none',
+        #     # 'learning/batching=single_gpu_detail',
+        #     #  'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None',
+        #     'data/datasets=affectnet_cluster',
+        #      'learning.batch_size_test=1'
+        # ]
+        # # deca_conf_path = None
+        # # stage = None
+        #
+        # deca_default = None
+        # deca_overrides = None
+        # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # # deca_conf = None
+        # stage = 'detail'
 
-        deca_default = "deca_train_coarse_cluster"
-        deca_overrides = [
-            # 'model/settings=coarse_train',
-            'model/settings=detail_train',
-            'model/paths=desktop',
-            'model/flame_tex=bfm_desktop',
-            'model.resume_training=True',  # load the original DECA model
-            'model.useSeg=rend', 'model.idw=0',
-            'learning/batching=single_gpu_coarse',
-            'learning/logging=none',
-            # 'learning/batching=single_gpu_detail',
-            #  'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None',
-            'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1'
-        ]
-        # deca_conf_path = None
-        # stage = None
-
-        deca_default = None
-        deca_overrides = None
-        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # deca_conf = None
-        stage = 'detail'
-
-        relative_to_path = '/ps/scratch/'
-        # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
-        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        # relative_to_path = '/ps/scratch/'
+        # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
+        # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
 
         # replace_root_path = None
         # relative_to_path = None
 
-        # emodeca_default = "emonet"
-        # emodeca_overrides = ['model/settings=emonet_trainable']
-        # deca_default = None
-        # deca_overrides = None
-
+        emodeca_default = "emonet"
+        emodeca_overrides = ['model/settings=emonet_trainable']
+        deca_default = None
+        deca_overrides = None
+        deca_conf_path = None
+        stage = None
+        relative_to_path = None
+        replace_root_path = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,

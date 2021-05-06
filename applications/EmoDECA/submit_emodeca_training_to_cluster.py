@@ -86,21 +86,21 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        [
-            [],
-            []
-        ],
-
         # [
-        #     ['model.use_detail_code=true'],
+        #     [],
         #     []
         # ],
-        #
+
         [
-            ['model.expression_balancing=true'],
+            ['model.use_detail_code=true'],
             []
         ],
         #
+        # [
+        #     ['model.expression_balancing=true'],
+        #     []
+        # ],
+        # #
         # [
         #     ['model.use_detail_code=true',
         #      'model.expression_balancing=true'],
@@ -110,16 +110,16 @@ def train_emodeca_on_cluster():
     ]
 
     #1 EMONET
-    conf = "emonet_cluster"
-    fixed_overrides_cfg = ['model/settings=emonet_trainable']
-    deca_conf = None
-    deca_conf_path = None
-    fixed_overrides_deca = None
-    stage = None
+    # conf = "emonet_cluster"
+    # fixed_overrides_cfg = ['model/settings=emonet_trainable']
+    # deca_conf = None
+    # deca_conf_path = None
+    # fixed_overrides_deca = None
+    # stage = None
 
     # EMODECA
-    # conf = "emodeca_coarse_cluster"
-    # fixed_overrides_cfg = []
+    conf = "emodeca_coarse_cluster"
+    fixed_overrides_cfg = []
 
     # deca_conf_path = None
     # deca_conf = "deca_train_detail_cluster"
@@ -138,10 +138,10 @@ def train_emodeca_on_cluster():
     # ]
 
     # EMOEXPDECA
-    # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-    # deca_conf = None
-    # fixed_overrides_deca = None
-    # stage = 'detail'
+    deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+    deca_conf = None
+    fixed_overrides_deca = None
+    stage = 'detail'
 
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()
