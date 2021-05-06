@@ -20,15 +20,17 @@ def get_emonet(device=None, load_pretrained=True):
     # Create the model
     net = EmoNet(n_expression=n_expression).to(device)
 
-    if load_pretrained:
-        state_dict_path = Path(
-            inspect.getfile(EmoNet)).parent.parent.parent / 'pretrained' / f'emonet_{n_expression}.pth'
-        print(f'Loading the EmoNet model from {state_dict_path}.')
-        state_dict = torch.load(str(state_dict_path), map_location='cpu')
-        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-        net.load_state_dict(state_dict, strict=False)
-    else:
+    # if load_pretrained:
+    state_dict_path = Path(
+        inspect.getfile(EmoNet)).parent.parent.parent / 'pretrained' / f'emonet_{n_expression}.pth'
+    print(f'Loading the EmoNet model from {state_dict_path}.')
+    state_dict = torch.load(str(state_dict_path), map_location='cpu')
+    state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+    net.load_state_dict(state_dict, strict=False)
+    if not load_pretrained:
         print("Created an untrained EmoNet instance")
+        net.reset_emo_parameters()
+
     net.eval()
     return net
 
@@ -106,3 +108,7 @@ class EmoNetLoss(torch.nn.Module):
     @property
     def output_emo(self):
         return self.output_emotion
+
+#
+# if __name__ == "__main__":
+#     net = get_emonet(load_pretrained=False)

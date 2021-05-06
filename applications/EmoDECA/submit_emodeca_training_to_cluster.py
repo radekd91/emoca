@@ -7,8 +7,13 @@ import time as t
 
 def submit(cfg, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/submission"
+
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
@@ -57,7 +62,8 @@ def submit(cfg, bid=10):
                        max_time_h=max_time_h,
                        max_price=max_price,
                        job_name=job_name,
-                       cuda_capability_requirement=cuda_capability_requirement
+                       cuda_capability_requirement=cuda_capability_requirement,
+                       chmod=False
                        )
     t.sleep(10)
 
@@ -67,7 +73,7 @@ def train_emodeca_on_cluster():
 
 
     training_modes = [
-        # DEFAULT
+        # # DEFAULT
         # [
         #     ['model.num_mlp_layers=1'],
         #     []
@@ -76,51 +82,62 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=2'],
         #     []
         # ],
-        [
-            ['model.num_mlp_layers=3'],
-            []
-        ],
+        # [
+        #     ['model.num_mlp_layers=3'],
+        #     []
+        # ],
         [
             [],
             []
         ],
 
-        [
-            ['model.use_detail_code=true'],
-            []
-        ],
-
+        # [
+        #     ['model.use_detail_code=true'],
+        #     []
+        # ],
+        #
         [
             ['model.expression_balancing=true'],
             []
         ],
-
-        [
-            ['model.use_detail_code=true',
-            'model.expression_balancing=true'],
-            []
-        ],
+        #
+        # [
+        #     ['model.use_detail_code=true',
+        #      'model.expression_balancing=true'],
+        #     []
+        # ],
 
     ]
 
-    conf = "emodeca_coarse_cluster"
-    fixed_overrides_cfg = []
-
+    #1 EMONET
+    conf = "emonet_cluster"
+    fixed_overrides_cfg = ['model/settings=emonet_trainable']
+    deca_conf = None
     deca_conf_path = None
-    deca_conf = "deca_train_detail_cluster"
+    fixed_overrides_deca = None
     stage = None
-    fixed_overrides_deca = [
-        # 'model/settings=coarse_train',
-        'model/settings=detail_train',
-        'model.resume_training=True',  # load the original DECA model
-        'model.useSeg=rend', 'model.idw=0',
-        'learning/batching=single_gpu_coarse',
-        # 'learning/batching=single_gpu_detail',
-        #  'model.shape_constrain_type=None',
-         'model.detail_constrain_type=None',
-        'data/datasets=affectnet_cluster',
-        'learning.batch_size_test=1'
-    ]
+
+    # EMODECA
+    # conf = "emodeca_coarse_cluster"
+    # fixed_overrides_cfg = []
+
+    # deca_conf_path = None
+    # deca_conf = "deca_train_detail_cluster"
+    # stage = None
+    # fixed_overrides_deca = [
+    #     # 'model/settings=coarse_train',
+    #     'model/settings=detail_train',
+    #     'model.resume_training=True',  # load the original DECA model
+    #     'model.useSeg=rend', 'model.idw=0',
+    #     'learning/batching=single_gpu_coarse',
+    #     # 'learning/batching=single_gpu_detail',
+    #     #  'model.shape_constrain_type=None',
+    #      'model.detail_constrain_type=None',
+    #     'data/datasets=affectnet_cluster',
+    #     'learning.batch_size_test=1'
+    # ]
+
+    # EMOEXPDECA
     # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
     # deca_conf = None
     # fixed_overrides_deca = None
@@ -129,7 +146,7 @@ def train_emodeca_on_cluster():
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()
         conf_overrides += mode[0]
-        if deca_conf_path is None:
+        if deca_conf_path is None and fixed_overrides_deca is not None:
             deca_overrides = fixed_overrides_deca.copy()
             deca_overrides += mode[1]
         else:

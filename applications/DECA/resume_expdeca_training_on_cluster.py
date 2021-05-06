@@ -13,10 +13,18 @@ def submit(
         bid=10):
 
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
-    result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca"
-    result_dir_cluster_side = "/ps/scratch/rdanecek/emoca/finetune_deca"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/expdeca/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/expdeca/submission"
+
+    # result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca"
+    # result_dir_cluster_side = "/ps/scratch/rdanecek/emoca/finetune_deca"
+
+    result_dir_local_mount = "/is/cluster/work/rdanecek/emoca/finetune_deca"
+    result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/finetune_deca"
+
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
@@ -96,8 +104,8 @@ def main():
     # resume_folders += ['2021_04_30_21-01-13_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
     # # resume_folders += ['']
 
-    for resume_folder in resume_folders:
-        submit(resume_folder, stage, resume_from_previous, force_new_location)
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
     # stage = 2
     # resume_from_previous = False
@@ -116,11 +124,24 @@ def main():
     # resume_from_previous = True
     # force_new_location = False
     # resume_folders = []
-    # # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
-    # # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
-    # # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
+    # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
+    # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
+    # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+
+    stage = 2
+    resume_from_previous = False
+    force_new_location = False
+    resume_folders = []
+    resume_folders += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early']
+    resume_folders += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
+    resume_folders += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early']
+    resume_folders += ['2021_05_02_12-36-00_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
+    resume_folders += ['2021_05_02_12-35-44_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early']
+    resume_folders += ['2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early']
+    for resume_folder in resume_folders:
+        submit(resume_folder, stage, resume_from_previous, force_new_location)
 
 
 if __name__ == "__main__":

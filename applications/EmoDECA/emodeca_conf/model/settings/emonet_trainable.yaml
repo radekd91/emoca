@@ -1,5 +1,6 @@
 # @package model
-emodeca_type: EmoDECA
+emodeca_type: EmoNetModule
+load_pretrained_emonet: False
 
 predict_expression: true
 predict_valence: true
@@ -22,7 +23,16 @@ va_loss:
   va_lccc: 1.
 
 exp_loss: nll_loss
+
+va_loss_scheme: shake
+#va_loss_scheme: norm
+#va_loss_scheme: none
+
 #exp_loss: cross_entropy
+#a_loss: mse_loss
+#v_loss: mse_loss
+#exp_loss: nll_loss
+##exp_loss: cross_entropy
 
 a_activation: none
 #a_activation: tanh
@@ -31,18 +41,5 @@ v_activation: none
 exp_activation: log_softmax
 #exp_activation: none
 
-va_loss_scheme: shake
-#va_loss_scheme: norm
-#va_loss_scheme: none
-
 expression_balancing: false
-use_expression: true
-use_global_pose: false
-use_jaw_pose: true
-use_detail_code: false
-deca_checkpoint: todo
-deca_cfg: todo
-deca_stage: todo
-num_mlp_layers: 4
-finetune_deca: false
 

@@ -53,35 +53,6 @@ class EmotionRecognitionBase(pl.LightningModule):
         self.v_loss = loss_from_cfg(config, 'v_loss')
         self.a_loss = loss_from_cfg(config, 'a_loss')
         self.exp_loss = loss_from_cfg(config, 'exp_loss')
-        # if 'va_loss' in config.model.keys():
-        #     if isinstance(self.config.model.va_loss, str):
-        #         self.va_loss = class_from_str(self.config.model.va_loss, sys.modules[__name__])
-        #     else:
-        #         cont = OmegaConf.to_container(self.config.model.va_loss)
-        #         if isinstance(cont, list):
-        #             self.va_loss = {name: 1. for name in cont}
-        #         elif isinstance(cont, dict):
-        #             self.va_loss = cont
-        #         else:
-        #             raise ValueError(f"Unkown type of loss {type(cont)}")
-        #
-        # else:
-        #     self.va_loss = None
-
-        # if 'v_loss' in config.model.keys():
-        #     self.v_loss = class_from_str(self.config.model.v_loss, sys.modules[__name__])
-        # else:
-        #     self.v_loss = None
-        #
-        # if 'a_loss' in config.model.keys():
-        #     self.a_loss = class_from_str(self.config.model.a_loss, sys.modules[__name__])
-        # else:
-        #     self.a_loss = None
-        #
-        # if 'exp_loss' in config.model.keys():
-        #     self.exp_loss = class_from_str(self.config.model.exp_loss, sys.modules[__name__])
-        # else:
-        #     self.exp_loss = None
 
 
     def forward(self, image):
@@ -287,6 +258,7 @@ class EmotionRecognitionBase(pl.LightningModule):
                                             valence_gt, arousal_gt, expr_classification_gt, class_weight, training=False)
 
         self._log_losses_and_metrics(losses, metrics, "val")
+        # visdict = self._test_visualization(values, batch, batch_idx, dataloader_idx=dataloader_idx)
         total_loss = losses["total"]
         return total_loss
 

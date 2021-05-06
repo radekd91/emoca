@@ -69,7 +69,8 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        env='work36',
                        username='rdanecek',
                        gpu_mem_requirement_mb=None,
-                       cuda_capability_requirement=None):
+                       cuda_capability_requirement=None,
+                       chmod=True):
     submission_dir_cluster_side = submission_dir_cluster_side or submission_dir_local_mount
     logdir = 'logs'
 
@@ -122,11 +123,17 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
         fp.write(cs)
     os.chmod(condor_fname, stat.S_IXOTH | stat.S_IWOTH | stat.S_IREAD | stat.S_IEXEC | stat.S_IXUSR | stat.S_IRUSR)  # make executable
 
-    cmd = f'cd {submission_dir_cluster_side} && ' \
-          f'mkdir {logdir} && ' \
-          f'chmod +x {os.path.basename(script_fname)} && ' \
-          f'chmod +x {os.path.basename(condor_fname)} && ' \
-          f'condor_submit_bid {bid} {os.path.basename(condor_fname)}'
+    if chmod:
+        cmd = f'cd {submission_dir_cluster_side} && ' \
+              f'mkdir {logdir} && ' \
+              f'chmod +x {os.path.basename(script_fname)} && ' \
+              f'chmod +x {os.path.basename(condor_fname)} && ' \
+              f'condor_submit_bid {bid} {os.path.basename(condor_fname)}'
+    else:
+        cmd = f'cd {submission_dir_cluster_side} && ' \
+              f'mkdir {logdir} && ' \
+              f'condor_submit_bid {bid} {os.path.basename(condor_fname)}'
+
     print("Called the following on the cluster: ")
     print(cmd)
     subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])

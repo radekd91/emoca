@@ -18,7 +18,15 @@ class EmoDECA(EmotionRecognitionBase):
         # learning_params = config.model.deca_cfg.learning
         # inout_params = config.model.deca_cfg.inout
         deca_checkpoint = config.model.deca_checkpoint
-        self.deca = instantiate_deca(config.model.deca_cfg, "test", deca_checkpoint )
+        deca_stage = config.model.deca_stage
+        deca_checkpoint_kwargs = {
+            "model_params": config.model.deca_cfg.model,
+            "learning_params": config.model.deca_cfg.learning,
+            "inout_params": config.model.deca_cfg.inout,
+            "stage_name": "testing",
+        }
+        self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test", deca_checkpoint, deca_checkpoint_kwargs)
+        self.deca.inout_params.full_run_dir = config.inout.full_run_dir
         self._setup_deca(False)
 
         in_size = 0
@@ -263,7 +271,8 @@ class EmoDECA(EmotionRecognitionBase):
         arousal_gt = input_batch["va"][:, 1:2]
         expr_classification_gt = input_batch["affectnetexp"]
 
-        values = self.deca.decode(output_values)
+        with torch.no_grad():
+            values = self.deca.decode(output_values)
 
         self.deca.logger = self.logger
         mode_ = str(self.deca.mode.name).lower()
@@ -282,8 +291,9 @@ class EmoDECA(EmotionRecognitionBase):
                                                                          values['ops'],
                                                                          uv_detail_normals, values, self.global_step,
                                                                          "test", "")
+        indices = 0
         visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
-                                                          indices=0, dataloader_idx=dataloader_idx)
+                                                          indices=indices, dataloader_idx=dataloader_idx)
         if f"{mode_}_test_landmarks_gt" in visdict.keys():
             del visdict[f"{mode_}_test_landmarks_gt"]
         if f"{mode_}_test_landmarks_predicted" in visdict.keys():
@@ -301,9 +311,9 @@ class EmoDECA(EmotionRecognitionBase):
 
         if isinstance(self.logger, WandbLogger):
             caption = self.deca.vae_2_str(
-                valence=valence_pred.detach().cpu().numpy(),
-                arousal=arousal_pred.detach().cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
+                valence=valence_pred.detach().cpu().numpy()[indices, ...],
+                arousal=arousal_pred.detach().cpu().numpy()[indices, ...],
+                affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[indices, ...],
                 expr7=None, prefix="pred")
             if f"{mode_}_test_geometry_coarse" in visdict.keys():
                 visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
@@ -312,7 +322,7 @@ class EmoDECA(EmotionRecognitionBase):
 
         if isinstance(self.logger, WandbLogger):
             self.logger.log_metrics(visdict)
-
+        return visdict
 
     # def test_step(self, batch, batch_idx, dataloader_idx=None):
     #     values = self.forward(batch)

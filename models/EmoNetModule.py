@@ -25,7 +25,6 @@ class EmoNetModule(EmotionRecognitionBase):
         return self.emonet(images, intermediate_features=False)
 
     def forward(self, batch):
-
         images = batch['image']
 
         if len(images.shape) == 5:
@@ -57,52 +56,9 @@ class EmoNetModule(EmotionRecognitionBase):
     def _get_trainable_parameters(self):
         return list(self.emonet.parameters())
 
-    # we can leave the default implementation
+    ## we can leave the default implementation
     # def train(self, mode=True):
-    #     self._setup_deca(mode)
-    #     self.mlp.train(mode)
-    #
-    # def training_step(self, batch, batch_idx):
-    #     values = self.forward(batch)
-    #     valence_pred = values["valence"]
-    #     arousal_pred = values["arousal"]
-    #     expr_classification_pred = values["expr_classification"]
-    #
-    #     valence_gt = batch["va"][:, 0:1]
-    #     arousal_gt = batch["va"][:, 1:2]
-    #     expr_classification_gt = batch["affectnetexp"]
-    #     if "expression_weight" in batch.keys():
-    #         class_weight = batch["expression_weight"][0]
-    #     else:
-    #         class_weight = None
-    #
-    #     losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-    #                                         valence_gt, arousal_gt, expr_classification_gt, class_weight)
-    #
-    #     self._log_losses_and_metrics(losses, metrics, "train")
-    #     total_loss = losses["total"]
-    #     return total_loss
-    #
-    # def validation_step(self, batch, batch_idx, dataloader_idx=None):
-    #     values = self.forward(batch)
-    #     valence_pred = values["valence"]
-    #     arousal_pred = values["arousal"]
-    #     expr_classification_pred = values["expr_classification"]
-    #
-    #     valence_gt = batch["va"][:, 0:1]
-    #     arousal_gt = batch["va"][:, 1:2]
-    #     expr_classification_gt = batch["affectnetexp"]
-    #     if "expression_weight" in batch.keys():
-    #         class_weight = batch["expression_weight"][0]
-    #     else:
-    #         class_weight = None
-    #
-    #     losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-    #                                         valence_gt, arousal_gt, expr_classification_gt, class_weight)
-    #
-    #     self._log_losses_and_metrics(losses, metrics, "val")
-    #     total_loss = losses["total"]
-    #     return total_loss
+    #     pass
 
     def _vae_2_str(self, valence=None, arousal=None, affnet_expr=None, expr7=None, prefix=""):
         caption = ""
@@ -150,7 +106,7 @@ class EmoNetModule(EmotionRecognitionBase):
 
 
         stage = "test"
-        log_dict = {}
+        vis_dict = {}
 
         i = 0 # index of sample in batch to log
         for key in visdict.keys():
@@ -168,7 +124,8 @@ class EmoNetModule(EmotionRecognitionBase):
             name = stage + "_" + key
             if dataloader_idx is not None:
                 name += "/dataloader_idx_" + str(dataloader_idx)
-            log_dict[name] = im2log
+            vis_dict[name] = im2log
 
         if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(log_dict)
+            self.logger.log_metrics(vis_dict)
+        return vis_dict

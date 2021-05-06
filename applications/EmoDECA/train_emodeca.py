@@ -11,6 +11,7 @@ from utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from applications.DECA.interactive_deca_decoder import hack_paths
 
 
 project_name = 'EmoDECA'
@@ -106,6 +107,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         #     deca.load_from_checkpoint(checkpoint_path=checkpoint)
         # deca.reconfigure(cfg)
 
+    deca_class = type(deca)
 
 
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
@@ -177,7 +179,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         if hasattr(cfg.learning, 'checkpoint_after_training'):
             if cfg.learning.checkpoint_after_training == 'best':
                 print(f"Loading the best checkpoint after training '{checkpoint_callback.best_model_path}'.")
-                deca = EmoDECA.load_from_checkpoint(checkpoint_callback.best_model_path,
+                deca = deca_class.load_from_checkpoint(checkpoint_callback.best_model_path,
                                                        config=cfg,
                                                        )
             elif cfg.learning.checkpoint_after_training == 'latest':
@@ -288,7 +290,8 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
         checkpoint = None
 
 
-def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides, deca_conf_path=None, deca_stage=None):
+def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides, deca_conf_path=None, deca_stage=None,
+              replace_root_path=None, relative_to_path=None):
     from hydra.experimental import compose, initialize
     from hydra.core.global_hydra import GlobalHydra
     initialize(config_path="emodeca_conf", job_name="train_deca")
@@ -299,14 +302,21 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
             GlobalHydra.instance().clear()
             initialize(config_path="../DECA/deca_conf", job_name="train_deca")
             deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
+            cfg.model.deca_checkpoint = None
         else:
             if deca_default is not None:
                 raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
             with open(Path(deca_conf_path) / "cfg.yaml", "r") as f:
                 deca_cfg = OmegaConf.load(f)
             deca_cfg = deca_cfg[deca_stage]
-        cfg.model.deca_checkpoint = None
+
+            ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best')
+            cfg.model.deca_checkpoint = ckpt
+            if replace_root_path is not None and relative_to_path is not None:
+                deca_cfg = hack_paths(deca_cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+
         cfg.model.deca_cfg = deca_cfg
+        cfg.model.deca_stage = deca_stage
     return cfg
 
 
@@ -331,13 +341,37 @@ def main():
             'data/datasets=affectnet_cluster',
              'learning.batch_size_test=1'
         ]
+        # deca_conf_path = None
+        # stage = None
+
+        deca_default = None
+        deca_overrides = None
+        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf = None
+        stage = 'detail'
+
+        relative_to_path = '/ps/scratch/'
+        # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
+        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+
+        # replace_root_path = None
+        # relative_to_path = None
 
         # emodeca_default = "emonet"
-        # emodeca_overrides = []
+        # emodeca_overrides = ['model/settings=emonet_trainable']
         # deca_default = None
         # deca_overrides = None
 
-        cfg = configure(emodeca_default, emodeca_overrides, deca_default, deca_overrides)
+
+        cfg = configure(emodeca_default,
+                        emodeca_overrides,
+                        deca_default,
+                        deca_overrides,
+                        deca_conf_path=deca_conf_path,
+                        deca_stage=stage,
+                        relative_to_path=relative_to_path,
+                        replace_root_path=replace_root_path)
     else:
         cfg_path = sys.argv[1]
         print(f"Training from config '{cfg_path}'")
