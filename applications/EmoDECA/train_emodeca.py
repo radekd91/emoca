@@ -55,6 +55,9 @@ def create_experiment_name(cfg, version=1):
     if hasattr(cfg.learning, 'early_stopping') and cfg.learning.early_stopping:
         experiment_name += "_early"
 
+    if cfg.learning.optimizer != 'Adam':
+        experiment_name += "_" + cfg.learning.optimizer
+
     return experiment_name
 
 
