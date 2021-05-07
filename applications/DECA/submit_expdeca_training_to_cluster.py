@@ -76,8 +76,8 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
-    ring_type = "gt_expression"
-    # ring_type = "gt_va"
+    # ring_type = "gt_expression"
+    ring_type = "gt_va"
     # ring_type = "emonet_feature"
 
     finetune_modes = [
@@ -158,13 +158,14 @@ def train_on_selected_sequences():
         #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
         # ],
 
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
+        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         [
             ['model.useSeg=rend', 'model.idw=0',
              'model.shape_constrain_type=None',
              'model.expression_constrain_type=exchange',
              'model.expression_constrain_use_jaw_pose=True',
              'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
              'model.background_from_input=False',
              f'data.ring_type={ring_type}',
              # 'data.ring_type=gt_va',
@@ -178,6 +179,7 @@ def train_on_selected_sequences():
              'model.expression_constrain_type=exchange',
              'model.expression_constrain_use_jaw_pose=True',
              'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
              'model.background_from_input=False',
              f'data.ring_type={ring_type}',
              # 'data.ring_type=gt_va',
@@ -189,34 +191,36 @@ def train_on_selected_sequences():
              'learning.batch_size_test=1']
         ],
 
-        # #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0',
-        #      'model.expression_constrain_type=exchange',
-        #      'model.expression_constrain_use_jaw_pose=True',
-        #      'model.expression_constrain_use_global_pose=False',
-        #      'model.background_from_input=False',
-        #      f'data.ring_type={ring_type}',
-        #      # 'data.ring_type=gt_va',
-        #      # 'data.ring_type=emonet_feature',
-        #      'data.ring_size=4',
-        #      'learning/batching=single_gpu_expdeca_coarse_ring',
-        #      'learning.gpu_memory_min_gb=24',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0',
-        #      'model.expression_constrain_type=exchange',
-        #      'model.expression_constrain_use_jaw_pose=True',
-        #      'model.expression_constrain_use_global_pose=False',
-        #      'model.background_from_input=False',
-        #      f'data.ring_type={ring_type}',
-        #      # 'data.ring_type=gt_va',
-        #      # 'data.ring_type=emonet_feature',
-        #      'data.ring_size=4',
-        #      'learning/batching=single_gpu_expdeca_detail_ring',
-        #      'learning.gpu_memory_min_gb=24',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        # ],
+        #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
+             'model.background_from_input=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_coarse_ring',
+             'learning.gpu_memory_min_gb=24',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
+             'model.background_from_input=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_detail_ring',
+             'learning.gpu_memory_min_gb=24',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
         # # DETAIL WITH COARSE, no landmarks for detail stage

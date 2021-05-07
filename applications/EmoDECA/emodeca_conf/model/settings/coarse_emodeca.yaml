@@ -36,6 +36,7 @@ va_loss_scheme: shake
 #va_loss_scheme: none
 
 expression_balancing: false
+use_identity: false
 use_expression: true
 use_global_pose: false
 use_jaw_pose: true

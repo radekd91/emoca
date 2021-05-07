@@ -30,6 +30,8 @@ def create_experiment_name(cfg, version=1):
             experiment_name += "_" + cfg.model.deca_cfg.model.deca_class
 
         experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
+        if cfg.model.use_identity:
+            experiment_name += "_id"
         if cfg.model.use_expression:
             experiment_name += "_exp"
         if cfg.model.use_global_pose:
