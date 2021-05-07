@@ -40,6 +40,7 @@ photow: 2.
 #shape_constrain_type: 'same' # None
 shape_constrain_type: none
 expression_constrain_type: none
+use_geometric_losses_expression_exchange: False
 
 exp_deca_global_pose: False
 #exp_deca_global_pose: True

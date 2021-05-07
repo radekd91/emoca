@@ -41,6 +41,7 @@ shape_constrain_type: none # None
 expression_constrain_type: none
 expression_constrain_use_jaw_pose: True
 expression_constrain_use_global_pose: False
+use_geometric_losses_expression_exchange: False
 
 exp_deca_global_pose: False
 #exp_deca_global_pose: True

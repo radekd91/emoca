@@ -86,11 +86,14 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
 
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
-            experiment_name += '_EmoLossB'
+            # experiment_name += '_EmoLossB'
+            experiment_name += '_EmoB'
         elif cfg_coarse.model.use_emonet_loss:
-            experiment_name += '_EmoLossC'
+            # experiment_name += '_EmoLossC'
+            experiment_name += '_EmoC'
         elif cfg_detail.model.use_emonet_loss:
-            experiment_name += '_EmoLossD'
+            # experiment_name += '_EmoLossD'
+            experiment_name += '_EmoD'
         if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
             experiment_name += '_'
             if cfg_coarse.model.use_emonet_feat_1:
@@ -106,8 +109,16 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
             if cfg_coarse.model.use_emonet_combined:
                 experiment_name += 'C'
 
-        if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
-            experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
+            # if expression exchange and geometric errors are to be computed even for the exchanged
+            if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
+                    cfg_coarse.model.use_geometric_losses_expression_exchange and \
+                    'expression_constrain_type' in cfg_coarse.model.keys() \
+                    and cfg_coarse.model.expression_constrain_type == 'exchange':
+                experiment_name += '_GeEx'
+
+        if version == 0:
+            if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
+                experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'

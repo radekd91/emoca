@@ -292,51 +292,6 @@ class DecaModule(LightningModule):
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
                                   images, cam, lmk, masks, va, expr7)
-                    # new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
-                    # new_order = new_order.flatten()
-                    # expcode_new = expcode[new_order]
-                    # ## append new shape code data
-                    # expcode = torch.cat([expcode, expcode_new], dim=0)
-                    # texcode = torch.cat([texcode, texcode], dim=0)
-                    # shapecode = torch.cat([shapecode, shapecode], dim=0)
-                    #
-                    # globpose = posecode[..., :3]
-                    # jawpose = posecode[..., 3:]
-                    #
-                    # if self.deca.config.expression_constrain_use_jaw_pose:
-                    #     jawpose_new = jawpose[new_order]
-                    #     jawpose = torch.cat([jawpose, jawpose_new], dim=0)
-                    # else:
-                    #     jawpose = torch.cat([jawpose, jawpose], dim=0)
-                    #
-                    # if self.deca.config.expression_constrain_use_global_pose:
-                    #     globpose_new = globpose[new_order]
-                    #     globpose = torch.cat([globpose, globpose_new], dim=0)
-                    # else:
-                    #     globpose = torch.cat([globpose, globpose], dim=0)
-                    #
-                    # if self.deca.config.expression_constrain_use_jaw_pose or self.deca.config.expression_constrain_use_global_pose:
-                    #     posecode = torch.cat([globpose, jawpose], dim=-1)
-                    #     # posecode_new = torch.cat([globpose, jawpose], dim=-1)
-                    # else:
-                    #     # posecode_new = posecode
-                    #     # posecode_new = posecode
-                    #     posecode = torch.cat([posecode, posecode], dim=0)
-                    #
-                    # cam = torch.cat([cam, cam], dim=0)
-                    # lightcode = torch.cat([lightcode, lightcode], dim=0)
-                    # ## append gt
-                    # images = torch.cat([images, images],
-                    #                    dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-                    # lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
-                    # masks = torch.cat([masks, masks], dim=0)
-                    #
-                    # # TODO fix this
-                    # if va is not None:
-                    #     va = torch.cat([va, va], dim=0)
-                    # if expr7 is not None:
-                    #     expr7 = torch.cat([expr7, expr7], dim=0)
-
 
 
         # -- detail
@@ -626,9 +581,14 @@ class DecaModule(LightningModule):
             masks = None
 
         batch_size = codedict["predicted_images"].shape[0]
+
+        use_geom_losses = 'use_geometric_losses_expression_exchange' in self.deca.config.keys() and \
+            self.deca.config.use_geometric_losses_expression_exchange
+
         if training and 'expression_constrain_type' in self.deca.config.keys() \
             and self.deca.config.expression_constrain_type == 'exchange' \
-            and (self.deca.mode == DecaMode.COARSE or self.deca.config.train_coarse):
+            and (self.deca.mode == DecaMode.COARSE or self.deca.config.train_coarse) \
+            and (not use_geom_losses):
             if batch_size % 2 != 0:
                 raise RuntimeError("The batch size should be even because it should have "
                                    f"got doubled in expression ring exchange. Instead it was odd: {batch_size}")
