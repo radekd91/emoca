@@ -2,6 +2,7 @@ import os, sys
 import torch
 import torchvision
 import torch.nn.functional as F
+import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
 from layers.losses.EmoNetLoss import EmoNetLoss
@@ -1176,7 +1177,12 @@ class DecaModule(LightningModule):
                 trainable_params,
                 lr=self.learning_params.learning_rate,
                 amsgrad=False)
-
+        elif self.config.learning.optimizer == 'AdaBound':
+            opt = adabound.AdaBound(
+                trainable_params,
+                lr=self.config.learning.learning_rate,
+                final_lr=self.config.learning.final_learning_rate
+            )
         elif self.learning_params.optimizer == 'SGD':
             self.deca.opt = torch.optim.SGD(
                 trainable_params,

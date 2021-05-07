@@ -9,6 +9,7 @@ from layers.losses.EmoNetLoss import get_emonet
 from utils.emotion_metrics import *
 from torch.nn.functional import mse_loss, cross_entropy, nll_loss, l1_loss, log_softmax
 import sys
+import adabound
 
 
 def loss_from_cfg(config, loss_name):
@@ -70,6 +71,12 @@ class EmotionRecognitionBase(pl.LightningModule):
                 trainable_params,
                 lr=self.config.learning.learning_rate,
                 amsgrad=False)
+        elif self.config.learning.optimizer == 'AdaBound':
+            opt = adabound.AdaBound(
+                trainable_params,
+                lr=self.config.learning.learning_rate,
+                final_lr=self.config.learning.final_learning_rate
+            )
 
         elif self.config.learning.optimizer == 'SGD':
             opt = torch.optim.SGD(
