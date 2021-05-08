@@ -86,32 +86,35 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        [
-            [],
-            []
-        ],
+        # [
+        #     [],
+        #     []
+        # ],
 
-        [
-            ['model.use_detail_code=true'],
-            []
-        ],
+        # [
+        #     ['model.use_detail_code=true'],
+        #     []
+        # ],
 
-        [
-            ['model.expression_balancing=true'],
-            []
-        ],
-        #
-        [
-            ['model.use_detail_code=true',
-             'model.expression_balancing=true'],
-            []
-        ],
+        # [
+        #     ['model.expression_balancing=true'],
+        #     []
+        # ],
+
+        # [
+        #     ['model.use_detail_code=true',
+        #      'model.expression_balancing=true'],
+        #     []
+        # ],
 
     ]
 
     # #1 EMONET
     # conf = "emonet_cluster"
-    # fixed_overrides_cfg = ['model/settings=emonet_trainable']
+    # fixed_overrides_cfg = [
+    #     'model/settings=emonet_trainable',
+    #     'learning/optimizer=adabound',
+    # ]
     # deca_conf = None
     # deca_conf_path = None
     # fixed_overrides_deca = None
@@ -120,7 +123,8 @@ def train_emodeca_on_cluster():
     # EMODECA
     conf = "emodeca_coarse_cluster"
     fixed_overrides_cfg = [
-        'model.use_identity=True', #
+        # 'model.use_identity=True', #
+        # 'learning/optimizer=adabound', #
     ]
 
     # deca_conf_path = None

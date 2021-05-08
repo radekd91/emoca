@@ -30,6 +30,8 @@ class EmoDECA(EmotionRecognitionBase):
         self._setup_deca(False)
 
         in_size = 0
+        if self.config.model.use_identity:
+            in_size += config.model.deca_cfg.model.n_shape
         if self.config.model.use_expression:
             in_size += config.model.deca_cfg.model.n_exp
         if self.config.model.use_global_pose:
@@ -116,7 +118,7 @@ class EmoDECA(EmotionRecognitionBase):
 
     def forward(self, batch):
         values = self.deca.encode(batch)
-        # shapecode = values['shapecode']
+        shapecode = values['shapecode']
         # texcode = values['texcode']
         expcode = values['expcode']
         posecode = values['posecode']
@@ -129,6 +131,11 @@ class EmoDECA(EmotionRecognitionBase):
         jaw_pose = posecode[:, 3:]
 
         input_list = []
+
+
+
+        if self.config.model.use_identity:
+            input_list += [shapecode]
 
         if self.config.model.use_expression:
             input_list += [expcode]
