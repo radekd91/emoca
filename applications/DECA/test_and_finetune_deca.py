@@ -173,7 +173,10 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
         return None
     if logger_type == "WandbLogger":
         print(f"Creating logger: {logger_type}")
-        logger = WandbLogger(name=name[:120],
+        short_name = name[:120]
+        print(f"Short name len: {len(short_name)}")
+        print(short_name)
+        logger = WandbLogger(name=short_name,
                              notes=name,
                              project=project_name,
                              version=version,
