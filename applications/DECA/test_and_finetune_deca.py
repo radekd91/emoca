@@ -173,7 +173,8 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
         return None
     if logger_type == "WandbLogger":
         print(f"Creating logger: {logger_type}")
-        logger = WandbLogger(name=name,
+        logger = WandbLogger(name=name[:128],
+                             notes=name,
                              project=project_name,
                              version=version,
                              save_dir=save_dir,
@@ -217,7 +218,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                     name=cfg.inout.name,
                     project_name=project_name,
                     version=version,
-                    save_dir=cfg.inout.full_run_dir)
+                    save_dir=cfg.inout.full_run_dir,
+                    config=OmegaConf.to_container(cfg)
+        )
 
     if logger is not None:
         logger.finalize("")
