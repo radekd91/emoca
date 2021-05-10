@@ -41,9 +41,11 @@ def data_preparation_function(cfg,path_to_affectnet, path_to_processed_affectnet
 
 
 def main():
-    path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
     path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
-    path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
+    # path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
+    path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
     run_name = sys.argv[1]
 
     if len(sys.argv) > 2:
