@@ -49,7 +49,7 @@ class EmoNetModule(EmotionRecognitionBase):
 
         # emotion['expression'] = emotion['expression']
 
-        classes_probs = F.softmax(emotion['expression'])
+        # classes_probs = F.softmax(emotion['expression'])
         expression = self.exp_activation(emotion['expression'], dim=1)
 
         values = {}

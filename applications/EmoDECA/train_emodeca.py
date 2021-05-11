@@ -29,17 +29,34 @@ def create_experiment_name(cfg, version=1):
             # experiment_name += "_" + cfg.model.deca_cfg.inout.name
             experiment_name += "_" + cfg.model.deca_cfg.model.deca_class
 
-        experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
-        if cfg.model.use_identity:
-            experiment_name += "_id"
-        if cfg.model.use_expression:
-            experiment_name += "_exp"
-        if cfg.model.use_global_pose:
-            experiment_name += "_pose"
-        if cfg.model.use_jaw_pose:
-            experiment_name += "_jaw"
-        if cfg.model.use_detail_code:
-            experiment_name += "_detail"
+        if "use_mlp" not in cfg.model.keys() or cfg.model.use_mlp:
+            experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
+
+            if cfg.model.use_identity:
+                experiment_name += "_id"
+            if cfg.model.use_expression:
+                experiment_name += "_exp"
+            if cfg.model.use_global_pose:
+                experiment_name += "_pose"
+            if cfg.model.use_jaw_pose:
+                experiment_name += "_jaw"
+            if cfg.model.use_detail_code:
+                experiment_name += "_detail"
+
+        if "use_emonet" in cfg.model.keys() and cfg.model.use_emonet:
+            experiment_name += "_EmoNet"
+            if cfg.model.use_coarse_image_emonet:
+                experiment_name += "C"
+            if cfg.model.use_detail_image_emonet:
+                experiment_name += "D"
+
+            if cfg.model.unpose_global_emonet:
+                experiment_name += "_unpose"
+            if cfg.model.static_light:
+                experiment_name += "_light"
+            if cfg.model.static_cam_emonet:
+                experiment_name += "_cam"
+
     else:
         experiment_name = "EmoNet"
 
@@ -327,8 +344,8 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
 def main():
     if len(sys.argv) < 2:
-        # emodeca_default = "emodeca_coarse"
-        # emodeca_overrides = []
+        emodeca_default = "emodeca_emonet_coarse"
+        emodeca_overrides = ['learning/logging=none']
         #
         # deca_default = "deca_train_coarse_cluster"
         # deca_overrides = [
@@ -349,28 +366,28 @@ def main():
         # # deca_conf_path = None
         # # stage = None
         #
-        # deca_default = None
-        # deca_overrides = None
-        # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        deca_default = None
+        deca_overrides = None
+        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
         # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
         # # deca_conf = None
-        # stage = 'detail'
+        stage = 'detail'
 
-        # relative_to_path = '/ps/scratch/'
+        relative_to_path = '/ps/scratch/'
         # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
-        # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
 
         # replace_root_path = None
         # relative_to_path = None
 
-        emodeca_default = "emonet"
-        emodeca_overrides = ['model/settings=emonet_trainable']
-        deca_default = None
-        deca_overrides = None
-        deca_conf_path = None
-        stage = None
-        relative_to_path = None
-        replace_root_path = None
+        # emodeca_default = "emonet"
+        # emodeca_overrides = ['model/settings=emonet_trainable']
+        # deca_default = None
+        # deca_overrides = None
+        # deca_conf_path = None
+        # stage = None
+        # relative_to_path = None
+        # replace_root_path = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,

@@ -12,7 +12,7 @@ import pickle as pkl
 from tqdm import tqdm, auto
 # import subprocess
 from torchvision.transforms import Resize, Compose
-
+from utils.FaceDetector import FAN
 from datasets.AffectNetDataModule import AffectNetExpressions
 from datasets.EmotionalImageDataset import EmotionalImageDataset
 from datasets.FaceDataModuleBase import FaceDataModuleBase
@@ -2233,9 +2233,9 @@ class TestData(Dataset):
         self.iscrop = iscrop
         self.resolution_inp = crop_size
         add_pretrained_deca_to_path()
-        from decalib.datasets import detectors
+        # from decalib.datasets import detectors
         if face_detector == 'fan':
-            self.face_detector = detectors.FAN()
+            self.face_detector = FAN()
         # elif face_detector == 'mtcnn':
         #     self.face_detector = detectors.MTCNN()
         else:
@@ -2275,7 +2275,9 @@ class TestData(Dataset):
                 bottom = np.max(kpt[:, 1])
                 old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
             else:
-                bbox, bbox_type, landmarks = self.face_detector.run(image)
+                # bbox, bbox_type, landmarks = self.face_detector.run(image)
+                bbox, bbox_type = self.face_detector.run(image)
+                bbox = bbox[0]
                 if len(bbox) < 4:
                     print('no face detected! run original image')
                     left = 0

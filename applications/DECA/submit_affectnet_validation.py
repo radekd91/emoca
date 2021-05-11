@@ -7,8 +7,10 @@ import time as t
 
 def submit(cfg, model_folder_name, mode, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/affectnet_test_submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/affectnet_test_submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
@@ -57,8 +59,9 @@ def submit(cfg, model_folder_name, mode, bid=10):
     t.sleep(1)
 
 def main():
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
 
     run_names = []
     # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
@@ -110,6 +113,20 @@ def main():
     # run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
 
 
+    ### ExpDECA expression rings
+    # geometric expression rings - these need a few more days of finetuning
+    # run_names += ['2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
+    # run_names += ['2021_05_07_20-46-09_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early']
+    # run_names += ['2021_05_07_20-45-33_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
+    # run_names += ['2021_05_07_20-36-43_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early']
+
+    # only emotion expression rings
+    # run_names += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early'] # ran
+    # run_names += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early'] # ran
+    # run_names += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early'] # ran
+    # run_names += ['2021_05_02_12-36-00_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early'] # ran
+    # run_names += ['2021_05_02_12-35-44_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early'] # ran
+    # run_names += ['2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'] # ran
 
 
     # mode = 'coarse'

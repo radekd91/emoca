@@ -1,4 +1,4 @@
-from .DECA import DecaModule, instantiate_deca
+from .DECA import DecaModule, instantiate_deca, DecaMode
 from .EmotionRecognitionModuleBase import EmotionRecognitionBase
 from .MLP import MLP
 import torch
@@ -8,6 +8,7 @@ from utils.other import class_from_str
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
+from layers.losses.EmoNetLoss import get_emonet
 
 
 class EmoDECA(EmotionRecognitionBase):
@@ -19,6 +20,7 @@ class EmoDECA(EmotionRecognitionBase):
         # inout_params = config.model.deca_cfg.inout
         deca_checkpoint = config.model.deca_checkpoint
         deca_stage = config.model.deca_stage
+        config.model.deca_cfg.model.background_from_input = False
         deca_checkpoint_kwargs = {
             "model_params": config.model.deca_cfg.model,
             "learning_params": config.model.deca_cfg.learning,
@@ -52,56 +54,30 @@ class EmoDECA(EmotionRecognitionBase):
         if self.config.model.predict_arousal:
             out_size += 1
 
-        self.mlp = MLP(in_size, out_size, hidden_layer_sizes)
+        if "use_mlp" not in self.config.model.keys() or self.config.model.use_mlp:
+            self.mlp = MLP(in_size, out_size, hidden_layer_sizes)
+        else:
+            self.mlp = None
 
-        # TODO: delete, this was moved to base
-        # if 'va_activation' in config.model.keys():
-        #     self.va_activation = None
-        # else:
-        #     self.va_activation = class_from_str(self.config.model.va_loss, F)
-        # if 'exp_activation' in config.model.keys():
-        #     self.exp_activation = F.log_softmax
-        # else:
-        #     self.exp_activation = class_from_str(self.config.model.exp_activation, F)
-        #
-        # self.va_loss = class_from_str(self.config.model.va_loss, F)
-        # self.exp_loss = class_from_str(self.config.model.exp_loss, F)
+        if "use_emonet" in self.config.model.keys() and self.config.model.use_emonet:
+            self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
+            if not config.model.load_pretrained_emonet:
+                self.emonet.n_expression = 9  # we use all affectnet classes (included none) for now
+                self.emonet._create_Emo()  # reinitialize
+        else:
+            self.emonet = None
+
+
 
     def _get_trainable_parameters(self):
         trainable_params = []
         if self.config.model.finetune_deca:
             trainable_params += self.deca._get_trainable_parameters()
-        trainable_params += list(self.mlp.parameters())
+        if self.mlp is not None:
+            trainable_params += list(self.mlp.parameters())
+        if self.emonet is not None:
+            trainable_params += list(self.emonet.parameters())
         return trainable_params
-
-    # def configure_optimizers(self):
-    #     trainable_params = []
-    #     if self.config.model.finetune_deca:
-    #         trainable_params += self.deca._get_trainable_parameters()
-    #     trainable_params += list(self.mlp.parameters())
-    #
-    #     if self.config.learning.optimizer == 'Adam':
-    #         opt = torch.optim.Adam(
-    #             trainable_params,
-    #             lr=self.config.learning.learning_rate,
-    #             amsgrad=False)
-    #
-    #     elif self.config.learning.optimizer == 'SGD':
-    #         opt = torch.optim.SGD(
-    #             trainable_params,
-    #             lr=self.config.learning.learning_rate)
-    #     else:
-    #         raise ValueError(f"Unsupported optimizer: '{self.config.learning.optimizer}'")
-    #
-    #     optimizers = [opt]
-    #     schedulers = []
-    #     if 'learning_rate_decay' in self.config.learning.keys():
-    #         scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=self.config.learning.learning_rate_decay)
-    #         schedulers += [scheduler]
-    #     if len(schedulers) == 0:
-    #         return opt
-    #
-    #     return optimizers, schedulers
 
     def _setup_deca(self, train : bool):
         if self.config.model.finetune_deca:
@@ -113,8 +89,34 @@ class EmoDECA(EmotionRecognitionBase):
 
     def train(self, mode=True):
         self._setup_deca(mode)
-        self.mlp.train(mode)
+        if self.mlp is not None:
+            self.mlp.train(mode)
+        if self.emonet is not None:
+            self.emonet.train(mode)
 
+    def emonet_out(self, images):
+        images = F.interpolate(images, (256, 256), mode='bilinear')
+        return self.emonet(images, intermediate_features=False)
+
+    def forward_emonet(self, values, values_decoded, mode):
+        if mode == 'detail':
+            image_name = 'predicted_detailed_image'
+        elif mode == 'coarse':
+            image_name = 'predicted_images'
+        else:
+            raise ValueError(f"Invalid image mode '{mode}'")
+
+        emotion = self.emonet_out(values_decoded[image_name])
+        if self.v_activation is not None:
+            emotion['valence'] = self.v_activation(emotion['valence'])
+        if self.a_activation is not None:
+            emotion['arousal'] = self.a_activation(emotion['arousal'])
+        if self.exp_activation is not None:
+            emotion['expression'] = self.exp_activation(emotion['expression'])
+        values[f"emonet_{mode}_valence"] = emotion['valence'].view(-1,1)
+        values[f"emonet_{mode}_arousal"] = emotion['arousal'].view(-1,1)
+        values[f"emonet_{mode}_expr_classification"] = emotion['expression']
+        return values
 
     def forward(self, batch):
         values = self.deca.encode(batch)
@@ -123,6 +125,7 @@ class EmoDECA(EmotionRecognitionBase):
         expcode = values['expcode']
         posecode = values['posecode']
         if self.config.model.use_detail_code:
+            assert self.deca.mode == DecaMode.DETAIL
             detailcode = values['detailcode']
         else:
             detailcode = None
@@ -130,144 +133,134 @@ class EmoDECA(EmotionRecognitionBase):
         global_pose = posecode[:, :3]
         jaw_pose = posecode[:, 3:]
 
-        input_list = []
+        if self.mlp is not None:
+            input_list = []
 
+            if self.config.model.use_identity:
+                input_list += [shapecode]
 
+            if self.config.model.use_expression:
+                input_list += [expcode]
 
-        if self.config.model.use_identity:
-            input_list += [shapecode]
+            if self.config.model.use_global_pose:
+                input_list += [global_pose]
 
-        if self.config.model.use_expression:
-            input_list += [expcode]
+            if self.config.model.use_jaw_pose:
+                input_list += [jaw_pose]
 
-        if self.config.model.use_global_pose:
-            input_list += [global_pose]
+            if self.config.model.use_detail_code:
+                input_list += [detailcode]
 
-        if self.config.model.use_jaw_pose:
-            input_list += [jaw_pose]
+            input = torch.cat(input_list, dim=1)
+            output = self.mlp(input)
 
-        if self.config.model.use_detail_code:
-            input_list += [detailcode]
+            out_idx = 0
+            if self.config.model.predict_expression:
+                expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
+                if self.exp_activation is not None:
+                    expr_classification = self.exp_activation(output[:, out_idx:(out_idx + self.num_classes)], dim=1)
+                out_idx += self.num_classes
+            else:
+                expr_classification = None
 
-        input = torch.cat(input_list, dim=1)
-        output = self.mlp(input)
+            if self.config.model.predict_valence:
+                valence = output[:, out_idx:(out_idx+1)]
+                if self.v_activation is not None:
+                    valence = self.v_activation(valence)
+                out_idx += 1
+            else:
+                valence = None
 
-        out_idx = 0
-        if self.config.model.predict_expression:
-            expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
-            if self.exp_activation is not None:
-                expr_classification = self.exp_activation(output[:, out_idx:(out_idx + self.num_classes)], dim=1)
-            out_idx += self.num_classes
-        else:
-            expr_classification = None
+            if self.config.model.predict_arousal:
+                arousal = output[:, out_idx:(out_idx+1)]
+                if self.a_activation is not None:
+                    arousal = self.a_activation(output[:, out_idx:(out_idx + 1)])
+                out_idx += 1
+            else:
+                arousal = None
 
-        if self.config.model.predict_valence:
-            valence = output[:, out_idx:(out_idx+1)]
-            if self.v_activation is not None:
-                valence = self.v_activation(valence)
-            out_idx += 1
-        else:
-            valence = None
+            values["valence"] = valence
+            values["arousal"] = arousal
+            values["expr_classification"] = expr_classification
 
-        if self.config.model.predict_arousal:
-            arousal = output[:, out_idx:(out_idx+1)]
-            if self.a_activation is not None:
-                arousal = self.a_activation(output[:, out_idx:(out_idx + 1)])
-            out_idx += 1
-        else:
-            arousal = None
+        if 'use_coarse_image_emonet' in self.config.model.keys() and self.config.model.use_coarse_image_emonet:
+            ## NULLIFY VALUES
+            values2decode = { **values }
+            if self.config.model.unpose_global_emonet:
+                values2decode["posecode"] = torch.cat([torch.zeros_like(global_pose), jaw_pose], dim=1)
 
-        values["valence"] = valence
-        values["arousal"] = arousal
-        values["expr_classification"] = expr_classification
+            if self.config.model.static_light:
+                lightcode = torch.zeros_like(values["lightcode"][0:1])
+                # lightcode[0, 0, :] = 3.5
+                lightcode[0, 0, :] = self.config.model.static_light
+                lightcode = lightcode.repeat(values["lightcode"].shape[0], 1, 1)
+                values2decode["lightcode"] = lightcode
+
+            if self.config.model.static_cam_emonet:
+                values2decode["cam"] = torch.tensor([[self.config.model.static_cam_emonet[0],
+                                                      self.config.model.static_cam_emonet[1],
+                                                      self.config.model.static_cam_emonet[2]]],
+                                                    dtype=values["cam"].dtype,
+                                                    device=values["cam"].device).\
+                    repeat(values["cam"].shape[0], 1)
+            # values2decode["cam"] = None # TODO: set a meaningful camera
+            values_decoded = self.deca.decode(values2decode)
+
+            # import matplotlib.pyplot as plt
+            # for i in range(values["cam"].shape[0]):
+            #     im1 = values_decoded['predicted_images'][i].detach().cpu().numpy().transpose([1, 2, 0])
+            #     im2 = values_decoded['predicted_detailed_image'][i].detach().cpu().numpy().transpose([1, 2, 0])
+            #     plt.figure()
+            #     plt.imshow(im1)
+            #     plt.figure()
+            #     plt.imshow(im2)
+
+            if self.config.model.use_coarse_image_emonet:
+                values = self.forward_emonet(values, values_decoded, 'coarse')
+
+            if self.config.model.use_detail_image_emonet:
+                values = self.forward_emonet(values, values_decoded, 'detail')
+
+        # emotion['expression'] = emotion['expression']
+
+        # classes_probs = F.softmax(emotion['expression'])
+        # expression = self.exp_activation(emotion['expression'], dim=1)
+
         return values
 
-    # TODO: remove this, moved to base
-    # def compute_loss(self,
-    #                  valence_pred, arousal_pred, expr_classification_pred,
-    #                  valence_gt, arousal_gt, expr_classification_gt,
-    #                  class_weight):
-    #     losses = {}
-    #     metrics = {}
-    #     if valence_pred is not None and arousal_pred is not None:
-    #         va_pred = torch.cat([valence_pred, arousal_pred], dim=1)
-    #         va_gt = torch.cat([valence_gt, arousal_gt], dim=1)
-    #         losses["va"] = self.va_loss(va_pred, va_gt)
-    #         metrics["va_mae"] = F.l1_loss(va_pred, va_gt)
-    #         metrics["va_mse"] = F.mse_loss(va_pred, va_gt)
-    #         metrics["va_rmse"] = torch.sqrt(F.mse_loss(va_pred, va_gt))
-    #     elif valence_pred is not None:
-    #         losses["v"] = self.va_loss(valence_pred, valence_gt)
-    #         metrics["v_mae"] = F.l1_loss(valence_pred, valence_gt)
-    #         metrics["v_mse"] = F.mse_loss(valence_pred, valence_gt)
-    #         metrics["v_rmse"] = torch.sqrt(F.mse_loss(valence_pred, valence_gt))
-    #     elif arousal_pred is not None:
-    #         losses["a"] = self.va_loss(arousal_pred, arousal_gt)
-    #         metrics["a_mae"] = F.l1_loss(arousal_pred, arousal_gt)
-    #         metrics["a_mse"] = F.mse_loss(arousal_pred, arousal_gt)
-    #         metrics["a_rmse"] = torch.sqrt(F.mse_loss(arousal_pred, arousal_gt))
-    #
-    #     if expr_classification_pred is not None:
-    #         if self.config.model.expression_balancing:
-    #             weight = class_weight
-    #         else:
-    #             weight = torch.ones_like(class_weight)
-    #
-    #         losses["expr"] = self.exp_loss(expr_classification_pred, expr_classification_gt[:, 0], weight)
-    #         # metrics["expr_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], torch.ones_like(class_weight))
-    #         # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], class_weight)
-    #         metrics["expr_nll"] = F.nll_loss(expr_classification_pred, expr_classification_gt[:, 0], torch.ones_like(class_weight))
-    #         metrics["expr_weighted_nll"] = F.nll_loss(expr_classification_pred, expr_classification_gt[:, 0], class_weight)
-    #
-    #     loss = 0.
-    #     for key, value in losses.items():
-    #         loss += value
-    #
-    #     losses["total"] = loss
-    #
-    #     return losses, metrics
+    def _compute_loss(self,
+                     pred, gt,
+                     class_weight,
+                     training=True,
+                     **kwargs):
 
-    # def training_step(self, batch, batch_idx):
-    #     values = self.forward(batch)
-    #     valence_pred = values["valence"]
-    #     arousal_pred = values["arousal"]
-    #     expr_classification_pred = values["expr_classification"]
-    #
-    #     valence_gt = batch["va"][:, 0:1]
-    #     arousal_gt = batch["va"][:, 1:2]
-    #     expr_classification_gt = batch["affectnetexp"]
-    #     if "expression_weight" in batch.keys():
-    #         class_weight = batch["expression_weight"][0]
-    #     else:
-    #         class_weight = None
-    #
-    #     losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-    #                       valence_gt, arousal_gt, expr_classification_gt, class_weight)
-    #
-    #     self._log_losses_and_metrics(losses, metrics, "train")
-    #     total_loss = losses["total"]
-    #     return total_loss
-    #
-    # def validation_step(self, batch, batch_idx, dataloader_idx=None):
-    #     values = self.forward(batch)
-    #     valence_pred = values["valence"]
-    #     arousal_pred = values["arousal"]
-    #     expr_classification_pred = values["expr_classification"]
-    #
-    #     valence_gt = batch["va"][:, 0:1]
-    #     arousal_gt = batch["va"][:, 1:2]
-    #     expr_classification_gt = batch["affectnetexp"]
-    #     if "expression_weight" in batch.keys():
-    #         class_weight = batch["expression_weight"][0]
-    #     else:
-    #         class_weight = None
-    #
-    #     losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-    #                                         valence_gt, arousal_gt, expr_classification_gt, class_weight)
-    #
-    #     self._log_losses_and_metrics(losses, metrics, "val")
-    #     total_loss = losses["total"]
-    #     return total_loss
+        if self.mlp is not None:
+            losses_mlp, metrics_mlp = super()._compute_loss(pred, gt, class_weight, training)
+        else:
+            losses_mlp, metrics_mlp = {}, {}
+
+        if self.emonet is not None:
+            if self.config.model.use_coarse_image_emonet:
+                losses_emonet_c, metrics_emonet_c = super()._compute_loss(pred, gt, class_weight, training,
+                                                                      pred_prefix="emonet_coarse_")
+            else:
+                losses_emonet_c, metrics_emonet_c = {}, {}
+
+            if self.config.model.use_detail_image_emonet:
+                losses_emonet_d, metrics_emonet_d = super()._compute_loss(pred, gt, class_weight, training,
+                                                                      pred_prefix="emonet_detail_")
+            else:
+                losses_emonet_d, metrics_emonet_d = {}, {}
+            losses_emonet = {**losses_emonet_c, **losses_emonet_d}
+            metrics_emonet = {**metrics_emonet_c, **metrics_emonet_d}
+        else:
+            losses_emonet, metrics_emonet = {}, {}
+
+        losses = {**losses_emonet, **losses_mlp}
+        metrics = {**metrics_emonet, **metrics_mlp}
+
+        return losses, metrics
+
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
         valence_pred = output_values["valence"]

@@ -2,14 +2,14 @@
 augmentation:
   - Affine:
       - scale:
-          - 0.9
-          - 1.1
+          - 0.8
+          - 1.2
       - rotate:
           - -10.0
           - 10.0
       - translate_percent:
-          - -0.05
-          - 0.05
+          - -0.1
+          - 0.1
   - OneOf:
       - JpegCompression:
           - compression:

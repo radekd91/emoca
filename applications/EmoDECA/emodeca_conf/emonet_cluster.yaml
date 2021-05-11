@@ -1,6 +1,6 @@
 defaults:
   - data/datasets: affectnet_cluster
-#  - data/augmentations: none
+  - data/augmentations: none
 #  - model/paths : desktop
   - model/settings : emonet
 #  - model/sizes : default

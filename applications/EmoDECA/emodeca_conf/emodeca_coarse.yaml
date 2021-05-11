@@ -1,6 +1,6 @@
 defaults:
   - data/datasets: affectnet_desktop
-#  - data/augmentations: none
+  - data/augmentations: none
 #  - model/paths : desktop
   - model/settings : coarse_emodeca
 #  - model/sizes : default

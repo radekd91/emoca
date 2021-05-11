@@ -130,93 +130,106 @@ class EmotionRecognitionBase(pl.LightningModule):
         return va_loss_weights
 
 
-    def compute_loss(self,
-                     valence_pred, arousal_pred, expr_classification_pred,
-                     valence_gt, arousal_gt, expr_classification_gt,
-                     class_weight,
-                     training=True):
+    def _compute_loss(self,
+                      pred,
+                      gt,
+                      class_weight,
+                      training=True,
+                      pred_prefix=""):
         losses = {}
         metrics = {}
 
         weights = self._get_step_loss_weights(training)
 
-        if valence_pred is not None:
-            metrics["v_mae"] = F.l1_loss(valence_pred, valence_gt)
-            metrics["v_mse"] = F.mse_loss(valence_pred, valence_gt)
-            metrics["v_rmse"] = torch.sqrt(metrics["v_mse"])
-            metrics["v_pcc"] = PCC_torch(valence_pred, valence_gt, batch_first=False)
-            metrics["v_ccc"] = CCC_torch(valence_pred, valence_gt, batch_first=False)
-            metrics["v_sagr"] = SAGR_torch(valence_pred, valence_gt)
-            # metrics["v_icc"] = ICC_torch(valence_pred, valence_gt)
+        if pred[pred_prefix + "valence"] is not None:
+            metrics[pred_prefix + "v_mae"] = F.l1_loss(pred[pred_prefix + "valence"], gt["valence"])
+            metrics[pred_prefix + "v_mse"] = F.mse_loss(pred[pred_prefix + "valence"], gt["valence"])
+            metrics[pred_prefix + "v_rmse"] = torch.sqrt(metrics[pred_prefix + "v_mse"])
+            metrics[pred_prefix + "v_pcc"] = PCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
+            metrics[pred_prefix + "v_ccc"] = CCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
+            metrics[pred_prefix + "v_sagr"] = SAGR_torch(pred[pred_prefix + "valence"], gt["valence"])
+            # metrics["v_icc"] = ICC_torch(pred["valence"], gt["valence"])
             if self.v_loss is not None:
                 if callable(self.v_loss):
-                    losses["v"] = self.v_loss(valence_pred, valence_gt)
+                    losses["v"] = self.v_loss(pred[pred_prefix + "valence"], gt["valence"])
                 elif isinstance(self.v_loss, dict):
                     for name, weight in self.v_loss.items():
                         # losses[name] = metrics[name]*weight
-                        losses[name] = metrics[name]*weights[name]
+                        losses[name] = metrics[pred_prefix + name]*weights[name]
                 else:
                     raise RuntimeError(f"Uknown expression loss '{self.v_loss}'")
 
-        if arousal_pred is not None:
-            metrics["a_mae"] = F.l1_loss(arousal_pred, arousal_gt)
-            metrics["a_mse"] = F.mse_loss(arousal_pred, arousal_gt)
-            metrics["a_rmse"] = torch.sqrt( metrics["a_mse"])
-            metrics["a_pcc"] = PCC_torch(arousal_pred, arousal_gt, batch_first=False)
-            metrics["a_ccc"] = CCC_torch(arousal_pred, arousal_gt, batch_first=False)
-            metrics["a_sagr"] = SAGR_torch(arousal_pred, arousal_gt)
-            # metrics["a_icc"] = ICC_torch(arousal_pred, arousal_gt)
+        if pred[pred_prefix + "arousal"] is not None:
+            metrics[pred_prefix + "a_mae"] = F.l1_loss(pred[pred_prefix + "arousal"], gt["arousal"])
+            metrics[pred_prefix + "a_mse"] = F.mse_loss(pred[pred_prefix + "arousal"], gt["arousal"])
+            metrics[pred_prefix + "a_rmse"] = torch.sqrt( metrics[pred_prefix + "a_mse"])
+            metrics[pred_prefix + "a_pcc"] = PCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
+            metrics[pred_prefix + "a_ccc"] = CCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
+            metrics[pred_prefix + "a_sagr"] = SAGR_torch(pred[pred_prefix + "arousal"], gt["arousal"])
+            # metrics["a_icc"] = ICC_torch(pred["arousal"], gt["arousal"])
             if self.a_loss is not None:
                 if callable(self.a_loss):
-                    losses["a"] = self.a_loss(arousal_pred, arousal_gt)
+                    losses[pred_prefix + "a"] = self.a_loss(pred[pred_prefix + "arousal"], gt["arousal"])
                 elif isinstance(self.a_loss, dict):
                     for name, weight in self.a_loss.items():
                         # losses[name] = metrics[name]*weight
-                        losses[name] = metrics[name]*weights[name]
+                        losses[pred_prefix + name] = metrics[pred_prefix + name]*weights[name]
                 else:
                     raise RuntimeError(f"Uknown expression loss '{self.a_loss}'")
 
-        if valence_pred is not None and arousal_pred is not None:
-            va_pred = torch.cat([valence_pred, arousal_pred], dim=1)
-            va_gt = torch.cat([valence_gt, arousal_gt], dim=1)
-            metrics["va_mae"] = F.l1_loss(va_pred, va_gt)
-            metrics["va_mse"] = F.mse_loss(va_pred, va_gt)
-            metrics["va_rmse"] = torch.sqrt(metrics["va_mse"])
-            metrics["va_lpcc"] = (1. - 0.5*(metrics["a_pcc"] + metrics["v_pcc"]))[0][0]
-            metrics["va_lccc"] = (1. - 0.5*(metrics["a_ccc"] + metrics["v_ccc"]))[0][0]
+        if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
+            va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
+            va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
+            metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
+            metrics[pred_prefix + "va_mse"] = F.mse_loss(va_pred, va_gt)
+            metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
+            metrics[pred_prefix + "va_lpcc"] = (1. - 0.5*(metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
+            metrics[pred_prefix + "va_lccc"] = (1. - 0.5*(metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
             if self.va_loss is not None:
                 if callable(self.va_loss):
-                    losses["va"] = self.va_loss(va_pred, va_gt)
+                    losses[pred_prefix + "va"] = self.va_loss(va_pred, va_gt)
                 elif isinstance(self.va_loss, dict):
                     for name, weight in self.va_loss.items():
                         # losses[name] = metrics[name]*weight
-                        losses[name] = metrics[name] * weights[name]
+                        losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
                 else:
                     raise RuntimeError(f"Uknown expression loss '{self.va_loss}'")
 
-        if expr_classification_pred is not None:
+        if pred[pred_prefix + "expr_classification"] is not None:
             if self.config.model.expression_balancing:
                 weight = class_weight
             else:
                 weight = torch.ones_like(class_weight)
 
-            # metrics["expr_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], torch.ones_like(class_weight))
-            # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(expr_classification_pred, expr_classification_gt[:, 0], class_weight)
-            metrics["expr_nll"] = F.nll_loss(expr_classification_pred, expr_classification_gt[:, 0],
+            # metrics["expr_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], torch.ones_like(class_weight))
+            # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
+            metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                           gt["expr_classification"][:, 0],
                                              torch.ones_like(class_weight))
-            metrics["expr_weighted_nll"] = F.nll_loss(expr_classification_pred, expr_classification_gt[:, 0],
+            metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                                    gt["expr_classification"][:, 0],
                                                       class_weight)
-            metrics["expr_acc"] = ACC_torch( torch.argmax(expr_classification_pred, dim=1), expr_classification_gt[:, 0])
+            metrics[pred_prefix + "expr_acc"] = ACC_torch( torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+                                                           gt["expr_classification"][:, 0])
 
 
             if self.exp_loss is not None:
                 if callable(self.exp_loss):
-                    losses["expr"] = self.exp_loss(expr_classification_pred, expr_classification_gt[:, 0], weight)
+                    losses[pred_prefix + "expr"] = self.exp_loss(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0], weight)
                 elif isinstance(self.exp_loss, dict):
                     for name, weight in self.exp_loss.items():
-                        losses[name] = metrics[name]*weight
+                        losses[pred_prefix + name] = metrics[pred_prefix + name]*weight
                 else:
                     raise RuntimeError(f"Uknown expression loss '{self.exp_loss}'")
+        return losses, metrics
+
+
+    def compute_loss(self,
+                     pred,
+                     gt,
+                     class_weight,
+                     training=True):
+        losses, metrics = self._compute_loss(pred, gt, class_weight, training)
 
         loss = 0.
         for key, value in losses.items():
@@ -228,9 +241,9 @@ class EmotionRecognitionBase(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         values = self.forward(batch)
-        valence_pred = values["valence"]
-        arousal_pred = values["arousal"]
-        expr_classification_pred = values["expr_classification"]
+        # valence_pred = values["valence"]
+        # arousal_pred = values["arousal"]
+        # expr_classification_pred = values["expr_classification"]
 
         valence_gt = batch["va"][:, 0:1]
         arousal_gt = batch["va"][:, 1:2]
@@ -240,8 +253,14 @@ class EmotionRecognitionBase(pl.LightningModule):
         else:
             class_weight = None
 
-        losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-                                            valence_gt, arousal_gt, expr_classification_gt, class_weight, training=True)
+
+        gt = {}
+        gt["valence"] = valence_gt
+        gt["arousal"] = arousal_gt
+        gt["expr_classification"] = expr_classification_gt
+
+        pred = values
+        losses, metrics = self.compute_loss(pred, gt, class_weight, training=True)
 
         self._log_losses_and_metrics(losses, metrics, "train")
         total_loss = losses["total"]
@@ -249,9 +268,9 @@ class EmotionRecognitionBase(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         values = self.forward(batch)
-        valence_pred = values["valence"]
-        arousal_pred = values["arousal"]
-        expr_classification_pred = values["expr_classification"]
+        # valence_pred = values["valence"]
+        # arousal_pred = values["arousal"]
+        # expr_classification_pred = values["expr_classification"]
 
         valence_gt = batch["va"][:, 0:1]
         arousal_gt = batch["va"][:, 1:2]
@@ -261,8 +280,18 @@ class EmotionRecognitionBase(pl.LightningModule):
         else:
             class_weight = None
 
-        losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-                                            valence_gt, arousal_gt, expr_classification_gt, class_weight, training=False)
+        gt = {}
+        gt["valence"] = valence_gt
+        gt["arousal"] = arousal_gt
+        gt["expr_classification"] = expr_classification_gt
+
+        pred = values
+        # pred = {}
+        # pred["valence"] = valence_pred
+        # pred["arousal"] = arousal_pred
+        # pred["expr_classification"] = expr_classification_pred
+
+        losses, metrics = self.compute_loss(pred, gt, class_weight, training=False)
 
         self._log_losses_and_metrics(losses, metrics, "val")
         # visdict = self._test_visualization(values, batch, batch_idx, dataloader_idx=dataloader_idx)
@@ -274,9 +303,9 @@ class EmotionRecognitionBase(pl.LightningModule):
 
     def test_step(self, batch, batch_idx, dataloader_idx=None):
         values = self.forward(batch)
-        valence_pred = values["valence"]
-        arousal_pred = values["arousal"]
-        expr_classification_pred = values["expr_classification"]
+        # valence_pred = values["valence"]
+        # arousal_pred = values["arousal"]
+        # expr_classification_pred = values["expr_classification"]
         if "expression_weight" in batch.keys():
             class_weight = batch["expression_weight"][0]
         else:
@@ -286,8 +315,13 @@ class EmotionRecognitionBase(pl.LightningModule):
             valence_gt = batch["va"][:, 0:1]
             arousal_gt = batch["va"][:, 1:2]
             expr_classification_gt = batch["affectnetexp"]
-            losses, metrics = self.compute_loss(valence_pred, arousal_pred, expr_classification_pred,
-                                                valence_gt, arousal_gt, expr_classification_gt, class_weight,
+            gt = {}
+            gt["valence"] = valence_gt
+            gt["arousal"] = arousal_gt
+            gt["expr_classification"] = expr_classification_gt
+
+            pred = values
+            losses, metrics = self.compute_loss(pred, gt, class_weight,
                                                 training=False)
 
         if self.config.learning.test_vis_frequency > 0:
