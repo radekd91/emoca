@@ -183,7 +183,8 @@ class EmoDECA(EmotionRecognitionBase):
             values["arousal"] = arousal
             values["expr_classification"] = expr_classification
 
-        if 'use_coarse_image_emonet' in self.config.model.keys() and self.config.model.use_coarse_image_emonet:
+        if self.emonet is not None:
+        # if 'use_coarse_image_emonet' in self.config.model.keys() and self.config.model.use_coarse_image_emonet:
             ## NULLIFY VALUES
             values2decode = { **values }
             if self.config.model.unpose_global_emonet:
@@ -214,6 +215,7 @@ class EmoDECA(EmotionRecognitionBase):
             #     plt.imshow(im1)
             #     plt.figure()
             #     plt.imshow(im2)
+
 
             if self.config.model.use_coarse_image_emonet:
                 values = self.forward_emonet(values, values_decoded, 'coarse')

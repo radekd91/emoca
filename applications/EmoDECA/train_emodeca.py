@@ -345,7 +345,14 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 def main():
     if len(sys.argv) < 2:
         emodeca_default = "emodeca_emonet_coarse"
-        emodeca_overrides = ['learning/logging=none']
+        emodeca_overrides = ['learning/logging=none',
+                             'model/settings=coarse_emodeca_emonet',
+                             'model.unpose_global_emonet=false',
+                             'model.use_coarse_image_emonet=false',
+                             'model.use_detail_image_emonet=true',
+                             'model.static_cam_emonet=false',
+                             'model.static_light=false',
+                             ]
         #
         # deca_default = "deca_train_coarse_cluster"
         # deca_overrides = [
