@@ -5,10 +5,26 @@ load_pretrained_emonet: True
 predict_expression: true
 predict_valence: true
 predict_arousal: true
-a_loss: mse_loss
-v_loss: mse_loss
+
+#a_loss: mse_loss
+a_loss:
+#  - a_ccc: 0.5
+#  - a_pcc: 0.5
+  a_mse: 1.
+
+#v_loss: mse_loss
+v_loss:
+#  - v_ccc: 0.5
+#  - v_pcc: 0.5
+  v_mse: 1.
+
+va_loss:
+  va_lpcc: 1.
+  va_lccc: 1.
+
 exp_loss: nll_loss
-#exp_loss: cross_entropy
+
+va_loss_scheme: shake
 
 a_activation: none
 #a_activation: tanh

@@ -86,37 +86,46 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        # [
-        #     [],
-        #     []
-        # ],
+        [
+            [],
+            []
+        ],
         # [
         #     ['model/settings=coarse_emodeca_emonet'],
         #     []
         # ],
         #
-        [
-            ['model/settings=coarse_emodeca_emonet',
-             'model.use_coarse_image_emonet=false'],
-            []
-        ],
-
-        [
-            [
-                'model/settings=coarse_emodeca_emonet',
-                'model.unpose_global_emonet=false',
-                'model.use_coarse_image_emonet=false',
-                'model.use_detail_image_emonet=true',
-                'model.static_cam_emonet=false',
-                'model.static_light=false',
-            ],
-            []
-        ],
-
+        # [
+        #     ['model/settings=coarse_emodeca_emonet',
+        #      'model.use_coarse_image_emonet=true',
+        #      'model.use_detail_image_emonet=false',
+        #      ],
+        #     []
+        # ],
+        #
+        # [
+        #     [
+        #         'model/settings=coarse_emodeca_emonet',
+        #         'model.unpose_global_emonet=false',
+        #         'model.use_coarse_image_emonet=false',
+        #         'model.use_detail_image_emonet=true',
+        #         'model.static_cam_emonet=false',
+        #         'model.static_light=false',
+        #     ],
+        #     []
+        # ],
+        #
         # [
         #     ['model.use_detail_code=true'],
         #     []
         # ],
+        [
+            [
+                'model.use_detail_code=true',
+                'model.mlp_norm_layer=BatchNorm1d',
+             ],
+            []
+        ],
 
         # [
         #     ['model.expression_balancing=true'],
@@ -134,9 +143,11 @@ def train_emodeca_on_cluster():
     # #1 EMONET
     # conf = "emonet_cluster"
     # fixed_overrides_cfg = [
-    #     'model/settings=emonet_trainable',
-    #     'learning/optimizer=adabound',
-    #     'data/augmentations=default',
+    #     # 'model/settings=emonet_trainable',
+    #     'learning.max_steps=0',
+    #     'learning.max_epochs=0',
+    #     # 'learning/optimizer=adabound',
+    #     # 'data/augmentations=default',
     # ]
     # deca_conf = None
     # deca_conf_path = None

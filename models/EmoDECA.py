@@ -2,6 +2,7 @@ from .DECA import DecaModule, instantiate_deca, DecaMode
 from .EmotionRecognitionModuleBase import EmotionRecognitionBase
 from .MLP import MLP
 import torch
+from torch.nn import BatchNorm1d, LayerNorm, InstanceNorm1d
 import pytorch_lightning as pl
 import numpy as np
 from utils.other import class_from_str
@@ -9,6 +10,7 @@ import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
 from layers.losses.EmoNetLoss import get_emonet
+import sys
 
 
 class EmoDECA(EmotionRecognitionBase):
@@ -55,7 +57,11 @@ class EmoDECA(EmotionRecognitionBase):
             out_size += 1
 
         if "use_mlp" not in self.config.model.keys() or self.config.model.use_mlp:
-            self.mlp = MLP(in_size, out_size, hidden_layer_sizes)
+            if 'mlp_norm_layer' in self.config.model.keys():
+                batch_norm = class_from_str(self.config.model.mlp_norm_layer, sys.modules[__name__])
+            else:
+                batch_norm = None
+            self.mlp = MLP(in_size, out_size, hidden_layer_sizes, batch_norm=batch_norm)
         else:
             self.mlp = None
 

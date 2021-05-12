@@ -32,6 +32,9 @@ def create_experiment_name(cfg, version=1):
         if "use_mlp" not in cfg.model.keys() or cfg.model.use_mlp:
             experiment_name += f"_nl-{cfg.model.num_mlp_layers}"
 
+            if "mlp_norm_layer" in cfg.model.keys() and cfg.model.mlp_norm_layer:
+                experiment_name += cfg.model.mlp_norm_layer
+
             if cfg.model.use_identity:
                 experiment_name += "_id"
             if cfg.model.use_expression:
@@ -346,12 +349,14 @@ def main():
     if len(sys.argv) < 2:
         emodeca_default = "emodeca_emonet_coarse"
         emodeca_overrides = ['learning/logging=none',
-                             'model/settings=coarse_emodeca_emonet',
-                             'model.unpose_global_emonet=false',
-                             'model.use_coarse_image_emonet=false',
-                             'model.use_detail_image_emonet=true',
-                             'model.static_cam_emonet=false',
-                             'model.static_light=false',
+                             'model/settings=coarse_emodeca',
+                             # 'model/settings=coarse_emodeca_emonet',
+                             '+model.mlp_norm_layer=BatchNorm1d',
+                             # 'model.unpose_global_emonet=false',
+                             # 'model.use_coarse_image_emonet=false',
+                             # 'model.use_detail_image_emonet=true',
+                             # 'model.static_cam_emonet=false',
+                             # 'model.static_light=false',
                              ]
         #
         # deca_default = "deca_train_coarse_cluster"
