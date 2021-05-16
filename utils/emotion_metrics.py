@@ -107,6 +107,7 @@ def PCC_torch(ground_truth, predictions, batch_first=True):
     # print(ground_truth.shape)
     # print(predictions.shape)
     assert ground_truth.shape == predictions.shape
+    assert predictions.numel() >= 2 # std doesn't make sense, unless there is at least two items in the batch
 
     if batch_first:
         dim = -1
@@ -133,6 +134,8 @@ def CCC_torch(ground_truth, predictions, batch_first=False):
         Inputs are numpy arrays.
     """
     assert ground_truth.shape == predictions.shape
+    assert predictions.numel() >= 2  # std doesn't make sense, unless there is at least two items in the batch
+
     mean_pred = torch.mean(predictions)
     mean_gt = torch.mean(ground_truth)
 

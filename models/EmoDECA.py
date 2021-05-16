@@ -1,5 +1,5 @@
 from .DECA import DecaModule, instantiate_deca, DecaMode
-from .EmotionRecognitionModuleBase import EmotionRecognitionBase
+from .EmotionRecognitionModuleBase import EmotionRecognitionBaseModule, loss_from_cfg
 from .MLP import MLP
 import torch
 from torch.nn import BatchNorm1d, LayerNorm, InstanceNorm1d
@@ -13,7 +13,7 @@ from layers.losses.EmoNetLoss import get_emonet
 import sys
 
 
-class EmoDECA(EmotionRecognitionBase):
+class EmoDECA(EmotionRecognitionBaseModule):
 
     def __init__(self, config):
         super().__init__(config)
@@ -374,3 +374,4 @@ class EmoDECA(EmotionRecognitionBase):
     #         #
     #         self.logger.log_metrics({f"{stage}_metric_" + key: value for key,value in metrics.items()})#, on_epoch=on_epoch, on_step=on_step)
     #
+

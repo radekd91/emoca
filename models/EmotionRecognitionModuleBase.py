@@ -13,11 +13,11 @@ import adabound
 
 
 def loss_from_cfg(config, loss_name):
-    if loss_name in config.model.keys():
-        if isinstance(config.model[loss_name], str):
-            loss = class_from_str(config.model[loss_name], sys.modules[__name__])
+    if loss_name in config.keys():
+        if isinstance(config[loss_name], str):
+            loss = class_from_str(config[loss_name], sys.modules[__name__])
         else:
-            cont = OmegaConf.to_container(config.model[loss_name])
+            cont = OmegaConf.to_container(config[loss_name])
             if isinstance(cont, list):
                 loss = {name: 1. for name in cont}
             elif isinstance(cont, dict):
@@ -29,7 +29,8 @@ def loss_from_cfg(config, loss_name):
     return loss
 
 
-class EmotionRecognitionBase(pl.LightningModule):
+
+class EmotionRecognitionBaseModule(pl.LightningModule):
 
     def __init__(self, config):
         super().__init__()
@@ -50,10 +51,10 @@ class EmotionRecognitionBase(pl.LightningModule):
         else:
             self.exp_activation = F.log_softmax
 
-        self.va_loss = loss_from_cfg(config, 'va_loss')
-        self.v_loss = loss_from_cfg(config, 'v_loss')
-        self.a_loss = loss_from_cfg(config, 'a_loss')
-        self.exp_loss = loss_from_cfg(config, 'exp_loss')
+        self.va_loss = loss_from_cfg(config.model, 'va_loss')
+        self.v_loss = loss_from_cfg(config.model, 'v_loss')
+        self.a_loss = loss_from_cfg(config.model, 'a_loss')
+        self.exp_loss = loss_from_cfg(config.model, 'exp_loss')
 
 
     def forward(self, image):
@@ -139,90 +140,98 @@ class EmotionRecognitionBase(pl.LightningModule):
         losses = {}
         metrics = {}
 
-        weights = self._get_step_loss_weights(training)
+        scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
+        weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        if pred[pred_prefix + "valence"] is not None:
-            metrics[pred_prefix + "v_mae"] = F.l1_loss(pred[pred_prefix + "valence"], gt["valence"])
-            metrics[pred_prefix + "v_mse"] = F.mse_loss(pred[pred_prefix + "valence"], gt["valence"])
-            metrics[pred_prefix + "v_rmse"] = torch.sqrt(metrics[pred_prefix + "v_mse"])
-            metrics[pred_prefix + "v_pcc"] = PCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
-            metrics[pred_prefix + "v_ccc"] = CCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
-            metrics[pred_prefix + "v_sagr"] = SAGR_torch(pred[pred_prefix + "valence"], gt["valence"])
-            # metrics["v_icc"] = ICC_torch(pred["valence"], gt["valence"])
-            if self.v_loss is not None:
-                if callable(self.v_loss):
-                    losses["v"] = self.v_loss(pred[pred_prefix + "valence"], gt["valence"])
-                elif isinstance(self.v_loss, dict):
-                    for name, weight in self.v_loss.items():
-                        # losses[name] = metrics[name]*weight
-                        losses[name] = metrics[pred_prefix + name]*weights[name]
-                else:
-                    raise RuntimeError(f"Uknown expression loss '{self.v_loss}'")
+        metrics, losses = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix)
+        metrics, losses = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix)
+        metrics, losses = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix)
 
-        if pred[pred_prefix + "arousal"] is not None:
-            metrics[pred_prefix + "a_mae"] = F.l1_loss(pred[pred_prefix + "arousal"], gt["arousal"])
-            metrics[pred_prefix + "a_mse"] = F.mse_loss(pred[pred_prefix + "arousal"], gt["arousal"])
-            metrics[pred_prefix + "a_rmse"] = torch.sqrt( metrics[pred_prefix + "a_mse"])
-            metrics[pred_prefix + "a_pcc"] = PCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
-            metrics[pred_prefix + "a_ccc"] = CCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
-            metrics[pred_prefix + "a_sagr"] = SAGR_torch(pred[pred_prefix + "arousal"], gt["arousal"])
-            # metrics["a_icc"] = ICC_torch(pred["arousal"], gt["arousal"])
-            if self.a_loss is not None:
-                if callable(self.a_loss):
-                    losses[pred_prefix + "a"] = self.a_loss(pred[pred_prefix + "arousal"], gt["arousal"])
-                elif isinstance(self.a_loss, dict):
-                    for name, weight in self.a_loss.items():
-                        # losses[name] = metrics[name]*weight
-                        losses[pred_prefix + name] = metrics[pred_prefix + name]*weights[name]
-                else:
-                    raise RuntimeError(f"Uknown expression loss '{self.a_loss}'")
+        metrics, losses = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
+                                   self.config.model.expression_balancing, pred_prefix=pred_prefix)
 
-        if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
-            va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
-            va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
-            metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
-            metrics[pred_prefix + "va_mse"] = F.mse_loss(va_pred, va_gt)
-            metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
-            metrics[pred_prefix + "va_lpcc"] = (1. - 0.5*(metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
-            metrics[pred_prefix + "va_lccc"] = (1. - 0.5*(metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
-            if self.va_loss is not None:
-                if callable(self.va_loss):
-                    losses[pred_prefix + "va"] = self.va_loss(va_pred, va_gt)
-                elif isinstance(self.va_loss, dict):
-                    for name, weight in self.va_loss.items():
-                        # losses[name] = metrics[name]*weight
-                        losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
-                else:
-                    raise RuntimeError(f"Uknown expression loss '{self.va_loss}'")
+        # if pred[pred_prefix + "valence"] is not None:
+        #     metrics[pred_prefix + "v_mae"] = F.l1_loss(pred[pred_prefix + "valence"], gt["valence"])
+        #     metrics[pred_prefix + "v_mse"] = F.mse_loss(pred[pred_prefix + "valence"], gt["valence"])
+        #     metrics[pred_prefix + "v_rmse"] = torch.sqrt(metrics[pred_prefix + "v_mse"])
+        #     metrics[pred_prefix + "v_pcc"] = PCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
+        #     metrics[pred_prefix + "v_ccc"] = CCC_torch(pred[pred_prefix + "valence"], gt["valence"], batch_first=False)
+        #     metrics[pred_prefix + "v_sagr"] = SAGR_torch(pred[pred_prefix + "valence"], gt["valence"])
+        #     # metrics["v_icc"] = ICC_torch(pred["valence"], gt["valence"])
+        #     if self.v_loss is not None:
+        #         if callable(self.v_loss):
+        #             losses["v"] = self.v_loss(pred[pred_prefix + "valence"], gt["valence"])
+        #         elif isinstance(self.v_loss, dict):
+        #             for name, weight in self.v_loss.items():
+        #                 # losses[name] = metrics[name]*weight
+        #                 losses[name] = metrics[pred_prefix + name]*weights[name]
+        #         else:
+        #             raise RuntimeError(f"Uknown expression loss '{self.v_loss}'")
+        #
+        # if pred[pred_prefix + "arousal"] is not None:
+        #     metrics[pred_prefix + "a_mae"] = F.l1_loss(pred[pred_prefix + "arousal"], gt["arousal"])
+        #     metrics[pred_prefix + "a_mse"] = F.mse_loss(pred[pred_prefix + "arousal"], gt["arousal"])
+        #     metrics[pred_prefix + "a_rmse"] = torch.sqrt( metrics[pred_prefix + "a_mse"])
+        #     metrics[pred_prefix + "a_pcc"] = PCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
+        #     metrics[pred_prefix + "a_ccc"] = CCC_torch(pred[pred_prefix + "arousal"], gt["arousal"], batch_first=False)
+        #     metrics[pred_prefix + "a_sagr"] = SAGR_torch(pred[pred_prefix + "arousal"], gt["arousal"])
+        #     # metrics["a_icc"] = ICC_torch(pred["arousal"], gt["arousal"])
+        #     if self.a_loss is not None:
+        #         if callable(self.a_loss):
+        #             losses[pred_prefix + "a"] = self.a_loss(pred[pred_prefix + "arousal"], gt["arousal"])
+        #         elif isinstance(self.a_loss, dict):
+        #             for name, weight in self.a_loss.items():
+        #                 # losses[name] = metrics[name]*weight
+        #                 losses[pred_prefix + name] = metrics[pred_prefix + name]*weights[name]
+        #         else:
+        #             raise RuntimeError(f"Uknown expression loss '{self.a_loss}'")
+        #
+        # if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
+        #     va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
+        #     va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
+        #     metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
+        #     metrics[pred_prefix + "va_mse"] = F.mse_loss(va_pred, va_gt)
+        #     metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
+        #     metrics[pred_prefix + "va_lpcc"] = (1. - 0.5*(metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
+        #     metrics[pred_prefix + "va_lccc"] = (1. - 0.5*(metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+        #     if self.va_loss is not None:
+        #         if callable(self.va_loss):
+        #             losses[pred_prefix + "va"] = self.va_loss(va_pred, va_gt)
+        #         elif isinstance(self.va_loss, dict):
+        #             for name, weight in self.va_loss.items():
+        #                 # losses[name] = metrics[name]*weight
+        #                 losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
+        #         else:
+        #             raise RuntimeError(f"Uknown expression loss '{self.va_loss}'")
+        #
+        # if pred[pred_prefix + "expr_classification"] is not None:
+        #     if self.config.model.expression_balancing:
+        #         weight = class_weight
+        #     else:
+        #         weight = torch.ones_like(class_weight)
+        #
+        #     # metrics["expr_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], torch.ones_like(class_weight))
+        #     # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
+        #     metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+        #                                                    gt["expr_classification"][:, 0],
+        #                                      torch.ones_like(class_weight))
+        #     metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+        #                                                             gt["expr_classification"][:, 0],
+        #                                               class_weight)
+        #     metrics[pred_prefix + "expr_acc"] = ACC_torch( torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+        #                                                    gt["expr_classification"][:, 0])
+        #
+        #
+        #     if self.exp_loss is not None:
+        #         if callable(self.exp_loss):
+        #             losses[pred_prefix + "expr"] = self.exp_loss(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0], weight)
+        #         elif isinstance(self.exp_loss, dict):
+        #             for name, weight in self.exp_loss.items():
+        #                 losses[pred_prefix + name] = metrics[pred_prefix + name]*weight
+        #         else:
+        #             raise RuntimeError(f"Uknown expression loss '{self.exp_loss}'")
 
-        if pred[pred_prefix + "expr_classification"] is not None:
-            if self.config.model.expression_balancing:
-                weight = class_weight
-            else:
-                weight = torch.ones_like(class_weight)
-
-            # metrics["expr_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], torch.ones_like(class_weight))
-            # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
-            metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
-                                                           gt["expr_classification"][:, 0],
-                                             torch.ones_like(class_weight))
-            metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
-                                                                    gt["expr_classification"][:, 0],
-                                                      class_weight)
-            metrics[pred_prefix + "expr_acc"] = ACC_torch( torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
-                                                           gt["expr_classification"][:, 0])
-
-
-            if self.exp_loss is not None:
-                if callable(self.exp_loss):
-                    losses[pred_prefix + "expr"] = self.exp_loss(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0], weight)
-                elif isinstance(self.exp_loss, dict):
-                    for name, weight in self.exp_loss.items():
-                        losses[pred_prefix + name] = metrics[pred_prefix + name]*weight
-                else:
-                    raise RuntimeError(f"Uknown expression loss '{self.exp_loss}'")
         return losses, metrics
-
 
     def compute_loss(self,
                      pred,
@@ -230,13 +239,10 @@ class EmotionRecognitionBase(pl.LightningModule):
                      class_weight,
                      training=True):
         losses, metrics = self._compute_loss(pred, gt, class_weight, training)
-
         loss = 0.
         for key, value in losses.items():
             loss += value
-
         losses["total"] = loss
-
         return losses, metrics
 
     def training_step(self, batch, batch_idx):
@@ -348,3 +354,119 @@ class EmotionRecognitionBase(pl.LightningModule):
             self.logger.log_metrics({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
                                      metrics.items()})  # , on_epoch=on_epoch, on_step=on_step)
 
+
+
+def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix=""):
+
+    if measure not in ["valence", "arousal"]:
+        raise ValueError(f"Invalid measure {measure}")
+
+    measure_label = pred_prefix + measure
+
+    if pred[pred_prefix + measure] is not None:
+        metrics[pred_prefix + f"{measure[0]}_mae"] = F.l1_loss(pred[measure_label], gt[measure])
+        metrics[pred_prefix + f"{measure[0]}_mse"] = F.mse_loss(pred[measure_label], gt[measure])
+        metrics[pred_prefix + f"{measure[0]}_rmse"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse"])
+        metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
+        metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
+        metrics[pred_prefix + f"{measure[0]}_sagr"] = SAGR_torch(pred[measure_label], gt[measure])
+        # metrics["v_icc"] = ICC_torch(pred[measure_label], gt[measure])
+        if loss is not None:
+            if callable(loss):
+                losses[pred_prefix + measure[0]] = loss(pred[measure_label], gt[measure])
+            elif isinstance(loss, dict):
+                # print(metrics.keys() )
+                for name, weight in loss.items():
+                    # losses[name] = metrics[name]*weight
+                    losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
+            else:
+                raise RuntimeError(f"Uknown {measure} loss '{loss}'")
+    return losses, metrics
+
+
+def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix=""):
+    if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
+        va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
+        va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
+        metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
+        metrics[pred_prefix + "va_mse"] = F.mse_loss(va_pred, va_gt)
+        metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
+        metrics[pred_prefix + "va_lpcc"] = \
+            (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
+        metrics[pred_prefix + "va_lccc"] = \
+            (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+        if loss is not None:
+            if callable(loss):
+                losses[pred_prefix + "va"] = loss(va_pred, va_gt)
+            elif isinstance(loss, dict):
+                for name, weight in loss.items():
+                    # losses[name] = metrics[name]*weight
+                    losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
+            else:
+                raise RuntimeError(f"Uknown expression loss '{loss}'")
+    return losses, metrics
+
+
+def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing, pred_prefix=""):
+    if pred[pred_prefix + "expr_classification"] is not None:
+        if expression_balancing:
+            weight = class_weight
+        else:
+            weight = torch.ones_like(class_weight)
+
+        # metrics["expr_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], torch.ones_like(class_weight))
+        # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
+        metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                       gt["expr_classification"][:, 0],
+                                                       torch.ones_like(class_weight))
+        metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                                gt["expr_classification"][:, 0],
+                                                                class_weight)
+        metrics[pred_prefix + "expr_acc"] = ACC_torch(torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+                                                      gt["expr_classification"][:, 0])
+
+        if loss is not None:
+            if callable(loss):
+                losses[pred_prefix + "expr"] = loss(pred[pred_prefix + "expr_classification"],
+                                                             gt["expr_classification"][:, 0], weight)
+            elif isinstance(loss, dict):
+                for name, weight in loss.items():
+                    losses[pred_prefix + name] = metrics[pred_prefix + name] * weight
+            else:
+                raise RuntimeError(f"Uknown expression loss '{loss}'")
+
+    return losses, metrics
+
+
+def _get_step_loss_weights(v_loss, a_loss, va_loss, scheme, training):
+    va_loss_weights = {}
+    for key in v_loss:
+        va_loss_weights[key] = v_loss[key]
+
+    for key in a_loss:
+        va_loss_weights[key] = a_loss[key]
+
+    for key in va_loss:
+        va_loss_weights[key] = va_loss[key]
+
+    # if training:
+    #     return va_loss_weights
+    # n_terms = len(va_loss_weights)
+
+    if scheme is not None:
+        if training and scheme == 'shake':
+            for key in va_loss_weights:
+                va_loss_weights[key] = np.random.rand(1)[0]
+            total_w = 0.
+            for key in va_loss_weights:
+                total_w += va_loss_weights[key]
+            for key in va_loss_weights:
+                va_loss_weights[key] /= total_w
+        elif scheme == 'norm':
+            total_w = 0.
+            for key in va_loss_weights:
+                total_w += va_loss_weights[key]
+
+            for key in va_loss_weights:
+                va_loss_weights[key] /= total_w
+    return va_loss_weights

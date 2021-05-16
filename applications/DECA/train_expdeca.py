@@ -60,10 +60,10 @@ def prepare_data(cfg):
     return dm, sequence_name
 
 
-def create_experiment_name(cfg_coarse, cfg_detail, version=1):
+def create_experiment_name(cfg_coarse, cfg_detail, version=2):
     # experiment_name = "ExpDECA"
     experiment_name = cfg_coarse.model.deca_class
-    if version <= 1:
+    if version <= 2:
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]
 
@@ -166,10 +166,16 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=1):
             experiment_name += "NoLmk"
 
         if cfg_coarse.learning.train_K > 1:
-            if cfg_coarse.model.shape_constrain_type != 'exchange':
-                experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
-            if cfg_detail.model.detail_constrain_type != 'exchange':
-                experiment_name += f'_De{cfg_coarse.model.detail_constrain_type}'
+            if version <= 1:
+                if cfg_coarse.model.shape_constrain_type != 'exchange':
+                    experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
+                if cfg_detail.model.detail_constrain_type != 'exchange':
+                    experiment_name += f'_De{cfg_detail.model.detail_constrain_type}'
+            else:
+                if cfg_coarse.model.shape_constrain_type != 'none':
+                    experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type[:2]}'
+                if cfg_detail.model.detail_constrain_type != 'none':
+                    experiment_name += f'_De{cfg_detail.model.detail_constrain_type[:2]}'
 
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
@@ -331,7 +337,36 @@ def resume_training(run_path, start_at_stage, resume_from_previous, force_new_lo
 
 def main():
     configured = False
-    if len(sys.argv) > 2:
+
+    if len(sys.argv) <= 2:
+        coarse_conf = "deca_train_coarse"
+        detail_conf = "deca_train_detail"
+        coarse_override = [
+            # 'model/settings=coarse_train',
+            # 'model/settings=coarse_train_emonet',
+            # 'model/settings=coarse_train_expdeca',
+            # 'model/settings=coarse_train_expdeca_emonet',
+            'model/settings=coarse_train_expdeca_emomlp',
+            'data/datasets=affectnet_desktop', # affectnet vs deca dataset
+            'data.num_workers=0',
+            'model.resume_training=True', # load the original DECA model
+            'learning.early_stopping.patience=5',
+            'learning/logging=none',
+            'learning.batch_size_train=4',
+                              ]
+        detail_override = [
+            # 'model/settings=detail_train',
+            # 'model/settings=detail_train_emonet',
+            # 'model/settings=detail_train_expdeca_emonet',
+            'model/settings=detail_train_expdeca_emomlp',
+            'data/datasets=affectnet_desktop', # affectnet vs deca dataset
+            'learning.early_stopping.patience=5',
+            'learning/logging=none',
+            'data.num_workers=0',
+            'learning.batch_size_train=4',
+        ]
+
+    elif len(sys.argv) > 2:
         if Path(sys.argv[1]).is_file():
             configured = True
             with open(sys.argv[1], 'r') as f:
@@ -344,13 +379,15 @@ def main():
     else:
         coarse_conf = "deca_finetune_coarse_cluster"
         detail_conf = "deca_finetune_detail_cluster"
+        coarse_override = []
+        detail_override = []
 
     if len(sys.argv) > 4:
         coarse_override = sys.argv[3]
         detail_override = sys.argv[4]
-    else:
-        coarse_override = []
-        detail_override = []
+    # else:
+    #     coarse_override = []
+    #     detail_override = []
     if configured:
         train_expdeca(coarse_conf, detail_conf)
     else:

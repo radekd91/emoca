@@ -1,5 +1,6 @@
 # @package _group_
-output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca
+#output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca
+output_dir: /is/cluster/work/rdanecek/emoca/finetune_deca
 full_run_dir: todo
 checkpoint_dir: todo
 name: todo

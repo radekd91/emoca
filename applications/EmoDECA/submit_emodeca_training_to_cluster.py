@@ -86,10 +86,10 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        [
-            [],
-            []
-        ],
+        # [
+        #     [],
+        #     []
+        # ],
         # [
         #     ['model/settings=coarse_emodeca_emonet'],
         #     []
@@ -122,7 +122,7 @@ def train_emodeca_on_cluster():
         [
             [
                 'model.use_detail_code=true',
-                'model.mlp_norm_layer=BatchNorm1d',
+                '+model.mlp_norm_layer=BatchNorm1d',
              ],
             []
         ],

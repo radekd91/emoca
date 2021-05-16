@@ -5,6 +5,7 @@ import datetime
 from omegaconf import OmegaConf
 import time as t
 
+
 def submit(cfg_coarse, cfg_detail, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"

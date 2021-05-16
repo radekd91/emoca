@@ -27,6 +27,7 @@ background_from_input: true
 #detail_constrain_type: exchange
 detail_constrain_type: none
 
+
 expression_constrain_type: none
 expression_constrain_use_jaw_pose: True
 expression_constrain_use_global_pose: False
@@ -76,3 +77,47 @@ use_emonet_combined: False
 emonet_weight: 0.0015
 use_gt_emotion_loss: False
 gt_emotion_reg: 0.0
+
+mlp_emotion_predictor_weight: 0.0015
+mlp_emotion_predictor:
+  predict_expression: true
+  predict_valence: true
+  predict_arousal: true
+
+  #a_loss: mse_loss
+  a_loss:
+    #  - a_ccc: 0.5
+    #  - a_pcc: 0.5
+    a_mse: 1.
+
+  #v_loss: mse_loss
+  v_loss:
+    #  - v_ccc: 0.5
+    #  - v_pcc: 0.5
+    v_mse: 1.
+
+  va_loss:
+    va_lpcc: 1.
+    va_lccc: 1.
+
+  exp_loss: nll_loss
+  #exp_loss: cross_entropy
+
+  a_activation: none
+  #a_activation: tanh
+  v_activation: none
+  #v_activation: tanh
+  exp_activation: log_softmax
+  #exp_activation: none
+
+  va_loss_scheme: shake
+  #va_loss_scheme: norm
+  #va_loss_scheme: none
+
+  expression_balancing: false
+  use_identity: true
+  use_expression: true
+  use_global_pose: false
+  use_jaw_pose: true
+  use_detail_code: true
+  num_mlp_layers: 4

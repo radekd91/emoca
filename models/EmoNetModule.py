@@ -10,17 +10,20 @@ from datasets.AffectNetDataModule import AffectNetExpressions
 from datasets.FaceVideoDataset import Expression7
 from pathlib import Path
 from utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
-from models.EmotionRecognitionModuleBase import EmotionRecognitionBase
+from models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
 
 
-class EmoNetModule(EmotionRecognitionBase):
+class EmoNetModule(EmotionRecognitionBaseModule):
 
     def __init__(self, config):
         super().__init__(config)
         self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
         if not config.model.load_pretrained_emonet:
             self.emonet.n_expression = 9 # we use all affectnet classes (included none) for now
+            self.n_expression = 9 # we use all affectnet classes (included none) for now
             self.emonet._create_Emo() # reinitialize
+        else:
+            self.n_expression = 8
 
         self.size = (256, 256) # predefined input image size
 
@@ -56,6 +59,14 @@ class EmoNetModule(EmotionRecognitionBase):
         values['valence'] = valence.view(-1,1)
         values['arousal'] = arousal.view(-1,1)
         values['expr_classification'] = expression
+
+        # TODO: WARNING: HACK
+        if self.n_expression == 8:
+            values['expr_classification'] = torch.cat([
+                values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
+                                               + 2*values['expr_classification'].min()],
+                dim=1)
+
         return values
 
     def _get_trainable_parameters(self):

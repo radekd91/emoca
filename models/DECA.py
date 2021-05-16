@@ -17,6 +17,8 @@ from .Renderer import SRenderY
 from .DecaEncoder import ResnetEncoder, SecondHeadResnet
 from .DecaDecoder import Generator
 from .DecaFLAME import FLAME, FLAMETex
+# from .MLP import MLP
+from .EmotionMLP import EmotionMLP
 
 import layers.losses.DecaLosses as lossfunc
 import utils.DecaUtils as util
@@ -28,6 +30,7 @@ from utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_i
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 from utils.other import class_from_str
+from omegaconf import OmegaConf
 
 
 class DecaMode(Enum):
@@ -58,6 +61,12 @@ class DecaModule(LightningModule):
             self.emonet_loss = EmoNetLoss(self.device)
         else:
             self.emonet_loss = None
+            
+        if 'mlp_emotion_predictor' in self.deca.config.keys():
+            # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
+            self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
+        else:
+            self.emotion_mlp = None
 
     def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
@@ -361,7 +370,6 @@ class DecaModule(LightningModule):
             codedict['expr7'] = expr7
         return codedict
 
-
     def decode(self, codedict, training=True) -> dict:
         shapecode = codedict['shapecode']
         expcode = codedict['expcode']
@@ -464,6 +472,10 @@ class DecaModule(LightningModule):
             uv_detail_normals = None
             predicted_detailed_image = None
 
+        if self.emotion_mlp is not None:
+            codedict = self.emotion_mlp(codedict, "emo_mlp_")
+
+
         # populate the value dict for metric computation/visualization
         codedict['predicted_images'] = predicted_images
         codedict['predicted_detailed_image'] = predicted_detailed_image
@@ -565,7 +577,7 @@ class DecaModule(LightningModule):
         return d
 
 
-    def _compute_loss(self, codedict, training=True) -> (dict, dict):
+    def _compute_loss(self, codedict, batch, training=True) -> (dict, dict):
         #### ----------------------- Losses
         losses = {}
         metrics = {}
@@ -768,6 +780,13 @@ class DecaModule(LightningModule):
             nonvis_mask = (1 - util.binary_erosion(uv_vis_mask))
             losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
 
+        if self.emotion_mlp is not None:
+            mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
+            for key in mlp_losses.keys():
+                losses[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_losses[key]
+            for key in mlp_metrics.keys():
+                metrics[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_metrics[key]
+
         # else:
         #     uv_texture_gt_patch_ = None
         #     uv_texture_patch_ = None
@@ -775,11 +794,11 @@ class DecaModule(LightningModule):
 
         return losses, metrics
 
-    def compute_loss(self, values, training=True) -> (dict, dict):
+    def compute_loss(self, values, batch, training=True) -> (dict, dict):
         """
         training should be set to true when calling from training_step only
         """
-        losses, metrics = self._compute_loss(values, training=training)
+        losses, metrics = self._compute_loss(values, batch, training=training)
 
         all_loss = 0.
         losses_key = losses.keys()
@@ -808,7 +827,7 @@ class DecaModule(LightningModule):
         with torch.no_grad():
             values = self.encode(batch, training=False)
             values = self.decode(values, training=False)
-            losses_and_metrics = self.compute_loss(values, training=False)
+            losses_and_metrics = self.compute_loss(values, batch, training=False)
         #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         # prefix = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
@@ -875,7 +894,7 @@ class DecaModule(LightningModule):
             values = self.encode(batch, training=False)
             values = self.decode(values, training=False)
             if 'mask' in batch.keys():
-                losses_and_metrics = self.compute_loss(values, training=False)
+                losses_and_metrics = self.compute_loss(values, batch, training=False)
                 # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
                 losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
             else:
@@ -926,7 +945,7 @@ class DecaModule(LightningModule):
     def training_step(self, batch, batch_idx): #, debug=True):
         values = self.encode(batch, training=True)
         values = self.decode(values, training=True)
-        losses_and_metrics = self.compute_loss(values, training=True)
+        losses_and_metrics = self.compute_loss(values, batch, training=True)
 
         uv_detail_normals = None
         if 'uv_detail_normals' in values.keys():
