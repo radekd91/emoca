@@ -177,6 +177,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
                 if cfg_detail.model.detail_constrain_type != 'none':
                     experiment_name += f'_De{cfg_detail.model.detail_constrain_type[:2]}'
 
+        if 'mlp_emotion_predictor' in cfg_coarse.model.keys() and cfg_coarse.model.mlp_emotion_predictor:
+            experiment_name += f"_MLP_{cfg_coarse.model.mlp_emotion_predictor_weight}"
+
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
 
@@ -365,6 +368,9 @@ def main():
             'data.num_workers=0',
             'learning.batch_size_train=4',
         ]
+
+        coarse_conf = detail_conf
+        coarse_override = detail_override
 
     elif len(sys.argv) > 2:
         if Path(sys.argv[1]).is_file():
