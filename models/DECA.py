@@ -101,6 +101,9 @@ class DecaModule(LightningModule):
         self.deca.train(mode)
 
         if self.emonet_loss is not None:
+            self.emotion_mlp.train(mode)
+
+        if self.emonet_loss is not None:
             self.emonet_loss.eval()
 
         if self.deca.perceptual_loss is not None:
