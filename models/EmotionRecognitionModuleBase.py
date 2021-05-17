@@ -373,7 +373,7 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
         elif permit_dropping_corr:
             pass
         else:
-            print("Cannot compute correlation for a single sample")
+            raise RuntimeError("Cannot compute correlation for a single sample")
         metrics[pred_prefix + f"{measure[0]}_sagr"] = SAGR_torch(pred[measure_label], gt[measure])
         # metrics["v_icc"] = ICC_torch(pred[measure_label], gt[measure])
         if loss is not None:
@@ -406,7 +406,7 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
         elif permit_dropping_corr:
             pass
         else:
-            print("Cannot compute correlation for a single element")
+            raise RuntimeError("Cannot compute correlation for a single element")
         if loss is not None:
             if callable(loss):
                 losses[pred_prefix + "va"] = loss(va_pred, va_gt)
@@ -415,8 +415,6 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
                     # losses[name] = metrics[name]*weight
                     if permit_dropping_corr and pred_prefix + name not in metrics.keys():
                         continue
-                    if pred_prefix + name not in metrics.keys():
-                        print(pred_prefix + name)
                     losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
             else:
                 raise RuntimeError(f"Uknown expression loss '{loss}'")
