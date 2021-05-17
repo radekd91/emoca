@@ -33,7 +33,7 @@ def validation_set_pass(cfg,
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
 
         if hasattr(cfg.inout, 'time'):
-            version = cfg.inout.time + "_" + cfg.inout.name
+            version = cfg.inout.time # + "_" + cfg.inout.name
         else:
             version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
 
