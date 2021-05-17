@@ -100,7 +100,7 @@ class DecaModule(LightningModule):
         # super().train(mode) # not necessary
         self.deca.train(mode)
 
-        if self.emonet_loss is not None:
+        if self.emotion_mlp is not None:
             self.emotion_mlp.train(mode)
 
         if self.emonet_loss is not None:

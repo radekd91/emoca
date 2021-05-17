@@ -19,11 +19,11 @@ def submit(
     submission_dir_local_mount = "/is/cluster/work/rdanecek/expdeca/submission"
     submission_dir_cluster_side = "/is/cluster/work/rdanecek/expdeca/submission"
 
-    # result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca"
-    # result_dir_cluster_side = "/ps/scratch/rdanecek/emoca/finetune_deca"
+    result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/emodeca"
+    result_dir_cluster_side = "/ps/scratch/rdanecek/emoca/emodeca"
 
-    result_dir_local_mount = "/is/cluster/work/rdanecek/emoca/finetune_deca"
-    result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/finetune_deca"
+    # result_dir_local_mount = "/is/cluster/work/rdanecek/emoca/finetune_deca"
+    # result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/finetune_deca"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
@@ -38,17 +38,16 @@ def submit(
     coarse_file = Path(result_dir_local_mount) / resume_folder / "cfg.yaml"
     with open(coarse_file, 'r') as f:
         cfg = OmegaConf.load(f)
-    cfg_coarse = cfg.coarse
 
     submission_folder_local.mkdir(parents=True)
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = cfg_coarse.learning.gpu_memory_min_gb * 1024
+    gpu_mem_requirement_mb = cfg.learning.gpu_memory_min_gb * 1024
     # gpu_mem_requirement_mb = None
     # cpus = cfg_coarse.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
-    gpus = cfg_coarse.learning.num_gpus
+    gpus = cfg.learning.num_gpus
     num_jobs = 1
     max_time_h = 36
     max_price = 10000
@@ -88,6 +87,7 @@ def main():
     resume_folders += ['2021_05_12_14-51-36_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early']
     resume_folders += ['2021_05_12_14-22-36_EmoDECA_Affec_ExpDECA_EmoNetD_unpose_light_cam_shake_early']
     resume_folders += ['2021_05_11_22-57-26_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early']
+    resume_folders += ['2021_05_12_14-22-40_EmoDECA_Affec_ExpDECA_EmoNetD_shake_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
