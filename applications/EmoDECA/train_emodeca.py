@@ -345,6 +345,18 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
     return cfg
 
 
+def load_configs(run_path):
+    with open(Path(run_path) / "cfg.yaml", "r") as f:
+        conf = OmegaConf.load(f)
+    return conf
+
+
+def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
+    cfg = load_configs(run_path)
+    train_emodeca(cfg, start_i=start_at_stage, resume_from_previous = resume_from_previous,
+                  force_new_location=force_new_location)
+
+
 def main():
     if len(sys.argv) < 2:
 
