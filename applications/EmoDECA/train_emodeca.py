@@ -112,25 +112,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             logger.finalize("")
         if checkpoint is None:
             deca = deca_class(cfg)
-            # if cfg.model.resume_training:
-            #     print("[WARNING] Loading DECA checkpoint pretrained by the old code")
-            #     deca.deca._load_old_checkpoint()
         else:
             checkpoint_kwargs = checkpoint_kwargs or {}
             deca = deca_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
-            # if stage == 'train':
-            #     mode = True
-            # else:
-            #     mode = False
-            # deca.reconfigure(cfg)
-    # else:
-        # if stage == 'train':
-        #     mode = True
-        # else:
-        #     mode = False
-        # if checkpoint is not None:
-        #     deca.load_from_checkpoint(checkpoint_path=checkpoint)
-        # deca.reconfigure(cfg)
 
     deca_class = type(deca)
 
@@ -232,12 +216,13 @@ def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = N
     checkpoint = get_checkpoint(cfg, replace_root = replace_root,
                                 relative_to = relative_to, checkpoint_mode=checkpoint_mode)
     cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
-    checkpoint_kwargs = {
-        "model_params": cfg.model,
-        "learning_params": cfg.learning,
-        "inout_params": cfg.inout,
-        "stage_name": prefix
-    }
+    # checkpoint_kwargs = {
+    #     "model_params": cfg.model,
+    #     "learning_params": cfg.learning,
+    #     "inout_params": cfg.inout,
+    #     "stage_name": prefix
+    # }
+    checkpoint_kwargs = {'config': cfg}
     return checkpoint, checkpoint_kwargs
 
 

@@ -29,7 +29,6 @@ def loss_from_cfg(config, loss_name):
     return loss
 
 
-
 class EmotionRecognitionBaseModule(pl.LightningModule):
 
     def __init__(self, config):
@@ -55,6 +54,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         self.v_loss = loss_from_cfg(config.model, 'v_loss')
         self.a_loss = loss_from_cfg(config.model, 'a_loss')
         self.exp_loss = loss_from_cfg(config.model, 'exp_loss')
+
+        # self.val_conf_mat = pl.metrics.ConfusionMatrix(self.num_classes, 'true')
+        # self.val_conf_mat = pl.metrics.ConfusionMatrix(self.num_classes, 'true')
 
 
     def forward(self, image):
@@ -131,6 +133,17 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         return va_loss_weights
 
 
+    # def validation_epoch_end(self, outputs) -> None:
+    #     if isinstance(self.logger, WandbLogger):
+    #         import wandb
+    #
+    #         {"conf_mat": wandb.plot.confusion_matrix(probs=None,
+    #                                 y_true = ground_truth, preds = predictions,
+    #                                 class_names = class_names}
+    #
+    #         self.wandb_logger
+
+
     def _compute_loss(self,
                       pred,
                       gt,
@@ -149,6 +162,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.model.expression_balancing, pred_prefix=pred_prefix)
+
+        # if not training:
+        #     self.val_conf_mat(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0])
 
         # if pred[pred_prefix + "valence"] is not None:
         #     metrics[pred_prefix + "v_mae"] = F.l1_loss(pred[pred_prefix + "valence"], gt["valence"])
