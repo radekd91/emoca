@@ -361,66 +361,66 @@ def main():
     if len(sys.argv) < 2:
 
         #1 EMONET
-        emodeca_default = "emonet"
-        emodeca_overrides = [
-            # 'model/settings=emonet_trainable',
-            # 'learning/logging=none',
-            'learning.max_steps=1',
-            'learning.max_epochs=1',
-            'learning.checkpoint_after_training=latest',
-            'learning.val_check_interval=1',
-            'learning.learning_rate=0',
-            # 'learning/optimizer=adabound',
-            # 'data/datasets=affectnet_desktop',
-            # 'data/augmentations=default',
-        ]
-        deca_conf = None
-        deca_conf_path = None
-        fixed_overrides_deca = None
-        stage = None
-        deca_default = None
-        deca_overrides = None
+        # emodeca_default = "emonet"
+        # emodeca_overrides = [
+        #     # 'model/settings=emonet_trainable',
+        #     # 'learning/logging=none',
+        #     'learning.max_steps=1',
+        #     'learning.max_epochs=1',
+        #     'learning.checkpoint_after_training=latest',
+        #     'learning.val_check_interval=1',
+        #     'learning.learning_rate=0',
+        #     # 'learning/optimizer=adabound',
+        #     # 'data/datasets=affectnet_desktop',
+        #     # 'data/augmentations=default',
+        # ]
+        # deca_conf = None
+        # deca_conf_path = None
+        # fixed_overrides_deca = None
+        # stage = None
+        # deca_default = None
+        # deca_overrides = None
 
 
         # EMODECA
-        # emodeca_default = "emodeca_emonet_coarse"
-        # emodeca_overrides = ['learning/logging=none',
-        #                      'model/settings=coarse_emodeca',
-        #                      # 'model/settings=coarse_emodeca_emonet',
-        #                      '+model.mlp_norm_layer=BatchNorm1d',
-        #                      # 'model.unpose_global_emonet=false',
-        #                      # 'model.use_coarse_image_emonet=false',
-        #                      # 'model.use_detail_image_emonet=true',
-        #                      # 'model.static_cam_emonet=false',
-        #                      # 'model.static_light=false',
-        #                      ]
-        #
-        # deca_default = "deca_train_coarse_cluster"
-        # deca_overrides = [
-        #     # 'model/settings=coarse_train',
-        #     'model/settings=detail_train',
-        #     'model/paths=desktop',
-        #     'model/flame_tex=bfm_desktop',
-        #     'model.resume_training=True',  # load the original DECA model
-        #     'model.useSeg=rend', 'model.idw=0',
-        #     'learning/batching=single_gpu_coarse',
-        #     'learning/logging=none',
-        #     # 'learning/batching=single_gpu_detail',
-        #     #  'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None',
-        #     'data/datasets=affectnet_cluster',
-        #      'learning.batch_size_test=1'
-        # ]
-        # # deca_conf_path = None
-        # # stage = None
-        #
+        emodeca_default = "emodeca_emonet_coarse"
+        emodeca_overrides = ['learning/logging=none',
+                             # 'model/settings=coarse_emodeca',
+                             'model/settings=coarse_emodeca_emonet',
+                             # '+model.mlp_norm_layer=BatchNorm1d',
+                             # 'model.unpose_global_emonet=false',
+                             # 'model.use_coarse_image_emonet=false',
+                             # 'model.use_detail_image_emonet=true',
+                             # 'model.static_cam_emonet=false',
+                             # 'model.static_light=false',
+                             ]
+
+        deca_default = "deca_train_coarse_cluster"
+        deca_overrides = [
+            # 'model/settings=coarse_train',
+            'model/settings=detail_train',
+            'model/paths=desktop',
+            'model/flame_tex=bfm_desktop',
+            'model.resume_training=True',  # load the original DECA model
+            'model.useSeg=rend', 'model.idw=0',
+            'learning/batching=single_gpu_coarse',
+            'learning/logging=none',
+            # 'learning/batching=single_gpu_detail',
+            #  'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
+            'data/datasets=affectnet_cluster',
+             'learning.batch_size_test=1'
+        ]
+        # deca_conf_path = None
+        # stage = None
 
 
-        # deca_default = None
-        # deca_overrides = None
-        # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # # deca_conf = None
+
+        deca_default = None
+        deca_overrides = None
+        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf = None
         stage = 'detail'
 
         # relative_to_path = '/ps/scratch/'

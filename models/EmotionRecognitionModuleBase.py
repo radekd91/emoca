@@ -143,11 +143,11 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
         weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        metrics, losses = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        metrics, losses = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        metrics, losses = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        losses, metrics = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix, permit_dropping_corr=not training)
 
-        metrics, losses = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
+        losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.model.expression_balancing, pred_prefix=pred_prefix)
 
         # if pred[pred_prefix + "valence"] is not None:
