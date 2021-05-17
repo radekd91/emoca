@@ -20,7 +20,6 @@ from tqdm import auto
 project_name = 'EmoDECA'
 
 
-
 def validation_set_pass(cfg,
                         # stage, prefix,
                         dm=None, logger=None,
@@ -128,11 +127,17 @@ def validation_set_pass(cfg,
     dl = dm.val_dataloader()
 
 
-    gt_list = []
-    pred_list = []
-
     deca.cuda()
     deca.eval()
+
+    prefixes = ['', 'emonet_coarse_', 'emonet_detail_']
+
+
+    gt_list = []
+    pred_dict = {}
+    for p in prefixes:
+        pred_dict[p] = []
+
 
     for bi, batch in  enumerate(auto.tqdm(dl)):
         for key in batch.keys():
@@ -143,10 +148,15 @@ def validation_set_pass(cfg,
             values = deca.forward(batch)
         # valence_pred = values["valence"]
         # arousal_pred = values["arousal"]
-        expr_classification_pred = values["expr_classification"]
-
         # valence_gt = batch["va"][:, 0:1]
         # arousal_gt = batch["va"][:, 1:2]
+
+
+        for p in prefixes:
+            if p + "expr_classification" in values.keys():
+                expr_classification_pred = values[p + "expr_classification"]
+                pred_dict[p] += [expr_classification_pred]
+
         expr_classification_gt = batch["affectnetexp"]
         # if "expression_weight" in batch.keys():
         #     class_weight = batch["expression_weight"][0]
@@ -166,16 +176,17 @@ def validation_set_pass(cfg,
 
 
         gt_list += [expr_classification_gt ]
-        pred_list += [  expr_classification_pred]
+        # pred_list += [  expr_classification_pred]
 
 
     gt_labels = torch.cat(gt_list)
-    probs = torch.cat(pred_list)
-
 
     names = [AffectNetExpressions(i).name for i in range(9)]
-    conf_mat = wandb.plot.confusion_matrix(y_true=gt_labels.detach().cpu().numpy()[:,0], probs=probs.detach().cpu().numpy(), class_names=names, title="Expression confusion matrix")
-    wandb.log({"val_conf_mat" : conf_mat})
+
+    for p in prefixes:
+        probs = torch.cat(pred_dict[p])
+        conf_mat = wandb.plot.confusion_matrix(y_true=gt_labels.detach().cpu().numpy()[:,0], probs=probs.detach().cpu().numpy(), class_names=names, title="Expression confusion matrix")
+        wandb.log({p + "val_conf_mat" : conf_mat})
 
     print("DONE!")
 
@@ -194,7 +205,13 @@ def main():
         relative_to_path = '/ps/scratch/'
         replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
         # resume_from = '/ps/scratch/rdanecek/emoca/finetune_deca/2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'
-        run_path = "2021_05_12_22-53-50_EmoNet_shake_early"
+        # run_path = "2021_05_12_22-53-50_EmoNet_shake_early"
+        # run_path = '2021_05_12_14-54-24_EmoDECA_Affec_ExpDECA_EmoNetC_unpose_light_cam_shake_early'
+        # run_path = '2021_05_12_14-51-36_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early'
+        # run_path = '2021_05_12_14-22-36_EmoDECA_Affec_ExpDECA_EmoNetD_unpose_light_cam_shake_early'
+        # run_path = '2021_05_11_22-57-26_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early'
+        run_path = '2021_05_12_14-22-40_EmoDECA_Affec_ExpDECA_EmoNetD_shake_early'
+
         path = root / run_path
     else:
         root = '/ps/scratch/rdanecek/emoca/emodeca/'
