@@ -171,9 +171,9 @@ class EmotionMLP(torch.nn.Module):
         losses, metrics = {}, {}
         # print(metrics.keys())
         losses, metrics = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence",
-                                      pred_prefix=pred_prefix)
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training)
         losses, metrics = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal",
-                                      pred_prefix=pred_prefix)
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training)
         losses, metrics = va_loss(self.va_loss, pred, gt, weights, metrics, losses,
                                   pred_prefix=pred_prefix)
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,

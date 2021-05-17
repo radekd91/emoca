@@ -36,6 +36,8 @@ def prepare_data(cfg):
         if ring_size is not None and 'shape_constrain_type' in cfg.model.keys() and (cfg.model.shape_constrain_type is not None and str(cfg.model.shape_constrain_type).lower() != 'none'):
             raise ValueError("AffectNet does not support shape exchange!")
 
+        drop_last = cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else None
+
         dm = AffectNetDataModule(
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
@@ -53,6 +55,7 @@ def prepare_data(cfg):
             augmentation=augmentation,
             ring_type=ring_type,
             ring_size=ring_size,
+            drop_last=drop_last
         )
         sequence_name = "AffNet"
     else:
@@ -369,8 +372,8 @@ def main():
             'learning.batch_size_train=4',
         ]
 
-        coarse_conf = detail_conf
-        coarse_override = detail_override
+        # coarse_conf = detail_conf
+        # coarse_override = detail_override
 
     elif len(sys.argv) > 2:
         if Path(sys.argv[1]).is_file():

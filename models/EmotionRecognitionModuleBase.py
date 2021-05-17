@@ -356,7 +356,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
 
 
-def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix=""):
+def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="", permit_dropping_corr=False):
 
     if measure not in ["valence", "arousal"]:
         raise ValueError(f"Invalid measure {measure}")
@@ -367,8 +367,13 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
         metrics[pred_prefix + f"{measure[0]}_mae"] = F.l1_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_mse"] = F.mse_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_rmse"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse"])
-        metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
-        metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
+        if gt[measure].numel() >= 2:
+            metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
+            metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
+        elif permit_dropping_corr:
+            pass
+        else:
+            print("Cannot compute correlation for a single sample")
         metrics[pred_prefix + f"{measure[0]}_sagr"] = SAGR_torch(pred[measure_label], gt[measure])
         # metrics["v_icc"] = ICC_torch(pred[measure_label], gt[measure])
         if loss is not None:
@@ -378,29 +383,40 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
                 # print(metrics.keys() )
                 for name, weight in loss.items():
                     # losses[name] = metrics[name]*weight
+                    if permit_dropping_corr and pred_prefix + name not in metrics.keys():
+                        continue
                     losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
             else:
                 raise RuntimeError(f"Uknown {measure} loss '{loss}'")
     return losses, metrics
 
 
-def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix=""):
+def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dropping_corr=False):
     if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
         va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
         va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
         metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
         metrics[pred_prefix + "va_mse"] = F.mse_loss(va_pred, va_gt)
         metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
-        metrics[pred_prefix + "va_lpcc"] = \
-            (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
-        metrics[pred_prefix + "va_lccc"] = \
-            (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+        if pred_prefix + "a_pcc" in metrics.keys():
+            metrics[pred_prefix + "va_lpcc"] = \
+                (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
+            metrics[pred_prefix + "va_lccc"] = \
+                (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+        elif permit_dropping_corr:
+            pass
+        else:
+            print("Cannot compute correlation for a single element")
         if loss is not None:
             if callable(loss):
                 losses[pred_prefix + "va"] = loss(va_pred, va_gt)
             elif isinstance(loss, dict):
                 for name, weight in loss.items():
                     # losses[name] = metrics[name]*weight
+                    if permit_dropping_corr and pred_prefix + name not in metrics.keys():
+                        continue
+                    if pred_prefix + name not in metrics.keys():
+                        print(pred_prefix + name)
                     losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
             else:
                 raise RuntimeError(f"Uknown expression loss '{loss}'")

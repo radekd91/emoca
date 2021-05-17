@@ -68,7 +68,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                  test_batch_size=64,
                  num_workers=0,
                  ring_type=None,
-                 ring_size=None
+                 ring_size=None,
+                 drop_last=False,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -112,6 +113,8 @@ class AffectNetDataModule(FaceDataModuleBase):
             raise ValueError(f"Invalid ring type '{ring_type}'")
         self.ring_type = ring_type
         self.ring_size = ring_size
+
+        self.drop_last = drop_last
 
     @property
     def subset_size(self):
@@ -366,16 +369,17 @@ class AffectNetDataModule(FaceDataModuleBase):
         #         self.path / "Automatically_Annotated" / "Automatically_annotated_file_list.csv")
 
     def train_dataloader(self):
-        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers, batch_size=self.train_batch_size)
+        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers,
+                        batch_size=self.train_batch_size, drop_last=self.drop_last)
         return dl
 
     def val_dataloader(self):
         return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
-                          batch_size=self.val_batch_size)
+                          batch_size=self.val_batch_size, drop_last=self.drop_last)
 
     def test_dataloader(self):
         return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
-                          batch_size=self.test_batch_size)
+                          batch_size=self.test_batch_size, drop_last=self.drop_last)
 
     def _get_retrieval_array(self, prefix, feature_label, dataset_size, feature_shape, feature_dtype, modifier='w+'):
         outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)

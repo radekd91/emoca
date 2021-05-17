@@ -17,3 +17,5 @@ face_detector_threshold: 0.9
 
 ring_type: none
 ring_size: none
+
+drop_last: true
