@@ -184,9 +184,10 @@ def validation_set_pass(cfg,
     names = [AffectNetExpressions(i).name for i in range(9)]
 
     for p in prefixes:
-        probs = torch.cat(pred_dict[p])
-        conf_mat = wandb.plot.confusion_matrix(y_true=gt_labels.detach().cpu().numpy()[:,0], probs=probs.detach().cpu().numpy(), class_names=names, title="Expression confusion matrix")
-        wandb.log({p + "val_conf_mat" : conf_mat})
+        if len(pred_dict[p]) > 0:
+            probs = torch.cat(pred_dict[p])
+            conf_mat = wandb.plot.confusion_matrix(y_true=gt_labels.detach().cpu().numpy()[:,0], probs=probs.detach().cpu().numpy(), class_names=names, title="Expression confusion matrix")
+            wandb.log({p + "val_conf_mat" : conf_mat})
 
     print("DONE!")
 

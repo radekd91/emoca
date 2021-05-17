@@ -154,8 +154,14 @@ def compute_confusion_matrix_on_cluster():
     #     '/ps/scratch/rdanecek/emoca/emodeca/2021_04_23_16-51-53_EmoDECA_Affec_ExpDECA_nl-4_exp_jaw_early']
     #     # resume_folders += ['']
 
-    resume_folders = sorted(list(Path('/ps/scratch/rdanecek/emoca/emodeca').glob("*")))
-    resume_folders = [str(s) for s in resume_folders]
+    resume_folders += ['2021_05_12_14-54-24_EmoDECA_Affec_ExpDECA_EmoNetC_unpose_light_cam_shake_early']
+    resume_folders += ['2021_05_12_14-51-36_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early']
+    resume_folders += ['2021_05_12_14-22-36_EmoDECA_Affec_ExpDECA_EmoNetD_unpose_light_cam_shake_early']
+    resume_folders += ['2021_05_11_22-57-26_EmoDECA_Affec_ExpDECA_EmoNetCD_unpose_light_cam_shake_early']
+    resume_folders += ['2021_05_12_14-22-40_EmoDECA_Affec_ExpDECA_EmoNetD_shake_early']
+
+    # resume_folders = sorted(list(Path('/ps/scratch/rdanecek/emoca/emodeca').glob("*")))
+    # resume_folders = [str(s) for s in resume_folders]
     for resume_folder in resume_folders:
         submit(resume_folder)
 
