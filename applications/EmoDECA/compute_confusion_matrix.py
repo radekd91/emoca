@@ -195,15 +195,15 @@ def main():
         replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
         # resume_from = '/ps/scratch/rdanecek/emoca/finetune_deca/2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'
         run_path = "2021_05_12_22-53-50_EmoNet_shake_early"
+        path = root / run_path
     else:
         root = '/ps/scratch/rdanecek/emoca/emodeca/'
         relative_to_path = None
         replace_root_path = None
-        run_path = sys.argv[1]
+        path = sys.argv[1]
 
     stages_prefixe = ""
 
-    path = root / run_path
 
     cfg = load_configs(path)
 
