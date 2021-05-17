@@ -601,6 +601,9 @@ class AffectNet(EmotionalImageDatasetBase):
 
         self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
         self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
+        self.exp_weight_tensor = 1. / self.exp_weight_tensor
+        self.exp_weight_tensor /= torch.norm(self.exp_weight_tensor)
+
 
         if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
             raise ValueError(f"Invalid ring type '{ring_type}'")
