@@ -36,7 +36,7 @@ def prepare_data(cfg):
         if ring_size is not None and 'shape_constrain_type' in cfg.model.keys() and (cfg.model.shape_constrain_type is not None and str(cfg.model.shape_constrain_type).lower() != 'none'):
             raise ValueError("AffectNet does not support shape exchange!")
 
-        drop_last = cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else None
+        drop_last = cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else False
 
         dm = AffectNetDataModule(
             input_dir=cfg.data.input_dir,

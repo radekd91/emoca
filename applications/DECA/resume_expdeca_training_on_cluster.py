@@ -83,7 +83,7 @@ def main():
     resume_from_previous = False
     force_new_location = False
 
-    resume_folders = []
+    # resume_folders = []
     # resume_folders += ['2021_04_13_19-02-10_ExpDECA__EmoTrain_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_19-02-11_ExpDECA__EmoStat_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_19-02-31_ExpDECA__clone_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
@@ -117,28 +117,31 @@ def main():
     # # resume_folders += ['2021_04_18_13-43-55_ExpDECA_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_CoNone_DeNone_Aug_early'] # resumed
     # # resume_folders += ['2021_04_18_12-47-40_ExpDECA_para_Jaw_NoRing_DeSegrend_CoNone_DeNone_DwC_early'] # resumed
 
-    #em-MLP models
-    resume_folders += ['2021_05_17_01-24-26_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_DwC_early']
-    resume_folders += ['2021_05_17_01-22-52_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_early']
 
-    # for resume_folder in resume_folders:
-    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
-    #
-    #
-    # stage = 2
-    # resume_from_previous = True
-    # force_new_location = False
-    # resume_folders = []
-    # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
-    # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
-    # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
     stage = 2
-    resume_from_previous = False
+    resume_from_previous = True
     force_new_location = False
+
     resume_folders = []
+    # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
+    # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
+    # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
+
+    # em-MLP models
+    resume_folders += ['2021_05_17_01-24-26_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_DwC_early']
+    resume_folders += ['2021_05_17_01-22-52_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_early']
+
+
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+
+    # stage = 2
+    # resume_from_previous = False
+    # force_new_location = False
+    # resume_folders = []
     # resume_folders += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early']
     # resume_folders += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
     # resume_folders += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early']
@@ -147,10 +150,10 @@ def main():
     # resume_folders += ['2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early']
 
     ## expression ring,
-    resume_folders += ['2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
-    resume_folders += ['2021_05_07_20-46-09_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early']
-    resume_folders += ['2021_05_07_20-45-33_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
-    resume_folders += ['2021_05_07_20-36-43_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early']
+    # resume_folders += ['2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
+    # resume_folders += ['2021_05_07_20-46-09_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early']
+    # resume_folders += ['2021_05_07_20-45-33_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
+    # resume_folders += ['2021_05_07_20-36-43_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
