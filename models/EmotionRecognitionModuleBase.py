@@ -143,9 +143,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
         weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        metrics, losses = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix)
-        metrics, losses = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix)
-        metrics, losses = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix)
+        metrics, losses = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        metrics, losses = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        metrics, losses = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix, permit_dropping_corr=not training)
 
         metrics, losses = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.model.expression_balancing, pred_prefix=pred_prefix)
@@ -406,7 +406,7 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
         elif permit_dropping_corr:
             pass
         else:
-            raise RuntimeError("Cannot compute correlation for a single element")
+            raise RuntimeError(f"Cannot compute correlation loss for a single sample. '{pred_prefix + 'a_pcc'}")
         if loss is not None:
             if callable(loss):
                 losses[pred_prefix + "va"] = loss(va_pred, va_gt)

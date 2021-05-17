@@ -48,14 +48,14 @@ class EmotionMLP(torch.nn.Module):
         if self.config.predict_arousal:
             out_size += 1
 
-        if "use_mlp" not in self.config.keys() or self.config.use_mlp:
-            if 'mlp_norm_layer' in self.config.keys():
-                batch_norm = class_from_str(self.config.mlp_norm_layer, sys.modules[__name__])
-            else:
-                batch_norm = None
-            self.mlp = MLP(in_size, out_size, hidden_layer_sizes, batch_norm=batch_norm)
+        # if "use_mlp" not in self.config.keys() or self.config.use_mlp:
+        if 'mlp_norm_layer' in self.config.keys():
+            batch_norm = class_from_str(self.config.mlp_norm_layer, sys.modules[__name__])
         else:
-            self.mlp = None
+            batch_norm = None
+        self.mlp = MLP(in_size, out_size, hidden_layer_sizes, batch_norm=batch_norm)
+        # else:
+        #     self.mlp = None
 
         if 'v_activation' in config.keys():
             self.v_activation = class_from_str(self.config.v_activation, sys.modules[__name__])
