@@ -621,25 +621,23 @@ class AffectNet(EmotionalImageDatasetBase):
         else:
             self.expr2sample = None
 
+        va = self.df[["valence", "arousal"]].to_numpy()
+        sampling_rate = 0.1
+        # bin_1d = np.arange(-1.,1.+sampling_rate, sampling_rate)
+        bin_1d = np.arange(-1.,1., sampling_rate)
+        stat, x_ed, y_ed, va_binnumber = sp.stats.binned_statistic_2d(
+            va[:, 0], va[:, 1], None, 'count', [bin_1d, bin_1d], expand_binnumbers=False)
+        va_weights = 1 / va_binnumber
+        va_weights /= np.linalg.norm(va_weights)
+        va_weights *= np.linalg.norm(np.ones_like(va_weights))
+        self.va_sample_weights = va_weights
+
         if ring_type == "gt_va":
-            va = self.df[["valence", "arousal"]].to_numpy()
-            sampling_rate = 0.1
-            # bin_1d = np.arange(-1.,1.+sampling_rate, sampling_rate)
-            bin_1d = np.arange(-1.,1., sampling_rate)
-            
-            # def aggregation_fn(array):
-            #     if len(array) == 0 or array.size == 0:
-            #         return float('NaN')
-            #     return [array]
-            # stat, x_ed, y_e, binnumber = sp.stats.binned_statistic_2d(
-            #     va[:, 0], va[:, 1], None, aggregation_fn, [bin_1d, bin_1d], expand_binnumbers=True)
-            stat, x_ed, y_e, binnumber = sp.stats.binned_statistic_2d(
-                va[:, 0], va[:, 1], None, 'count', [bin_1d, bin_1d], expand_binnumbers=False)
             self.bins_to_samples = {}
-            self.va_bin_indices = binnumber
-            bin_indices = np.unique(binnumber)
+            self.va_bin_indices = va_binnumber
+            bin_indices = np.unique(va_binnumber)
             for bi in bin_indices:
-                self.bins_to_samples[bi] = np.where(binnumber == bi)[0]
+                self.bins_to_samples[bi] = np.where(va_binnumber == bi)[0]
 
         elif ring_type == "emonet_va":
             raise NotImplementedError()
@@ -655,6 +653,28 @@ class AffectNet(EmotionalImageDatasetBase):
         else:
             self.nn_indices_array = None
             self.nn_distances_array = None
+
+
+        # v = self.df[["valence"]].to_numpy()
+        sampling_rate = 0.1
+
+        bin_1d = np.arange(-1.,1., sampling_rate)
+        stat, x_ed, va_binnumber = sp.stats.binned_statistic(
+            va[:, 0], None, 'count', bin_1d)
+        v_weights = 1 / va_binnumber
+        v_weights /= np.linalg.norm(v_weights)
+        v_weights *= np.linalg.norm(np.ones_like(v_weights))
+        self.v_sample_weights = v_weights
+
+        bin_1d = np.arange(-1.,1., sampling_rate)
+        stat, x_ed, va_binnumber = sp.stats.binned_statistic(
+            va[:, 1], None, 'count', bin_1d)
+        a_weights = 1 / va_binnumber
+        a_weights /= np.linalg.norm(a_weights)
+        a_weights *= np.linalg.norm(np.ones_like(a_weights))
+        self.a_sample_weights = a_weights
+
+
 
 
 
@@ -747,8 +767,11 @@ class AffectNet(EmotionalImageDatasetBase):
             "affectnetexp": torch.tensor([expression, ], dtype=torch.long),
             "va": torch.tensor([valence, arousal], dtype=torch.float32),
             "label": str(im_file.stem),
-            # "expression_weight": torch.tensor([self.exp_weights[expression], ]),
-            "expression_weight": self.exp_weight_tensor
+            "expression_weight": self.exp_weight_tensor,
+            "expression_sample_weight": torch.tensor([self.exp_weights[expression], ]),
+            "valence_sample_weight": torch.tensor([self.v_sample_weights[index],], dtype=torch.float32),
+            "arousal_sample_weight": torch.tensor([self.a_sample_weights[index],], dtype=torch.float32),
+            "va_sample_weight": torch.tensor([self.va_sample_weights[index],], dtype=torch.float32),
         }
 
         if landmark is not None:
@@ -905,8 +928,8 @@ if __name__ == "__main__":
              scale=1.25,
              ignore_invalid=True,
              # ring_type="gt_expression",
-             # ring_type="gt_va",
-             ring_type="emonet_feature",
+             ring_type="gt_va",
+             # ring_type="emonet_feature",
              ring_size=4
             )
     print(dm.num_subsets)
@@ -916,7 +939,7 @@ if __name__ == "__main__":
     # dl = dm.val_dataloader()
     print(f"len training set: {len(dm.training_set)}")
     print(f"len validation set: {len(dm.validation_set)}")
-    dl = dm.train_dataloader()
+    # dl = dm.train_dataloader()
     # for bi, batch in enumerate(dl):
         # if bi == 10:
         #     break

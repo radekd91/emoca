@@ -149,16 +149,43 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                       gt,
                       class_weight,
                       training=True,
-                      pred_prefix=""):
+                      pred_prefix="",
+                      valence_sample_weight=None,
+                      arousal_sample_weight=None,
+                      va_sample_weight=None,
+                      expression_sample_weight=None
+                      ):
         losses = {}
         metrics = {}
 
         scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
-        weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
+        loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence", pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal", pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        losses, metrics = va_loss(self.va_loss, pred, gt, weights, metrics, losses, pred_prefix=pred_prefix, permit_dropping_corr=not training)
+        if 'continuous_va_balancing' in self.config.model.keys():
+            if self.config.model.continuous_va_balancing == '1d':
+                v_weight = valence_sample_weight
+                a_weight = arousal_sample_weight
+            elif self.config.model.continuous_va_balancing == '2d':
+                v_weight = va_sample_weight
+                a_weight = va_sample_weight
+            elif self.config.model.continuous_va_balancing == 'expr':
+                v_weight = expression_sample_weight
+                a_weight = expression_sample_weight
+            else:
+                raise RuntimeError(f"Invalid continuous affect balancing"
+                                   f" '{self.config.model.continuous_va_balancing}'")
+        else:
+            v_weight = None
+            a_weight = None
+
+        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                      sample_weights=v_weight)
+        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                      sample_weights=a_weight)
+        losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
+                                  permit_dropping_corr=not training)
 
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.model.expression_balancing, pred_prefix=pred_prefix)
@@ -253,8 +280,17 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                      pred,
                      gt,
                      class_weight,
+                     valence_sample_weight=None,
+                     arousal_sample_weight=None,
+                     va_sample_weight=None,
+                     expression_sample_weight=None,
                      training=True):
-        losses, metrics = self._compute_loss(pred, gt, class_weight, training)
+        losses, metrics = self._compute_loss(pred, gt, class_weight, training,
+                                             valence_sample_weight=valence_sample_weight,
+                                             arousal_sample_weight=arousal_sample_weight,
+                                             va_sample_weight=va_sample_weight,
+                                             expression_sample_weight=expression_sample_weight,
+                                             )
         loss = 0.
         for key, value in losses.items():
             loss += value
@@ -275,6 +311,10 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         else:
             class_weight = None
 
+        valence_sample_weight = batch["valence_sample_weight"] if "valence_sample_weight" in batch.keys() else None
+        arousal_sample_weight = batch["arousal_sample_weight"] if "arousal_sample_weight" in batch.keys() else None
+        va_sample_weight = batch["va_sample_weight"] if "va_sample_weight" in batch.keys() else None
+        expression_sample_weight = batch["expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
 
         gt = {}
         gt["valence"] = valence_gt
@@ -282,7 +322,12 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         gt["expr_classification"] = expr_classification_gt
 
         pred = values
-        losses, metrics = self.compute_loss(pred, gt, class_weight, training=True)
+        losses, metrics = self.compute_loss(pred, gt, class_weight, training=True,
+                                            valence_sample_weight=valence_sample_weight,
+                                            arousal_sample_weight=arousal_sample_weight,
+                                            va_sample_weight=va_sample_weight,
+                                            expression_sample_weight=expression_sample_weight,
+                                            )
 
         self._log_losses_and_metrics(losses, metrics, "train")
         total_loss = losses["total"]
@@ -313,7 +358,18 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         # pred["arousal"] = arousal_pred
         # pred["expr_classification"] = expr_classification_pred
 
-        losses, metrics = self.compute_loss(pred, gt, class_weight, training=False)
+        valence_sample_weight = batch["valence_sample_weight"] if "valence_sample_weight" in batch.keys() else None
+        arousal_sample_weight = batch["arousal_sample_weight"] if "arousal_sample_weight" in batch.keys() else None
+        va_sample_weight = batch["va_sample_weight"] if "va_sample_weight" in batch.keys() else None
+        expression_sample_weight = batch[
+            "expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
+
+        losses, metrics = self.compute_loss(pred, gt, class_weight, training=False,
+                                            valence_sample_weight=valence_sample_weight,
+                                            arousal_sample_weight=arousal_sample_weight,
+                                            va_sample_weight=va_sample_weight,
+                                            expression_sample_weight=expression_sample_weight,
+                                            )
 
         self._log_losses_and_metrics(losses, metrics, "val")
         # visdict = self._test_visualization(values, batch, batch_idx, dataloader_idx=dataloader_idx)
@@ -372,7 +428,8 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
 
 
-def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="", permit_dropping_corr=False):
+def v_or_a_loss(loss, pred, gt, term_weights,
+                metrics, losses, measure, pred_prefix="", permit_dropping_corr=False, sample_weights=None):
 
     if measure not in ["valence", "arousal"]:
         raise ValueError(f"Invalid measure {measure}")
@@ -383,9 +440,22 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
         metrics[pred_prefix + f"{measure[0]}_mae"] = F.l1_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_mse"] = F.mse_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_rmse"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse"])
+
         if gt[measure].numel() >= 2:
             metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
             metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
+
+        if sample_weights is not None:
+            metrics[pred_prefix + f"{measure[0]}_mse_weighted"] = (sample_weights * F.mse_loss(pred[measure_label], gt[measure], reduction='none')).mean()
+            metrics[pred_prefix + f"{measure[0]}_rmse_weighted"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse_weighted"])
+
+            if gt[measure].numel() >= 2:
+                metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = PCC_torch(pred[measure_label], gt[measure],
+                                                                       batch_first=False, weights=sample_weights)
+                metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = CCC_torch(pred[measure_label], gt[measure],
+                                                                       batch_first=False, weights=sample_weights)
+
+
         elif permit_dropping_corr:
             pass
         else:
@@ -401,7 +471,7 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
                     # losses[name] = metrics[name]*weight
                     if permit_dropping_corr and pred_prefix + name not in metrics.keys():
                         continue
-                    losses[pred_prefix + name] = metrics[pred_prefix + name] * weights[name]
+                    losses[pred_prefix + name] = metrics[pred_prefix + name] * term_weights[name]
             else:
                 raise RuntimeError(f"Uknown {measure} loss '{loss}'")
     return losses, metrics
@@ -409,6 +479,7 @@ def v_or_a_loss(loss, pred, gt, weights, metrics, losses, measure, pred_prefix="
 
 def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dropping_corr=False):
     if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
+
         va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
         va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
         metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
@@ -419,10 +490,18 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
                 (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
             metrics[pred_prefix + "va_lccc"] = \
                 (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+
+        if pred_prefix + "a_pcc_weighted" in metrics.keys():
+            metrics[pred_prefix + "va_lpcc_weighted"] = \
+                (1. - 0.5 * (metrics[pred_prefix + "a_pcc_weighted"] + metrics[pred_prefix + "v_pcc_weighted"]))[0][0]
+            metrics[pred_prefix + "va_lccc_weighted"] = \
+                (1. - 0.5 * (metrics[pred_prefix + "a_ccc_weighted"] + metrics[pred_prefix + "v_ccc_weighted"]))[0][0]
+
         elif permit_dropping_corr:
             pass
         else:
             raise RuntimeError(f"Cannot compute correlation loss for a single sample. '{pred_prefix + 'a_pcc'}")
+
         if loss is not None:
             if callable(loss):
                 losses[pred_prefix + "va"] = loss(va_pred, va_gt)
