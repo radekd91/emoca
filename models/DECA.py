@@ -94,8 +94,6 @@ class DecaModule(LightningModule):
         if shape_constraint is not None and expression_constraint is not None:
             raise ValueError("Both shape constraint and expression constraint are active. This is probably not what we want.")
 
-
-
     def train(self, mode: bool = True):
         # super().train(mode) # not necessary
         self.deca.train(mode)
@@ -786,8 +784,12 @@ class DecaModule(LightningModule):
         if self.emotion_mlp is not None:
             mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
             for key in mlp_losses.keys():
+                if key in losses.keys():
+                    raise RuntimeError(f"Duplicate loss label {key}")
                 losses[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_losses[key]
             for key in mlp_metrics.keys():
+                if key in losses.keys():
+                    raise RuntimeError(f"Duplicate metric label {key}")
                 metrics[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_metrics[key]
 
         # else:

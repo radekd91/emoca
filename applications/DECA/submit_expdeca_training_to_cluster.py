@@ -359,11 +359,11 @@ def train_on_selected_sequences():
                               ]
 
     # emonet_weights = [0.15,] #default
-    emonet_weights = [0.15/100,] #new default
-    # emonet_weights = [0.15, 0.15/5, 0.15/10, 0.15/50, 0.15/100]
+    # emomlp_weights = [1,0] #new default
+    emomlp_weights = [0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
 
     config_pairs = []
-    for emeonet_reg in emonet_weights:
+    for emomlp_weight in emomlp_weights:
         for fmode in finetune_modes:
             coarse_overrides = fixed_overrides_coarse.copy()
             detail_overrides = fixed_overrides_detail.copy()
@@ -375,7 +375,7 @@ def train_on_selected_sequences():
             # pretrain_coarse_overrides += [data_override]
             # coarse_overrides += [data_override]
             # detail_overrides += [data_override]
-            emonet_weight_override = f'model.emonet_weight={emeonet_reg}'
+            emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
             coarse_overrides += [emonet_weight_override]
             detail_overrides += [emonet_weight_override]
 

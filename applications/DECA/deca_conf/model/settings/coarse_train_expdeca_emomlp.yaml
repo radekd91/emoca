@@ -96,7 +96,7 @@ mlp_emotion_predictor:
   #va_loss_scheme: norm
   #va_loss_scheme: none
 
-  expression_balancing: false
+  expression_balancing: true
   use_identity: true
   use_expression: true
   use_global_pose: false

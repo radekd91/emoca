@@ -147,7 +147,6 @@ class EmotionMLP(torch.nn.Module):
 
 
     def compute_loss(self, pred, batch, training, pred_prefix=""):
-
         valence_gt = batch["va"][:, 0:1]
         arousal_gt = batch["va"][:, 1:2]
         expr_classification_gt = batch["affectnetexp"]
@@ -163,18 +162,42 @@ class EmotionMLP(torch.nn.Module):
 
         # TODO: this is not ugly enough
         scheme = None if 'va_loss_scheme' not in self.config.keys() else self.config.va_loss_scheme
-        weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
+        loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
         # for key in pred.keys():
         #     if isinstance(pred[key], torch.Tensor) and (pred[key].isnan()).any():
         #         print(key)
 
+        valence_sample_weight = batch["valence_sample_weight"] if "valence_sample_weight" in batch.keys() else None
+        arousal_sample_weight = batch["arousal_sample_weight"] if "arousal_sample_weight" in batch.keys() else None
+        va_sample_weight = batch["va_sample_weight"] if "va_sample_weight" in batch.keys() else None
+        expression_sample_weight = batch["expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
+
+        if 'continuous_va_balancing' in self.config.keys():
+            if self.config.continuous_va_balancing == '1d':
+                v_weight = valence_sample_weight
+                a_weight = arousal_sample_weight
+            elif self.config.continuous_va_balancing == '2d':
+                v_weight = va_sample_weight
+                a_weight = va_sample_weight
+            elif self.config.continuous_va_balancing == 'expr':
+                v_weight = expression_sample_weight
+                a_weight = expression_sample_weight
+            else:
+                raise RuntimeError(f"Invalid continuous affect balancing"
+                                   f" '{self.config.continuous_va_balancing}'")
+        else:
+            v_weight = None
+            a_weight = None
+
         losses, metrics = {}, {}
         # print(metrics.keys())
-        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, weights, metrics, losses, "valence",
-                                      pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, weights, metrics, losses, "arousal",
-                                      pred_prefix=pred_prefix, permit_dropping_corr=not training)
-        losses, metrics = va_loss(self.va_loss, pred, gt, weights, metrics, losses,
+        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                      sample_weights=v_weight)
+        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
+                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                      sample_weights=a_weight)
+        losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses,
                                   pred_prefix=pred_prefix)
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.expression_balancing, pred_prefix=pred_prefix)
