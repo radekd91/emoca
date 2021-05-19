@@ -90,13 +90,27 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         optimizers = [opt]
         schedulers = []
-        if 'learning_rate_decay' in self.config.learning.keys():
-            scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=self.config.learning.learning_rate_decay)
-            schedulers += [scheduler]
-        if len(schedulers) == 0:
-            return opt
 
-        return optimizers, schedulers
+        opt_dict = {}
+        opt_dict['optimizer'] = opt
+        if 'learning_rate_patience' in self.config.learning.keys():
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt,
+                                                                   patience=self.config.learning.learning_rate_patience,
+                                                                   factor=self.config.learning.learning_rate_decay,
+                                                                   mode=self.config.learning.lr_sched_mode)
+            schedulers += [scheduler]
+            opt_dict['lr_scheduler'] = scheduler
+            opt_dict['monitor'] = 'val_loss_total'
+        elif 'learning_rate_decay' in self.config.learning.keys():
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=self.config.learning.learning_rate_decay)
+            opt_dict['lr_scheduler'] = scheduler
+            schedulers += [scheduler]
+        return opt_dict
+        #
+        # if len(schedulers) == 0:
+        #     return opt
+        #
+        # return optimizers, schedulers
 
     def _get_step_loss_weights(self, training):
         va_loss_weights = {}

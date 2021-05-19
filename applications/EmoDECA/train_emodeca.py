@@ -81,6 +81,13 @@ def create_experiment_name(cfg, version=1):
     if cfg.learning.optimizer != 'Adam':
         experiment_name += "_" + cfg.learning.optimizer
 
+    if 'learning_rate_patience' in cfg.learning.keys():
+        experiment_name += "_RLROP"
+
+    if 'learning_rate_decay' in cfg.learning.keys():
+        experiment_name += f"_d{cfg.learning.learning_rate_decay:0.4f}"
+
+
     return experiment_name
 
 
@@ -357,6 +364,7 @@ def main():
             # 'learning.max_steps=1',
             'learning.max_epochs=1',
             'learning.checkpoint_after_training=latest',
+            '+learning/lr_scheduler=reduce_on_plateau',
             'model.continuous_va_balancing=1d',
             # 'model.continuous_va_balancing=2d',
             # 'model.continuous_va_balancing=expr',
