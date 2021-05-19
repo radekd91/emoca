@@ -114,6 +114,7 @@ mlp_emotion_predictor:
   #va_loss_scheme: norm
   #va_loss_scheme: none
 
+  continuous_va_balancing: 1d
   expression_balancing: true
   use_identity: true
   use_expression: true

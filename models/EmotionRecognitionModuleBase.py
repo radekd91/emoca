@@ -504,6 +504,10 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
                 (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
             metrics[pred_prefix + "va_lccc"] = \
                 (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+        elif permit_dropping_corr:
+            pass
+        else:
+            raise RuntimeError(f"Cannot compute correlation loss for a single sample. '{pred_prefix + 'a_pcc'}")
 
         if pred_prefix + "a_pcc_weighted" in metrics.keys():
             metrics[pred_prefix + "va_lpcc_weighted"] = \
