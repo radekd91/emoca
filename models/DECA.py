@@ -788,7 +788,7 @@ class DecaModule(LightningModule):
                     raise RuntimeError(f"Duplicate loss label {key}")
                 losses[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_losses[key]
             for key in mlp_metrics.keys():
-                if key in losses.keys():
+                if key in metrics.keys():
                     raise RuntimeError(f"Duplicate metric label {key}")
                 metrics[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_metrics[key]
 
