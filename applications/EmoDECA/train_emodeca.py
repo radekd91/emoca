@@ -100,7 +100,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
 
-        if hasattr(cfg.inout, 'time'):
+        if hasattr(cfg.inout, 'time') and hasattr(cfg.inout, 'random_id'):
+            version = cfg.inout.time + "_" + cfg.inout.random_id
+        elif hasattr(cfg.inout, 'time'):
             version = cfg.inout.time + "_" + cfg.inout.name
         else:
             version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
@@ -261,6 +263,7 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
@@ -271,6 +274,10 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
             time = cfg.inout.time
         else:
             time = experiment_name[:len_time_str]
+        if hasattr(cfg.inout, 'random_id') and cfg.inout.random_id is not None:
+            random_id = cfg.inout.random_id
+        else:
+            random_id = ""
         full_run_dir = Path(cfg.inout.full_run_dir).parent
         exist_ok = True # a path for an old experiment should exist
 
@@ -286,16 +293,22 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
     cfg.inout.checkpoint_dir = str(checkpoint_dir)
     cfg.inout.name = experiment_name
     cfg.inout.time = time
+    cfg.inout.random_id = random_id
 
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=cfg, f=outfile)
+
+
+    version = time
+    if random_id is not None and len(random_id) > 0:
+        version += "_" + cfg.inout.random_id
 
     logger = create_logger(
                          cfg.learning.logger_type,
                          name=experiment_name,
                          project_name=project_name,
                          config=OmegaConf.to_container(cfg),
-                         version=time,
+                         version=version,
                          save_dir=full_run_dir)
 
     deca = None

@@ -222,6 +222,7 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
@@ -232,6 +233,10 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
             time = cfg_coarse.inout.time
         else:
             time = experiment_name[:len_time_str]
+        if hasattr(cfg_coarse.inout, 'random_id') and cfg_coarse.inout.random_id is not None:
+            random_id = cfg_coarse.inout.random_id
+        else:
+            random_id = ""
         full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
         exist_ok = True # a path for an old experiment should exist
 
@@ -247,6 +252,7 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
     cfg_coarse.inout.time = time
+    cfg_coarse.inout.random_id = random_id
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
@@ -256,6 +262,7 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
     cfg_detail.inout.time = time
+    cfg_detail.inout.random_id = random_id
 
     # save config to target folder
     conf = DictConfig({})
@@ -264,12 +271,16 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=conf, f=outfile)
 
+    version = time
+    if random_id is not None and len(random_id) > 0:
+        version += "_" + cfg_detail.inout.random_id
+
     wandb_logger = create_logger(
                          cfg_coarse.learning.logger_type,
                          name=experiment_name,
                          project_name=project_name,
                          config=OmegaConf.to_container(conf),
-                         version=time,
+                         version=version,
                          save_dir=full_run_dir)
 
     deca = None

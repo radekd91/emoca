@@ -212,7 +212,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if logger is None:
         N = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
 
-        if hasattr(cfg.inout, 'time'):
+        if hasattr(cfg.inout, 'time') and hasattr(cfg.inout, 'random_id'):
+            version = cfg.inout.time + "_" + cfg.inout.random_id
+        elif hasattr(cfg.inout, 'time'):
             version = cfg.inout.time + "_" + cfg.inout.name
         else:
             version = sequence_name[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
@@ -473,6 +475,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
             old_run_dir = cfg_coarse.inout.full_run_dir
             cfg_coarse.inout.full_run_dir_previous = old_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail, sequence_name)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
@@ -483,6 +486,10 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
             time = cfg_coarse.inout.time
         else:
             time = experiment_name[:len_time_str]
+        if hasattr(cfg_coarse.inout, 'random_id') and cfg_coarse.inout.random_id is not None:
+            random_id = cfg_coarse.inout.random_id
+        else:
+            random_id = ""
         full_run_dir = Path(cfg_coarse.inout.full_run_dir).parent
         exist_ok = True # a path for an old experiment should exist
 
@@ -500,6 +507,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     cfg_coarse.inout.checkpoint_dir = str(coarse_checkpoint_dir)
     cfg_coarse.inout.name = experiment_name
     cfg_coarse.inout.time = time
+    cfg_coarse.inout.random_id = random_id
 
     # if cfg_detail.inout.full_run_dir == 'todo':
     detail_checkpoint_dir = full_run_dir / "detail" / "checkpoints"
@@ -511,6 +519,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     cfg_detail.inout.checkpoint_dir = str(detail_checkpoint_dir)
     cfg_detail.inout.name = experiment_name
     cfg_detail.inout.time = time
+    cfg_detail.inout.random_id = random_id
 
     conf = DictConfig({})
     conf.coarse = cfg_coarse
@@ -518,12 +527,17 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     with open(full_run_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=conf, f=outfile)
 
+    version = time
+    if random_id is not None and len(random_id) > 0:
+        version += "_" + cfg_detail.inout.random_id
+
     wandb_logger = create_logger(
                          conf.coarse.learning.logger_type,
                          name=experiment_name,
                          project_name=project_name,
                          config=OmegaConf.to_container(conf),
-                         version=time + "_" + experiment_name,
+                         # version=time + "_" + experiment_name,
+                         version=version,
                          save_dir=full_run_dir)
 
         # WandbLogger(name=experiment_name,
