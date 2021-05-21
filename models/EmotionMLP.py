@@ -163,9 +163,6 @@ class EmotionMLP(torch.nn.Module):
         # TODO: this is not ugly enough
         scheme = None if 'va_loss_scheme' not in self.config.keys() else self.config.va_loss_scheme
         loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
-        # for key in pred.keys():
-        #     if isinstance(pred[key], torch.Tensor) and (pred[key].isnan()).any():
-        #         print(key)
 
         valence_sample_weight = batch["valence_sample_weight"] if "valence_sample_weight" in batch.keys() else None
         arousal_sample_weight = batch["arousal_sample_weight"] if "arousal_sample_weight" in batch.keys() else None
@@ -201,9 +198,5 @@ class EmotionMLP(torch.nn.Module):
                                   pred_prefix=pred_prefix)
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                    self.config.expression_balancing, pred_prefix=pred_prefix)
-
-        # for key in losses.keys():
-        #     if losses[key] != losses[key]:
-        #         print(key)
 
         return losses, metrics

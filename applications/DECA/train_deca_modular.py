@@ -86,7 +86,7 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
             raise RuntimeError("Finding the best checkpoint failed")
         checkpoint = str(checkpoints[min_idx])
     else:
-        raise ValueError(f"Invalid checkopoint loading mode '{mode}'")
+        raise ValueError(f"Invalid checkpoint loading mode '{mode}'")
     print(f"Selecting checkpoint '{checkpoint}'")
     return checkpoint
 

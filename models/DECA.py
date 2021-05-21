@@ -790,7 +790,9 @@ class DecaModule(LightningModule):
             for key in mlp_metrics.keys():
                 if key in metrics.keys():
                     raise RuntimeError(f"Duplicate metric label {key}")
-                metrics[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_metrics[key]
+                # let's report the metrics (which are a superset of losses when it comes to EmoMLP) without the weight,
+                # it's hard to plot the metrics otherwise
+                metrics[key] = self.deca.config.mlp_emotion_predictor_weight # * mlp_metrics[key]
 
         # else:
         #     uv_texture_gt_patch_ = None
