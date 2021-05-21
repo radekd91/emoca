@@ -792,7 +792,8 @@ class DecaModule(LightningModule):
                     raise RuntimeError(f"Duplicate metric label {key}")
                 # let's report the metrics (which are a superset of losses when it comes to EmoMLP) without the weight,
                 # it's hard to plot the metrics otherwise
-                metrics[key] = self.deca.config.mlp_emotion_predictor_weight # * mlp_metrics[key]
+                metrics[key] = mlp_metrics[key]
+                # metrics[key] = self.deca.config.mlp_emotion_predictor_weight * mlp_metrics[key]
 
         # else:
         #     uv_texture_gt_patch_ = None
@@ -1189,6 +1190,10 @@ class DecaModule(LightningModule):
             trainable_params += self.deca._get_detail_trainable_parameters()
         else:
             raise ValueError(f"Invalid deca mode: {self.mode}")
+
+        if self.emotion_mlp is not None:
+            trainable_params += list(self.emotion_mlp.parameters())
+
         return trainable_params
 
 

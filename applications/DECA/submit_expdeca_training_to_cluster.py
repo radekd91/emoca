@@ -358,9 +358,7 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
                               ]
 
-    # emonet_weights = [0.15,] #default
-    # emomlp_weights = [1,0] #new default
-    emomlp_weights = [0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
 
     config_pairs = []
     for emomlp_weight in emomlp_weights:
