@@ -142,22 +142,22 @@ def train_on_selected_sequences():
         # ],
 
         # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        ],
-
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
         # [
         #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
         #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
         # ],
+
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -358,7 +358,8 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
                               ]
 
-    emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emomlp_weights = [0.5, 0.1, 0.05, 0.005]
 
     config_pairs = []
     for emomlp_weight in emomlp_weights:

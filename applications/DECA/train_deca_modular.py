@@ -47,7 +47,11 @@ def get_checkpoint(cfg, replace_root = None, relative_to = None, checkpoint_mode
 def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
     checkpoint_dir = cfg.inout.checkpoint_dir
     if replace_root is not None and relative_to is not None:
-        checkpoint_dir = str(Path(replace_root) / Path(checkpoint_dir).relative_to(relative_to))
+        try:
+            checkpoint_dir = str(Path(replace_root) / Path(checkpoint_dir).relative_to(relative_to))
+        except ValueError as e:
+            print(f"Not replacing the root of checkpoint_dir '{checkpoint_dir}' beacuse the specified root does not fit:"
+                  f"'{replace_root}'")
     print(f"Looking for checkpoint in '{checkpoint_dir}'")
     checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
     if len(checkpoints) == 0:

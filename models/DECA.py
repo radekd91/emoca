@@ -1071,12 +1071,15 @@ class DecaModule(LightningModule):
                                     values[mode_ + "_arousal_input"][i].detach().cpu().item(),
                                     np.argmax(values[mode_ + "_expression_input"][i].detach().cpu().numpy()),
                                     prefix="emonet") + "\n"
-                            if 'va' in values.keys():
+                            if 'va' in values.keys() and mode_ + "valence_gt" in values.keys():
+                                # caption += self.vae_2_str(
+                                #     values[mode_ + "_valence_gt"][i].detach().cpu().item(),
+                                #     values[mode_ + "_arousal_gt"][i].detach().cpu().item(),
                                 caption += self.vae_2_str(
-                                    values[mode_ + "_valence_gt"][i].detach().cpu().item(),
-                                    values[mode_ + "_arousal_gt"][i].detach().cpu().item(),
+                                    values[mode_ + "valence_gt"][i].detach().cpu().item(),
+                                    values[mode_ + "arousal_gt"][i].detach().cpu().item(),
                                     prefix="gt") + "\n"
-                            if 'expr7' in values.keys():
+                            if 'expr7' in values.keys() and mode_ + "_expression_gt" in values.keys():
                                 caption += "\n" + self.vae_2_str(
                                     expr7=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
                                     prefix="gt") + "\n"

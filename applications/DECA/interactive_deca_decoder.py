@@ -20,7 +20,10 @@ def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
         cfg.model.pretrained_modelpath = '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
         if cfg.data.data_root is not None:
             cfg.data.data_root = str(Path(replace_root_path) / Path(cfg.data.data_root).relative_to(relative_to_path))
-        cfg.inout.full_run_dir = str(Path(replace_root_path) / Path(cfg.inout.full_run_dir).relative_to(relative_to_path))
+        try:
+            cfg.inout.full_run_dir = str(Path(replace_root_path) / Path(cfg.inout.full_run_dir).relative_to(relative_to_path))
+        except ValueError as e:
+            print(f"Skipping hacking full_run_dir {cfg.inout.full_run_dir} because it does not start with '{relative_to_path}'")
 
 
     return cfg
