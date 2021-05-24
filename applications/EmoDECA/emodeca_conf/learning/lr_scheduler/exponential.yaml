@@ -1,2 +1,2 @@
 # @package learning
-learning_rate_decay: 0.1
+learning_rate_decay:  0.9

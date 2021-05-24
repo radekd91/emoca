@@ -454,22 +454,21 @@ def v_or_a_loss(loss, pred, gt, term_weights,
         metrics[pred_prefix + f"{measure[0]}_mae"] = F.l1_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_mse"] = F.mse_loss(pred[measure_label], gt[measure])
         metrics[pred_prefix + f"{measure[0]}_rmse"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse"])
+        
+        if sample_weights is not None:
+            metrics[pred_prefix + f"{measure[0]}_mse_weighted"] = (sample_weights * F.mse_loss(pred[measure_label], gt[measure], reduction='none')).mean()
+            metrics[pred_prefix + f"{measure[0]}_rmse_weighted"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse_weighted"])
+
 
         if gt[measure].numel() >= 2:
             metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
             metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
 
-        if sample_weights is not None:
-            metrics[pred_prefix + f"{measure[0]}_mse_weighted"] = (sample_weights * F.mse_loss(pred[measure_label], gt[measure], reduction='none')).mean()
-            metrics[pred_prefix + f"{measure[0]}_rmse_weighted"] = torch.sqrt(metrics[pred_prefix + f"{measure[0]}_mse_weighted"])
-
-            if gt[measure].numel() >= 2:
+            if sample_weights is not None:
                 metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = PCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
                 metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = CCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
-
-
         elif permit_dropping_corr:
             pass
         else:
