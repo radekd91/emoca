@@ -578,7 +578,7 @@ class DecaModule(LightningModule):
         return d
 
 
-    def _compute_loss(self, codedict, batch, training=True) -> (dict, dict):
+    def _compute_loss(self, codedict, batch, training=True, testing=False) -> (dict, dict):
         #### ----------------------- Losses
         losses = {}
         metrics = {}
@@ -781,7 +781,7 @@ class DecaModule(LightningModule):
             nonvis_mask = (1 - util.binary_erosion(uv_vis_mask))
             losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
 
-        if self.emotion_mlp is not None:
+        if self.emotion_mlp is not None and not testing:
             mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
             for key in mlp_losses.keys():
                 if key in losses.keys():
@@ -802,11 +802,11 @@ class DecaModule(LightningModule):
 
         return losses, metrics
 
-    def compute_loss(self, values, batch, training=True) -> (dict, dict):
+    def compute_loss(self, values, batch, training=True, testing=False) -> (dict, dict):
         """
         training should be set to true when calling from training_step only
         """
-        losses, metrics = self._compute_loss(values, batch, training=training)
+        losses, metrics = self._compute_loss(values, batch, training=training, testing=testing)
 
         all_loss = 0.
         losses_key = losses.keys()
@@ -902,7 +902,7 @@ class DecaModule(LightningModule):
             values = self.encode(batch, training=False)
             values = self.decode(values, training=False)
             if 'mask' in batch.keys():
-                losses_and_metrics = self.compute_loss(values, batch, training=False)
+                losses_and_metrics = self.compute_loss(values, batch, training=False, testing=True)
                 # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
                 losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
             else:
