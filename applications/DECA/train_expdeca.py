@@ -201,6 +201,11 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
     configs = [cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["train", "test", "train", "test"]
     stages_prefixes = ["", "", "", ""]
+
+    # CAREFUL: debug hacks that have no business being commited
+    # configs = [cfg_detail, cfg_detail]
+    # stages = ["train", "test"]
+    # stages_prefixes = ["", ""]
     # configs = [cfg_coarse, cfg_detail]
     # stages = ["train", "train",]
     # stages_prefixes = ["", ""]

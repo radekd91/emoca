@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from train_expdeca import prepare_data
 from torch.utils.data.dataloader import DataLoader
+from datasets.AffectNetDataModule import AffectNetDataModule, AffectNetExpressions
 
 
 def exchange_codes(vals1, vals2, codes_to_exchange):
@@ -44,10 +45,13 @@ def exchange_codes(vals1, vals2, codes_to_exchange):
     return values_12, values_21
 
 
-def decode(deca, values, training=True):
+def decode(deca, values, batch=None, training=False):
     with torch.no_grad():
         values = deca.decode(values, training=training)
-        # losses = deca.compute_loss(values, training=False)
+        if batch is not None and 'landmark' in batch.keys(): # a full batch came, including supervision
+            losses = deca.compute_loss(values, batch, training=training)
+        else:
+            losses = None
 
         uv_detail_normals = None
         if 'uv_detail_normals' in values.keys():
@@ -64,24 +68,21 @@ def decode(deca, values, training=True):
             save=False
         )
         vis_dict = deca._create_visualizations_to_log("", visualizations, values, 0, indices=0)
-    return values, vis_dict
-    # return values, losses, vis_dict
+    # return values, vis_dict
+    return values, vis_dict, losses
 
 
-def exchange_and_decode(deca, vals1, vals2, codes_to_exchange):
+def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2):
     values_12, values_21 = exchange_codes( vals1, vals2, codes_to_exchange)
 
-    values_12, vis_dict_12 = decode(deca, values_12)
-    values_21, vis_dict_21 = decode(deca, values_21)
+    values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1)
+    values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2)
 
-    # values_12, losses_12, vis_dict_12 = decode(deca, values_12)
-    # values_21, losses_21, vis_dict_21 = decode(deca, values_21)
-
-    return [values_21, vis_dict_21], [values_12, vis_dict_12]
-    # return [values_21, losses_21, vis_dict_21], [values_12, losses_12, vis_dict_12]
+    # return [values_21, vis_dict_21], [values_12, vis_dict_12]
+    return [values_21, vis_dict_21, losses_21], [values_12, vis_dict_12, losses_12]
 
 
-def visualize(vis_dict, title, axs=None, fig=None, ri=None):
+def visualize(vis_dict, title, values, losses, batch, axs=None, fig=None, ri=None):
     if axs is None:
         fig, axs = plt.subplots(1, 7)
         fig.suptitle(title, fontsize=16)
@@ -104,7 +105,7 @@ def visualize(vis_dict, title, axs=None, fig=None, ri=None):
             break
     if prefix is None:
         print(vis_dict.keys())
-        raise RuntimeError(f"Unknown disctionary content. Available keys {vis_dict.keys()}")
+        raise RuntimeError(f"Unknown dictionoary content. Available keys {vis_dict.keys()}")
 
 
     axs[0].annotate(title, xy=(0, 0.5), xytext=(-axs[0].yaxis.labelpad, 0),
@@ -113,7 +114,25 @@ def visualize(vis_dict, title, axs=None, fig=None, ri=None):
 
     i = 0
     axs[i].imshow(vis_dict[f'{prefix}detail__inputs'])
+
+    stage = "detail"
+
     axs[i].set_title("input")
+
+    if ri < 2:
+        title = ""
+        if f"{stage}_valence_gt" in values.keys():
+            title += f'\nV_GT={ values[stage + "_valence_gt"][0].detach().cpu().item():+3.2f}'
+            title += f'\nA_GT={ values[stage + "_arousal_gt"][0].detach().cpu().item():+3.2f}'
+        if "affectnetexp" in batch.keys():
+            title += f'\nE_GT={AffectNetExpressions(batch["affectnetexp"][0].detach().cpu().item()).name}'
+        if f'{stage}_valence_input' in values.keys():
+            title += f'\nV_EN={ values[stage + "_valence_input"][0].detach().cpu().item():+3.2f}'
+            title += f'\nA_EN={ values[stage + "_arousal_input"][0].detach().cpu().item():+3.2f}'
+        if f'{stage}_expression_input' in values.keys():
+            title += f'\nE_EN={AffectNetExpressions(np.argmax(values[stage + "_expression_input"][i].detach().cpu().numpy())).name}'
+        axs[i].text(256.0, 112.0, title, size=12, verticalalignment='center', horizontalalignment='left')
+
     i += 1
     # if f'{prefix}detail__landmarks_gt' in vis_dict.keys():
     #     ax[1].imshow(vis_dict[f'{prefix}detail__landmarks_gt'])
@@ -130,27 +149,45 @@ def visualize(vis_dict, title, axs=None, fig=None, ri=None):
     axs[i].set_title("detail geometry")
     i += 1
     axs[i].imshow(vis_dict[f'{prefix}detail__output_images_coarse'])
+    # title = "coarse image"
+    title = ""
+    if f'coarse_valence_output' in values.keys():
+        title += f'\nV_EN={ values["coarse_valence_output"][0].detach().cpu().item():+3.2f}'
+        title += f'\nA_EN={ values["coarse_arousal_output"][0].detach().cpu().item():+3.2f}'
+    if f'coarse_expression_output' in values.keys():
+        title += f'\nA_EN={AffectNetExpressions(np.argmax(values["coarse_expression_output"][0].detach().cpu().numpy())).name}'
     axs[i].set_title("coarse image")
+    axs[i].text(256.0, 112.0, title, size=12, verticalalignment='center', horizontalalignment='left')
     i += 1
     axs[i].imshow(vis_dict[f'{prefix}detail__output_images_detail'])
+    # title = "detail image"
+    title = ""
+    if f'{stage}_valence_output' in values.keys():
+        title += f'\nV_EN={ values[stage + "_valence_output"][0].detach().cpu().item():+3.2f}'
+        title += f'\nA_EN={ values[stage + "_arousal_output"][0].detach().cpu().item():+3.2f}'
+    if f'{stage}_expression_output' in values.keys():
+        title += f'\nE_EN={AffectNetExpressions(np.argmax(values[stage + "_expression_output"][0].detach().cpu().numpy())).name}'
     axs[i].set_title("detail image")
+    axs[i].text(256.0, 112.0, title, size=12, verticalalignment='center', horizontalalignment='left')
     i += 1
 
 
-def test(deca, img):
-    img["image"] = img["image"].cuda()
-    img["image"] = img["image"].view(1,3,224,224)
+def test(deca, batch):
+    for key in batch:
+        if isinstance(batch[key], torch.Tensor):
+            batch[key] = batch[key].cuda()
+    # batch["image"] = batch["image"].cuda()
+    # batch["image"] = batch["image"].view(1, 3, 224, 224)
 
-
-
-    vals = deca.encode(img, training=False)
+    vals = deca.encode(batch, training=False)
     # vals = deca.decode(vals)
-    vals, visdict = decode(deca, vals, training=False)
-    return vals, visdict
+    vals, visdict, losses = decode(deca, vals, batch, training=False)
+    return vals, visdict, losses
 
 
-def plot_comparison(names, visdicts):
+def plot_comparison(names, outputs, batch1, batch2, deca_name):
     fig = plt.figure()
+    plt.title(deca_name)
     # # fig, axs = plt.subplots(14, 7)
     # fig, big_ax = plt.subplots(figsize=(15.0, 15.0), nrows=len(names), ncols=1, sharey=True)
     # # fig.suptitle("Exchange results", fontsize=16)
@@ -177,11 +214,32 @@ def plot_comparison(names, visdicts):
         axs += [ax_row]
 
     for i in range(len(names)):
+        values, visdict, losses = outputs[i]
         # visualize(visdicts[i], names[i], axs[i*n_cols:(i+1)*n_cols], fig, i)
-        visualize(visdicts[i], names[i], axs[i], fig, i)
+        # visualize(visdicts[i], names[i], values[i], losses[i], axs[i], fig, i)
+        if i == 1:
+            batch = batch2
+        else:
+            batch = batch1
+        visualize(visdict, names[i], values, losses, batch, axs[i], fig, i)
     fig.set_facecolor('w')
-    plt.tight_layout()
+    # mng = plt.get_current_fig_manager()
+    # mng.frame.Maximize(True)
+    plot_backend = plt.get_backend()
+    mng = plt.get_current_fig_manager()
+    if plot_backend == 'TkAgg':
+        mng.resize(*mng.window.maxsize())
+    elif plot_backend == 'wxAgg':
+        mng.frame.Maximize(True)
+    elif plot_backend[:2] == 'Qt': #'Qt4Agg':
+        mng.window.showMaximized()
+    else:
+        raise RuntimeError(f"Invalid backend: {plot_backend}")
 
+    fig.set_size_inches(32, 18)  # set figure's size manually to your full screen (32x18)
+    # plt.savefig('filename.png', bbox_inches='tight')
+    # plt.tight_layout()
+    return fig
 
 
 def exchange_and_visualize(deca, img1_path_or_batch, img2_path_or_batch):
@@ -199,73 +257,121 @@ def exchange_and_visualize(deca, img1_path_or_batch, img2_path_or_batch):
     elif not isinstance(img2_path_or_batch, dict):
         raise ValueError("img2_path_or_batch must be a path to an image or a dataset sample dict")
 
-    values_img1, visdict1 = test(deca, img1_path_or_batch)
-    values_img2, visdict2 = test(deca, img2_path_or_batch)
+    values_img1, visdict1, losses1 = test(deca, img1_path_or_batch)
+    values_img2, visdict2, losses2 = test(deca, img2_path_or_batch)
 
     # exchange codes
-    vals21_s, vals12_s = exchange_and_decode(deca, values_img1, values_img2, ['shapecode'])
-    vals21_d, vals12_d = exchange_and_decode(deca, values_img1, values_img2, ['detailcode'])
-    vals21_e, vals12_e = exchange_and_decode(deca, values_img1, values_img2, ['expcode', 'jawpose'])
+    vals21_s, vals12_s = exchange_and_decode(deca, values_img1, values_img2, ['shapecode'], img1_path_or_batch, img2_path_or_batch)
+    vals21_d, vals12_d = exchange_and_decode(deca, values_img1, values_img2, ['detailcode'], img1_path_or_batch, img2_path_or_batch)
+    vals21_e, vals12_e = exchange_and_decode(deca, values_img1, values_img2, ['expcode', 'jawpose'], img1_path_or_batch, img2_path_or_batch)
 
-    vals21_sd, vals12_sd = exchange_and_decode(deca, values_img1, values_img2, ['shapecode', 'detailcode'])
-    vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2, ['detailcode', 'expcode', 'jawpose'])
-    vals21_se, vals12_se = exchange_and_decode(deca, values_img1, values_img2, ['shapecode', 'expcode', 'jawpose'])
+    vals21_sd, vals12_sd = exchange_and_decode(deca, values_img1, values_img2, ['shapecode', 'detailcode'], img1_path_or_batch, img2_path_or_batch)
+    vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2, ['detailcode', 'expcode', 'jawpose'], img1_path_or_batch, img2_path_or_batch)
+    vals21_se, vals12_se = exchange_and_decode(deca, values_img1, values_img2, ['shapecode', 'expcode', 'jawpose'], img1_path_or_batch, img2_path_or_batch)
     # visualize and analyze
 
     names1 = []
     visdicts1 = []
+    values1 = []
+    results1 = []
     names2 = []
     visdicts2 = []
+    values2 = []
+    results2 = []
 
     names1 += ["Input"]
     visdicts1 += [visdict1]
+    values1 += [values_img1]
+    results1 += [[values_img1, visdict1, losses1],]
+
     names1 += ["Target"]
     visdicts1 += [visdict2]
+    values1 += [values_img2]
+    results1 += [[values_img2, visdict2, losses2],]
+
     names2 += ["Input"]
     visdicts2 += [visdict2]
+    values2 += [values_img2]
+    results2 += [[values_img2, visdict2, losses2], ]
+
     names2 += ["Target"]
     visdicts2 += [visdict1]
+    values2 += [values_img1]
+    results2 += [[values_img1, visdict1, losses1], ]
 
-
-    names1 += ["Shape exchange 1-2"]
+    names1 += ["Shape exchange"]
     visdicts1 += [vals12_s[1]]
+    values1 += [vals12_s[0]]
+    results1 += [vals12_s,]
 
-    names2 += ["Shape exchange 2-1"]
+    names2 += ["Shape exchange"]
     visdicts2 += [vals21_s[1]]
+    values2 += [vals21_s[0]]
+    results2 += [vals21_s, ]
 
-    names1 += ["Detail exchange 1-2"]
+    names1 += ["Detail exchange"]
     visdicts1 += [vals12_d[1]]
+    values1 += [vals12_d[0]]
+    results1 += [vals12_d,]
 
-    names2 += ["Detail exchange 2-1"]
+    names2 += ["Detail exchange"]
     visdicts2 += [vals21_d[1]]
+    values2 += [vals21_d[0]]
+    results2 += [vals21_d, ]
     #
-    names1 += [ "Expression exchange 1-2"]
+    names1 += [ "Expression exchange"]
     visdicts1 += [vals12_e[1]]
+    values1 += [vals12_e[0]]
+    results1 += [vals12_e, ]
 
-    names2 += ["Expression exchange 2-1"]
+    names2 += ["Expression exchange"]
     visdicts2 += [vals21_e[1]]
+    values2 += [vals21_e[0]]
+    results2 += [vals21_e, ]
     #
-    names1 += ["Shape+Detail exchange 1-2"]
-    visdicts1 += [vals12_sd[1]]
-
-    names2 += ["Shape+Detail exchange 2-1"]
-    visdicts2 += [vals21_sd[1]]
-
-    names1 += ["Detail+expression exchange 1-2"]
+    names1 += ["Detail+expression exchange"]
     visdicts1 += [vals12_de[1]]
+    values1 += [vals12_de[0]]
+    results1 += [vals12_de, ]
 
-    names2 += ["Detail+expression exchange 2-1"]
+    names2 += ["Detail+expression exchange"]
     visdicts2 += [vals21_de[1]]
+    values2 += [vals21_de[0]]
+    results2 += [vals21_de, ]
+
+    names1 += ["Shape+Detail exchange"]
+    visdicts1 += [vals12_sd[1]]
+    values1 += [vals12_sd[0]]
+    results1 += [vals12_sd, ]
+
+    names2 += ["Shape+Detail exchange"]
+    visdicts2 += [vals21_sd[1]]
+    values2 += [vals21_sd[0]]
+    results2 += [vals21_sd, ]
+
     #
-    names1 += ["Shape+expression exchange 1-2"]
+    names1 += ["Shape+expression exchange"]
     visdicts1 += [vals12_se[1]]
+    values1 += [vals12_se[0]]
+    results1 += [vals12_se, ]
 
-    names2 += ["Shape+expression exchange 2-1"]
+    names2 += ["Shape+expression exchange"]
     visdicts2 += [vals21_se[1]]
+    values2 += [vals21_se[0]]
+    results2 += [vals21_se, ]
 
-    plot_comparison(names1, visdicts1)
-    plot_comparison(names2, visdicts2)
-    plt.show()
+    deca_name = deca.inout_params.name
+
+    fig12 = plot_comparison(names1, results1, img1_path_or_batch, img2_path_or_batch, deca_name)
+    fig21 = plot_comparison(names2, results2, img2_path_or_batch, img1_path_or_batch, deca_name)
+    # plot_comparison(names1, visdicts1, values1)
+    # plot_comparison(names2, visdicts2, values2)
+    # mng = plt.get_current_fig_manager()
+    # mng.frame.Maximize(True)
+    # mng.window.showMaximized()
+
+    return fig12, fig21
+
 
     #
     # i = 0
@@ -329,12 +435,31 @@ def main_aff_wild_selection(deca):
 
 
 
+def load_affectnet():
+    # scratch = "/home/rdanecek/Workspace/mount/scratch/"
+    project = "/home/rdanecek/Workspace/mount/project/"
+    work = "/is/cluster/work"
+
+
+    dm = AffectNetDataModule(
+        str(Path(project) / "EmotionalFacialAnimation/data/affectnet/"),
+        # str(Path(scratch) / "rdanecek/data/affectnet"),
+        str(Path(work) / "rdanecek/data/affectnet"),
+        # processed_subfolder="processed_2021_Apr_02_03-13-33",
+        processed_subfolder="processed_2021_Apr_05_15-22-18",
+        mode="manual",
+        scale=1.25)
+
+    return dm
+
+
 def main_affectnet(deca, conf, stage ):
 
     conf[stage].data.input_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet"
     conf[stage].data.output_dir = "/is/cluster/work/rdanecek/data/affectnet"
 
-    dm, name = prepare_data(conf[stage])
+    # dm, name = prepare_data(conf[stage])
+    dm = load_affectnet()
 
     dm.val_batch_size = 1
     dm.ring_size = None
@@ -352,14 +477,26 @@ def main_affectnet(deca, conf, stage ):
     dl = DataLoader(dm.validation_set, shuffle=True, num_workers=dm.num_workers,
                           batch_size=dm.val_batch_size, drop_last=dm.drop_last)
 
+    result_dir = Path(deca.inout_params.full_run_dir).parent / "tests" / "AffectNetExchange"
+    result_dir.mkdir(exist_ok=True, parents=True)
+
     from tqdm import auto
     prev_batch = 0
     for bi, batch in auto.tqdm(enumerate(dl)):
         if bi == 0:
             prev_batch = batch
             continue
-        exchange_and_visualize(deca, batch, prev_batch)
+        fig12, fig21 = exchange_and_visualize(deca, batch, prev_batch)
+
+        # plt.show(block=False)
+        fig12.savefig( result_dir / f"{bi:04d}_{bi-1:04d}.png", bbox_inches='tight')#, dpi = 300)
+        fig21.savefig( result_dir / f"{bi-1:04d}_{bi:04d}.png", bbox_inches='tight')#, dpi = 300)
+        plt.close(fig12)
+        plt.close(fig21)
+
         prev_batch = batch
+        if bi > 100:
+            break
 
 
 def main():

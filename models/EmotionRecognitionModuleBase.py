@@ -201,8 +201,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
                                   permit_dropping_corr=not training)
 
+
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
-                                   self.config.model.expression_balancing, pred_prefix=pred_prefix)
+                                   self.config.model.expression_balancing, self.num_classes, pred_prefix=pred_prefix)
 
         # if not training:
         #     self.val_conf_mat(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0])
@@ -533,9 +534,11 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
     return losses, metrics
 
 
-def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing, pred_prefix=""):
+def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing, num_classes, pred_prefix=""):
     if pred[pred_prefix + "expr_classification"] is not None:
-        if expression_balancing:
+        if class_weight.shape[0] != num_classes:
+            weight = None
+        elif expression_balancing:
             weight = class_weight
         else:
             weight = torch.ones_like(class_weight)
@@ -544,12 +547,19 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
         # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
         metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
                                                        gt["expr_classification"][:, 0],
-                                                       torch.ones_like(class_weight))
-        metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
-                                                                gt["expr_classification"][:, 0],
-                                                                class_weight)
-        metrics[pred_prefix + "expr_acc"] = ACC_torch(torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
-                                                      gt["expr_classification"][:, 0])
+                                                       None)
+                                                       # torch.ones_like(class_weight))
+        if weight is not None:
+            metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                                    gt["expr_classification"][:, 0],
+                                                                    class_weight)
+            metrics[pred_prefix + "expr_acc"] = ACC_torch(
+                torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+                                                          gt["expr_classification"][:, 0])
+        else:
+            metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
+                                                       gt["expr_classification"][:, 0],
+                                                       None)
 
         if loss is not None:
             if callable(loss):

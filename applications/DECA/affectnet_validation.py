@@ -64,6 +64,9 @@ def main():
     conf[mode].model.test_vis_frequency = 1
     # conf[mode].inout.name = "affectnet_test"
     conf[mode].inout.name = "affectnet_test_" + conf[mode].inout.name
+    import datetime
+    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+    conf[mode].inout.random_id = str(hash(time))
     print(f"Beginning testing for '{run_name}' in mode '{mode}'")
     single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net", dm=dm)
     print("We're done y'all")

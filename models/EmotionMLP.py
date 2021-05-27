@@ -84,7 +84,7 @@ class EmotionMLP(torch.nn.Module):
         expcode = values['expcode']
         posecode = values['posecode']
         if self.config.use_detail_code:
-            if 'detailcode' in values.keys():
+            if 'detailcode' in values.keys() and values['detailcode'] is not None:
                 detailcode = values['detailcode']
             else:
                 detailcode = torch.zeros((posecode.shape[0], self.n_detail), dtype=posecode.dtype, device=posecode.device )
@@ -195,8 +195,8 @@ class EmotionMLP(torch.nn.Module):
                                       pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                       sample_weights=a_weight)
         losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses,
-                                  pred_prefix=pred_prefix)
+                                  pred_prefix=pred_prefix,  permit_dropping_corr=not training)
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
-                                   self.config.expression_balancing, pred_prefix=pred_prefix)
+                                   self.config.expression_balancing, self.num_classes, pred_prefix=pred_prefix, )
 
         return losses, metrics

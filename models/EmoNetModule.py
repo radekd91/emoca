@@ -24,6 +24,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
             self.emonet._create_Emo() # reinitialize
         else:
             self.n_expression = 8
+        self.num_classes = self.n_expression
 
         self.size = (256, 256) # predefined input image size
 
