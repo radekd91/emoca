@@ -112,12 +112,12 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             if cfg_coarse.model.use_emonet_combined:
                 experiment_name += 'C'
 
-            # if expression exchange and geometric errors are to be computed even for the exchanged
-            if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
-                    cfg_coarse.model.use_geometric_losses_expression_exchange and \
-                    'expression_constrain_type' in cfg_coarse.model.keys() \
-                    and cfg_coarse.model.expression_constrain_type == 'exchange':
-                experiment_name += '_GeEx'
+        # if expression exchange and geometric errors are to be computed even for the exchanged
+        if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
+                cfg_coarse.model.use_geometric_losses_expression_exchange and \
+                'expression_constrain_type' in cfg_coarse.model.keys() \
+                and cfg_coarse.model.expression_constrain_type == 'exchange':
+            experiment_name += '_GeEx'
 
         if version == 0:
             if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
