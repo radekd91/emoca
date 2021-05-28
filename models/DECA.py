@@ -143,7 +143,7 @@ class DecaModule(LightningModule):
 
     def _expression_ring_exchange(self, original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, detailcode=None):
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, detailcode=None, exprw=None):
         new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
         new_order = new_order.flatten()
         expcode_new = expcode[new_order]
@@ -183,17 +183,23 @@ class DecaModule(LightningModule):
         lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
         masks = torch.cat([masks, masks], dim=0)
 
-        # TODO fix this
         if va is not None:
-            va = torch.cat([va, va], dim=0)
+            va = torch.cat([va, va[new_order]], dim=0)
         if expr7 is not None:
-            expr7 = torch.cat([expr7, expr7], dim=0)
+            expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
+        if affectnetexp is not None:
+            affectnetexp = torch.cat([affectnetexp, affectnetexp[new_order]], dim=0)
+        if exprw is not None:
+            exprw = torch.cat([exprw, exprw[new_order]], dim=0)
 
         if detailcode is not None:
-            detailcode = torch.cat([detailcode, detailcode], dim=0)
-            return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, detailcode
+            #TODO: to exchange or not to exchange, that is the question, the answer is probably yes
 
-        return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7
+            # detailcode = torch.cat([detailcode, detailcode], dim=0)
+            detailcode = torch.cat([detailcode, detailcode[new_order]], dim=0)
+        return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw
+
+        # return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7
 
 
     def encode(self, batch, training=True) -> dict:
@@ -233,6 +239,18 @@ class DecaModule(LightningModule):
             expr7 = expr7.view(-1, expr7.shape[-1])
         else:
             expr7 = None
+
+        if 'affectnetexp' in batch:
+            affectnetexp = batch['affectnetexp']
+            affectnetexp = affectnetexp.view(-1, affectnetexp.shape[-1])
+        else:
+            affectnetexp = None
+
+        if 'expression_weight' in batch:
+            exprw = batch['expression_weight']
+            exprw = exprw.view(-1, exprw.shape[-1])
+        else:
+            exprw = None
 
         shapecode, texcode, expcode, posecode, cam, lightcode = self._encode_flame(images)
 
@@ -299,10 +317,10 @@ class DecaModule(LightningModule):
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
-                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7 = \
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, exprw = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7)
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, None, exprw)
 
 
         # -- detail
@@ -345,10 +363,10 @@ class DecaModule(LightningModule):
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
-                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, detailcode = \
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, detailcode)
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw)
 
 
         codedict['shapecode'] = shapecode
@@ -369,6 +387,12 @@ class DecaModule(LightningModule):
             codedict['va'] = va
         if 'expr7' in batch.keys():
             codedict['expr7'] = expr7
+        if 'affectnetexp' in batch.keys():
+            codedict['affectnetexp'] = affectnetexp
+
+        if 'expression_weight' in batch.keys():
+            codedict['expression_weight'] = exprw
+
         return codedict
 
     def decode(self, codedict, training=True) -> dict:
@@ -633,6 +657,7 @@ class DecaModule(LightningModule):
             expr7 = expr7.view(-1, expr7.shape[-1])
         else:
             expr7 = None
+
 
         if self.mode == DecaMode.DETAIL:
             uv_texture = codedict["uv_texture"]
@@ -1083,7 +1108,7 @@ class DecaModule(LightningModule):
                                 caption += "\n" + self.vae_2_str(
                                     expr7=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
                                     prefix="gt") + "\n"
-                            if 'affectnetexp' in values.keys():
+                            if 'affectnetexp' in values.keys() and mode_ + "_expression_gt" in values.keys():
                                 caption += "\n" + self.vae_2_str(
                                     affnet_expr=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
                                     prefix="gt") + "\n"

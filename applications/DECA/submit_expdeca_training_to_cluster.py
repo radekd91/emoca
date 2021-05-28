@@ -78,8 +78,8 @@ def train_on_selected_sequences():
     detail_conf = "deca_train_detail_cluster"
 
     # ring_type = "gt_expression"
-    ring_type = "gt_va"
-    # ring_type = "emonet_feature"
+    # ring_type = "gt_va"
+    ring_type = "emonet_feature"
 
     finetune_modes = [
         # # DEFAULT without jaw
@@ -151,13 +151,13 @@ def train_on_selected_sequences():
         # ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        ],
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        # ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -192,36 +192,36 @@ def train_on_selected_sequences():
         #      'learning.batch_size_test=1']
         # ],
         #
-        # #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0',
-        #      'model.expression_constrain_type=exchange',
-        #      'model.expression_constrain_use_jaw_pose=True',
-        #      'model.expression_constrain_use_global_pose=False',
-        #      'model.use_geometric_losses_expression_exchange=True',
-        #      'model.background_from_input=False',
-        #      f'data.ring_type={ring_type}',
-        #      # 'data.ring_type=gt_va',
-        #      # 'data.ring_type=emonet_feature',
-        #      'data.ring_size=4',
-        #      'learning/batching=single_gpu_expdeca_coarse_ring',
-        #      'learning.gpu_memory_min_gb=24',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0',
-        #      'model.expression_constrain_type=exchange',
-        #      'model.expression_constrain_use_jaw_pose=True',
-        #      'model.expression_constrain_use_global_pose=False',
-        #      'model.use_geometric_losses_expression_exchange=True',
-        #      'model.background_from_input=False',
-        #      f'data.ring_type={ring_type}',
-        #      # 'data.ring_type=gt_va',
-        #      # 'data.ring_type=emonet_feature',
-        #      'data.ring_size=4',
-        #      'learning/batching=single_gpu_expdeca_detail_ring',
-        #      'learning.gpu_memory_min_gb=24',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        # ],
+        #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
+        [
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
+             'model.background_from_input=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_coarse_ring',
+             'learning.gpu_memory_min_gb=24',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0',
+             'model.expression_constrain_type=exchange',
+             'model.expression_constrain_use_jaw_pose=True',
+             'model.expression_constrain_use_global_pose=False',
+             'model.use_geometric_losses_expression_exchange=True',
+             'model.background_from_input=False',
+             f'data.ring_type={ring_type}',
+             # 'data.ring_type=gt_va',
+             # 'data.ring_type=emonet_feature',
+             'data.ring_size=4',
+             'learning/batching=single_gpu_expdeca_detail_ring',
+             'learning.gpu_memory_min_gb=24',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
         # # DETAIL WITH COARSE, no landmarks for detail stage
@@ -347,8 +347,8 @@ def train_on_selected_sequences():
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
+    ]
 
-                              ]
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
@@ -356,10 +356,11 @@ def train_on_selected_sequences():
         'model/settings=detail_train_expdeca_emomlp',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
-                              ]
+    ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
-    emomlp_weights = [0.5, 0.1, 0.05, 0.005]
+    # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
+    emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
     for emomlp_weight in emomlp_weights:

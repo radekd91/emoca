@@ -462,8 +462,8 @@ def v_or_a_loss(loss, pred, gt, term_weights,
 
 
         if gt[measure].numel() >= 2:
-            metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)
-            metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)
+            metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
+            metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
 
             if sample_weights is not None:
                 metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = PCC_torch(pred[measure_label], gt[measure],
@@ -501,9 +501,9 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
         metrics[pred_prefix + "va_rmse"] = torch.sqrt(metrics[pred_prefix + "va_mse"])
         if pred_prefix + "a_pcc" in metrics.keys():
             metrics[pred_prefix + "va_lpcc"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0][0]
+                (1. - 0.5 * (metrics[pred_prefix + "a_pcc"] + metrics[pred_prefix + "v_pcc"]))[0]#[0]
             metrics[pred_prefix + "va_lccc"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0][0]
+                (1. - 0.5 * (metrics[pred_prefix + "a_ccc"] + metrics[pred_prefix + "v_ccc"]))[0]#[0]
         elif permit_dropping_corr:
             pass
         else:
@@ -511,9 +511,9 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
 
         if pred_prefix + "a_pcc_weighted" in metrics.keys():
             metrics[pred_prefix + "va_lpcc_weighted"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_pcc_weighted"] + metrics[pred_prefix + "v_pcc_weighted"]))[0][0]
+                (1. - 0.5 * (metrics[pred_prefix + "a_pcc_weighted"] + metrics[pred_prefix + "v_pcc_weighted"]))[0]#[0]
             metrics[pred_prefix + "va_lccc_weighted"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_ccc_weighted"] + metrics[pred_prefix + "v_ccc_weighted"]))[0][0]
+                (1. - 0.5 * (metrics[pred_prefix + "a_ccc_weighted"] + metrics[pred_prefix + "v_ccc_weighted"]))[0]#[0]
 
         elif permit_dropping_corr:
             pass

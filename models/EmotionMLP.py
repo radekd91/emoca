@@ -147,11 +147,11 @@ class EmotionMLP(torch.nn.Module):
 
 
     def compute_loss(self, pred, batch, training, pred_prefix=""):
-        valence_gt = batch["va"][:, 0:1]
-        arousal_gt = batch["va"][:, 1:2]
-        expr_classification_gt = batch["affectnetexp"]
-        if "expression_weight" in batch.keys():
-            class_weight = batch["expression_weight"][0]
+        valence_gt = pred["va"][:, 0:1]
+        arousal_gt = pred["va"][:, 1:2]
+        expr_classification_gt = pred["affectnetexp"]
+        if "expression_weight" in pred.keys():
+            class_weight = pred["expression_weight"][0]
         else:
             class_weight = None
 
@@ -182,6 +182,10 @@ class EmotionMLP(torch.nn.Module):
             else:
                 raise RuntimeError(f"Invalid continuous affect balancing"
                                    f" '{self.config.continuous_va_balancing}'")
+            if len(v_weight.shape) > 1:
+                v_weight = v_weight.view(-1)
+            if len(a_weight.shape) > 1:
+                a_weight = a_weight.view(-1)
         else:
             v_weight = None
             a_weight = None
