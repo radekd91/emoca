@@ -77,8 +77,8 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
-    ring_type = "gt_expression"
-    # ring_type = "gt_va"
+    # ring_type = "gt_expression"
+    ring_type = "gt_va"
     # ring_type = "emonet_feature"
 
     finetune_modes = [
@@ -342,8 +342,8 @@ def train_on_selected_sequences():
         # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        # 'model/settings=coarse_train_expdeca_emonet',
-        'model/settings=coarse_train_expdeca_emomlp',
+        'model/settings=coarse_train_expdeca_emonet',
+        # 'model/settings=coarse_train_expdeca_emomlp',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
@@ -352,8 +352,8 @@ def train_on_selected_sequences():
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        # 'model/settings=detail_train_expdeca_emonet',
-        'model/settings=detail_train_expdeca_emomlp',
+        'model/settings=detail_train_expdeca_emonet',
+        # 'model/settings=detail_train_expdeca_emomlp',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
     ]
@@ -375,9 +375,9 @@ def train_on_selected_sequences():
             # pretrain_coarse_overrides += [data_override]
             # coarse_overrides += [data_override]
             # detail_overrides += [data_override]
-            emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
-            coarse_overrides += [emonet_weight_override]
-            detail_overrides += [emonet_weight_override]
+            # emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
+            # coarse_overrides += [emonet_weight_override]
+            # detail_overrides += [emonet_weight_override]
 
             cfgs = train_expdeca.configure(
                 coarse_conf, coarse_overrides,

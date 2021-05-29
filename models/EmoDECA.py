@@ -45,7 +45,12 @@ class EmoDECA(EmotionRecognitionBaseModule):
         if self.config.model.use_detail_code:
             in_size += config.model.deca_cfg.model.n_detail
 
-        hidden_layer_sizes = config.model.num_mlp_layers * [in_size]
+        if 'mlp_dimension_factor' in self.config.model.keys():
+            dim_factor = self.config.model.mlp_dimension_factor
+        else:
+            dim_factor = 1
+            
+        hidden_layer_sizes = config.model.num_mlp_layers * [in_size * dim_factor]
 
         out_size = 0
         if self.config.model.predict_expression:

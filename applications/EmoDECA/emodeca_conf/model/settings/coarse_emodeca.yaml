@@ -51,5 +51,6 @@ deca_checkpoint: todo
 deca_cfg: todo
 deca_stage: todo
 num_mlp_layers: 4
+mlp_dimension_factor: 1
 finetune_deca: false
 

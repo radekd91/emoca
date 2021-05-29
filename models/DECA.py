@@ -183,6 +183,18 @@ class DecaModule(LightningModule):
         lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
         masks = torch.cat([masks, masks], dim=0)
 
+
+        # NOTE:
+        # Here we could think about what makes sense to exchange
+        # 1) Do we exchange all emotion GT (VA and expression) within the ring?
+        # 2) Do we exchange only the GT on which the ring is constructed (AffectNet ring based on binned VA or expression or Emonet feature?)
+        # note: if we use EmoMLP that goes from (expression, jawpose, detailcode) -> (v,a,expr) and we exchange
+        # ALL of these, the EmoMLP prediction will of course be the same. The output image still changes,
+        # so EmoNet loss (if used) would be different. Same for the photometric/landmark losses.
+
+        # TODO:
+        # For now I decided to exchange everything but this should probably be experimented with
+        # I would argue though, that exchanging the GT is the right thing to do
         if va is not None:
             va = torch.cat([va, va[new_order]], dim=0)
         if expr7 is not None:
@@ -806,7 +818,7 @@ class DecaModule(LightningModule):
             nonvis_mask = (1 - util.binary_erosion(uv_vis_mask))
             losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
 
-        if self.emotion_mlp is not None and not testing:
+        if self.emotion_mlp is not None:# and not testing:
             mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
             for key in mlp_losses.keys():
                 if key in losses.keys():
@@ -1135,13 +1147,6 @@ class DecaModule(LightningModule):
                     if dataloader_idx is not None:
                         name += "/dataloader_idx_" + str(dataloader_idx)
                     log_dict[name] = im2log
-        # self.log_dict(log_dict, on_step=on_step, on_epoch=on_epoch)
-        # if on_step:
-        #     step = self.global_step
-        # if on_epoch:
-        #     step = self.current_epoch
-        # self.logger.experiment.log(log_dict, step=step)
-        # self.logger.experiment.log(log_dict)#, step=step)
         return log_dict
 
     def _visualization_checkpoint(self, verts, trans_verts, ops, uv_detail_normals, additional, batch_idx, stage, prefix,
