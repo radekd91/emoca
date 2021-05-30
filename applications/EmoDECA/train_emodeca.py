@@ -368,48 +368,49 @@ def resume_training(run_path, start_at_stage, resume_from_previous, force_new_lo
 def main():
     if len(sys.argv) < 2:
 
-        #1 EMONET
-        emodeca_default = "emonet"
-        emodeca_overrides = [
-            # 'model/settings=emonet_trainable',
-            'model/settings=emonet_trainable_weighted_va',
-            'learning/logging=none',
-            # 'learning.max_steps=1',
-            'learning.max_epochs=1',
-            'learning.checkpoint_after_training=latest',
-            '+learning/lr_scheduler=reduce_on_plateau',
-            # 'model.continuous_va_balancing=1d',
-            # 'model.continuous_va_balancing=2d',
-            # 'model.continuous_va_balancing=expr',
-            # 'learning.val_check_interval=1',
-            # 'learning.learning_rate=0',
-            # 'learning/optimizer=adabound',
-            # 'data/datasets=affectnet_desktop',
-            # 'data/augmentations=default',
-
-            '+model.mlp_dimension_factor=4',
-        ]
-        deca_conf = None
-        deca_conf_path = None
-        fixed_overrides_deca = None
-        stage = None
-        deca_default = None
-        deca_overrides = None
-
-
-        # # EMODECA
-        # emodeca_default = "emodeca_emonet_coarse"
-        # emodeca_overrides = ['learning/logging=none',
-        #                      # 'model/settings=coarse_emodeca',
-        #                      'model/settings=coarse_emodeca_emonet',
-        #                      # '+model.mlp_norm_layer=BatchNorm1d',
-        #                      # 'model.unpose_global_emonet=false',
-        #                      # 'model.use_coarse_image_emonet=false',
-        #                      # 'model.use_detail_image_emonet=true',
-        #                      # 'model.static_cam_emonet=false',
-        #                      # 'model.static_light=false',
-        #                      ]
+        # #1 EMONET
+        # emodeca_default = "emonet"
+        # emodeca_overrides = [
+        #     # 'model/settings=emonet_trainable',
+        #     'model/settings=emonet_trainable_weighted_va',
+        #     'learning/logging=none',
+        #     # 'learning.max_steps=1',
+        #     'learning.max_epochs=1',
+        #     'learning.checkpoint_after_training=latest',
+        #     '+learning/lr_scheduler=reduce_on_plateau',
+        #     # 'model.continuous_va_balancing=1d',
+        #     # 'model.continuous_va_balancing=2d',
+        #     # 'model.continuous_va_balancing=expr',
+        #     # 'learning.val_check_interval=1',
+        #     # 'learning.learning_rate=0',
+        #     # 'learning/optimizer=adabound',
+        #     # 'data/datasets=affectnet_desktop',
+        #     # 'data/augmentations=default',
         #
+        # ]
+        # deca_conf = None
+        # deca_conf_path = None
+        # fixed_overrides_deca = None
+        # stage = None
+        # deca_default = None
+        # deca_overrides = None
+        #
+
+        # EMODECA
+        emodeca_default = "emodeca_emonet_coarse"
+        emodeca_overrides = ['learning/logging=none',
+                             'model/settings=coarse_emodeca',
+                             # 'model/settings=coarse_emodeca_emonet',
+                             # '+model.mlp_norm_layer=BatchNorm1d',
+                             # 'model.unpose_global_emonet=false',
+                             # 'model.use_coarse_image_emonet=false',
+                             # 'model.use_detail_image_emonet=true',
+                             # 'model.static_cam_emonet=false',
+                             # 'model.static_light=false',
+
+                             'model.mlp_dimension_factor=4',
+                             ]
+
         # deca_default = "deca_train_coarse_cluster"
         # deca_overrides = [
         #     # 'model/settings=coarse_train',
@@ -428,22 +429,22 @@ def main():
         # ]
         # # deca_conf_path = None
         # # stage = None
-        #
-        #
-        #
-        # deca_default = None
-        # deca_overrides = None
-        # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # # deca_conf = None
-        # stage = 'detail'
 
-        # relative_to_path = '/ps/scratch/'
-        # # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
-        # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
 
-        replace_root_path = None
-        relative_to_path = None
+
+        deca_default = None
+        deca_overrides = None
+        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # deca_conf = None
+        stage = 'detail'
+
+        relative_to_path = '/ps/scratch/'
+        # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
+        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+
+        # replace_root_path = None
+        # relative_to_path = None
 
         # emodeca_default = "emonet"
         # emodeca_overrides = ['model/settings=emonet_trainable']

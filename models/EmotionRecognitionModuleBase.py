@@ -199,7 +199,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                                       pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                       sample_weights=a_weight)
         losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
-                                  permit_dropping_corr=not training)
+                                  permit_dropping_corr=not training, sample_weights=v_weight)
 
 
         losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
@@ -496,7 +496,7 @@ def v_or_a_loss(loss, pred, gt, term_weights,
     return losses, metrics
 
 
-def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dropping_corr=False):
+def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dropping_corr=False, sample_weights=None):
     if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
         va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
         va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
@@ -514,17 +514,18 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
             raise RuntimeError(f"Missing computed correlation for the combined correlation loss: "
                                f"'{pred_prefix + 'a_pcc'}'")
 
-        if pred_prefix + "a_pcc_weighted" in metrics.keys():
-            metrics[pred_prefix + "va_lpcc_weighted"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_pcc_weighted"] + metrics[pred_prefix + "v_pcc_weighted"]))[0]#[0]
-            metrics[pred_prefix + "va_lccc_weighted"] = \
-                (1. - 0.5 * (metrics[pred_prefix + "a_ccc_weighted"] + metrics[pred_prefix + "v_ccc_weighted"]))[0]#[0]
+        if sample_weights is not None:
+            if pred_prefix + "a_pcc_weighted" in metrics.keys():
+                metrics[pred_prefix + "va_lpcc_weighted"] = \
+                    (1. - 0.5 * (metrics[pred_prefix + "a_pcc_weighted"] + metrics[pred_prefix + "v_pcc_weighted"]))[0]#[0]
+                metrics[pred_prefix + "va_lccc_weighted"] = \
+                    (1. - 0.5 * (metrics[pred_prefix + "a_ccc_weighted"] + metrics[pred_prefix + "v_ccc_weighted"]))[0]#[0]
 
-        elif permit_dropping_corr:
-            pass
-        else:
-            raise RuntimeError(f"Missing computed correlation for the combined weighted correlation loss: "
-                               f"'{pred_prefix + 'a_pcc'}'")
+            elif permit_dropping_corr:
+                pass
+            else:
+                raise RuntimeError(f"Missing computed correlation for the combined weighted correlation loss: "
+                                   f"'{pred_prefix + 'a_pcc'}'")
 
         if loss is not None:
             if callable(loss):
