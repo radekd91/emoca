@@ -308,7 +308,12 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                                              )
         loss = 0.
         for key, value in losses.items():
-            loss += value
+            if value.ndim == 0:
+                loss += value
+            elif value.ndim == 1:
+                loss += value[0]
+            else:
+                raise RuntimeError(f"Invalid loss shape for term '{key}': {value.shape}")
         losses["total"] = loss
         return losses, metrics
 
@@ -493,7 +498,6 @@ def v_or_a_loss(loss, pred, gt, term_weights,
 
 def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dropping_corr=False):
     if pred[pred_prefix + "valence"] is not None and pred[pred_prefix + "arousal"] is not None:
-
         va_pred = torch.cat([pred[pred_prefix + "valence"], pred[pred_prefix + "arousal"]], dim=1)
         va_gt = torch.cat([gt["valence"], gt["arousal"]], dim=1)
         metrics[pred_prefix + "va_mae"] = F.l1_loss(va_pred, va_gt)
@@ -507,7 +511,8 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
         elif permit_dropping_corr:
             pass
         else:
-            raise RuntimeError(f"Cannot compute correlation loss for a single sample. '{pred_prefix + 'a_pcc'}")
+            raise RuntimeError(f"Missing computed correlation for the combined correlation loss: "
+                               f"'{pred_prefix + 'a_pcc'}'")
 
         if pred_prefix + "a_pcc_weighted" in metrics.keys():
             metrics[pred_prefix + "va_lpcc_weighted"] = \
@@ -518,7 +523,8 @@ def va_loss(loss, pred, gt, weights, metrics, losses, pred_prefix="", permit_dro
         elif permit_dropping_corr:
             pass
         else:
-            raise RuntimeError(f"Cannot compute correlation loss for a single sample. '{pred_prefix + 'a_pcc'}")
+            raise RuntimeError(f"Missing computed correlation for the combined weighted correlation loss: "
+                               f"'{pred_prefix + 'a_pcc'}'")
 
         if loss is not None:
             if callable(loss):

@@ -378,7 +378,7 @@ def main():
             'learning.max_epochs=1',
             'learning.checkpoint_after_training=latest',
             '+learning/lr_scheduler=reduce_on_plateau',
-            'model.continuous_va_balancing=1d',
+            # 'model.continuous_va_balancing=1d',
             # 'model.continuous_va_balancing=2d',
             # 'model.continuous_va_balancing=expr',
             # 'learning.val_check_interval=1',
@@ -386,6 +386,8 @@ def main():
             # 'learning/optimizer=adabound',
             # 'data/datasets=affectnet_desktop',
             # 'data/augmentations=default',
+
+            '+model.mlp_dimension_factor=4',
         ]
         deca_conf = None
         deca_conf_path = None
