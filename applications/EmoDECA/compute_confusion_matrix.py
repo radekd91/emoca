@@ -222,13 +222,13 @@ def main():
         replace_root_path = None
         path = sys.argv[1]
 
-    stages_prefixe = ""
+    stages_prefixes = ""
 
 
     cfg = load_configs(path)
 
     checkpoint_mode = 'best' # resuming in the same stage, we want to pick up where we left of
-    checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixe, checkpoint_mode=checkpoint_mode,
+    checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixes, checkpoint_mode=checkpoint_mode,
                                                                relative_to=relative_to_path,
                                                                replace_root=replace_root_path)
 

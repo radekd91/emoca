@@ -1124,6 +1124,16 @@ class DecaModule(LightningModule):
                                 caption += "\n" + self.vae_2_str(
                                     affnet_expr=values[mode_ + "_expression_gt"][i].detach().cpu().numpy(),
                                     prefix="gt") + "\n"
+                        elif 'geometry_detail' in key:
+                            if "emo_mlp_valence" in values.keys():
+                                caption += self.vae_2_str(
+                                    values["emo_mlp_valence"][i].detach().cpu().item(),
+                                    values["emo_mlp_arousal"][i].detach().cpu().item(),
+                                    prefix="mlp")
+                            if 'emo_mlp_expr_classification' in values.keys():
+                                caption += "\n" + self.vae_2_str(
+                                    affnet_expr=values["emo_mlp_expr_classification"][i].detach().cpu().argmax().numpy(),
+                                    prefix="mlp") + "\n"
                         elif key == 'output_images_' + mode_:
                             if mode_ + "_valence_output" in values.keys():
                                 caption += self.vae_2_str(values[mode_ + "_valence_output"][i].detach().cpu().item(),

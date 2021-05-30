@@ -1,6 +1,6 @@
 from utils.condor import execute_on_cluster
 from pathlib import Path
-import expression_disentanglement_experiment as script
+import affectnet_validation
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -16,7 +16,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
-    local_script_path = Path(script.__file__).absolute()
+    local_script_path = Path(affectnet_validation.__file__).absolute()
     cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
                           / local_script_path.parents[0].name / local_script_path.name
 
@@ -36,7 +36,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
     mem_gb = 12
-    args = f"{model_folder_name} {mode}"
+    args = f"{model_folder_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
