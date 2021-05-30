@@ -5,7 +5,7 @@ import datetime
 from omegaconf import OmegaConf
 import time as t
 
-def submit(cfg, model_folder_name, mode, bid=10):
+def submit(cfg, model_folder_name, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
     submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/affectnet_test_submission"
@@ -129,26 +129,22 @@ def main():
     # run_names += ['2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'] # ran
 
     ### ExpDECA with EmoMLP
-    run_names += ['2021_05_21_15-44-46_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_early']
-    run_names += ['2021_05_21_15-44-48_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_early']
-    run_names += ['2021_05_21_15-44-49_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_early']
-    run_names += ['2021_05_21_15-44-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_early'] # TO BE RAN
+    # run_names += ['2021_05_21_15-44-46_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_early']
+    # run_names += ['2021_05_21_15-44-48_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_early']
+    # run_names += ['2021_05_21_15-44-49_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_early']
+    # run_names += ['2021_05_21_15-44-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_early']
 
     ### ExpDECA DwC with EmoMLP
     run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early']
-    run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_DwC_early'] # TO BE RAN
+    # run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_DwC_early'] # TO BE RAN
     # run_names += ['2021_05_24_12-22-21_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_DwC_early'] # TO BE RAN
-    run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early'] # TO BE RAN
-
-
-    # mode = 'coarse'
-    mode = 'detail'
+    # run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early'] # TO BE RAN
 
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
-        submit(conf, run_name, mode)
+        submit(conf, run_name)
 
 
 if __name__ == "__main__":

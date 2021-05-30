@@ -238,7 +238,7 @@ def load_configs(run_path):
 
 
 def main():
-    if len(sys.argv) <= 3:
+    if len(sys.argv) <= 1:
         path_to_models = "/is/cluster/work/rdanecek/emoca/finetune_deca/"
         ## relative_to_path = None
         ## replace_root_path = None
@@ -272,7 +272,7 @@ def main():
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
-    else:
+    else: # > 1
         cfg_path = sys.argv[1]
         relative_to_path = None
         replace_root_path = None
@@ -280,13 +280,13 @@ def main():
         with open(Path(cfg_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
 
-    if len(sys.argv) > 3:
-        num_epochs = int(sys.argv[3])
+    if len(sys.argv) > 2:
+        num_epochs = int(sys.argv[2])
     else:
         num_epochs = 1
 
-    if len(sys.argv) > 4:
-        visualization_freq = int(sys.argv[4])
+    if len(sys.argv) > 3:
+        visualization_freq = int(sys.argv[3])
     else:
         visualization_freq = 50
 
