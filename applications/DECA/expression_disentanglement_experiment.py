@@ -114,8 +114,8 @@ def validation_set_pass(cfg,
                               batch_size=dm.val_batch_size, drop_last=True)
 
         for bi, batch in enumerate(auto.tqdm(dl)):
-            if bi == 50:
-                break
+            # if bi == 50:
+            #     break
             visualize = step % visualization_freq == 0
 
             batch1 = {}
@@ -262,12 +262,12 @@ def main():
         # run_name += '2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'
 
         # ExpDECA on AffectNet, Expression ring with geometric losses
-        # run_name = '2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early'
+        run_name = '2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early'
         # run_name = '2021_05_07_20-46-09_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early'
         # run_name = '2021_05_07_20-45-33_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early'
         # run_name = '2021_05_07_20-36-43_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'
 
-        run_name = '2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early'
+        # run_name = '2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early'
 
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
