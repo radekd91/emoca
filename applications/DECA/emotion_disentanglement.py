@@ -446,10 +446,11 @@ def main_aff_wild_selection(deca):
 
 
 
-def load_affectnet():
+def load_affectnet(project=None, work=None):
     # scratch = "/home/rdanecek/Workspace/mount/scratch/"
-    project = "/home/rdanecek/Workspace/mount/project/"
-    work = "/is/cluster/work"
+    # project = project or "/home/rdanecek/Workspace/mount/project/"
+    project = project or "/ps/project/"
+    work = work or "/is/cluster/work/"
 
 
     dm = AffectNetDataModule(
