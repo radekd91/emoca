@@ -79,13 +79,14 @@ def decode(deca, values, batch=None, training=False, visualize=True,
     return values, vis_dict, losses
 
 
-def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2, visualize=True, output_vis_path=None):
+def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2, visualize=True
+                        , output_vis_path12=None, output_vis_path21=None):
     values_12, values_21 = exchange_codes( vals1, vals2, codes_to_exchange)
 
     values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1, visualize=visualize, #stage="12",
-                                               output_vis_path=output_vis_path)
+                                               output_vis_path=output_vis_path12)
     values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2, visualize=visualize, #stage="21",
-                                               output_vis_path=output_vis_path)
+                                               output_vis_path=output_vis_path21)
 
     # return [values_21, vis_dict_21], [values_12, vis_dict_12]
     return [values_21, vis_dict_21, losses_21], [values_12, vis_dict_12, losses_12]

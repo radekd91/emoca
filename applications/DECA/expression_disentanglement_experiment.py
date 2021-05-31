@@ -81,6 +81,10 @@ def validation_set_pass(cfg,
     result_dir.mkdir(exist_ok=True, parents=True)
 
     visualization_dir = result_dir / "visualizations"
+    visualization_dir1 = visualization_dir / "1"
+    visualization_dir2 = visualization_dir / "2"
+    visualization_dir12 = visualization_dir / "12"
+    visualization_dir21 = visualization_dir / "21"
 
     import pytorch_lightning as pl
     # pl.utilities.seed.seed_everything(0, workers=True)
@@ -150,14 +154,17 @@ def validation_set_pass(cfg,
 
             with torch.no_grad():
                 values_img1, visdict1, losses1 = test(deca, batch1, visualize=visualize, #stage="1",
-                                                      output_vis_path=str(visualization_dir))
+                                                      output_vis_path=str(visualization_dir1))
                 values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize, #stage="2",
-                                                      output_vis_path=str(visualization_dir))
+                                                      output_vis_path=str(visualization_dir2))
 
                 vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2,
                                                            codes_to_exchange
                                                           , batch1,
-                                                           batch2, visualize=visualize, output_vis_path=str(visualization_dir))
+                                                           batch2, visualize=visualize,
+                                                           output_vis_path12=str(visualization_dir12),
+                                                           output_vis_path21=str(visualization_dir21)
+                                                           )
                 values_21, vis_dict_21, losses_21 = vals21_de
                 values_12, vis_dict_12, losses_12 = vals12_de
 
