@@ -107,10 +107,10 @@ def main():
     # run_names += ['']
 
     # AffectNet
-    # run_names += ['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early']  # ran
-    # run_names += ['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early']  # ran
-    # run_names += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # ran
-    # run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
+    run_names += ['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early']  # ran
+    run_names += ['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early']  # ran
+    run_names += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # ran
+    run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
 
 
 
@@ -142,8 +142,8 @@ def main():
     # run_names += ['2021_05_24_12-22-21_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_DwC_early']
     # run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early']
 
-    # codes_to_exchange = ['detailcode', 'expcode', 'jawpose']
-    codes_to_exchange = ['expcode', 'jawpose']
+    codes_to_exchange = ['detailcode', 'expcode', 'jawpose']
+    # codes_to_exchange = ['expcode', 'jawpose']
 
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name

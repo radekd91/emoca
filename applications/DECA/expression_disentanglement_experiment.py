@@ -246,6 +246,9 @@ def load_configs(run_path):
 
 
 def main():
+
+    print(sys.argv)
+
     if len(sys.argv) <= 2:
         path_to_models = "/is/cluster/work/rdanecek/emoca/finetune_deca/"
         ## relative_to_path = None
