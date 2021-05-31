@@ -27,7 +27,7 @@ project_name = 'EmotionalDECA'
 
 
 
-def eliminate_unwanted_visualization(d, inputs=True, landmarks=True):
+def eliminate_unwanted_visualization(d, inputs=False, landmarks=False):
     keys_to_remove = []
     for key in d.keys():
         if 'normals' in key:
