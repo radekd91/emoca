@@ -27,13 +27,21 @@ project_name = 'EmotionalDECA'
 
 
 
-def eliminate_unwanted_visualization(d):
+def eliminate_unwanted_visualization(d, inputs=True, landmarks=True):
     keys_to_remove = []
     for key in d.keys():
         if 'normals' in key:
             keys_to_remove += [key]
         if 'albedo' in key:
             keys_to_remove += [key]
+
+        if inputs and 'inputs' in key:
+            keys_to_remove += [key]
+
+        if landmarks and 'landmarks' in key:
+            keys_to_remove += [key]
+
+
     for key in keys_to_remove:
         del d[key]
     return key
@@ -141,8 +149,10 @@ def validation_set_pass(cfg,
 
 
             with torch.no_grad():
-                values_img1, visdict1, losses1 = test(deca, batch1, visualize=visualize, stage="1", output_vis_path=str(visualization_dir))
-                values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize, stage="2", output_vis_path=str(visualization_dir))
+                values_img1, visdict1, losses1 = test(deca, batch1, visualize=visualize, #stage="1",
+                                                      output_vis_path=str(visualization_dir))
+                values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize, #stage="2",
+                                                      output_vis_path=str(visualization_dir))
 
                 vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2,
                                                            codes_to_exchange
@@ -203,8 +213,8 @@ def validation_set_pass(cfg,
                 if visualize:
                     eliminate_unwanted_visualization(visdict1)
                     eliminate_unwanted_visualization(visdict2)
-                    eliminate_unwanted_visualization(vis_dict_12)
-                    eliminate_unwanted_visualization(vis_dict_21)
+                    eliminate_unwanted_visualization(vis_dict_12, inputs=True, landmarks=True)
+                    eliminate_unwanted_visualization(vis_dict_21, inputs=True, landmarks=True)
 
                     # for key in visdict1.keys():
                     #     savepath = Path(
