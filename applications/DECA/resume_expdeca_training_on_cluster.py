@@ -170,6 +170,22 @@ def main():
     # resume_folders += ["2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early"]
     # resume_folders += ["2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early"]
 
+    ## Emo MLP emotion ring, ge ex
+    # resume_folders += ['2021_05_28_16-35-17_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exemonet_feature_CoNo_MLP_0.05_DwC_early']
+    # resume_folders += ['2021_05_28_16-35-32_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exgt_va_CoNo_MLP_0.05_DwC_early'] # weird
+    # resume_folders += ['2021_05_28_16-35-33_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exgt_expression_CoNo_MLP_0.05_DwC_early']
+
+    ## Emo MLP emotion ring
+    # resume_folders += ['2021_05_28_16-45-22_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exgt_expression_CoNo_MLP_0.05_DwC_early']
+    # resume_folders += ['2021_05_28_16-45-34_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exgt_va_CoNo_MLP_0.05_DwC_early']
+    # resume_folders += ['2021_05_28_16-46-05_ExpDECA_Affec_para_Jaw_DeSegrend_BlackB_Exemonet_feature_CoNo_MLP_0.05_DwC_early']
+
+    ## ExpDECA emo ring emonet featue ge ex
+    # resume_folders += ['2021_05_28_17-59-11_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_DeSegrend_BlackB_Exgt_va_CoNo_DwC_early']
+    # resume_folders += ['2021_05_28_18-12-17_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNo_DwC_early']
+
+
+
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
 

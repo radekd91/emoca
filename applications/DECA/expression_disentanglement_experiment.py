@@ -96,12 +96,19 @@ def validation_set_pass(cfg,
         else:
             version = "AffNet"[:N] # unfortunately time doesn't cut it if two jobs happen to start at the same time
 
+        exp_conf = DictConfig({})
+        exp_conf.model = cfg
+        exp_conf.result_dir = str(result_dir)
+        exp_conf.num_epochs = num_epochs
+        exp_conf.visualization_freq = visualization_freq
+
         logger = create_logger(
                     cfg.learning.logger_type,
                     name=cfg.inout.name,
                     project_name=project_name,
                     version=version,
-                    save_dir=result_dir)
+                    save_dir=result_dir,
+                    config=OmegaConf.to_container(exp_conf))
 
     deca.logger = logger
 
@@ -262,12 +269,12 @@ def main():
         # run_name += '2021_05_02_12-34-47_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'
 
         # ExpDECA on AffectNet, Expression ring with geometric losses
-        run_name = '2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early'
+        # run_name = '2021_05_07_20-48-30_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early'
         # run_name = '2021_05_07_20-46-09_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_early'
         # run_name = '2021_05_07_20-45-33_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early'
         # run_name = '2021_05_07_20-36-43_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_early'
 
-        # run_name = '2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early'
+        run_name = '2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early'
 
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
@@ -304,13 +311,13 @@ def main():
     stages_prefix = ""
 
 
-    checkpoint_mode = 'best' # resuming in the same stage, we want to pick up where we left of
-    checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(conf[stage],
-                                                               checkpoint_mode=checkpoint_mode,
-                                                               prefix=stages_prefix
-                                                               # relative_to=relative_to_path,
-                                                               # replace_root=replace_root_path
-                                                               )
+    # checkpoint_mode = 'best' # resuming in the same stage, we want to pick up where we left of
+    # checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(conf[stage],
+    #                                                            checkpoint_mode=checkpoint_mode,
+    #                                                            prefix=stages_prefix
+    #                                                            # relative_to=relative_to_path,
+    #                                                            # replace_root=replace_root_path
+    #                                                            )
 
     validation_set_pass(conf[stage],
                         deca,

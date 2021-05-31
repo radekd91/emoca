@@ -1,9 +1,10 @@
 from utils.condor import execute_on_cluster
 from pathlib import Path
-import affectnet_validation
+import expression_disentanglement_experiment
 import datetime
 from omegaconf import OmegaConf
 import time as t
+
 
 def submit(cfg, model_folder_name, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -16,7 +17,7 @@ def submit(cfg, model_folder_name, bid=10):
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
-    local_script_path = Path(affectnet_validation.__file__).absolute()
+    local_script_path = Path(expression_disentanglement_experiment.__file__).absolute()
     cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
                           / local_script_path.parents[0].name / local_script_path.name
 
@@ -27,8 +28,8 @@ def submit(cfg, model_folder_name, bid=10):
     username = 'rdanecek'
     gpu_mem_requirement_mb = cfg.detail.learning.gpu_memory_min_gb * 1024
     # gpu_mem_requirement_mb = None
-    # cpus = cfg.detail.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
-    cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
+    cpus = cfg.detail.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
+    # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     gpus = cfg.detail.learning.num_gpus
     num_jobs = 1
     max_time_h = 10
@@ -135,10 +136,10 @@ def main():
     # run_names += ['2021_05_21_15-44-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_early']
 
     ### ExpDECA DwC with EmoMLP
-    run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early']
-    # run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_DwC_early'] # TO BE RAN
-    # run_names += ['2021_05_24_12-22-21_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_DwC_early'] # TO BE RAN
-    # run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early'] # TO BE RAN
+    # run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.1_DwC_early']
+    # run_names += ['2021_05_24_12-22-17_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.05_DwC_early']
+    # run_names += ['2021_05_24_12-22-21_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_DwC_early']
+    # run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early']
 
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
