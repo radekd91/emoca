@@ -299,13 +299,13 @@ def main():
         with open(Path(cfg_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
 
-    if len(sys.argv) > 2:
-        num_epochs = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        num_epochs = int(sys.argv[3])
     else:
         num_epochs = 1
 
-    if len(sys.argv) > 3:
-        visualization_freq = int(sys.argv[3])
+    if len(sys.argv) > 4:
+        visualization_freq = int(sys.argv[4])
     else:
         visualization_freq = 50
 
