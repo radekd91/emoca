@@ -340,8 +340,10 @@ def main():
     for code in codes_to_exchange:
         exchange_acronym += code[0]
 
-    conf["coarse"].inout.name = "an_tangle_" + exchange_acronym + '_' + conf["coarse"].inout.name
-    conf["detail"].inout.name = "an_tangle_" + exchange_acronym + '_' + conf["detail"].inout.name
+    experiment_name_prefix = "affnet_ex_"
+
+    conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["coarse"].inout.name
+    conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["detail"].inout.name
 
     deca = load_deca(conf, stage, 'best', relative_to_path, replace_root_path)
     deca.cuda()
