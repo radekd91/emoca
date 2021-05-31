@@ -345,6 +345,7 @@ def main():
                         dm,
                         visualization_freq,
                         num_epochs,
+                        codes_to_exchange
                         # data_preparation_function=prepare_data,
                         # checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs
                         )
