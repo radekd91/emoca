@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 import time as t
 
 
-def submit(cfg, model_folder_name, bid=10):
+def submit(cfg, model_folder_name, codes_to_exchange, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
     submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/affectnet_test_submission"
@@ -37,7 +37,7 @@ def submit(cfg, model_folder_name, bid=10):
     job_name = "finetune_deca"
     cuda_capability_requirement = 6
     mem_gb = 12
-    args = f"{model_folder_name}"
+    args = f"{model_folder_name} {','.join(codes_to_exchange)}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -142,11 +142,13 @@ def main():
     # run_names += ['2021_05_24_12-22-21_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.005_DwC_early']
     # run_names += ['2021_05_24_12-21-45_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.5_DwC_early']
 
+    codes_to_exchange = ['detailcode', 'expcode', 'jawpose']
+
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
-        submit(conf, run_path)
+        submit(conf, run_path, codes_to_exchange)
 
 
 if __name__ == "__main__":

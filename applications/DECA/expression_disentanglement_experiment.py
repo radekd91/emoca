@@ -44,18 +44,16 @@ def validation_set_pass(cfg,
                         dm,
                         visualization_freq,
                         num_epochs,
+                        codes_to_exchange,
                         # stage, prefix,
                         # dm=None,
-                        logger=None,
+                        # logger=None,
                         # data_preparation_function=None,
                         # checkpoint=None, checkpoint_kwargs=None
     ):
 
-    # # if deca is None:
-    # if 'deca_class' in cfg.model:
-    #     deca_class = class_from_str(cfg.model.deca_class, sys.modules[__name__])
-    # else:
-    #     deca_class = DECA
+
+    logger = None
 
     if logger is not None:
         logger.finalize("")
@@ -102,6 +100,7 @@ def validation_set_pass(cfg,
         exp_conf.result_dir = str(result_dir)
         exp_conf.num_epochs = num_epochs
         exp_conf.visualization_freq = visualization_freq
+        exp_conf.codes_to_exchange = codes_to_exchange
 
         logger = create_logger(
                     cfg.learning.logger_type,
@@ -146,7 +145,8 @@ def validation_set_pass(cfg,
                 values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize, stage="2", output_vis_path=str(visualization_dir))
 
                 vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2,
-                                                           ['detailcode', 'expcode', 'jawpose'], batch1,
+                                                           codes_to_exchange
+                                                          , batch1,
                                                            batch2, visualize=visualize, output_vis_path=str(visualization_dir))
                 values_21, vis_dict_21, losses_21 = vals21_de
                 values_12, vis_dict_12, losses_12 = vals12_de
@@ -246,7 +246,7 @@ def load_configs(run_path):
 
 
 def main():
-    if len(sys.argv) <= 1:
+    if len(sys.argv) <= 2:
         path_to_models = "/is/cluster/work/rdanecek/emoca/finetune_deca/"
         ## relative_to_path = None
         ## replace_root_path = None
@@ -284,10 +284,15 @@ def main():
         project = "/home/rdanecek/Workspace/mount/project/"
         dm = load_affectnet(project=project)
 
+        codes_to_exchange = ['detailcode', 'expcode', 'jawpose']
+
     else: # > 1
         cfg_path = sys.argv[1]
         relative_to_path = None
         replace_root_path = None
+
+        codes_to_exchange = sys.argv[2]
+        codes_to_exchange = sorted(codes_to_exchange.split(','))
 
         dm = load_affectnet()
 
@@ -307,9 +312,12 @@ def main():
     stage = 'detail'
 
 
+    exchange_acronym = ''
+    for code in codes_to_exchange:
+        exchange_acronym += code[0]
 
-    conf["coarse"].inout.name = "an_tangle_" + conf["coarse"].inout.name
-    conf["detail"].inout.name = "an_tangle_" + conf["detail"].inout.name
+    conf["coarse"].inout.name = "an_tangle_" + exchange_acronym + '_' + conf["coarse"].inout.name
+    conf["detail"].inout.name = "an_tangle_" + exchange_acronym + '_' + conf["detail"].inout.name
 
     deca = load_deca(conf, stage, 'best', relative_to_path, replace_root_path)
     deca.cuda()
@@ -325,6 +333,9 @@ def main():
     #                                                            # relative_to=relative_to_path,
     #                                                            # replace_root=replace_root_path
     #                                                            )
+
+
+
 
     validation_set_pass(conf[stage],
                         deca,
