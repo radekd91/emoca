@@ -1071,9 +1071,12 @@ class DecaModule(LightningModule):
         return caption
 
 
-    def _create_visualizations_to_log(self, stage, visdict, values, step, indices=None, dataloader_idx=None):
+    def _create_visualizations_to_log(self, stage, visdict, values, step, indices=None,
+                                      dataloader_idx=None, output_dir=None):
         mode_ = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
+
+        output_dir = output_dir or self.inout_params.full_run_dir
 
         log_dict = {}
         for key in visdict.keys():
@@ -1086,7 +1089,7 @@ class DecaModule(LightningModule):
                 indices = [indices,]
             if isinstance(indices, str) and indices == 'all':
                 image = np.concatenate([images[i] for i in range(images.shape[0])], axis=1)
-                savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
+                savepath = Path(f'{output_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_all.png')
                 # im2log = Image(image, caption=key)
                 if isinstance(self.logger, WandbLogger):
                     im2log = _log_wandb_image(savepath, image)
@@ -1144,7 +1147,7 @@ class DecaModule(LightningModule):
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  np.argmax(values["detail_output_expression"][
                         #                                                i].detach().cpu().numpy()))
-                    savepath = Path(f'{self.inout_params.full_run_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
+                    savepath = Path(f'{output_dir}/{prefix}_{stage}/{key}/{self.current_epoch:04d}_{step:04d}_{i:02d}.png')
                     image = images[i]
                     # im2log = Image(image, caption=caption)
                     if isinstance(self.logger, WandbLogger):

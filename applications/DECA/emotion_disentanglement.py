@@ -46,7 +46,8 @@ def exchange_codes(vals1, vals2, codes_to_exchange):
 
 
 def decode(deca, values, batch=None, training=False, visualize=True,
-           stage="" # used for paths in visualizations saving
+           stage="", # used for paths in visualizations saving
+           output_vis_path=None
            ):
     with torch.no_grad():
         values = deca.decode(values, training=training)
@@ -70,18 +71,19 @@ def decode(deca, values, batch=None, training=False, visualize=True,
                 "",
                 save=False
             )
-            vis_dict = deca._create_visualizations_to_log(stage, visualizations, values, 0, indices=0)
+            vis_dict = deca._create_visualizations_to_log(stage, visualizations, values, 0,
+                                                          indices=0, output_dir=output_vis_path)
         else:
             vis_dict = None
     # return values, vis_dict
     return values, vis_dict, losses
 
 
-def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2, visualize=True):
+def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2, visualize=True, output_vis_path=None):
     values_12, values_21 = exchange_codes( vals1, vals2, codes_to_exchange)
 
-    values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1, visualize=visualize, stage="12")
-    values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2, visualize=visualize, stage="21")
+    values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1, visualize=visualize, stage="12", output_vis_path=output_vis_path)
+    values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2, visualize=visualize, stage="21", output_vis_path=output_vis_path)
 
     # return [values_21, vis_dict_21], [values_12, vis_dict_12]
     return [values_21, vis_dict_21, losses_21], [values_12, vis_dict_12, losses_12]
@@ -186,7 +188,8 @@ def visualize(vis_dict, title, values, losses, batch, axs=None, fig=None, ri=Non
 
 
 def test(deca, batch, visualize=True,
-         stage="" # only important for saved paths of visualizations
+         stage="", # only important for saved paths of visualizations
+         output_vis_path=None
          ):
     for key in batch:
         if isinstance(batch[key], torch.Tensor):
@@ -196,7 +199,8 @@ def test(deca, batch, visualize=True,
 
     vals = deca.encode(batch, training=False)
     # vals = deca.decode(vals)
-    vals, visdict, losses = decode(deca, vals, batch, training=False, visualize=visualize, stage=stage)
+    vals, visdict, losses = decode(deca, vals, batch, training=False, visualize=visualize, stage=stage,
+                                   output_vis_path=output_vis_path)
     return vals, visdict, losses
 
 
