@@ -41,6 +41,7 @@ def eliminate_unwanted_visualization(d):
 
 def validation_set_pass(cfg,
                         deca,
+                        dm,
                         visualization_freq,
                         num_epochs,
                         # stage, prefix,
@@ -49,8 +50,6 @@ def validation_set_pass(cfg,
                         # data_preparation_function=None,
                         # checkpoint=None, checkpoint_kwargs=None
     ):
-
-    dm = load_affectnet()
 
     # # if deca is None:
     # if 'deca_class' in cfg.model:
@@ -141,8 +140,8 @@ def validation_set_pass(cfg,
 
 
             with torch.no_grad():
-                values_img1, visdict1, losses1 = test(deca, batch1, visualize=visualize)
-                values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize)
+                values_img1, visdict1, losses1 = test(deca, batch1, visualize=visualize, stage="1")
+                values_img2, visdict2, losses2 = test(deca, batch2, visualize=visualize, stage="2")
 
                 vals21_de, vals12_de = exchange_and_decode(deca, values_img1, values_img2,
                                                            ['detailcode', 'expcode', 'jawpose'], batch1,
@@ -213,10 +212,10 @@ def validation_set_pass(cfg,
                     #     if isinstance(logger, WandbLogger):
                     #         im2log = _log_wandb_image(savepath, visdict1, caption)
 
-                    logger.log_metrics({ "1_" + key: value for key,value in visdict1.items()}, step=step)
-                    logger.log_metrics({ "2_" + key: value for key,value in visdict2.items()}, step=step)
-                    logger.log_metrics({ "12_" + key: value for key,value in vis_dict_12.items()}, step=step)
-                    logger.log_metrics({ "21_" + key: value for key,value in vis_dict_21.items()}, step=step)
+                    logger.log_metrics({"1_" + key: value for key,value in visdict1.items()}, step=step)
+                    logger.log_metrics({"2_" + key: value for key,value in visdict2.items()}, step=step)
+                    logger.log_metrics({"12_" + key: value for key,value in vis_dict_12.items()}, step=step)
+                    logger.log_metrics({"21_" + key: value for key,value in vis_dict_21.items()}, step=step)
 
             step += 1
 
@@ -279,10 +278,16 @@ def main():
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
+
+        project = "/home/rdanecek/Workspace/mount/project/"
+        dm = load_affectnet(project=project)
+
     else: # > 1
         cfg_path = sys.argv[1]
         relative_to_path = None
         replace_root_path = None
+
+        dm = load_affectnet()
 
         with open(Path(cfg_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
@@ -321,6 +326,7 @@ def main():
 
     validation_set_pass(conf[stage],
                         deca,
+                        dm,
                         visualization_freq,
                         num_epochs,
                         # data_preparation_function=prepare_data,

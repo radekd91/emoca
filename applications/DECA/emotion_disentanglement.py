@@ -45,7 +45,9 @@ def exchange_codes(vals1, vals2, codes_to_exchange):
     return values_12, values_21
 
 
-def decode(deca, values, batch=None, training=False, visualize=True):
+def decode(deca, values, batch=None, training=False, visualize=True,
+           stage="" # used for paths in visualizations saving
+           ):
     with torch.no_grad():
         values = deca.decode(values, training=training)
         if batch is not None and 'landmark' in batch.keys(): # a full batch came, including supervision
@@ -64,11 +66,11 @@ def decode(deca, values, batch=None, training=False, visualize=True):
                 uv_detail_normals,
                 values,
                 0,
-                "",
+                stage,
                 "",
                 save=False
             )
-            vis_dict = deca._create_visualizations_to_log("", visualizations, values, 0, indices=0)
+            vis_dict = deca._create_visualizations_to_log(stage, visualizations, values, 0, indices=0)
         else:
             vis_dict = None
     # return values, vis_dict
@@ -78,8 +80,8 @@ def decode(deca, values, batch=None, training=False, visualize=True):
 def exchange_and_decode(deca, vals1, vals2, codes_to_exchange, batch1, batch2, visualize=True):
     values_12, values_21 = exchange_codes( vals1, vals2, codes_to_exchange)
 
-    values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1, visualize=visualize)
-    values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2, visualize=visualize)
+    values_12, vis_dict_12, losses_12 = decode(deca, values_12, batch1, visualize=visualize, stage="12")
+    values_21, vis_dict_21, losses_21 = decode(deca, values_21, batch2, visualize=visualize, stage="21")
 
     # return [values_21, vis_dict_21], [values_12, vis_dict_12]
     return [values_21, vis_dict_21, losses_21], [values_12, vis_dict_12, losses_12]
@@ -183,7 +185,9 @@ def visualize(vis_dict, title, values, losses, batch, axs=None, fig=None, ri=Non
     i += 1
 
 
-def test(deca, batch, visualize=True):
+def test(deca, batch, visualize=True,
+         stage="" # only important for saved paths of visualizations
+         ):
     for key in batch:
         if isinstance(batch[key], torch.Tensor):
             batch[key] = batch[key].cuda()
@@ -192,7 +196,7 @@ def test(deca, batch, visualize=True):
 
     vals = deca.encode(batch, training=False)
     # vals = deca.decode(vals)
-    vals, visdict, losses = decode(deca, vals, batch, training=False, visualize=visualize)
+    vals, visdict, losses = decode(deca, vals, batch, training=False, visualize=visualize, stage=stage)
     return vals, visdict, losses
 
 
@@ -471,7 +475,9 @@ def main_affectnet(deca, conf, stage ):
     conf[stage].data.output_dir = "/is/cluster/work/rdanecek/data/affectnet"
 
     # dm, name = prepare_data(conf[stage])
-    dm = load_affectnet()
+    # scratch = "/home/rdanecek/Workspace/mount/scratch/"
+    project = "/home/rdanecek/Workspace/mount/project/"
+    dm = load_affectnet(project=project)
 
     dm.val_batch_size = 1
     dm.ring_size = None
