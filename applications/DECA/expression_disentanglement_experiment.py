@@ -345,6 +345,10 @@ def main():
     conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["coarse"].inout.name
     conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["detail"].inout.name
 
+    # we don't want background from input. it might interfere with the final picture
+    conf["coarse"].model.background_from_input = False
+    conf["detail"].model.background_from_input = False
+
     deca = load_deca(conf, stage, 'best', relative_to_path, replace_root_path)
     deca.cuda()
     deca.eval()
