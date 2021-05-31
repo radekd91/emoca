@@ -77,7 +77,11 @@ def validation_set_pass(cfg,
     deca.eval()
     deca_name = deca.inout_params.name
 
-    result_dir = Path(deca.inout_params.full_run_dir).parent / "tests" / "AffectNetDisentangle"
+    exchange_acronym = ''
+    for code in codes_to_exchange:
+        exchange_acronym += code[0]
+
+    result_dir = Path(deca.inout_params.full_run_dir).parent / "tests" / "AffectNetDisentangle" / exchange_acronym
     result_dir.mkdir(exist_ok=True, parents=True)
 
     visualization_dir = result_dir / "visualizations"
