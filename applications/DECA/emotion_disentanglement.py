@@ -27,16 +27,29 @@ def exchange_codes(vals1, vals2, codes_to_exchange):
             jaw2 = vals2['posecode'][:, 3:]
             glob1 = vals1['posecode'][:, :3]
             glob2 = vals2['posecode'][:, :3]
-            pose12 = torch.clone(vals1['posecode'])
-            pose21 = torch.clone(vals2['posecode'])
+            # pose12 = torch.clone(vals1['posecode'])
+            # pose21 = torch.clone(vals2['posecode'])
+            # pose12 = torch.zeros_like(vals1['posecode'])
+            # pose21 = torch.zeros_like(vals2['posecode'])
 
             if code == 'jawpose':
-                pose21[:, 3:] = jaw1
-                pose12[:, 3:] = jaw2
+                pose21 = torch.cat([glob2, jaw1], dim=1)
+                pose12 = torch.cat([glob1, jaw2], dim=1)
+            # else:
+            #     pose21[:, 3:] += jaw2
+            #     pose12[:, 3:] += jaw1
 
-            if code == 'globalpose':
-                pose21[:, 3:] = glob1
-                pose12[:, 3:] = glob2
+            elif code == 'globalpose':
+                # pose21[:, :3] += glob1
+                # pose12[:, :3] += glob2
+
+                pose21 = torch.cat([glob1, jaw2], dim=1)
+                pose12 = torch.cat([glob2, jaw1], dim=1)
+            else:
+                raise RuntimeError(f"Invalid pose code '{code}'")
+            # else:
+            #     pose21[:, :3] += glob2
+            #     pose12[:, :3] += glob1
 
             values_21['posecode'], values_12['posecode'] = pose21, pose12
 
