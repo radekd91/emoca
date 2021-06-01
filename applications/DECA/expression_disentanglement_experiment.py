@@ -356,6 +356,8 @@ def main():
     else:
         conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + "Original_DECA"
         conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + "Original_DECA"
+        conf["coarse"].inout.full_run_dir = Path(conf["coarse"].inout.full_run_dir).parent.parent / "Original_DECA" / "coarse"
+        conf["detail"].inout.full_run_dir = Path(conf["detail"].inout.full_run_dir).parent.parent / "Original_DECA" / "detail"
 
 
     # we don't want background from input. it might interfere with the final picture
