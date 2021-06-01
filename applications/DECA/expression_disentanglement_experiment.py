@@ -271,6 +271,7 @@ def main():
     print(sys.argv)
 
     if len(sys.argv) <= 2:
+        use_original_deca = False
         path_to_models = "/is/cluster/work/rdanecek/emoca/finetune_deca/"
         ## relative_to_path = None
         ## replace_root_path = None
@@ -312,6 +313,13 @@ def main():
 
     else: # > 1
         cfg_path = sys.argv[1]
+        use_original_deca = False
+        if cfg_path == "Original_DECA":
+            path_to_models = "/ps/scratch/rdanecek/emoca/finetune_deca/"
+            cfg_path = path_to_models + '2021_04_23_17-00-40_ExpDECA_DecaD_NoRing_DeSegrend_early'
+            use_original_deca = True
+
+
         relative_to_path = None
         replace_root_path = None
 
@@ -342,30 +350,27 @@ def main():
 
     experiment_name_prefix = "affnet_ex_"
 
-    conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["coarse"].inout.name
-    conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["detail"].inout.name
+    if not use_original_deca:
+        conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["coarse"].inout.name
+        conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + conf["detail"].inout.name
+    else:
+        conf["coarse"].inout.name = experiment_name_prefix + exchange_acronym + '_' + "Original_DECA"
+        conf["detail"].inout.name = experiment_name_prefix + exchange_acronym + '_' + "Original_DECA"
+
 
     # we don't want background from input. it might interfere with the final picture
-    conf["coarse"].model.background_from_input = False
-    conf["detail"].model.background_from_input = False
+    # conf["coarse"].model.background_from_input = False
+    # conf["detail"].model.background_from_input = False
 
     deca = load_deca(conf, stage, 'best', relative_to_path, replace_root_path)
+
+    if use_original_deca:
+        deca.deca.config.resume_training = True
+        deca.deca._load_old_checkpoint()
+        print("Loading original DECA checkpoint")
+
     deca.cuda()
     deca.eval()
-
-    stages_prefix = ""
-
-
-    # checkpoint_mode = 'best' # resuming in the same stage, we want to pick up where we left of
-    # checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(conf[stage],
-    #                                                            checkpoint_mode=checkpoint_mode,
-    #                                                            prefix=stages_prefix
-    #                                                            # relative_to=relative_to_path,
-    #                                                            # replace_root=replace_root_path
-    #                                                            )
-
-
-
 
     validation_set_pass(conf[stage],
                         deca,
