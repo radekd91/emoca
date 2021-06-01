@@ -314,7 +314,8 @@ def main():
     else: # > 1
         cfg_path = sys.argv[1]
         use_original_deca = False
-        if cfg_path == "Original_DECA":
+        if Path(cfg_path).stem == "Original_DECA":
+            print("Loading Original DECA")
             path_to_models = "/ps/scratch/rdanecek/emoca/finetune_deca/"
             cfg_path = path_to_models + '2021_04_23_17-00-40_ExpDECA_DecaD_NoRing_DeSegrend_early'
             use_original_deca = True
