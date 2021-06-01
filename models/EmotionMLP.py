@@ -17,6 +17,12 @@ from torch.nn.functional import mse_loss, cross_entropy, nll_loss, l1_loss, log_
 from torch.nn import BatchNorm1d, LayerNorm, InstanceNorm1d
 
 
+def add_cfg_if_missing(cfg, name, default):
+    if name not in cfg.keys():
+        cfg[name] = default
+    return cfg
+
+
 class EmotionMLP(torch.nn.Module):
 
     def __init__(self, config, deca_cfg):
@@ -77,22 +83,44 @@ class EmotionMLP(torch.nn.Module):
         self.a_loss = loss_from_cfg(config, 'a_loss')
         self.exp_loss = loss_from_cfg(config, 'exp_loss')
 
+        # config backwards compatibility
+        self.config = add_cfg_if_missing(self.config, 'detach_shape', False)
+        self.config = add_cfg_if_missing(self.config, 'detach_expression', False)
+        self.config = add_cfg_if_missing(self.config, 'detach_detailcode', False)
+        self.config = add_cfg_if_missing(self.config, 'detach_jaw', False)
+        self.config = add_cfg_if_missing(self.config, 'detach_global_pose', False)
+
 
     def forward(self, values, result_prefix=""):
         shapecode = values['shapecode']
+
+        if self.config.detach_shape:
+            shapecode = shapecode.detach()
+
         # texcode = values['texcode']
         expcode = values['expcode']
+
+        if self.config.detach_expression:
+            expcode = expcode.detach()
+
         posecode = values['posecode']
         if self.config.use_detail_code:
             if 'detailcode' in values.keys() and values['detailcode'] is not None:
                 detailcode = values['detailcode']
+                if self.config.detach_detailcode:
+                    detailcode = detailcode.detach()
             else:
                 detailcode = torch.zeros((posecode.shape[0], self.n_detail), dtype=posecode.dtype, device=posecode.device )
         else:
             detailcode = None
 
         global_pose = posecode[:, :3]
+        if self.config.detach_global_pose:
+            global_pose = global_pose.detach()
+
         jaw_pose = posecode[:, 3:]
+        if self.config.detach_jaw:
+            jaw_pose = jaw_pose.detach()
 
         input_list = []
 

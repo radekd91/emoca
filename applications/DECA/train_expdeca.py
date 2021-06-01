@@ -183,6 +183,20 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if 'mlp_emotion_predictor' in cfg_coarse.model.keys() and cfg_coarse.model.mlp_emotion_predictor:
             experiment_name += f"_MLP_{cfg_coarse.model.mlp_emotion_predictor_weight}"
 
+            detach_name = ""
+            if 'detach_shape' in cfg_coarse.model.mlp_emotion_predictor.keys() and cfg_coarse.model.mlp_emotion_predictor.detach_shape:
+                detach_name += 'S'
+            if 'detach_expression' in cfg_coarse.model.mlp_emotion_predictor.keys() and cfg_coarse.model.mlp_emotion_predictor.detach_expression:
+                detach_name += 'E'
+            if 'detach_detailcode' in cfg_coarse.model.mlp_emotion_predictor.keys() and cfg_coarse.model.mlp_emotion_predictor.detach_detailcode:
+                detach_name += 'D'
+            if 'detach_jaw' in cfg_coarse.model.mlp_emotion_predictor.keys() and cfg_coarse.model.mlp_emotion_predictor.detach_jaw:
+                detach_name += 'J'
+            if 'detach_global_pose' in cfg_coarse.model.mlp_emotion_predictor.keys() and cfg_coarse.model.mlp_emotion_predictor.detach_global_pose:
+                detach_name += 'G'
+            if len(detach_name) > 0:
+                experiment_name += "_det" + detach_name
+
         if 'augmentation' in cfg_coarse.data.keys() and len(cfg_coarse.data.augmentation) > 0:
             experiment_name += "_Aug"
 
@@ -373,6 +387,13 @@ def main():
             'model.expression_constrain_use_jaw_pose=True',
             'model.expression_constrain_use_global_pose=False',
             'model.use_geometric_losses_expression_exchange=True',
+
+            '+model.mlp_emotion_predictor.detach_shape=True',
+            '+model.mlp_emotion_predictor.detach_expression=True',
+            '+model.mlp_emotion_predictor.detach_detailcode=True',
+            '+model.mlp_emotion_predictor.detach_jaw=True',
+            '+model.mlp_emotion_predictor.detach_global_pose=True',
+
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
             f'data.ring_type=gt_va',
              'data.ring_size=4',
@@ -392,6 +413,11 @@ def main():
             'model.expression_constrain_use_jaw_pose=True',
             'model.expression_constrain_use_global_pose=False',
             'model.use_geometric_losses_expression_exchange=True',
+            '+model.mlp_emotion_predictor.detach_shape=True',
+            '+model.mlp_emotion_predictor.detach_expression=True',
+            '+model.mlp_emotion_predictor.detach_detailcode=True',
+            '+model.mlp_emotion_predictor.detach_jaw=True',
+            '+model.mlp_emotion_predictor.detach_global_pose=True',
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
             f'data.ring_type=gt_va',
              'learning/batching=single_gpu_expdeca_detail_ring',
