@@ -78,8 +78,8 @@ def train_on_selected_sequences():
     detail_conf = "deca_train_detail_cluster"
 
     # ring_type = "gt_expression"
-    ring_type = "gt_va"
-    # ring_type = "emonet_feature"
+    # ring_type = "gt_va"
+    ring_type = "emonet_feature"
 
     finetune_modes = [
         # # DEFAULT without jaw
@@ -150,7 +150,7 @@ def train_on_selected_sequences():
         #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
         # ],
 
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
         # [
         #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
         #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
@@ -342,8 +342,13 @@ def train_on_selected_sequences():
         # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
-        # 'model/settings=coarse_train_expdeca_emomlp',
+        # 'model/settings=coarse_train_expdeca_emonet',
+        'model/settings=coarse_train_expdeca_emomlp',
+        # '+model.mlp_emotion_predictor.detach_shape=True',
+        # '+model.mlp_emotion_predictor.detach_expression=False',
+        # '+model.mlp_emotion_predictor.detach_detailcode=False',
+        # '+model.mlp_emotion_predictor.detach_jaw=True',
+        # '+model.mlp_emotion_predictor.detach_global_pose=False',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
         'learning.early_stopping.patience=5',
@@ -352,15 +357,21 @@ def train_on_selected_sequences():
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        'model/settings=detail_train_expdeca_emonet',
-        # 'model/settings=detail_train_expdeca_emomlp',
+        # 'model/settings=detail_train_expdeca_emonet',
+        'model/settings=detail_train_expdeca_emomlp',
+        # '+model.mlp_emotion_predictor.detach_shape=True',
+        # '+model.mlp_emotion_predictor.detach_expression=False',
+        # '+model.mlp_emotion_predictor.detach_detailcode=False',
+        # '+model.mlp_emotion_predictor.detach_jaw=True',
+        # '+model.mlp_emotion_predictor.detach_global_pose=False',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
     ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
-    emomlp_weights = [0.05] # this one seems to be close to the sweet spot
+    emomlp_weights = [1.0]
+    # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
     for emomlp_weight in emomlp_weights:

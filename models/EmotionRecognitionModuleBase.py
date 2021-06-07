@@ -550,6 +550,12 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
         else:
             weight = torch.ones_like(class_weight)
 
+
+        if (num_classes <= gt["expr_classification"].max()).any():
+            print("[Warning] Class lable index is higher and will be reduced.")
+            #TODO: evaluation hack warning
+            gt["expr_classification"][gt["expr_classification"] >= num_classes] = num_classes-1
+
         # metrics["expr_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], torch.ones_like(class_weight))
         # metrics["expr_weighted_cross_entropy"] = F.cross_entropy(pred["expr_classification"], gt["expr_classification"][:, 0], class_weight)
         metrics[pred_prefix + "expr_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
