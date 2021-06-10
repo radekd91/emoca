@@ -7,6 +7,7 @@ from applications.DECA.train_deca_modular import get_checkpoint, locate_checkpoi
 
 from models.EmoDECA import EmoDECA
 from models.EmoNetModule import EmoNetModule
+from models.EmoSwinModule import EmoSwinModule
 from utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
@@ -60,8 +61,12 @@ def create_experiment_name(cfg, version=1):
             if cfg.model.static_cam_emonet:
                 experiment_name += "_cam"
 
-    else:
+    elif cfg.model.emodeca_type == "EmoNetModule":
         experiment_name = "EmoNet"
+    elif cfg.model.emodeca_type == "EmoSwinModule":
+        experiment_name = "EmoSwin"
+    else:
+        raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
     if 'continuous_va_balancing' in cfg.model.keys():
         experiment_name += "_va" + cfg.model.continuous_va_balancing
@@ -350,6 +355,13 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
         cfg.model.deca_cfg = deca_cfg
         cfg.model.deca_stage = deca_stage
+
+    if 'swin_type' in cfg.model.keys():
+        if cfg.model.swin_cfg == 'todo':
+            swin_cfg = OmegaConf.load(
+                Path(__file__).parents[3] / "SwinTransformer" / "configs" / (cfg.model.swin_type + ".yaml"))
+            OmegaConf.set_struct(swin_cfg, True)
+            cfg.model.swin_cfg = swin_cfg
     return cfg
 
 
@@ -396,7 +408,7 @@ def main():
         # deca_overrides = None
         #
 
-        # EMODECA
+        #2 EMODECA
         emodeca_default = "emodeca_emonet_coarse"
         emodeca_overrides = ['learning/logging=none',
                              'model/settings=coarse_emodeca',
@@ -454,6 +466,34 @@ def main():
         # stage = None
         # relative_to_path = None
         # replace_root_path = None
+
+        #3) EmoSWIN
+        emodeca_default = "emoswin"
+        emodeca_overrides = [
+            # 'model/settings=emonet_trainable',
+            'model/settings=swin',
+            'learning/logging=none',
+            # 'learning.max_steps=1',
+            'learning.max_epochs=1',
+            'learning.checkpoint_after_training=latest',
+            # 'learning.batch_size_train=32',
+            # 'learning.batch_size_val=1',
+            # '+learning/lr_scheduler=reduce_on_plateau',
+            # 'model.continuous_va_balancing=1d',
+            # 'model.continuous_va_balancing=2d',
+            # 'model.continuous_va_balancing=expr',
+            # 'learning.val_check_interval=1',
+            # 'learning.learning_rate=0',
+            # 'learning/optimizer=adabound',
+            # 'data/datasets=affectnet_desktop',
+            # 'data/augmentations=default',
+        ]
+        deca_conf = None
+        deca_conf_path = None
+        fixed_overrides_deca = None
+        stage = None
+        deca_default = None
+        deca_overrides = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,

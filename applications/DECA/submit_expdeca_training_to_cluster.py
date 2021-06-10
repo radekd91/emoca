@@ -78,8 +78,8 @@ def train_on_selected_sequences():
     detail_conf = "deca_train_detail_cluster"
 
     # ring_type = "gt_expression"
-    # ring_type = "gt_va"
-    ring_type = "emonet_feature"
+    ring_type = "gt_va"
+    # ring_type = "emonet_feature"
 
     finetune_modes = [
         # # DEFAULT without jaw
@@ -151,13 +151,13 @@ def train_on_selected_sequences():
         # ],
 
         # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        # ],
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -193,35 +193,35 @@ def train_on_selected_sequences():
         # ],
         #
         #DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE, EXPRESSION RING EXCHANGE
-        [
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.expression_constrain_type=exchange',
-             'model.expression_constrain_use_jaw_pose=True',
-             'model.expression_constrain_use_global_pose=False',
-             'model.use_geometric_losses_expression_exchange=True',
-             'model.background_from_input=False',
-             f'data.ring_type={ring_type}',
-             # 'data.ring_type=gt_va',
-             # 'data.ring_type=emonet_feature',
-             'data.ring_size=4',
-             'learning/batching=single_gpu_expdeca_coarse_ring',
-             'learning.gpu_memory_min_gb=24',
-             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0',
-             'model.expression_constrain_type=exchange',
-             'model.expression_constrain_use_jaw_pose=True',
-             'model.expression_constrain_use_global_pose=False',
-             'model.use_geometric_losses_expression_exchange=True',
-             'model.background_from_input=False',
-             f'data.ring_type={ring_type}',
-             # 'data.ring_type=gt_va',
-             # 'data.ring_type=emonet_feature',
-             'data.ring_size=4',
-             'learning/batching=single_gpu_expdeca_detail_ring',
-             'learning.gpu_memory_min_gb=24',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        ],
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.expression_constrain_type=exchange',
+        #      'model.expression_constrain_use_jaw_pose=True',
+        #      'model.expression_constrain_use_global_pose=False',
+        #      'model.use_geometric_losses_expression_exchange=False',
+        #      'model.background_from_input=False',
+        #      f'data.ring_type={ring_type}',
+        #      # 'data.ring_type=gt_va',
+        #      # 'data.ring_type=emonet_feature',
+        #      'data.ring_size=4',
+        #      'learning/batching=single_gpu_expdeca_coarse_ring',
+        #      'learning.gpu_memory_min_gb=24',
+        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0',
+        #      'model.expression_constrain_type=exchange',
+        #      'model.expression_constrain_use_jaw_pose=True',
+        #      'model.expression_constrain_use_global_pose=False',
+        #      'model.use_geometric_losses_expression_exchange=False',
+        #      'model.background_from_input=False',
+        #      f'data.ring_type={ring_type}',
+        #      # 'data.ring_type=gt_va',
+        #      # 'data.ring_type=emonet_feature',
+        #      'data.ring_size=4',
+        #      'learning/batching=single_gpu_expdeca_detail_ring',
+        #      'learning.gpu_memory_min_gb=24',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=none', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        # ],
 
         # # DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK,
         # # DETAIL WITH COARSE, no landmarks for detail stage
@@ -347,7 +347,7 @@ def train_on_selected_sequences():
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
         # '+model.mlp_emotion_predictor.detach_detailcode=False',
-        # '+model.mlp_emotion_predictor.detach_jaw=True',
+        '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'model.resume_training=True', # load the original DECA model
@@ -362,7 +362,7 @@ def train_on_selected_sequences():
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
         # '+model.mlp_emotion_predictor.detach_detailcode=False',
-        # '+model.mlp_emotion_predictor.detach_jaw=True',
+        '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
@@ -370,7 +370,8 @@ def train_on_selected_sequences():
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
-    emomlp_weights = [1.0]
+    # emomlp_weights = [1.0] # with detached jaw pose
+    emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
