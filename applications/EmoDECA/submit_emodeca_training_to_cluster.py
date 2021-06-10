@@ -127,10 +127,10 @@ def train_emodeca_on_cluster():
         #     []
         # ],
 
-        # [
-        #     ['model.expression_balancing=true'],
-        #     []
-        # ],
+        [
+            ['model.expression_balancing=true'],
+            []
+        ],
 
         # [
         #     ['model.use_detail_code=true',
@@ -138,15 +138,15 @@ def train_emodeca_on_cluster():
         #     []
         # ],
         #
-        [
-            [
-                'model.use_detail_code=true',
-                '+model.mlp_norm_layer=BatchNorm1d',
-                'model.expression_balancing=true',
-                'model.mlp_dimension_factor=4',
-             ],
-            []
-        ],
+        # [
+        #     [
+        #         'model.use_detail_code=true',
+        #         '+model.mlp_norm_layer=BatchNorm1d',
+        #         'model.expression_balancing=true',
+        #         'model.mlp_dimension_factor=4',
+        #      ],
+        #     []
+        # ],
 
         # [
         #     [   'model.expression_balancing=true',
@@ -189,35 +189,52 @@ def train_emodeca_on_cluster():
     # fixed_overrides_deca = None
     # stage = None
 
-    # EMODECA
-    conf = "emodeca_coarse_cluster"
+    #2 EMOSWIN
+    conf = "emoswin"
     fixed_overrides_cfg = [
-        'model.use_identity=True', #
+        'model/settings=swin',
+        # '+learning/lr_scheduler=reduce_on_plateau',
+        # '+learning/lr_scheduler=exponential',
+        'learning.batch_size_train=32',
+        # 'learning.max_steps=0',
+        # 'learning.max_epochs=0',
+        # 'learning/optimizer=adabound',
         # 'data/augmentations=default',
-        # 'learning/optimizer=adabound', #
     ]
-
-    # deca_conf_path = None
-    # deca_conf = "deca_train_detail_cluster"
-    # stage = None
-    # fixed_overrides_deca = [
-    #     # 'model/settings=coarse_train',
-    #     'model/settings=detail_train',
-    #     'model.resume_training=True',  # load the original DECA model
-    #     'model.useSeg=rend', 'model.idw=0',
-    #     'learning/batching=single_gpu_coarse',
-    #     # 'learning/batching=single_gpu_detail',
-    #     #  'model.shape_constrain_type=None',
-    #      'model.detail_constrain_type=None',
-    #     'data/datasets=affectnet_cluster',
-    #     'learning.batch_size_test=1'
-    # ]
-
-    # # EMOEXPDECA
-    deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
     deca_conf = None
+    deca_conf_path = None
     fixed_overrides_deca = None
-    stage = 'detail'
+    stage = None
+
+    # # EMODECA
+    # conf = "emodeca_coarse_cluster"
+    # fixed_overrides_cfg = [
+    #     'model.use_identity=True', #
+    #     # 'data/augmentations=default',
+    #     # 'learning/optimizer=adabound', #
+    # ]
+    #
+    # # deca_conf_path = None
+    # # deca_conf = "deca_train_detail_cluster"
+    # # stage = None
+    # # fixed_overrides_deca = [
+    # #     # 'model/settings=coarse_train',
+    # #     'model/settings=detail_train',
+    # #     'model.resume_training=True',  # load the original DECA model
+    # #     'model.useSeg=rend', 'model.idw=0',
+    # #     'learning/batching=single_gpu_coarse',
+    # #     # 'learning/batching=single_gpu_detail',
+    # #     #  'model.shape_constrain_type=None',
+    # #      'model.detail_constrain_type=None',
+    # #     'data/datasets=affectnet_cluster',
+    # #     'learning.batch_size_test=1'
+    # # ]
+    #
+    # # # EMOEXPDECA
+    # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+    # deca_conf = None
+    # fixed_overrides_deca = None
+    # stage = 'detail'
 
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()

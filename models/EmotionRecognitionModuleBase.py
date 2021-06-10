@@ -276,7 +276,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         #     metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
         #                                                             gt["expr_classification"][:, 0],
         #                                               class_weight)
-        #     metrics[pred_prefix + "expr_acc"] = ACC_torch( torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+        n#     metrics[pred_prefix + "expr_acc"] = ACC_torch( torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
         #                                                    gt["expr_classification"][:, 0])
         #
         #

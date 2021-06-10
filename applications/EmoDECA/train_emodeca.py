@@ -65,6 +65,7 @@ def create_experiment_name(cfg, version=1):
         experiment_name = "EmoNet"
     elif cfg.model.emodeca_type == "EmoSwinModule":
         experiment_name = "EmoSwin"
+        experiment_name += "_" + cfg.model.swin_type
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
