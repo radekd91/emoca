@@ -196,6 +196,7 @@ def train_emodeca_on_cluster():
         # '+learning/lr_scheduler=reduce_on_plateau',
         # '+learning/lr_scheduler=exponential',
         'learning.batch_size_train=32',
+        'data/datasets=affectnet_cluster',
         # 'learning.max_steps=0',
         # 'learning.max_epochs=0',
         # 'learning/optimizer=adabound',
