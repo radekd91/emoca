@@ -200,7 +200,9 @@ def train_emodeca_on_cluster():
         # swin_type: swin_small_patch4_window7_224
         # swin_type: swin_tiny_patch4_window7_224
         'learning.batch_size_train=16',
-        'model.swin_type=swin_large_patch4_window7_224',
+        'model.swin_type=swin_large_patch4_window7_224_22k',
+        # 'model.swin_type=swin_base_patch4_window7_224',
+        # 'model.swin_type=swin_tiny_patch4_window7_224',
         'data/datasets=affectnet_cluster',
         # 'learning.max_steps=0',
         # 'learning.max_epochs=0',

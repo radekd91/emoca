@@ -8,8 +8,15 @@ if str(swin_path.parent) not in sys.path:
     sys.path += [str(swin_path.parent)]
 
 from SwinTransformer.models.build import build_model
-from omegaconf import open_dict
+from omegaconf import open_dict, OmegaConf
 import torch
+
+
+def swin_cfg_from_name(name):
+    swin_cfg = OmegaConf.load(
+        Path(__file__).parents[2] / "SwinTransformer" / "configs" / (name + ".yaml"))
+    OmegaConf.set_struct(swin_cfg, True)
+    return swin_cfg
 
 
 def create_swin_backbone(swin_cfg, num_classes, img_size, load_pretrained_swin=False, pretrained_model=None):

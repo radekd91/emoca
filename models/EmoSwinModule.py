@@ -12,16 +12,6 @@ from datasets.FaceVideoDataset import Expression7
 from pathlib import Path
 from utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 from models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
-
-
-# swin_path = (Path(__file__).parents[2] / "Swin-Transformer").absolute()
-swin_path = (Path(__file__).parents[2] / "SwinTransformer").absolute()
-if not swin_path.is_dir():
-    raise ImportError(f"Swin repository not found in : '{swin_path}'")
-if str(swin_path.parent) not in sys.path:
-    sys.path += [str(swin_path.parent)]
-
-from SwinTransformer.models.build import build_model
 from omegaconf import open_dict
 from .Swin import create_swin_backbone
 

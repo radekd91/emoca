@@ -14,7 +14,7 @@ from pathlib import Path
 from skimage.io import imsave
 
 from .Renderer import SRenderY
-from .DecaEncoder import ResnetEncoder, SecondHeadResnet
+from .DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
 from .DecaDecoder import Generator
 from .DecaFLAME import FLAME, FLAMETex
 # from .MLP import MLP
@@ -1340,11 +1340,31 @@ class DECA(torch.nn.Module):
 
     def _create_model(self):
         # coarse shape
-        self.E_flame = ResnetEncoder(outsize=self.n_param)
+        e_flame_type = 'ResnetEncoder'
+        if 'e_flame_type' in self.config.keys():
+            e_flame_type = self.config.e_flame_type
+
+        if e_flame_type == 'ResnetEncoder':
+            self.E_flame = ResnetEncoder(outsize=self.n_param)
+        elif e_flame_type[:4] == 'swin':
+            self.E_flame = SwinEncoder(outsize=self.n_param, img_size=self.config.image_size, swin_type=e_flame_type)
+        else:
+            raise ValueError(f"Invalid 'e_flame_type' = {e_flame_type}")
+
         self.flame = FLAME(self.config)
         self.flametex = FLAMETex(self.config)
         # detail modeling
-        self.E_detail = ResnetEncoder(outsize=self.n_detail)
+        e_detail_type = 'ResnetEncoder'
+        if 'e_detail_type' in self.config.keys():
+            e_detail_type = self.config.e_detail_type
+
+        if e_detail_type == 'ResnetEncoder':
+            self.E_detail = ResnetEncoder(outsize=self.n_detail)
+        elif e_flame_type[:4] == 'swin':
+            self.E_detail = SwinEncoder(outsize=self.n_detail, img_size=self.config.image_size, swin_type=e_detail_type)
+        else:
+            raise ValueError(f"Invalid 'e_detail_type'={e_detail_type}")
+
         self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
                                   sample_mode='bilinear')
         # self._load_old_checkpoint()

@@ -45,6 +45,17 @@ def create_experiment_name(cfg_coarse_pre, cfg_coarse, cfg_detail, version=1):
             experiment_name += 'w-%.05f' % cfg_coarse.model.emonet_weight
 
 
+        e_flame_type = 'ResnetEncoder'
+        if 'e_flame_type' in cfg_coarse.model.keys():
+            e_flame_type = cfg_coarse.model.e_flame_type
+        if e_flame_type != 'ResnetEncoder':
+            experiment_name += "_EF" + e_flame_type[:6]
+
+        e_detail_type = 'ResnetEncoder'
+        if 'e_detail_type' in cfg_detail.model.keys():
+            e_detail_type = cfg_detail.model.e_detail_type
+        if e_detail_type != 'ResnetEncoder':
+            experiment_name += "_EF" + e_detail_type[:6]
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'
@@ -74,12 +85,21 @@ def create_experiment_name(cfg_coarse_pre, cfg_coarse, cfg_detail, version=1):
         if not cfg_detail.model.use_detail_mrf:
             experiment_name += '_NoMRF'
 
+        # if not cfg_coarse.model.background_from_input and not cfg_detail.model.background_from_input:
+        #     experiment_name += '_BackBlackB'
+        # elif not cfg_coarse.model.background_from_input:
+        #     experiment_name += '_BackBlackC'
+        # elif not cfg_detail.model.background_from_input:
+        #     experiment_name += '_BackBlackD'
         if not cfg_coarse.model.background_from_input and not cfg_detail.model.background_from_input:
-            experiment_name += '_BackBlackB'
+            experiment_name += '_BlackB'
         elif not cfg_coarse.model.background_from_input:
-            experiment_name += '_BackBlackC'
+            experiment_name += '_BlackC'
         elif not cfg_detail.model.background_from_input:
-            experiment_name += '_BackBlackD'
+            experiment_name += '_BlackD'
+
+
+
 
         if version == 0:
             if cfg_coarse.learning.learning_rate != 0.0001:
@@ -308,14 +328,26 @@ def main():
         coarse_conf = "deca_train_coarse"
         detail_conf = "deca_train_detail"
 
+        flame_encoder = 'swin_tiny_patch4_window7_224'
+        detail_encoder = 'swin_tiny_patch4_window7_224'
+
+        coarse_pretrain_override = ['learning/batching=single_gpu_coarse_pretrain_32gb', f'+model.e_flame_type={flame_encoder}'
+                                    ,  f'+model.e_detail_type={detail_encoder}']
+        coarse_override = ['learning/batching=single_gpu_coarse_32gb', f'+model.e_flame_type={flame_encoder}',
+                           f'+model.e_detail_type={detail_encoder}']
+        detail_override = ['learning/batching=single_gpu_detail_32gb', f'+model.e_flame_type={flame_encoder}',
+                     f'+model.e_detail_type={detail_encoder}']
+
+
     if len(sys.argv) >= 7:
         coarse_pretrain_override = sys.argv[4]
         coarse_override = sys.argv[5]
         detail_override = sys.argv[6]
-    else:
-        coarse_pretrain_override = []
-        coarse_override = []
-        detail_override = []
+    # else:
+    #     coarse_pretrain_override = []
+    #     coarse_override = []
+    #     detail_override = []
+
     if configured:
         train_deca(coarse_pretrain_conf, coarse_conf, detail_conf)
     else:

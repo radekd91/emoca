@@ -6,17 +6,20 @@ import torch
 import torch.nn.functional as F
 import models.ResNet as resnet
 
+from .Swin import create_swin_backbone, swin_cfg_from_name
 
-class ResnetEncoder(nn.Module):
+class BaseEncoder(nn.Module):
     def __init__(self, outsize, last_op=None):
-        super(ResnetEncoder, self).__init__()
-        feature_size = 2048
-        self.encoder = resnet.load_ResNet50Model()  # out: 2048
+        super().__init__()
+        self.feature_size = 2048
+        self.outsize = outsize
+        # self.encoder = resnet.load_ResNet50Model()  # out: 2048
+        self._create_encoder()
         ### regressor
         self.layers = nn.Sequential(
-            nn.Linear(feature_size, 1024),
+            nn.Linear(self.feature_size, 1024),
             nn.ReLU(),
-            nn.Linear(1024, outsize)
+            nn.Linear(1024, self.outsize)
         )
         self.last_op = last_op
 
@@ -29,15 +32,34 @@ class ResnetEncoder(nn.Module):
             return parameters
         return parameters, features
 
+    def _create_encoder(self):
+        raise NotImplementedError()
+
+
+class ResnetEncoder(BaseEncoder):
+    def __init__(self, outsize, last_op=None):
+        super(ResnetEncoder, self).__init__(outsize, last_op)
+    #     feature_size = 2048
+    #     self.encoder = resnet.load_ResNet50Model()  # out: 2048
+    #     ### regressor
+    #     self.layers = nn.Sequential(
+    #         nn.Linear(feature_size, 1024),
+    #         nn.ReLU(),
+    #         nn.Linear(1024, outsize)
+    #     )
+    #     self.last_op = last_op
+
+    def _create_encoder(self):
+        self.encoder = resnet.load_ResNet50Model()  # out: 2048
+
 
 class SecondHeadResnet(nn.Module):
 
-    def __init__(self, resnet : ResnetEncoder, outsize, last_op=None):
+    def __init__(self, enc : BaseEncoder, outsize, last_op=None):
         super().__init__()
-        self.resnet = resnet
-        feature_size = 2048
+        self.resnet = enc # yes, self.resnet is no longer accurate but the name is kept for legacy reasons (to be able to load old models)
         self.layers = nn.Sequential(
-            nn.Linear(feature_size, 1024),
+            nn.Linear(self.resnet.feature_size, 1024),
             nn.ReLU(),
             nn.Linear(1024, outsize)
         )
@@ -60,6 +82,18 @@ class SecondHeadResnet(nn.Module):
         self.layers.train(mode)
         return self
 
+
+class SwinEncoder(BaseEncoder):
+
+    def __init__(self, swin_type, img_size, outsize, last_op=None):
+        self.swin_type = swin_type
+        self.img_size = img_size
+        super().__init__(outsize, last_op)
+
+    def _create_encoder(self):
+        swin_cfg = swin_cfg_from_name(self.swin_type)
+        self.encoder = create_swin_backbone(
+            swin_cfg, self.feature_size, self.img_size, load_pretrained_swin=True, pretrained_model=self.swin_type)
 
 # class ResnetEncoder(nn.Module):
 #     def __init__(self, append_layers = None):
