@@ -55,7 +55,7 @@ def create_experiment_name(cfg_coarse_pre, cfg_coarse, cfg_detail, version=1):
         if 'e_detail_type' in cfg_detail.model.keys():
             e_detail_type = cfg_detail.model.e_detail_type
         if e_detail_type != 'ResnetEncoder':
-            experiment_name += "_EF" + e_detail_type[:6]
+            experiment_name += "_ED" + e_detail_type[:6]
 
         if cfg_coarse.model.use_gt_emotion_loss and cfg_detail.model.use_gt_emotion_loss:
             experiment_name += '_SupervisedEmoLossB'
