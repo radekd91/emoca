@@ -23,6 +23,7 @@ if str(swin_path.parent) not in sys.path:
 
 from SwinTransformer.models.build import build_model
 from omegaconf import open_dict
+from .Swin import create_swin_backbone
 
 class EmoSwinModule(EmotionRecognitionBaseModule):
 
@@ -30,55 +31,12 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         super().__init__(config)
         self.n_expression = 9  # we use all affectnet classes (included none) for now
         with open_dict(config.model.swin_cfg):
-            config.model.swin_cfg.MODEL.NUM_CLASSES = self.n_expression + 2
-            config.model.swin_cfg.MODEL.SWIN.PATCH_SIZE = 4
-            config.model.swin_cfg.MODEL.SWIN.IN_CHANS = 3
-            config.model.swin_cfg.MODEL.SWIN.MLP_RATIO = 4.
-            config.model.swin_cfg.MODEL.SWIN.QKV_BIAS = True
-            config.model.swin_cfg.MODEL.SWIN.QK_SCALE = None
-            config.model.swin_cfg.MODEL.SWIN.APE = False
-            config.model.swin_cfg.MODEL.SWIN.PATCH_NORM = True
+            self.swin = create_swin_backbone(config.model.swin_cfg,
+                                             self.n_expression + 2,
+                                             config.data.image_size,
+                                             config.model.load_pretrained_swin,
+                                             self.config.model.swin_type )
 
-            # Dropout rate
-            if 'DROP_RATE' not in config.model.swin_cfg.MODEL.keys():
-                config.model.swin_cfg.MODEL.DROP_RATE = 0.0
-            # Drop path rate
-            if 'DROP_PATH_RATE' not in config.model.swin_cfg.MODEL.keys():
-                config.model.swin_cfg.MODEL.DROP_PATH_RATE = 0.1
-            # Label Smoothing
-
-            if 'DROP_PATH_RATE' not in config.model.swin_cfg.MODEL.keys():
-                config.model.swin_cfg.MODEL.LABEL_SMOOTHING = 0.1
-
-            config.model.swin_cfg.DATA = {}
-            config.model.swin_cfg.DATA.IMG_SIZE = config.data.image_size
-
-            config.model.swin_cfg.TRAIN = {}
-            config.model.swin_cfg.TRAIN.USE_CHECKPOINT = False
-
-            # # Swin Transformer parameters
-            # _C.MODEL.SWIN = CN()
-            # _C.MODEL.SWIN.PATCH_SIZE = 4
-            # _C.MODEL.SWIN.IN_CHANS = 3
-            # _C.MODEL.SWIN.EMBED_DIM = 96
-            # _C.MODEL.SWIN.DEPTHS = [2, 2, 6, 2]
-            # _C.MODEL.SWIN.NUM_HEADS = [3, 6, 12, 24]
-            # _C.MODEL.SWIN.WINDOW_SIZE = 7
-            # _C.MODEL.SWIN.MLP_RATIO = 4.
-            # _C.MODEL.SWIN.QKV_BIAS = True
-            # _C.MODEL.SWIN.QK_SCALE = None
-            # _C.MODEL.SWIN.APE = False
-            # _C.MODEL.SWIN.PATCH_NORM = True
-
-        self.swin = build_model(config.model.swin_cfg)
-
-        if config.model.load_pretrained_swin:
-            path_to_model = Path(__file__).parents[2] / "SwinTransformer" / "pretrained_models" / (self.config.model.swin_type + ".pth")
-            state_dict = torch.load(path_to_model)
-            del state_dict['model']['head.weight']
-            del state_dict['model']['head.bias']
-            self.swin.load_state_dict(state_dict['model'], strict=False)
-            print(f"Loading pretrained model from '{path_to_model}'")
         self.num_classes = self.n_expression
 
     def forward_swin(self, images):
