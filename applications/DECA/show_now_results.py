@@ -24,36 +24,52 @@ def main():
     # run_names['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
 
 
-    ### no-RING DECAs
-    # DECA dataset
-    run_names['2021_04_23_17-06-29_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] =\
-        'DECA_DecaD_NoRing_EmoLossB_DwC'
-    run_names['2021_04_23_17-05-49_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] = \
-        'DECA_DecaD_NoRing_EmoLossB'
-    run_names['2021_04_23_17-00-40_ExpDECA_DecaD_NoRing_DeSegrend_early'] = \
-        'DECA_DecaD_NoRing'
-    # # run_names += ['']
-    #
-    # # # AffectNet
-    run_names['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early'] = \
-        'DECA_Affec_NoRing_DwC'
-    run_names['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early'] = \
-        'DECA_Affec_NoRing'
-    run_names['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] = \
-        'DECA_Affec_NoRing_EmoLossB_DwC'
-    run_names['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] = \
-        'DECA_Affec_NoRing_EmoLossB'
+    # ### no-RING DECAs
+    # # DECA dataset
+    # run_names['2021_04_23_17-06-29_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] =\
+    #     'DECA_DecaD_NoRing_EmoLossB_DwC'
+    # run_names['2021_04_23_17-05-49_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] = \
+    #     'DECA_DecaD_NoRing_EmoLossB'
+    # run_names['2021_04_23_17-00-40_ExpDECA_DecaD_NoRing_DeSegrend_early'] = \
+    #     'DECA_DecaD_NoRing'
+    # # # run_names += ['']
+    # #
+    # # # # AffectNet
+    # run_names['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early'] = \
+    #     'DECA_Affec_NoRing_DwC'
+    # run_names['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early'] = \
+    #     'DECA_Affec_NoRing'
+    # run_names['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] = \
+    #     'DECA_Affec_NoRing_EmoLossB_DwC'
+    # run_names['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] = \
+    #     'DECA_Affec_NoRing_EmoLossB'
 
+    run_names_new = {}
+    # run_names_news += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] = "SWIN S"# DECA EmoNet
+    run_names_new['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] = "SWIN T"
+    run_names_new['2021_06_24_10-44-02_DECA__DeSegFalse_early'] = "DECA ResNet" # DECA EmoNet
 
     use_dense_topology = False
     # use_dense_topology = True
 
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    path_to_old_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    path_to_new_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
 
 
     run_files = []
     nicks = []
+    path_to_models = path_to_old_models
     for run_name, nick in run_names.items():
+        if use_dense_topology:
+            savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
+        else:
+            savefolder = Path(path_to_models) / run_name / stage / "NoW_flame"
+
+        run_files += [str(savefolder / "results" / "_computed_distances.npy")]
+        nicks += [nick]
+
+    path_to_models = path_to_new_models
+    for run_name, nick in run_names_new.items():
         if use_dense_topology:
             savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
         else:

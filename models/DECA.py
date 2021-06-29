@@ -474,8 +474,15 @@ class DecaModule(LightningModule):
 
 
         if self.deca.config.background_from_input:
-            predicted_images = (1. - masks) * images + masks * predicted_images
+            if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+                ## special case only for inference time if the rendering image sizes have been changed
+                images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
+                predicted_images = (1. - masks) * images_resized + masks * predicted_images
+            else:
+                images_resized = images
+                predicted_images = (1. - masks) * images + masks * predicted_images
         else:
+            images_resized = images
             predicted_images = masks * predicted_images
 
         if self.mode == DecaMode.DETAIL:
@@ -487,13 +494,18 @@ class DecaModule(LightningModule):
             uv_texture = albedo.detach() * uv_shading
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
             if self.deca.config.background_from_input:
-                predicted_detailed_image = (1. - masks) * images + masks*predicted_detailed_image
+                if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+                    ## special case only for inference time if the rendering image sizes have been changed
+                    # images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
+                    predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                else:
+                    predicted_images = (1. - masks) * images + masks * predicted_images
             else:
                 predicted_detailed_image = masks * predicted_detailed_image
 
             # --- extract texture
             uv_pverts = self.deca.render.world2uv(trans_verts).detach()
-            uv_gt = F.grid_sample(torch.cat([images, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+            uv_gt = F.grid_sample(torch.cat([images_resized, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
                                   mode='bilinear')
             uv_texture_gt = uv_gt[:, :3, :, :].detach()
             uv_mask_gt = uv_gt[:, 3:, :, :].detach()

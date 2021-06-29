@@ -2277,14 +2277,14 @@ class TestData(Dataset):
             else:
                 # bbox, bbox_type, landmarks = self.face_detector.run(image)
                 bbox, bbox_type = self.face_detector.run(image)
-                bbox = bbox[0]
-                if len(bbox) < 4:
+                if len(bbox) < 1:
                     print('no face detected! run original image')
                     left = 0
                     right = h - 1
                     top = 0
                     bottom = w - 1
                 else:
+                    bbox = bbox[0]
                     left = bbox[0]
                     right = bbox[2]
                     top = bbox[1]

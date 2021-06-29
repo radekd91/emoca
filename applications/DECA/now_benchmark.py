@@ -164,7 +164,8 @@ def get_now_point_indices(mode='handpicked', verts=None, landmark3d=None, dense_
 
 
 def main():
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
     path_to_now = '/home/rdanecek/Workspace/Data/now/NoW_Dataset/final_release_version/'
     dense_template_path = '/home/rdanecek/Workspace/Repos/DECA/data/texture_data_256.npy'
     dense_template = np.load(dense_template_path, allow_pickle=True, encoding='latin1').item()
@@ -190,13 +191,16 @@ def main():
     # # run_names += ['']
     #
     # # # AffectNet
-    run_names += ['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early']  # ran
-    run_names += ['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early']  # ran
-    run_names += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # ran
-    run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
+    # run_names += ['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early']  # ran
+    # run_names += ['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early']  # ran
+    # run_names += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # ran
+    # run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
 
 
-
+    # SWIN tests
+    run_names += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] # DECA SWIN S
+    # run_names += ['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] # DECA SWIN T
+    # run_names += ['2021_06_24_10-44-02_DECA__DeSegFalse_early'] # DECA ResNet 19
 
     for run_name in run_names:
 
