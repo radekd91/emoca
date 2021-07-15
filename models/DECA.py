@@ -546,6 +546,7 @@ class DecaModule(LightningModule):
             codedict['uv_z'] = uv_z
             codedict['uv_shading'] = uv_shading
             codedict['uv_vis_mask'] = uv_vis_mask
+            codedict['uv_mask'] = uv_mask
             codedict['displacement_map'] = uv_z + self.deca.fixed_uv_dis[None, None, :, :]
 
         return codedict
