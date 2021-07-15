@@ -1,9 +1,0 @@
-defaults:
-  - data/datasets: data_cluster
-  - data/augmentations: none
-  - model/paths : cluster
-  - model/settings : default_coarse
-  - model/sizes : default
-  - model/flame_tex: bfm
-  - learning: finetune_adam_coarse
-  - inout: cluster
