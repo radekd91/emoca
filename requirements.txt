@@ -1,5 +1,4 @@
 numpy~=1.19.5
-pytorch3d~=0.2.5
 scikit-image~=0.17.2
 wandb~=0.10.30
 opencv-python~=4.5.1.48
@@ -11,7 +10,6 @@ omegaconf~=2.0.6
 adabound~=0.0.5
 smplx~=0.1.26
 imageio~=2.9.0
-pyvista~=0.26.1
 tqdm~=4.51.0
 pillow~=8.1.2
 pandas~=1.1.4
