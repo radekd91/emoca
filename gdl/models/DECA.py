@@ -1471,6 +1471,20 @@ class DECA(torch.nn.Module):
         code_list[-1] = code_list[-1].reshape(code.shape[0], 9, 3)
         return code_list
 
+    def add_detail_to_coarse_verts(self, uv_z, coarse_verts, coarse_normals):
+        uv_coarse_vertices = self.render.world2uv(coarse_verts).detach()
+        uv_coarse_normals = self.render.world2uv(coarse_normals).detach()
+        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
+        return self.add_detail_to_coarse_verts_uv(uv_z, uv_coarse_vertices, uv_coarse_normals)
+
+    def add_detail_to_coarse_verts_uv(self, uv_z, uv_coarse_vertices, uv_coarse_normals):
+        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
+        uv_detail_vertices = uv_coarse_vertices + \
+                             uv_z * uv_coarse_normals + \
+                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals.detach()
+        return uv_detail_vertices
+
+
     def displacement2normal(self, uv_z, coarse_verts, coarse_normals):
         batch_size = uv_z.shape[0]
         uv_coarse_vertices = self.render.world2uv(coarse_verts).detach()
