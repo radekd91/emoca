@@ -579,6 +579,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.use_processed = True
         self.ignore_invalid = ignore_invalid
         self.load_emotion_feature = load_emotion_feature
+        self.nn_distances_array = nn_distances_array
 
         if ignore_invalid:
             # filter invalid classes
@@ -612,11 +613,14 @@ class AffectNet(EmotionalImageDatasetBase):
 
         self.ring_type = ring_type
         self.ring_size = ring_size
+        self._init_sample_weights()
 
-        if ring_type == "gt_expression":
+
+    def _init_sample_weights(self):
+        if self.ring_type == "gt_expression":
             grouped = self.df.groupby(['expression'])
             self.expr2sample = grouped.groups
-        elif ring_type == "emonet_expression":
+        elif self.ring_type == "emonet_expression":
             raise NotImplementedError()
         else:
             self.expr2sample = None
@@ -632,23 +636,23 @@ class AffectNet(EmotionalImageDatasetBase):
         va_weights *= np.linalg.norm(np.ones_like(va_weights))
         self.va_sample_weights = va_weights
 
-        if ring_type == "gt_va":
+        if self.ring_type == "gt_va":
             self.bins_to_samples = {}
             self.va_bin_indices = va_binnumber
             bin_indices = np.unique(va_binnumber)
             for bi in bin_indices:
                 self.bins_to_samples[bi] = np.where(va_binnumber == bi)[0]
 
-        elif ring_type == "emonet_va":
+        elif self.ring_type == "emonet_va":
             raise NotImplementedError()
         else:
             self.bins_to_samples = {}
 
-        if ring_type == "emonet_feature":
-            if len(self) != nn_distances_array.shape[0] or len(self) != nn_indices_array.shape[0]:
+        if self.ring_type == "emonet_feature":
+            if len(self) != self.nn_distances_array.shape[0] or len(self) != self.nn_indices_array.shape[0]:
                 raise RuntimeError("The lengths of the dataset does not correspond to size of the nn_array. "
                                    "The sizes should be equal. Sth fishy is happening")
-            self.nn_indices_array = nn_indices_array
+            # self.nn_indices_array = self.nn_indices_array
             self.nn_distances_array = nn_distances_array
         else:
             self.nn_indices_array = None
@@ -673,9 +677,6 @@ class AffectNet(EmotionalImageDatasetBase):
         a_weights /= np.linalg.norm(a_weights)
         a_weights *= np.linalg.norm(np.ones_like(a_weights))
         self.a_sample_weights = a_weights
-
-
-
 
 
     def __len__(self):
@@ -789,6 +790,8 @@ class AffectNet(EmotionalImageDatasetBase):
 
     def __getitem__(self, index):
         if self.ring_type is None or self.ring_size == 1:
+        #TODO: check if following line is a breaking change
+        # if self.ring_type is None: # or self.ring_size == 1:
             return self._get_sample(index)
 
         sample = self._get_sample(index)
