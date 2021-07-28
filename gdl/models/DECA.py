@@ -45,7 +45,7 @@ class DecaModule(LightningModule):
         self.learning_params = learning_params
         self.inout_params = inout_params
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
-            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__)}")
+            print(f"Deca class is not specified. Defaulting to '{DECA.__name__}'")
             deca_class = DECA
         else:
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
@@ -1436,7 +1436,7 @@ class DECA(torch.nn.Module):
     def _load_old_checkpoint(self):
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
-            print(f"Loading model state from '{model_path}'")
+            print(f"Loading OLD PRETRAINED model state from '{model_path}'")
             checkpoint = torch.load(model_path)
             # model
             util.copy_state_dict(self.E_flame.state_dict(), checkpoint['E_flame'])
