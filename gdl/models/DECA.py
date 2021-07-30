@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss
+from layers.losses.EmoNetLoss import EmoNetLoss
 import numpy as np
 # from time import time
 from skimage.io import imread
@@ -20,16 +20,16 @@ from .DecaFLAME import FLAME, FLAMETex
 # from .MLP import MLP
 from .EmotionMLP import EmotionMLP
 
-import gdl.layers.losses.DecaLosses as lossfunc
-import gdl.utils.DecaUtils as util
+import layers.losses.DecaLosses as lossfunc
+import utils.DecaUtils as util
 from wandb import Image
-from gdl.datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
-from gdl.datasets.AffectNetDataModule import AffectNetExpressions
-from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
+from datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
+from datasets.AffectNetDataModule import AffectNetExpressions
+from utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 
 torch.backends.cudnn.benchmark = True
 from enum import Enum
-from gdl.utils.other import class_from_str
+from utils.other import class_from_str
 from omegaconf import OmegaConf
 
 
@@ -45,7 +45,7 @@ class DecaModule(LightningModule):
         self.learning_params = learning_params
         self.inout_params = inout_params
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
-            print(f"Deca class is not specified. Defaulting to '{DECA.__name__}'")
+            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__)}")
             deca_class = DECA
         else:
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
@@ -517,6 +517,27 @@ class DecaModule(LightningModule):
             uv_mask = uv_mask[:, None, :, :]
             ## combine masks
             uv_vis_mask = uv_mask_gt * uv_mask * self.deca.uv_face_eye_mask
+
+        ## NEURAL RENDERING
+        if hasattr(self, 'image_translator') and self.image_translator is not None:
+            predicted_detailed_image = self.image_translator(
+                {
+                    "input_image" : predicted_images,
+                    "ref_image" : images,
+                    "target_domain" : torch.tensor([1]*predicted_images.shape[0],
+                                                   dtype=torch.int64, device=predicted_images.device)
+                }
+            )
+            if self.mode == DecaMode.DETAIL:
+                    predicted_detailed_image = self.image_translator(
+                        {
+                            "input_image" : predicted_detailed_image,
+                            "ref_image" : images,
+                            "target_domain" : torch.tensor([1]*predicted_detailed_image.shape[0],
+                                                           dtype=torch.int64, device=predicted_detailed_image.device)
+                        }
+                    )
+
         else:
             uv_detail_normals = None
             predicted_detailed_image = None
@@ -1350,6 +1371,15 @@ class DECA(torch.nn.Module):
         else:
             fixed_uv_dis = torch.zeros([512, 512]).float()
         self.register_buffer('fixed_uv_dis', fixed_uv_dis)
+        self._setup_neural_rendering()
+
+
+    def _setup_neural_rendering(self):
+        if hasattr(self.config, "neural_renderer"):
+            from .StarGAN import StarGANWrapper
+            print("Creating neural renderer")
+            self.image_translator = StarGANWrapper(self.config.neural_renderer.cfg)
+
 
     def _create_model(self):
         # coarse shape
@@ -1436,7 +1466,7 @@ class DECA(torch.nn.Module):
     def _load_old_checkpoint(self):
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
-            print(f"Loading OLD PRETRAINED model state from '{model_path}'")
+            print(f"Loading model state from '{model_path}'")
             checkpoint = torch.load(model_path)
             # model
             util.copy_state_dict(self.E_flame.state_dict(), checkpoint['E_flame'])
@@ -1470,20 +1500,6 @@ class DECA(torch.nn.Module):
         # shapecode, texcode, expcode, posecode, cam, lightcode = code_list
         code_list[-1] = code_list[-1].reshape(code.shape[0], 9, 3)
         return code_list
-
-    def add_detail_to_coarse_verts(self, uv_z, coarse_verts, coarse_normals):
-        uv_coarse_vertices = self.render.world2uv(coarse_verts).detach()
-        uv_coarse_normals = self.render.world2uv(coarse_normals).detach()
-        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
-        return self.add_detail_to_coarse_verts_uv(uv_z, uv_coarse_vertices, uv_coarse_normals)
-
-    def add_detail_to_coarse_verts_uv(self, uv_z, uv_coarse_vertices, uv_coarse_normals):
-        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
-        uv_detail_vertices = uv_coarse_vertices + \
-                             uv_z * uv_coarse_normals + \
-                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals.detach()
-        return uv_detail_vertices
-
 
     def displacement2normal(self, uv_z, coarse_verts, coarse_normals):
         batch_size = uv_z.shape[0]
@@ -1576,7 +1592,7 @@ class DECA(torch.nn.Module):
                             inverse_face_order=True)
 
 
-from gdl.models.EmoNetRegressor import EmoNetRegressor, EmonetRegressorStatic
+from models.EmoNetRegressor import EmoNetRegressor, EmonetRegressorStatic
 
 class ExpDECA(DECA):
 
