@@ -87,7 +87,7 @@ class DecaModule(LightningModule):
         else:
             shape_constraint = None
         if 'expression_constrain_type' in self.deca.config.keys() and str(self.deca.config.expression_constrain_type).lower() != 'none':
-            expression_constraint = self.deca.config.shape_constrain_type
+            expression_constraint = self.deca.config.expression_constrain_type
         else:
             expression_constraint = None
 
@@ -503,7 +503,7 @@ class DecaModule(LightningModule):
             else:
                 predicted_detailed_image = masks * predicted_detailed_image
 
-            if self.deca.config.background_from_input and self._has_neural_rendering():
+            if self.deca.config.background_from_input and self.deca._has_neural_rendering():
                 raise NotImplementedError("Taking backround from the input image and neural rendering is not supported.")
 
             # --- extract texture
@@ -789,7 +789,7 @@ class DecaModule(LightningModule):
                 # with torch.no_grad():
 
                 self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse",
-                                           va, expr7, with_grad=self.deca.config.use_emonet_loss)
+                                           va, expr7, with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
 
                 codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -808,7 +808,7 @@ class DecaModule(LightningModule):
                     #TODO possible to make this more GPU efficient by not recomputing emotion for input image
                     self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, "coarse_translated",
                                                va, expr7,
-                                               with_grad=self.deca._has_neural_rendering())
+                                               with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
 
                     # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                     # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -839,12 +839,13 @@ class DecaModule(LightningModule):
                         predicted_detailed_translated_image[:geom_losses_idxs, ...] - images[:geom_losses_idxs,
                                                                            ...]).abs()).mean() * self.deca.config.photow
                 if self.deca.config.use_detailed_photo:
-                    losses['photometric_translated_detailed_texture'] = predicted_detailed_translated_image
+                    losses['photometric_translated_detailed_texture'] = photometric_detailed_translated
                 else:
-                    metrics['photometric_translated_detailed_texture'] = predicted_detailed_translated_image
+                    metrics['photometric_translated_detailed_texture'] = photometric_detailed_translated
 
             if self.emonet_loss is not None:
-                self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail", with_grad=self.deca.config.use_emonet_loss)
+                self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
+                                           with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
                 codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
                 codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression']
@@ -859,10 +860,12 @@ class DecaModule(LightningModule):
                     codedict["detail_expression_gt"] = expr7
 
 
-                if self._has_neural_rendering():
+                if self.deca._has_neural_rendering():
                     #TODO possible to make this more GPU efficient by not recomputing emotion for input image
-                    self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, "detail_translated",
-                                               va, expr7, with_grad=self._has_neural_rendering())
+                    self._compute_emotion_loss(images, predicted_detailed_translated_image,
+                                               losses, metrics, "detail_translated",
+                                               va, expr7,
+                                               with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
 
                     # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                     # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -918,7 +921,8 @@ class DecaModule(LightningModule):
             losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
 
         if self.emotion_mlp is not None:# and not testing:
-            mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
+            mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(
+                codedict, batch, training=training, pred_prefix="emo_mlp_")
             for key in mlp_losses.keys():
                 if key in losses.keys():
                     raise RuntimeError(f"Duplicate loss label {key}")
@@ -1241,6 +1245,14 @@ class DecaModule(LightningModule):
                                 caption += self.vae_2_str(values[mode_ + "_valence_output"][i].detach().cpu().item(),
                                                                  values[mode_ + "_arousal_output"][i].detach().cpu().item(),
                                                                  np.argmax(values[mode_ + "_expression_output"][i].detach().cpu().numpy())) + "\n"
+
+                        elif key == 'output_translated_images_' + mode_:
+                            if mode_ + "_translated_valence_output" in values.keys():
+                                caption += self.vae_2_str(values[mode_ + "_translated_valence_output"][i].detach().cpu().item(),
+                                                                 values[mode_ + "_translated_arousal_output"][i].detach().cpu().item(),
+                                                                 np.argmax(values[mode_ + "_translated_expression_output"][i].detach().cpu().numpy())) + "\n"
+
+
                         # elif key == 'output_images_detail':
                         #     caption += "\n" + self.vae_2_str(values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
@@ -1446,7 +1458,7 @@ class DECA(torch.nn.Module):
 
 
     def _has_neural_rendering(self):
-        return hasattr(self.config, "neural_renderer") and self.config.neural_renderer
+        return hasattr(self.config, "neural_renderer") and bool(self.config.neural_renderer)
 
     def _setup_neural_rendering(self):
         if self._has_neural_rendering():

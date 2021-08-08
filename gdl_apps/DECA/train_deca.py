@@ -98,9 +98,6 @@ def create_experiment_name(cfg_coarse_pre, cfg_coarse, cfg_detail, version=1):
         elif not cfg_detail.model.background_from_input:
             experiment_name += '_BlackD'
 
-
-
-
         if version == 0:
             if cfg_coarse.learning.learning_rate != 0.0001:
                 experiment_name += f'CoLR-{cfg_coarse.learning.learning_rate}'
@@ -229,7 +226,8 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=0, resume
         cfg = configs[i]
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=wandb_logger,
                                       data_preparation_function=prepare_data,
-                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
+                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs
+                                      )
         checkpoint = None
 
 
@@ -251,7 +249,10 @@ def configure_and_train(coarse_pretrain_cfg_default, coarse_pretrain_overrides,
     cfg_coarse_pretrain, cfg_coarse, cfg_detail = configure(coarse_pretrain_cfg_default, coarse_pretrain_overrides,
                                        coarse_cfg_default, coarse_overrides,
                                        detail_cfg_default, detail_overrides)
-    train_deca(cfg_coarse_pretrain, cfg_coarse, cfg_detail)
+    train_deca(cfg_coarse_pretrain, cfg_coarse, cfg_detail,
+               # start_i=4,
+               # force_new_location=True
+               )
 
 
 def configure_and_resume(run_path,
@@ -328,6 +329,10 @@ def main():
         coarse_conf = "deca_train_coarse"
         detail_conf = "deca_train_detail"
 
+        # coarse_pretrain_conf = "deca_train_detail"
+        # coarse_conf = "deca_train_detail"
+        # detail_conf = "deca_train_detail"
+
         # flame_encoder = 'swin_tiny_patch4_window7_224'
         # detail_encoder = 'swin_tiny_patch4_window7_224'
         nr = "stargan"
@@ -356,10 +361,13 @@ def main():
                             'learning/batching=single_gpu_detail',
                            f'model/neural_rendering={nr}',
                             f'learning/logging={logger}',
+                            f'model.background_from_input=False',
                            # f'+model.e_flame_type={flame_encoder}',
                            # f'+model.e_detail_type={detail_encoder}'
                            ]
 
+        # coarse_override = detail_override
+        # coarse_pretrain_override = detail_override
 
     if len(sys.argv) >= 7:
         coarse_pretrain_override = sys.argv[4]

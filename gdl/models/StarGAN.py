@@ -24,6 +24,9 @@ class StarGANWrapper(torch.nn.Module):
         generator = build_generator(self.args)
         style_encoder = build_style_encoder(self.args)
 
+        generator.requires_grad_(False)
+        style_encoder.requires_grad_(False)
+
         self.nets_ema = Munch(generator=generator,
                          # mapping_network=mapping_network_ema,
                          style_encoder=style_encoder)
