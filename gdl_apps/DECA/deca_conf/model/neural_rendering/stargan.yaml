@@ -1,0 +1,5 @@
+# @package model
+neural_renderer:
+  class_: StarGAN
+  cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_07_29_16-23-26_DualStarGAN_input-out_im_detail_SupRec_VGG_FR/config.yaml
+  stargan_repo: /home/rdanecek/Workspace/Repos/stargan-v2

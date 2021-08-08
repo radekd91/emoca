@@ -328,15 +328,37 @@ def main():
         coarse_conf = "deca_train_coarse"
         detail_conf = "deca_train_detail"
 
-        flame_encoder = 'swin_tiny_patch4_window7_224'
-        detail_encoder = 'swin_tiny_patch4_window7_224'
+        # flame_encoder = 'swin_tiny_patch4_window7_224'
+        # detail_encoder = 'swin_tiny_patch4_window7_224'
+        nr = "stargan"
+        # nr = "none"
+        logger = "none"
+        # logger = "wandb"
 
-        coarse_pretrain_override = ['learning/batching=single_gpu_coarse_pretrain_32gb', f'+model.e_flame_type={flame_encoder}'
-                                    ,  f'+model.e_detail_type={detail_encoder}']
-        coarse_override = ['learning/batching=single_gpu_coarse_32gb', f'+model.e_flame_type={flame_encoder}',
-                           f'+model.e_detail_type={detail_encoder}']
-        detail_override = ['learning/batching=single_gpu_detail_32gb', f'+model.e_flame_type={flame_encoder}',
-                     f'+model.e_detail_type={detail_encoder}']
+        coarse_pretrain_override = [
+                                    'learning/batching=single_gpu_coarse_pretrain_32gb',
+                                    # 'learning/batching=single_gpu_coarse_pretrain',
+                                    f'model/neural_rendering={nr}',
+                                    f'learning/logging={logger}',
+                                    # f'+model.e_flame_type={flame_encoder}',
+                                    # f'+model.e_detail_type={detail_encoder}'
+                                    ]
+        coarse_override = [
+                            # 'learning/batching=single_gpu_coarse_32gb',
+                            'learning/batching=single_gpu_coarse',
+                           f'model/neural_rendering={nr}',
+                            f'learning/logging={logger}',
+                           # f'+model.e_flame_type={flame_encoder}',
+                           # f'+model.e_detail_type={detail_encoder}'
+                           ]
+        detail_override = [
+                            # 'learning/batching=single_gpu_detail_32gb',
+                            'learning/batching=single_gpu_detail',
+                           f'model/neural_rendering={nr}',
+                            f'learning/logging={logger}',
+                           # f'+model.e_flame_type={flame_encoder}',
+                           # f'+model.e_detail_type={detail_encoder}'
+                           ]
 
 
     if len(sys.argv) >= 7:

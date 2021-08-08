@@ -5,15 +5,19 @@ from stargan.core.model import build_style_encoder, build_generator, build_FAN
 from stargan.core.checkpoint import CheckpointIO
 from omegaconf import DictConfig, OmegaConf
 from munch import Munch
+import torch.nn.functional as F
 
 
 class StarGANWrapper(torch.nn.Module):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, stargan_repo=None):
         super().__init__()
 
         if isinstance(cfg, (str, Path)):
             self.args = OmegaConf.load(cfg)
+            if self.args.wing_path is not None:
+                self.args.wing_path = str(Path(stargan_repo ) / self.args.wing_path)
+                self.args.checkpoint_dir = str(Path(stargan_repo ) / self.args.checkpoint_dir)
         else:
             self.args = cfg
 
@@ -49,14 +53,16 @@ class StarGANWrapper(torch.nn.Module):
             ckptio.load(step)
 
     def _normalize(self, img, mean, std, max_pixel_value=1.0):
-        mean = torch.tensor(mean, dtype=torch.float32)
+        if not isinstance(mean, torch.Tensor):
+            mean = torch.tensor(mean, dtype=torch.float32, device = img.device)
         mean *= max_pixel_value
         if img.ndim == 4:
             mean = mean.view(1, mean.numel(), 1 , 1)
         else:
             mean = mean.view(mean.numel(), 1, 1)
 
-        std = torch.tensor(std, dtype=torch.float32)
+        if not isinstance(std, torch.Tensor):
+            std = torch.tensor(std, dtype=torch.float32, device = img.device)
         std *= max_pixel_value
         if img.ndim == 4:
             std = std.view(1, std.numel(), 1 , 1)
@@ -74,12 +80,15 @@ class StarGANWrapper(torch.nn.Module):
         return img
 
     def _denormalize(self, img,  mean, std, max_pixel_value=1.0):
+        if not isinstance(mean, torch.Tensor):
+            mean = torch.tensor(mean, dtype=torch.float32, device=img.device)
         if img.ndim == 4:
             mean = mean.view(1, mean.numel(), 1 , 1)
         else:
             mean = mean.view(mean.numel(), 1, 1)
 
-        std = torch.tensor(std, dtype=torch.float32)
+        if not isinstance(std, torch.Tensor):
+            std = torch.tensor(std, dtype=torch.float32, device=img.device)
         std *= max_pixel_value
         if img.ndim == 4:
             std = std.view(1, std.numel(), 1 , 1)
@@ -96,10 +105,15 @@ class StarGANWrapper(torch.nn.Module):
 
     def forward(self, sample):
         # images come in range [0,1] and will get transfered from [-1,1] to StarGAN
-        image = self._normalize(sample["input_image"],
+        input_image = sample["input_image"]
+        input_image = F.interpolate(input_image, (self.args.img_size, self.args.img_size), mode='bilinear')
+        image = self._normalize(input_image,
                                     mean=[0.5, 0.5, 0.5],
                                     std=[0.5, 0.5, 0.5])
-        ref_image = self._normalize(sample["ref_image"],
+        input_ref_image = F.interpolate(sample["ref_image"],
+                                        (self.args.img_size, self.args.img_size),
+                                        mode='bilinear')
+        ref_image = self._normalize(input_ref_image,
                                     mean=[0.5, 0.5, 0.5],
                                     std=[0.5, 0.5, 0.5])
 
@@ -115,4 +129,9 @@ class StarGANWrapper(torch.nn.Module):
         translated_image = self._denormalize(translated_image,
                                     mean=[0.5, 0.5, 0.5],
                                     std=[0.5, 0.5, 0.5])
+        output_size = sample["input_image"].shape[2:4]
+        translated_image = F.interpolate(translated_image,
+                      output_size,
+                      mode='bilinear')
+
         return translated_image
