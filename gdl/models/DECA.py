@@ -536,8 +536,9 @@ class DecaModule(LightningModule):
                                                    dtype=torch.int64, device=predicted_images.device)
                 }
             )
+
             if self.mode == DecaMode.DETAIL:
-                    predicted_detailed_translated_image = self.deca.image_translator(
+                predicted_detailed_translated_image = self.deca.image_translator(
                         {
                             "input_image" : predicted_detailed_image,
                             "ref_image" : images,
@@ -545,8 +546,18 @@ class DecaModule(LightningModule):
                                                            dtype=torch.int64, device=predicted_detailed_image.device)
                         }
                     )
+                translated_uv = F.grid_sample(torch.cat([predicted_detailed_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                                      mode='bilinear')
+                translated_uv_texture = translated_uv[:, :3, :, :].detach()
+
             else:
                 predicted_detailed_translated_image = None
+
+                translated_uv_texture = None
+                # no need in coarse mode
+                # translated_uv = F.grid_sample(torch.cat([predicted_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                #                       mode='bilinear')
+                # translated_uv_texture = translated_uv_gt[:, :3, :, :].detach()
         else:
             predicted_translated_image = None
             predicted_detailed_translated_image = None
@@ -571,6 +582,7 @@ class DecaModule(LightningModule):
         codedict['normals'] = ops['normals']
 
         if self.mode == DecaMode.DETAIL:
+            codedict['translated_uv_texture'] = translated_uv_texture
             codedict['uv_texture_gt'] = uv_texture_gt
             codedict['uv_texture'] = uv_texture
             codedict['uv_detail_normals'] = uv_detail_normals
@@ -761,8 +773,8 @@ class DecaModule(LightningModule):
                 if self.deca._has_neural_rendering():
                     predicted_translated_image = codedict["predicted_translated_image"]
                     photometric_translated = (masks[:geom_losses_idxs, ...] * (
-                            predicted_translated_image[:geom_losses_idxs, ...] - images[:geom_losses_idxs,
-                                                                               ...]).abs()).mean() * self.deca.config.photow
+                            predicted_translated_image[:geom_losses_idxs, ...] -
+                            images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
                     if self.deca.config.use_photometric:
                         losses['photometric_detailed_texture'] = photometric_translated
                     else:
@@ -897,19 +909,53 @@ class DecaModule(LightningModule):
 
                     detail_l1 = (uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
                                                         self.deca.config.sfsw[pi]
-                    if self.deca.config.use_detail_l1:
+                    if self.deca.config.use_detail_l1 and not self.deca._has_neural_rendering():
                         losses['detail_l1_{}'.format(pi)] = detail_l1
                     else:
                         metrics['detail_l1_{}'.format(pi)] = detail_l1
 
-                    mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
-                                                    uv_texture_gt_patch * uv_vis_mask_patch) * \
-                                                    self.deca.config.sfsw[pi] * self.deca.config.mrfwr
-                    if self.deca.config.use_detail_mrf:
+                    if self.deca.config.use_detail_mrf and not self.deca._has_neural_rendering():
+                        mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                                                        uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                                        self.deca.config.sfsw[pi] * self.deca.config.mrfwr
                         losses['detail_mrf_{}'.format(pi)] = mrf
                     else:
-                        metrics['detail_mrf_{}'.format(pi)] = mrf
+                        with torch.no_grad():
+                            mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                                                            uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                  self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                            metrics['detail_mrf_{}'.format(pi)] = mrf
 
+                    if self.deca._has_neural_rendering():
+                        # raise NotImplementedError("Gotta implement the texture extraction first.")
+                        translated_uv_texture = codedict["translated_uv_texture"]
+                        translated_uv_texture_patch = F.interpolate(
+                            translated_uv_texture[:geom_losses_idxs, :,
+                            self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                            self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
+                            [new_size, new_size], mode='bilinear')
+
+                        translated_detail_l1 = (translated_uv_texture_patch * uv_vis_mask_patch
+                                     - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
+                                    self.deca.config.sfsw[pi]
+
+                        if self.deca.config.use_detail_l1:
+                            losses['detail_translated_l1_{}'.format(pi)] = translated_detail_l1
+                        else:
+                            metrics['detail_translated_l1_{}'.format(pi)] = translated_detail_l1
+
+                        if self.deca.config.use_detail_mrf:
+                            translated_mrf = self.deca.perceptual_loss(translated_uv_texture_patch * uv_vis_mask_patch,
+                                                            uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                  self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                            losses['detail_translated_mrf_{}'.format(pi)] = translated_mrf
+                        else:
+                            with torch.no_grad():
+                                mrf = self.deca.perceptual_loss(translated_uv_texture_patch * uv_vis_mask_patch,
+                                                                uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                      self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                                metrics['detail_translated_mrf_{}'.format(pi)] = mrf
+                # Old piece of debug code. Good to delete.
                 # if pi == 2:
                 #     uv_texture_gt_patch_ = uv_texture_gt_patch
                 #     uv_texture_patch_ = uv_texture_patch
@@ -1332,6 +1378,9 @@ class DecaModule(LightningModule):
 
         if 'uv_texture_gt' in additional.keys():
             visdict['uv_texture_gt'] = additional['uv_texture_gt'][visind]
+
+        if 'translated_uv_texture' in additional.keys():
+            visdict['translated_uv_texture'] = additional['translated_uv_texture'][visind]
 
         if 'uv_vis_mask_patch' in additional.keys():
             visdict['uv_vis_mask_patch'] = additional['uv_vis_mask_patch'][visind]
