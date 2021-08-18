@@ -26,4 +26,4 @@ neural_renderer:
   # # hopefully converges into usefulness, trained on combined datasets
   # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-19-00_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_combined/config.yaml
   
-  stargan_repo: /home/rdanecek/Workspace/Repos/stargan-v2
+  stargan_repo: /home/rdanecek/workspace/repos/stargan-v2

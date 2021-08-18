@@ -1,11 +1,11 @@
 defaults:
-  - data/datasets: data_desktop
+  - data/datasets: coarse_data
   - data/augmentations: none
   - model/paths : desktop
-  - model/settings : default_coarse
+  - model/settings : coarse_train
   - model/sizes : default
-  - model/neural_rendering : none
-  - model/flame_tex: bfm_desktop
+  - model/neural_rendering : stargan
+  - model/flame_tex: bfm
   - learning/optimizer: finetune_adam_coarse
   - learning/batching: single_gpu_coarse
   - learning/callbacks: early_stopping
