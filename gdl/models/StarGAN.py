@@ -58,7 +58,7 @@ class StarGANWrapper(torch.nn.Module):
                 raise ValueError(f"Invalid resume_iter value: '{step}'")
 
         if step is not None and not isinstance(step, int):
-            raise ValueError(f"Invalid resume_iter value: {step}")
+            raise ValueError(f"Invalid resume_iter value: '{step}' or type: '{type(step)}'")
 
         for ckptio in self.ckptios:
             ckptio.load(step)
