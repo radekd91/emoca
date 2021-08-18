@@ -54,7 +54,7 @@ class StarGANWrapper(torch.nn.Module):
                     print(f"Loading Stargan from {ckpt}")
                     break
             else:
-                raise ValueError(f"Invalid resume_iter value: {step}")
+                raise ValueError(f"Invalid resume_iter value: '{step}'")
 
         if step is not None and not isinstance(step, int):
             raise ValueError(f"Invalid resume_iter value: {step}")
