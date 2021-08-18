@@ -46,10 +46,10 @@ class StarGANWrapper(torch.nn.Module):
                 ckpts.sort(reverse=True)
                 for ckpt in ckpts:
                 # split_name = ckpts[0].name.split("_")[0]
-                    split_name = ckpt.name.split("_")[0]
+                    split_name = ckpt.name.split("_")
                     if len(split_name) < 1:
                         continue
-                    num = ckpts[0].name.split("_")[0]
+                    num = split_name[0]
                     step = int(num)
                     print(f"Loading Stargan from {ckpt}")
                     break
