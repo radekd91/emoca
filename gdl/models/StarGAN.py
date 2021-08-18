@@ -48,6 +48,7 @@ class StarGANWrapper(torch.nn.Module):
                 # split_name = ckpts[0].name.split("_")[0]
                     split_name = ckpt.name.split("_")
                     if len(split_name) < 1:
+                        print(f"Skipping checkpoint '{ckpt}'")
                         continue
                     num = split_name[0]
                     step = int(num)
