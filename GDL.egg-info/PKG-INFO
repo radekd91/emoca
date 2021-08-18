@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: GDL
+Version: 0.0.2
+Summary: Radek's messy library for deep learning gdl_apps. Mostly with focus on 2D to 3D DL
+Home-page: UNKNOWN
+Author: Radek Danecek
+Author-email: danekradek@gmail.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

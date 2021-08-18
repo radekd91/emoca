@@ -44,8 +44,15 @@ class StarGANWrapper(torch.nn.Module):
                 path = Path(self.ckptios[0].fname_template)
                 ckpts = list(path.parent.glob("*.ckpt"))
                 ckpts.sort(reverse=True)
-                num = ckpts[0].name.split("_")[0]
-                step = int(num)
+                for ckpt in ckpts:
+                # split_name = ckpts[0].name.split("_")[0]
+                    split_name = ckpt.name.split("_")[0]
+                    if len(split_name) < 1:
+                        continue
+                    num = ckpts[0].name.split("_")[0]
+                    step = int(num)
+                    print(f"Loading Stargan from {ckpt}")
+                    break
             else:
                 raise ValueError(f"Invalid resume_iter value: {step}")
 

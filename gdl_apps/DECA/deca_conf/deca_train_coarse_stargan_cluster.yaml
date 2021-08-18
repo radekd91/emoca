@@ -1,7 +1,7 @@
 defaults:
   - data/datasets: coarse_data
   - data/augmentations: none
-  - model/paths : desktop
+  - model/paths : cluster
   - model/settings : coarse_train
   - model/sizes : default
   - model/neural_rendering : stargan

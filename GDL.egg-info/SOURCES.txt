@@ -1,0 +1,9 @@
+README.md
+setup.py
+./gdl/__init__.py
+./gdl_apps/__init__.py
+GDL.egg-info/PKG-INFO
+GDL.egg-info/SOURCES.txt
+GDL.egg-info/dependency_links.txt
+GDL.egg-info/requires.txt
+GDL.egg-info/top_level.txt
