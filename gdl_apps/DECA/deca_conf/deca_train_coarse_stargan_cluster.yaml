@@ -4,7 +4,7 @@ defaults:
   - model/paths : cluster
   - model/settings : coarse_train
   - model/sizes : default
-  - model/neural_rendering : stargan
+  - model/neural_rendering : stargan_cluster
   - model/flame_tex: bfm
   - learning/optimizer: finetune_adam_coarse
   - learning/batching: single_gpu_coarse

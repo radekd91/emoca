@@ -7,7 +7,10 @@ neural_renderer:
   
   #this one looks good, trained on AffectNet
   cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_06_14-55-12_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_hpf0.0_affectnet/config.yaml
-  
+
+  #this one looks good, trained on AffectNet
+  #  cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-12-20_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_affectnet/config.yaml
+
   # #this one also looks good, trained on AffectNet
   # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_01_18-27-39_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_hpf0.0/config.yaml
   
@@ -26,4 +29,4 @@ neural_renderer:
   # # hopefully converges into usefulness, trained on combined datasets
   # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-19-00_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_combined/config.yaml
   
-  stargan_repo: /home/rdanecek/workspace/repos/stargan-v2
+  stargan_repo: /lustre/home/rdanecek/workspace/repos/stargan-v2

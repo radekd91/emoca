@@ -57,7 +57,7 @@ class StarGANWrapper(torch.nn.Module):
                     found = True
                     break
                 if not found:
-                    raise RuntimeError(f"Checkpoint not found in '{path}'")
+                    raise RuntimeError(f"Checkpoint not found in '{path.parent}'")
             else:
                 raise ValueError(f"Invalid resume_iter value: '{step}'")
 

@@ -143,9 +143,9 @@ def train_on_selected_sequences():
 
         # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
         [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_coarse_32gb',
              'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_detail',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None', 'learning.batch_size_test=1']
         ],
@@ -339,9 +339,9 @@ def train_on_selected_sequences():
 
 
     fixed_overrides_coarse = [
-        'model/settings=coarse_train',
+        # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
-        # 'model/settings=coarse_train_expdeca',
+        'model/settings=coarse_train_expdeca',
         # 'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
@@ -357,8 +357,9 @@ def train_on_selected_sequences():
     ]
 
     fixed_overrides_detail = [
-        'model/settings=detail_train',
+        # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
+        'model/settings=detail_train_expdeca',
         # 'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
