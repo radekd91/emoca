@@ -44,6 +44,7 @@ class StarGANWrapper(torch.nn.Module):
                 path = Path(self.ckptios[0].fname_template)
                 ckpts = list(path.parent.glob("*.ckpt"))
                 ckpts.sort(reverse=True)
+                found = False
                 for ckpt in ckpts:
                 # split_name = ckpts[0].name.split("_")[0]
                     split_name = ckpt.name.split("_")
@@ -53,7 +54,10 @@ class StarGANWrapper(torch.nn.Module):
                     num = split_name[0]
                     step = int(num)
                     print(f"Loading Stargan from {ckpt}")
+                    found = True
                     break
+                if not found:
+                    raise RuntimeError(f"Checkpoint not found in '{path}'")
             else:
                 raise ValueError(f"Invalid resume_iter value: '{step}'")
 
