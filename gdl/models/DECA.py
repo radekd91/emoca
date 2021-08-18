@@ -441,7 +441,8 @@ class DecaModule(LightningModule):
                                       ops['grid'].detach(),
                                       align_corners=False)
         # images
-        predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
+        predicted_images = ops['images']
+        # predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
         # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
         segmentation_type = None
         if isinstance(self.deca.config.useSeg, bool):
@@ -460,7 +461,6 @@ class DecaModule(LightningModule):
         if masks is None: # if mask not provided, the only mask available is the rendered one
             segmentation_type = 'rend'
 
-
         if segmentation_type == "gt":
             masks = masks[:, None, :, :]
         elif segmentation_type == "rend":
@@ -473,7 +473,7 @@ class DecaModule(LightningModule):
             raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
 
 
-        if self.deca.config.background_from_input:
+        if self.deca.config.background_from_input in [True, "input"]:
             if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                 ## special case only for inference time if the rendering image sizes have been changed
                 images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
@@ -481,9 +481,14 @@ class DecaModule(LightningModule):
             else:
                 images_resized = images
                 predicted_images = (1. - masks) * images + masks * predicted_images
-        else:
+        elif self.deca.config.background_from_input in [False, "black"]:
             images_resized = images
             predicted_images = masks * predicted_images
+        elif self.deca.config.background_from_input in ["none"]:
+            images_resized = images
+            predicted_images = predicted_images
+        else:
+            raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
@@ -493,17 +498,24 @@ class DecaModule(LightningModule):
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
             uv_texture = albedo.detach() * uv_shading
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
-            if self.deca.config.background_from_input:
+            if self.deca.config.background_from_input in [True, "input"]:
                 if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                     ## special case only for inference time if the rendering image sizes have been changed
                     # images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
-                    predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                    ## before bugfix
+                    # predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                    ## after bugfix
+                    predicted_detailed_image = (1. - masks) * images_resized + masks * predicted_detailed_image
                 else:
-                    predicted_images = (1. - masks) * images + masks * predicted_images
-            else:
+                    predicted_detailed_image = (1. - masks) * images + masks * predicted_detailed_image
+            elif self.deca.config.background_from_input in [False, "black"]:
                 predicted_detailed_image = masks * predicted_detailed_image
+            elif self.deca.config.background_from_input in ["none"]:
+                predicted_detailed_image = predicted_detailed_image
+            else:
+                raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
-            if self.deca.config.background_from_input and self.deca._has_neural_rendering():
+            if self.deca.config.background_from_input in [True, "input"] and self.deca._has_neural_rendering():
                 raise NotImplementedError("Taking backround from the input image and neural rendering is not supported.")
 
             # --- extract texture
@@ -532,7 +544,7 @@ class DecaModule(LightningModule):
                 {
                     "input_image" : predicted_images,
                     "ref_image" : images,
-                    "target_domain" : torch.tensor([1]*predicted_images.shape[0],
+                    "target_domain" : torch.tensor([0]*predicted_images.shape[0],
                                                    dtype=torch.int64, device=predicted_images.device)
                 }
             )
@@ -542,7 +554,7 @@ class DecaModule(LightningModule):
                         {
                             "input_image" : predicted_detailed_image,
                             "ref_image" : images,
-                            "target_domain" : torch.tensor([1]*predicted_detailed_image.shape[0],
+                            "target_domain" : torch.tensor([0]*predicted_detailed_image.shape[0],
                                                            dtype=torch.int64, device=predicted_detailed_image.device)
                         }
                     )
@@ -776,9 +788,9 @@ class DecaModule(LightningModule):
                             predicted_translated_image[:geom_losses_idxs, ...] -
                             images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
                     if self.deca.config.use_photometric:
-                        losses['photometric_detailed_texture'] = photometric_translated
+                        losses['photometric_translated_texture'] = photometric_translated
                     else:
-                        metrics['photometric_detailed_texture'] = photometric_translated
+                        metrics['photometric_translated_texture'] = photometric_translated
 
             else:
                 raise ValueError("Is this line ever reached?")

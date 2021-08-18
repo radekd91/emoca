@@ -65,24 +65,25 @@ def prepare_data(cfg):
 
 def create_experiment_name(cfg_coarse, cfg_detail, version=2):
     # experiment_name = "ExpDECA"
-    experiment_name = cfg_coarse.model.deca_class
+    experiment_name = cfg_coarse.model.deca_class + "Star"
     if version <= 2:
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]
 
-        if cfg_coarse.model.expression_backbone == 'deca_parallel':
-            experiment_name += '_para'
-        elif cfg_coarse.model.expression_backbone == 'deca_clone':
-            experiment_name += '_clone'
-        elif cfg_coarse.model.expression_backbone == 'emonet_trainable':
-            experiment_name += '_EmoTrain'
-        elif cfg_coarse.model.expression_backbone == 'emonet_static':
-            experiment_name += '_EmoStat'
+        if cfg_coarse.model.deca_class == "ExpDECA":
+            if cfg_coarse.model.expression_backbone == 'deca_parallel':
+                experiment_name += '_para'
+            elif cfg_coarse.model.expression_backbone == 'deca_clone':
+                experiment_name += '_clone'
+            elif cfg_coarse.model.expression_backbone == 'emonet_trainable':
+                experiment_name += '_EmoTrain'
+            elif cfg_coarse.model.expression_backbone == 'emonet_static':
+                experiment_name += '_EmoStat'
 
-        if cfg_coarse.model.exp_deca_global_pose:
-            experiment_name += '_Glob'
-        if cfg_coarse.model.exp_deca_jaw_pose:
-            experiment_name += '_Jaw'
+            if cfg_coarse.model.exp_deca_global_pose:
+                experiment_name += '_Glob'
+            if cfg_coarse.model.exp_deca_jaw_pose:
+                experiment_name += '_Jaw'
 
         if cfg_coarse.learning.train_K == 1:
             experiment_name += '_NoRing'
@@ -170,13 +171,13 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
 
         if cfg_coarse.learning.train_K > 1:
             if version <= 1:
-                if cfg_coarse.model.shape_constrain_type != 'exchange':
-                    experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
+                # if cfg_coarse.model.shape_constrain_type != 'exchange':
+                #     experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type}'
                 if cfg_detail.model.detail_constrain_type != 'exchange':
                     experiment_name += f'_De{cfg_detail.model.detail_constrain_type}'
             else:
-                if cfg_coarse.model.shape_constrain_type != 'none':
-                    experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type[:2]}'
+                # if cfg_coarse.model.shape_constrain_type != 'none':
+                #     experiment_name += f'_Co{cfg_coarse.model.shape_constrain_type[:2]}'
                 if cfg_detail.model.detail_constrain_type != 'none':
                     experiment_name += f'_De{cfg_detail.model.detail_constrain_type[:2]}'
 
@@ -375,57 +376,63 @@ def main():
     configured = False
 
     if len(sys.argv) <= 2:
-        coarse_conf = "deca_train_coarse"
-        detail_conf = "deca_train_detail"
+        coarse_conf = "deca_train_coarse_stargan"
+        # coarse_conf = "deca_train_detail_stargan"
+        detail_conf = "deca_train_detail_stargan"
         coarse_override = [
             # 'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
             # 'model/settings=coarse_train_expdeca',
             # 'model/settings=coarse_train_expdeca_emonet',
-            'model/settings=coarse_train_expdeca_emomlp',
-            'model.expression_constrain_type=exchange',
-            'model.expression_constrain_use_jaw_pose=True',
-            'model.expression_constrain_use_global_pose=False',
-            'model.use_geometric_losses_expression_exchange=True',
+            # 'model/settings=coarse_train_expdeca_emomlp',
+            # 'model/settings=coarse_train_expdeca_emomlp',
+            # 'model.expression_constrain_type=exchange',
+            # 'model.expression_constrain_use_jaw_pose=True',
+            # 'model.expression_constrain_use_global_pose=False',
+            # 'model.use_geometric_losses_expression_exchange=True',
 
-            '+model.mlp_emotion_predictor.detach_shape=True',
-            '+model.mlp_emotion_predictor.detach_expression=True',
-            '+model.mlp_emotion_predictor.detach_detailcode=True',
-            '+model.mlp_emotion_predictor.detach_jaw=True',
-            '+model.mlp_emotion_predictor.detach_global_pose=True',
+            # '+model.mlp_emotion_predictor.detach_shape=True',
+            # '+model.mlp_emotion_predictor.detach_expression=True',
+            # '+model.mlp_emotion_predictor.detach_detailcode=True',
+            # '+model.mlp_emotion_predictor.detach_jaw=True',
+            # '+model.mlp_emotion_predictor.detach_global_pose=True',
 
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
-            f'data.ring_type=gt_va',
-             'data.ring_size=4',
-             'learning/batching=single_gpu_expdeca_coarse_ring',
+            # # f'data.ring_type=gt_va',
+            # #  'data.ring_size=4',
+            # #  'learning/batching=single_gpu_expdeca_coarse_ring',
             'data.num_workers=0',
             'model.resume_training=True', # load the original DECA model
-            'learning.early_stopping.patience=5',
-            'learning/logging=none',
-            'learning.batch_size_train=4',
+            'model.useSeg=False', # do not segment out the background from the coarse image
+            'model.background_from_input=none',
+            # 'learning.early_stopping.patience=5',
+            # 'learning/logging=none',
+            # 'learning.batch_size_train=4',
                               ]
         detail_override = [
             # 'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
             # 'model/settings=detail_train_expdeca_emonet',
-            'model/settings=detail_train_expdeca_emomlp',
-            'model.expression_constrain_type=exchange',
-            'model.expression_constrain_use_jaw_pose=True',
-            'model.expression_constrain_use_global_pose=False',
-            'model.use_geometric_losses_expression_exchange=True',
-            '+model.mlp_emotion_predictor.detach_shape=True',
-            '+model.mlp_emotion_predictor.detach_expression=True',
-            '+model.mlp_emotion_predictor.detach_detailcode=True',
-            '+model.mlp_emotion_predictor.detach_jaw=True',
-            '+model.mlp_emotion_predictor.detach_global_pose=True',
+            # 'model/settings=detail_train_expdeca_emomlp',
+            # 'model.expression_constrain_type=exchange',
+            # 'model.expression_constrain_use_jaw_pose=True',
+            # 'model.expression_constrain_use_global_pose=False',
+            # 'model.use_geometric_losses_expression_exchange=True',
+            # '+model.mlp_emotion_predictor.detach_shape=True',
+            # '+model.mlp_emotion_predictor.detach_expression=True',
+            # '+model.mlp_emotion_predictor.detach_detailcode=True',
+            # '+model.mlp_emotion_predictor.detach_jaw=True',
+            # '+model.mlp_emotion_predictor.detach_global_pose=True',
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
-            f'data.ring_type=gt_va',
-             'learning/batching=single_gpu_expdeca_detail_ring',
-             'data.ring_size=4',
-            'learning.early_stopping.patience=5',
-            'learning/logging=none',
+            # f'data.ring_type=gt_va',
+            #  'learning/batching=single_gpu_expdeca_detail_ring',
+            #  'data.ring_size=4',
+            # 'learning.early_stopping.patience=5',
+            # 'learning/logging=none',
             'data.num_workers=0',
-            'learning.batch_size_train=4',
+            'model.useSeg=False',
+            'model.background_from_input=none',
+            # 'learning.batch_size_train=4',
         ]
 
         # coarse_conf = detail_conf

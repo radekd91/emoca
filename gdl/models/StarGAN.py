@@ -85,6 +85,7 @@ class StarGANWrapper(torch.nn.Module):
     def _denormalize(self, img,  mean, std, max_pixel_value=1.0):
         if not isinstance(mean, torch.Tensor):
             mean = torch.tensor(mean, dtype=torch.float32, device=img.device)
+        mean *= max_pixel_value
         if img.ndim == 4:
             mean = mean.view(1, mean.numel(), 1 , 1)
         else:
