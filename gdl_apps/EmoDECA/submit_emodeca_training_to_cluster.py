@@ -86,10 +86,18 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        # [
-        #     [],
-        #     []
-        # ],
+        [
+            [],
+            []
+        ],
+        [
+            ['data.sampler=balanced_expr'],
+            []
+        ],
+        [
+            ['data.sampler=balanced_va'],
+            []
+        ],
         # [
         #     ['model/settings=coarse_emodeca_emonet'],
         #     []
@@ -127,10 +135,10 @@ def train_emodeca_on_cluster():
         #     []
         # ],
 
-        [
-            ['model.expression_balancing=true'],
-            []
-        ],
+        # [
+        #     ['model.expression_balancing=true'],
+        #     []
+        # ],
 
         # [
         #     ['model.use_detail_code=true',
@@ -171,39 +179,14 @@ def train_emodeca_on_cluster():
 
     ]
 
-    # #1 EMONET
-    # conf = "emonet_cluster"
-    # fixed_overrides_cfg = [
-    #     # 'model/settings=emonet_trainable',
-    #     # 'model/settings=emonet_trainable_weighted_va',
-    #     'model/settings=emonet_trainable_weighted_va_mse',
-    #     # '+learning/lr_scheduler=reduce_on_plateau',
-    #     '+learning/lr_scheduler=exponential',
-    #     # 'learning.max_steps=0',
-    #     # 'learning.max_epochs=0',
-    #     # 'learning/optimizer=adabound',
-    #     # 'data/augmentations=default',
-    # ]
-    # deca_conf = None
-    # deca_conf_path = None
-    # fixed_overrides_deca = None
-    # stage = None
-
-    #2 EMOSWIN
-    conf = "emoswin"
+    #1 EMONET
+    conf = "emonet_cluster"
     fixed_overrides_cfg = [
-        'model/settings=swin',
+        'model/settings=emonet_trainable',
+        # 'model/settings=emonet_trainable_weighted_va',
+        # 'model/settings=emonet_trainable_weighted_va_mse',
         # '+learning/lr_scheduler=reduce_on_plateau',
-        # '+learning/lr_scheduler=exponential',
-        # 'learning.batch_size_train=32',
-        # swin_type: swin_base_patch4_window7_224
-        # swin_type: swin_small_patch4_window7_224
-        # swin_type: swin_tiny_patch4_window7_224
-        'learning.batch_size_train=16',
-        'model.swin_type=swin_large_patch4_window7_224_22k',
-        # 'model.swin_type=swin_base_patch4_window7_224',
-        # 'model.swin_type=swin_tiny_patch4_window7_224',
-        'data/datasets=affectnet_cluster',
+        '+learning/lr_scheduler=exponential',
         # 'learning.max_steps=0',
         # 'learning.max_epochs=0',
         # 'learning/optimizer=adabound',
@@ -213,6 +196,31 @@ def train_emodeca_on_cluster():
     deca_conf_path = None
     fixed_overrides_deca = None
     stage = None
+
+    # #2 EMOSWIN
+    # conf = "emoswin"
+    # fixed_overrides_cfg = [
+    #     'model/settings=swin',
+    #     # '+learning/lr_scheduler=reduce_on_plateau',
+    #     # '+learning/lr_scheduler=exponential',
+    #     # 'learning.batch_size_train=32',
+    #     # swin_type: swin_base_patch4_window7_224
+    #     # swin_type: swin_small_patch4_window7_224
+    #     # swin_type: swin_tiny_patch4_window7_224
+    #     'learning.batch_size_train=16',
+    #     'model.swin_type=swin_large_patch4_window7_224_22k',
+    #     # 'model.swin_type=swin_base_patch4_window7_224',
+    #     # 'model.swin_type=swin_tiny_patch4_window7_224',
+    #     'data/datasets=affectnet_cluster',
+    #     # 'learning.max_steps=0',
+    #     # 'learning.max_epochs=0',
+    #     # 'learning/optimizer=adabound',
+    #     # 'data/augmentations=default',
+    # ]
+    # deca_conf = None
+    # deca_conf_path = None
+    # fixed_overrides_deca = None
+    # stage = None
 
     # # EMODECA
     # conf = "emodeca_coarse_cluster"

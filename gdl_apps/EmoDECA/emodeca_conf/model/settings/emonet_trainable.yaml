@@ -7,7 +7,8 @@ predict_valence: true
 predict_arousal: true
 
 
-continuous_va_balancing: 1d
+continuous_va_balancing: none
+#continuous_va_balancing: 1d
 #continuous_va_balancing: 2d
 #continuous_va_balancing: expr
 
