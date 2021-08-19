@@ -460,7 +460,13 @@ class DecaModule(LightningModule):
 
         if masks is None: # if mask not provided, the only mask available is the rendered one
             segmentation_type = 'rend'
-
+        elif masks.shape[-1] != predicted_images.shape[-1] or masks.shape[-2] != predicted_images.shape[-2]:
+            dims = masks.ndim == 3
+            if dims:
+                masks = masks[:, None, :, :]
+            masks = F.interpolate(masks, size=predicted_images.shape[-2:], mode='bilinear')
+            if dims:
+                masks = masks[:, 0, ...]
         if segmentation_type == "gt":
             masks = masks[:, None, :, :]
         elif segmentation_type == "rend":
@@ -469,6 +475,7 @@ class DecaModule(LightningModule):
             masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
         elif segmentation_type == "union":
             masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
+
         else:
             raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
 
@@ -573,6 +580,7 @@ class DecaModule(LightningModule):
         else:
             predicted_translated_image = None
             predicted_detailed_translated_image = None
+            translated_uv_texture = None
 
         if self.emotion_mlp is not None:
             codedict = self.emotion_mlp(codedict, "emo_mlp_")
@@ -581,7 +589,6 @@ class DecaModule(LightningModule):
         codedict['predicted_images'] = predicted_images
         codedict['predicted_detailed_image'] = predicted_detailed_image
         codedict['predicted_translated_image'] = predicted_translated_image
-        codedict['predicted_detailed_translated_image'] = predicted_detailed_translated_image
         codedict['verts'] = verts
         codedict['albedo'] = albedo
         codedict['mask_face_eye'] = mask_face_eye
@@ -594,6 +601,7 @@ class DecaModule(LightningModule):
         codedict['normals'] = ops['normals']
 
         if self.mode == DecaMode.DETAIL:
+            codedict['predicted_detailed_translated_image'] = predicted_detailed_translated_image
             codedict['translated_uv_texture'] = translated_uv_texture
             codedict['uv_texture_gt'] = uv_texture_gt
             codedict['uv_texture'] = uv_texture
