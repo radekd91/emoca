@@ -460,13 +460,23 @@ class DecaModule(LightningModule):
 
         if masks is None: # if mask not provided, the only mask available is the rendered one
             segmentation_type = 'rend'
+
         elif masks.shape[-1] != predicted_images.shape[-1] or masks.shape[-2] != predicted_images.shape[-2]:
+            # resize masks if need be (this is only done if configuration was changed at some point after training)
             dims = masks.ndim == 3
             if dims:
                 masks = masks[:, None, :, :]
             masks = F.interpolate(masks, size=predicted_images.shape[-2:], mode='bilinear')
             if dims:
                 masks = masks[:, 0, ...]
+
+        # resize images if need be (this is only done if configuration was changed at some point after training)
+        if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+            ## special case only for inference time if the rendering image sizes have been changed
+            images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
+        else:
+            images_resized = images
+
         if segmentation_type == "gt":
             masks = masks[:, None, :, :]
         elif segmentation_type == "rend":
@@ -475,7 +485,6 @@ class DecaModule(LightningModule):
             masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
         elif segmentation_type == "union":
             masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
-
         else:
             raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
 
@@ -483,16 +492,12 @@ class DecaModule(LightningModule):
         if self.deca.config.background_from_input in [True, "input"]:
             if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                 ## special case only for inference time if the rendering image sizes have been changed
-                images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
                 predicted_images = (1. - masks) * images_resized + masks * predicted_images
             else:
-                images_resized = images
                 predicted_images = (1. - masks) * images + masks * predicted_images
         elif self.deca.config.background_from_input in [False, "black"]:
-            images_resized = images
             predicted_images = masks * predicted_images
         elif self.deca.config.background_from_input in ["none"]:
-            images_resized = images
             predicted_images = predicted_images
         else:
             raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
