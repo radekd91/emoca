@@ -401,7 +401,7 @@ class AffectNetDataModule(FaceDataModuleBase):
             sampler = make_balanced_sample_by_weights(self.training_set.a_sample_weights)
         else:
             raise ValueError(f"Invalid sampler value: '{self.sampler}'")
-        dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers,
+        dl = DataLoader(self.training_set, shuffle=sampler is None, num_workers=self.num_workers,
                         batch_size=self.train_batch_size, drop_last=self.drop_last, sampler=sampler)
         return dl
 
