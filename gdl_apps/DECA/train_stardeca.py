@@ -55,7 +55,8 @@ def prepare_data(cfg):
             augmentation=augmentation,
             ring_type=ring_type,
             ring_size=ring_size,
-            drop_last=drop_last
+            drop_last=drop_last,
+            sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
         )
         sequence_name = "AffNet"
     else:

@@ -24,6 +24,7 @@ from gdl.transforms.imgaug import create_image_augmenter
 from torchvision.transforms import Resize, Compose
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data._utils.collate import default_collate
+from torch.utils.data.sampler import WeightedRandomSampler
 
 
 class AffectNetExpressions(Enum):
@@ -48,6 +49,21 @@ class AffectNetExpressions(Enum):
 
     # _expressions = {0: 'neutral', 1:'happy', 2:'sad', 3:'surprise', 4:'fear', 5:'disgust', 6:'anger', 7:'contempt', 8:'none'}
 
+def make_class_balanced_sampler(labels):
+    class_counts = np.bincount(labels)
+    class_weights = 1. / class_counts
+    weights = class_weights[labels]
+    return WeightedRandomSampler(weights, len(weights))
+
+def make_va_balanced_sampler(labels):
+    class_counts = np.bincount(labels)
+    class_weights = 1. / class_counts
+    weights = class_weights[labels]
+    return WeightedRandomSampler(weights, len(weights))
+
+def make_balanced_sample_by_weights(weights):
+    return WeightedRandomSampler(weights, len(weights))
+
 
 class AffectNetDataModule(FaceDataModuleBase):
 
@@ -70,6 +86,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                  ring_type=None,
                  ring_size=None,
                  drop_last=False,
+                 sampler=None,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -108,9 +125,12 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
         self.augmentation = augmentation
+        self.sampler = sampler or "uniform"
+        if self.sampler not in ["uniform", "balanced_expr", "balanced_va", "balanced_v", "balanced_a"]:
+            raise ValueError(f"Invalid sampler type: '{self.sampler}'")
 
         if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
-            raise ValueError(f"Invalid ring type '{ring_type}'")
+            raise ValueError(f"Invalid ring type: '{ring_type}'")
         self.ring_type = ring_type
         self.ring_size = ring_size
 
@@ -369,8 +389,20 @@ class AffectNetDataModule(FaceDataModuleBase):
         #         self.path / "Automatically_Annotated" / "Automatically_annotated_file_list.csv")
 
     def train_dataloader(self):
+        if self.sampler == "uniform":
+            sampler = None
+        elif self.sampler == "balanced_expr":
+            sampler = make_class_balanced_sampler(self.training_set.df["expression"].to_numpy())
+        elif self.sampler == "balanced_va":
+            sampler = make_balanced_sample_by_weights(self.training_set.va_sample_weights)
+        elif self.sampler == "balanced_v":
+            sampler = make_balanced_sample_by_weights(self.training_set.v_sample_weights)
+        elif self.sampler == "balanced_a":
+            sampler = make_balanced_sample_by_weights(self.training_set.a_sample_weights)
+        else:
+            raise ValueError(f"Invalid sampler value: '{self.sampler}'")
         dl = DataLoader(self.training_set, shuffle=True, num_workers=self.num_workers,
-                        batch_size=self.train_batch_size, drop_last=self.drop_last)
+                        batch_size=self.train_batch_size, drop_last=self.drop_last, sampler=sampler)
         return dl
 
     def val_dataloader(self):
