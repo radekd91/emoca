@@ -98,12 +98,12 @@ def train_emodeca_on_cluster():
             ['data.sampler=balanced_va'],
             []
         ],
-        [
-            ['data.sampler=balanced_expr',
-             'model.use_detail_code=true',
-             ],
-            []
-        ],
+        # [
+        #     ['data.sampler=balanced_expr',
+        #      'model.use_detail_code=true',
+        #      ],
+        #     []
+        # ],
         # [
         #     ['model/settings=coarse_emodeca_emonet'],
         #     []
