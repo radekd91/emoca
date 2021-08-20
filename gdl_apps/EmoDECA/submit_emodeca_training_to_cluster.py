@@ -98,12 +98,17 @@ def train_emodeca_on_cluster():
             ['data.sampler=balanced_va'],
             []
         ],
-        # [
-        #     ['data.sampler=balanced_expr',
-        #      'model.use_detail_code=true',
-        #      ],
-        #     []
-        # ],
+        [
+            ['data.sampler=balanced_expr',
+             'model.use_detail_code=true',
+             ],
+            []
+        ],
+        [
+            ['data.sampler=balanced_va',
+             'model.use_detail_code=true',],
+            []
+        ],
         # [
         #     ['model/settings=coarse_emodeca_emonet'],
         #     []
@@ -129,10 +134,10 @@ def train_emodeca_on_cluster():
         #     []
         # ],
         #
-        # [
-        #     ['model.use_detail_code=true'],
-        #     []
-        # ],
+        [
+            ['model.use_detail_code=true'],
+            []
+        ],
         # [
         #     [
         #         'model.use_detail_code=true',
@@ -203,39 +208,39 @@ def train_emodeca_on_cluster():
     # fixed_overrides_deca = None
     # stage = None
 
-    # #2 EMOSWIN
-    conf = "emoswin"
-    fixed_overrides_cfg = [
-        'model/settings=swin',
-        # '+learning/lr_scheduler=reduce_on_plateau',
-        # '+learning/lr_scheduler=exponential',
-        # 'learning.batch_size_train=32',
-        # swin_type: swin_base_patch4_window7_224
-        # swin_type: swin_small_patch4_window7_224
-        # swin_type: swin_tiny_patch4_window7_224
-        'learning.batch_size_train=16',
-        # 'model.swin_type=swin_large_patch4_window7_224_22k',
-        # 'model.swin_type=swin_base_patch4_window7_224',
-        'model.swin_type=swin_tiny_patch4_window7_224',
-        'data/datasets=affectnet_cluster',
-        # 'learning.max_steps=0',
-        # 'learning.max_epochs=0',
-        # 'learning/optimizer=adabound',
-        'data/augmentations=default',
-    ]
-    deca_conf = None
-    deca_conf_path = None
-    fixed_overrides_deca = None
-    stage = None
+    # # #2 EMOSWIN
+    # conf = "emoswin"
+    # fixed_overrides_cfg = [
+    #     'model/settings=swin',
+    #     # '+learning/lr_scheduler=reduce_on_plateau',
+    #     # '+learning/lr_scheduler=exponential',
+    #     # 'learning.batch_size_train=32',
+    #     # swin_type: swin_base_patch4_window7_224
+    #     # swin_type: swin_small_patch4_window7_224
+    #     # swin_type: swin_tiny_patch4_window7_224
+    #     'learning.batch_size_train=16',
+    #     # 'model.swin_type=swin_large_patch4_window7_224_22k',
+    #     # 'model.swin_type=swin_base_patch4_window7_224',
+    #     'model.swin_type=swin_tiny_patch4_window7_224',
+    #     'data/datasets=affectnet_cluster',
+    #     # 'learning.max_steps=0',
+    #     # 'learning.max_epochs=0',
+    #     # 'learning/optimizer=adabound',
+    #     'data/augmentations=default',
+    # ]
+    # deca_conf = None
+    # deca_conf_path = None
+    # fixed_overrides_deca = None
+    # stage = None
 
     # EMODECA
-    # conf = "emodeca_coarse_cluster"
-    # fixed_overrides_cfg = [
-    #     'model.use_identity=True', #
-    #     # 'data/augmentations=default',
-    #     # 'learning/optimizer=adabound', #
-    # ]
-    #
+    conf = "emodeca_coarse_cluster"
+    fixed_overrides_cfg = [
+        'model.use_identity=True', #
+        # 'data/augmentations=default',
+        # 'learning/optimizer=adabound', #
+    ]
+
     # deca_conf_path = None
     # deca_conf = "deca_train_detail_cluster"
     # stage = None
@@ -253,11 +258,11 @@ def train_emodeca_on_cluster():
     #     # 'data/augmentations=default',
     # ]
     #
-    # # # EMOEXPDECA
-    # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-    # deca_conf = None
-    # fixed_overrides_deca = None
-    # stage = 'detail'
+    # # EMOEXPDECA
+    deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+    deca_conf = None
+    fixed_overrides_deca = None
+    stage = 'detail'
 
     for mode in training_modes:
         conf_overrides = fixed_overrides_cfg.copy()
