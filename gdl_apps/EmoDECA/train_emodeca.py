@@ -8,6 +8,7 @@ from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
 from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoNetModule import EmoNetModule
 from gdl.models.EmoSwinModule import EmoSwinModule
+from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
@@ -66,6 +67,9 @@ def create_experiment_name(cfg, version=1):
     elif cfg.model.emodeca_type == "EmoSwinModule":
         experiment_name = "EmoSwin"
         experiment_name += "_" + cfg.model.swin_type
+    elif cfg.model.emodeca_type == "EmoCnnModule":
+        experiment_name = "EmoCnn"
+        experiment_name += "_" + cfg.model.backbone
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
@@ -473,33 +477,33 @@ def main():
         # # relative_to_path = None
         # # replace_root_path = None
         #
-        # #3) EmoSWIN
-        # emodeca_default = "emoswin"
-        # emodeca_overrides = [
-        #     # 'model/settings=emonet_trainable',
-        #     'model/settings=swin',
-        #     'learning/logging=none',
-        #     # 'learning.max_steps=1',
-        #     'learning.max_epochs=1',
-        #     'learning.checkpoint_after_training=latest',
-        #     # 'learning.batch_size_train=32',
-        #     # 'learning.batch_size_val=1',
-        #     # '+learning/lr_scheduler=reduce_on_plateau',
-        #     # 'model.continuous_va_balancing=1d',
-        #     # 'model.continuous_va_balancing=2d',
-        #     # 'model.continuous_va_balancing=expr',
-        #     # 'learning.val_check_interval=1',
-        #     # 'learning.learning_rate=0',
-        #     # 'learning/optimizer=adabound',
-        #     # 'data/datasets=affectnet_desktop',
-        #     # 'data/augmentations=default',
-        # ]
-        # deca_conf = None
-        # deca_conf_path = None
-        # fixed_overrides_deca = None
-        # stage = None
-        # deca_default = None
-        # deca_overrides = None
+        #3) EmoSWIN or EmoCNN
+        emodeca_default = "emoswin"
+        emodeca_overrides = [
+            # 'model/settings=swin',
+            'model/settings=resnet50',
+            'learning/logging=none',
+            # 'learning.max_steps=1',
+            'learning.max_epochs=1',
+            'learning.checkpoint_after_training=latest',
+            # 'learning.batch_size_train=32',
+            # 'learning.batch_size_val=1',
+            # '+learning/lr_scheduler=reduce_on_plateau',
+            # 'model.continuous_va_balancing=1d',
+            # 'model.continuous_va_balancing=2d',
+            # 'model.continuous_va_balancing=expr',
+            # 'learning.val_check_interval=1',
+            # 'learning.learning_rate=0',
+            # 'learning/optimizer=adabound',
+            # 'data/datasets=affectnet_desktop',
+            # 'data/augmentations=default',
+        ]
+        deca_conf = None
+        deca_conf_path = None
+        fixed_overrides_deca = None
+        stage = None
+        deca_default = None
+        deca_overrides = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,

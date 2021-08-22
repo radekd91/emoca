@@ -175,7 +175,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
         loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        if 'continuous_va_balancing' in self.config.model.keys() or self.config.model.continuous_va_balancing == "none":
+        if 'continuous_va_balancing' in self.config.model.keys() and self.config.model.continuous_va_balancing != "none":
             if self.config.model.continuous_va_balancing == '1d':
                 v_weight = valence_sample_weight
                 a_weight = arousal_sample_weight

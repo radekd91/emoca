@@ -1,16 +1,13 @@
 # @package model
-emodeca_type: EmoSwinModule
-#swin_type: swin_base_patch4_window7_224
-swin_type: swin_large_patch4_window7_224_22k
-#swin_type: swin_small_patch4_window7_224
-#swin_type: swin_tiny_patch4_window7_224
-swin_cfg: todo
-load_pretrained_swin: True
+emodeca_type: EmoCnnModule
+backbone: resnet50
+#backbone: vgg19
+load_pretrained: True
+pretrained_weights: /ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl
 
 predict_expression: true
 predict_valence: true
 predict_arousal: true
-
 
 #continuous_va_balancing: 1d
 #continuous_va_balancing: 2d
