@@ -341,8 +341,8 @@ def train_on_selected_sequences():
     fixed_overrides_coarse = [
         # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
-        'model/settings=coarse_train_expdeca',
-        # 'model/settings=coarse_train_expdeca_emonet',
+        # 'model/settings=coarse_train_expdeca',
+        'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -354,13 +354,14 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=none',
+        '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
     ]
 
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        'model/settings=detail_train_expdeca',
-        # 'model/settings=detail_train_expdeca_emonet',
+        # 'model/settings=detail_train_expdeca',
+        'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -371,6 +372,8 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=none',
+
+        '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
     ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
