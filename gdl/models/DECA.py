@@ -11,7 +11,6 @@ import numpy as np
 from skimage.io import imread
 import cv2
 from pathlib import Path
-from skimage.io import imsave
 
 from .Renderer import SRenderY
 from .DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
@@ -22,15 +21,13 @@ from .EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
 import gdl.utils.DecaUtils as util
-from wandb import Image
-from gdl.datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
+from gdl.datasets.FaceVideoDataset import Expression7
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 from gdl.utils.other import class_from_str
-from omegaconf import OmegaConf
 
 
 class DecaMode(Enum):
@@ -45,7 +42,7 @@ class DecaModule(LightningModule):
         self.learning_params = learning_params
         self.inout_params = inout_params
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
-            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__)}")
+            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
             deca_class = DECA
         else:
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
@@ -58,7 +55,11 @@ class DecaModule(LightningModule):
         if len(self.stage_name) > 0:
             self.stage_name += "_"
         if 'emonet_weight' in self.deca.config.keys():
-            self.emonet_loss = EmoNetLoss(self.device)
+            if 'emonet_model_path' in self.deca.config.keys():
+                emonet_model_path = self.deca.config.emonet_model_path
+            else:
+                emonet_model_path=None
+            self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
         else:
             self.emonet_loss = None
             

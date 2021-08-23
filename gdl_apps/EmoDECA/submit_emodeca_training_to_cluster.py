@@ -86,18 +86,18 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        [
-            [],
-            []
-        ],
+        # [
+        #     [],
+        #     []
+        # ],
         [
             ['data.sampler=balanced_expr'],
             []
         ],
-        [
-            ['data.sampler=balanced_va'],
-            []
-        ],
+        # [
+        #     ['data.sampler=balanced_va'],
+        #     []
+        # ],
         # [
         #     ['data.sampler=balanced_expr',
         #      'model.use_detail_code=true',
@@ -212,7 +212,11 @@ def train_emodeca_on_cluster():
     conf = "emoswin"
     fixed_overrides_cfg = [
         # 'model/settings=swin',
-        'model/settings=resnet50_cluster',
+        # 'model/settings=resnet50_cluster',
+        # 'model/settings=vgg13',
+        # 'model/settings=vgg16',
+        # 'model/settings=vgg16_bn',
+        'model/settings=vgg19',
         # '+learning/lr_scheduler=reduce_on_plateau',
         # '+learning/lr_scheduler=exponential',
         # 'learning.batch_size_train=32',

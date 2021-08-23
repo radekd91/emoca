@@ -1,7 +1,7 @@
 from gdl.models.DECA import DecaModule
+from gdl.models.IO import locate_checkpoint
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
-from gdl_apps.DECA.train_deca_modular import locate_checkpoint
 from gdl_apps.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt

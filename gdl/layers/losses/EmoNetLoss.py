@@ -1,38 +1,9 @@
 import torch
-from torchvision.transforms.transforms import Resize
+from gdl.layers.losses.EmonetLoader import get_emonet
 from pathlib import Path
-import sys
-import inspect
 import torch.nn.functional as F
-
-
-def get_emonet(device=None, load_pretrained=True):
-    device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    path_to_emonet = Path(__file__).absolute().resolve().parent.parent.parent.parent.parent / "emonet"
-    if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
-        print(f"Adding EmoNet path '{path_to_emonet}'")
-        sys.path += [str(path_to_emonet)]
-
-    from emonet.models import EmoNet
-    # n_expression = 5
-    n_expression = 8
-
-    # Create the model
-    net = EmoNet(n_expression=n_expression).to(device)
-
-    # if load_pretrained:
-    state_dict_path = Path(
-        inspect.getfile(EmoNet)).parent.parent.parent / 'pretrained' / f'emonet_{n_expression}.pth'
-    print(f'Loading the EmoNet model from {state_dict_path}.')
-    state_dict = torch.load(str(state_dict_path), map_location='cpu')
-    state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-    net.load_state_dict(state_dict, strict=False)
-    if not load_pretrained:
-        print("Created an untrained EmoNet instance")
-        net.reset_emo_parameters()
-
-    net.eval()
-    return net
+from gdl.models.EmoNetModule import EmoNetModule
+from gdl.models.IO import get_checkpoint_with_kwargs
 
 
 class EmoNetLoss(torch.nn.Module):
@@ -40,7 +11,35 @@ class EmoNetLoss(torch.nn.Module):
 
     def __init__(self, device, emonet=None):
         super().__init__()
-        self.emonet = emonet or get_emonet(device).eval()
+        if emonet is None:
+            self.emonet = get_emonet(device).eval()
+        elif isinstance(emonet, str):
+            path = Path(emonet)
+            if path.is_dir():
+                print(f"Loading trained EmoNet from: '{path}'")
+                def load_configs(run_path):
+                    from omegaconf import OmegaConf
+                    with open(Path(run_path) / "cfg.yaml", "r") as f:
+                        conf = OmegaConf.load(f)
+                    return conf
+
+                cfg = load_configs(path)
+                checkpoint_mode = 'best'
+                stages_prefixes = ""
+
+                checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixes,
+                                                                           checkpoint_mode=checkpoint_mode,
+                                                                           # relative_to=relative_to_path,
+                                                                           # replace_root=replace_root_path
+                                                                           )
+                checkpoint_kwargs = checkpoint_kwargs or {}
+                emonet_module = EmoNetModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
+                self.emonet = emonet_module.emonet
+            else:
+                raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
+
+        else:
+            self.emonet = emonet
         self.emonet.requires_grad_(False)
         # self.emonet.eval()
         # self.emonet = self.emonet.requires_grad_(False)

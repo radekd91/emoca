@@ -176,7 +176,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         return Path(self.output_dir) / "emotions"
 
     def _get_emotion_net(self, device):
-        from gdl.layers.losses.EmoNetLoss import get_emonet
+        from gdl.layers.losses.EmonetLoader import get_emonet
 
         net = get_emonet()
         net = net.to(device)

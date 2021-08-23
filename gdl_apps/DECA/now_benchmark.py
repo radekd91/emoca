@@ -3,7 +3,7 @@ from pathlib import Path
 from gdl.datasets.DecaDataModule import NoWVal, NoWTest
 from omegaconf import OmegaConf, DictConfig
 from gdl.models.DECA import DecaModule, DECA
-from train_deca_modular import locate_checkpoint
+from gdl.models.IO import locate_checkpoint
 from interactive_deca_decoder import hack_paths, load_deca
 import numpy as np
 import torch

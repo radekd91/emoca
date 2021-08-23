@@ -9,7 +9,7 @@ from gdl.utils.other import class_from_str
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
-from gdl.layers.losses.EmoNetLoss import get_emonet
+from gdl.layers.losses.EmonetLoader import get_emonet
 import sys
 
 # important for class_from_str to work

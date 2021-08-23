@@ -3,9 +3,10 @@ from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetExpressions
 from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
-from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+from gdl_apps.DECA.train_deca_modular import get_checkpoint
 
 from gdl.models.DECA import DECA, ExpDECA, DecaModule
+from gdl.models.IO import locate_checkpoint
 from gdl.models.EmoNetModule import EmoNetModule
 from gdl.utils.other import class_from_str
 import datetime

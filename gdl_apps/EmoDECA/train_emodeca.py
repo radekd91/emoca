@@ -1,14 +1,10 @@
 import os, sys
 from pathlib import Path
-from omegaconf import DictConfig, OmegaConf
-from gdl.datasets.AffectNetDataModule import AffectNetDataModule
+from omegaconf import OmegaConf
 from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
-from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
-from gdl.models.EmoNetModule import EmoNetModule
-from gdl.models.EmoSwinModule import EmoSwinModule
-from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
@@ -235,20 +231,6 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if logger is not None:
         logger.finalize("")
     return deca
-
-
-def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = None, checkpoint_mode=None):
-    checkpoint = get_checkpoint(cfg, replace_root = replace_root,
-                                relative_to = relative_to, checkpoint_mode=checkpoint_mode)
-    cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
-    # checkpoint_kwargs = {
-    #     "model_params": cfg.model,
-    #     "learning_params": cfg.learning,
-    #     "inout_params": cfg.inout,
-    #     "stage_name": prefix
-    # }
-    checkpoint_kwargs = {'config': cfg}
-    return checkpoint, checkpoint_kwargs
 
 
 def train_emodeca(cfg, start_i=0, resume_from_previous = True,
