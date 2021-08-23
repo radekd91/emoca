@@ -28,12 +28,11 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
             if config.model.load_pretrained:
                 # checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
                 load_state_dict(self.backbone, config.model.pretrained_weights)
-                self.linear = Linear(2048, self.num_classes+2)
+                self.linear = Linear(2048, self.num_classes+2) # 2048 is the output of  the resnet50 backbone without the MLP "top"
         elif config.model.backbone[:3] == "vgg":
             vgg_constructor = getattr(vgg, config.model.backbone)
             self.backbone = vgg_constructor(pretrained=bool(config.model.load_pretrained), progress=True)
-
-            self.linear = Linear(num_classes=self.num_classes)
+            self.linear = Linear(1000, self.num_classes+2) #1000 is the number of imagenet classes so the dim of the output of the vgg backbone
         else:
             raise ValueError(f"Invalid backbone: '{self.config.model.backbone}'")
 

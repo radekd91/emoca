@@ -211,7 +211,8 @@ def train_emodeca_on_cluster():
     # # #2 EMOSWIN
     conf = "emoswin"
     fixed_overrides_cfg = [
-        'model/settings=swin',
+        # 'model/settings=swin',
+        'model/settings=resnet50_cluster',
         # '+learning/lr_scheduler=reduce_on_plateau',
         # '+learning/lr_scheduler=exponential',
         # 'learning.batch_size_train=32',
@@ -220,7 +221,7 @@ def train_emodeca_on_cluster():
         # swin_type: swin_tiny_patch4_window7_224
         'learning.batch_size_train=16',
         # 'model.swin_type=swin_large_patch4_window7_224_22k',
-        'model.swin_type=swin_base_patch4_window7_224',
+        # 'model.swin_type=swin_base_patch4_window7_224',
         # 'model.swin_type=swin_tiny_patch4_window7_224',
         'data/datasets=affectnet_cluster',
         # 'learning.max_steps=0',

@@ -481,7 +481,9 @@ def main():
         emodeca_default = "emoswin"
         emodeca_overrides = [
             # 'model/settings=swin',
-            'model/settings=resnet50',
+            # 'model/settings=resnet50',
+            # 'model/settings=vgg19',
+            'model/settings=vgg16_bn',
             'learning/logging=none',
             # 'learning.max_steps=1',
             'learning.max_epochs=1',
