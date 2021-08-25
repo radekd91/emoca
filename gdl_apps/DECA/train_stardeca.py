@@ -102,7 +102,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if cfg_coarse.model.use_emonet_loss or cfg_detail.model.use_emonet_loss:
             experiment_name += '_'
             if 'emonet_model_path' in cfg_coarse.model.keys():
-                experiment_name += cfg_coarse.model.emonet_model_path[20:30]
+                experiment_name += Path(cfg_coarse.model.emonet_model_path).name[20:30]
                 experiment_name += '_'
                 if 'emoloss_trainable' in cfg_coarse.model.keys() and cfg_coarse.model.emoloss_trainable:
                     experiment_name += "ft_"
