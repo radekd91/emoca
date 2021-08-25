@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
-from ..layers.losses.EmoNetLoss import EmoNetLoss
+from ..layers.losses.EmoNetLoss import EmoNetLoss, create_emo_loss
 import numpy as np
 # from time import time
 from skimage.io import imread
@@ -59,7 +59,9 @@ class DecaModule(LightningModule):
                 emonet_model_path = self.deca.config.emonet_model_path
             else:
                 emonet_model_path=None
-            self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
+            # self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
+            emoloss_trainable = True if 'emoloss_trainable' in self.deca.config.keys() and self.deca.config.emoloss_trainable else False
+            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable)
         else:
             self.emonet_loss = None
             
@@ -641,8 +643,9 @@ class DecaModule(LightningModule):
 
 
         # EmoNet self-consistency loss terms
-        loss_or_metric(prefix + '_emonet_feat_1_L1', emo_feat_loss_1 * self.deca.config.emonet_weight,
-                       self.deca.config.use_emonet_feat_1 and self.deca.config.use_emonet_loss)
+        if emo_feat_loss_1 is not None:
+            loss_or_metric(prefix + '_emonet_feat_1_L1', emo_feat_loss_1 * self.deca.config.emonet_weight,
+                           self.deca.config.use_emonet_feat_1 and self.deca.config.use_emonet_loss)
         loss_or_metric(prefix + '_emonet_feat_2_L1', emo_feat_loss_2 * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_feat_2 and self.deca.config.use_emonet_loss)
         loss_or_metric(prefix + '_emonet_valence_L1', valence_loss * self.deca.config.emonet_weight,
@@ -652,7 +655,8 @@ class DecaModule(LightningModule):
         # loss_or_metric(prefix + 'emonet_expression_KL', expression_loss * self.deca.config.emonet_weight) # KL seems to be causing NaN's
         loss_or_metric(prefix + '_emonet_expression_L1',expression_loss * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_expression and self.deca.config.use_emonet_loss)
-        loss_or_metric(prefix + '_emonet_combined', (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_weight,
+        loss_or_metric(prefix + '_emonet_combined', ((emo_feat_loss_1 if emo_feat_loss_1 is not None else 0)
+                                                     + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_combined and self.deca.config.use_emonet_loss)
 
         # Log also the VA
@@ -661,9 +665,9 @@ class DecaModule(LightningModule):
         metric_dict[prefix + "_arousal_input"] = self.emonet_loss.input_emotion['arousal'].mean().detach()
         metric_dict[prefix + "_arousal_output"] = self.emonet_loss.output_emotion['arousal'].mean().detach()
 
-        input_ex = self.emonet_loss.input_emotion['expression'].detach().cpu().numpy()
+        input_ex = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
         input_ex = np.argmax(input_ex, axis=1).mean()
-        output_ex = self.emonet_loss.output_emotion['expression'].detach().cpu().numpy()
+        output_ex = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
         output_ex = np.argmax(output_ex, axis=1).mean()
         metric_dict[prefix + "_expression_input"] = torch.tensor(input_ex, device=self.device)
         metric_dict[prefix + "_expression_output"] = torch.tensor(output_ex, device=self.device)
@@ -831,10 +835,10 @@ class DecaModule(LightningModule):
 
                 codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
                 codedict["coarse_valence_output"] = self.emonet_loss.output_emotion['valence']
                 codedict["coarse_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression']
+                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
                 if va is not None:
                     codedict["coarse_valence_gt"] = va[:, 0]
@@ -853,7 +857,7 @@ class DecaModule(LightningModule):
                     # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
                     codedict["coarse_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
                     codedict["coarse_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                    codedict["coarse_translated_expression_output"] = self.emonet_loss.output_emotion['expression']
+                    codedict["coarse_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -889,7 +893,7 @@ class DecaModule(LightningModule):
                 codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression']
                 codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
                 codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression']
+                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
                 if va is not None:
                     codedict["detail_valence_gt"] = va[:,0]
@@ -910,7 +914,7 @@ class DecaModule(LightningModule):
                     # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
                     codedict["detail_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
                     codedict["detail_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                    codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression']
+                    codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 if self.deca.config.sfsw[pi] != 0:
@@ -1431,6 +1435,9 @@ class DecaModule(LightningModule):
 
         if self.emotion_mlp is not None:
             trainable_params += list(self.emotion_mlp.parameters())
+
+        if self.emonet_loss is not None:
+            trainable_params += self.emonet_loss._get_trainable_params()
 
         return trainable_params
 

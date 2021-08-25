@@ -29,14 +29,13 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
 
         self.num_classes = self.n_expression
 
-    def forward_swin(self, images):
-        output = self.swin(images)
-
+    def _forward(self, images):
+        output, emo_feat_2 = self.swin(images, include_features=True)
         out_idx = 0
         if self.config.model.predict_expression:
             expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
             if self.exp_activation is not None:
-                expr_classification = self.exp_activation(output[:, out_idx:(out_idx + self.num_classes)], dim=1)
+                expr_classification = self.exp_activation(expr_classification, dim=1)
             out_idx += self.num_classes
         else:
             expr_classification = None
@@ -52,12 +51,13 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         if self.config.model.predict_arousal:
             arousal = output[:, out_idx:(out_idx + 1)]
             if self.a_activation is not None:
-                arousal = self.a_activation(output[:, out_idx:(out_idx + 1)])
+                arousal = self.a_activation(arousal)
             out_idx += 1
         else:
             arousal = None
 
         values = {}
+        values["emo_feat_2"] = emo_feat_2
         values["valence"] = valence
         values["arousal"] = arousal
         values["expr_classification"] = expr_classification
@@ -78,7 +78,7 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         # print(images.shape)
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
-        emotion = self.forward_swin(images)
+        emotion = self._forward(images)
 
         valence = emotion['valence']
         arousal = emotion['arousal']

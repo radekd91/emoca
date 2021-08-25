@@ -37,15 +37,16 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
             raise ValueError(f"Invalid backbone: '{self.config.model.backbone}'")
 
 
-    def forward_cnn(self, images):
+    def _forward(self, images):
         output = self.backbone(images)
+        emo_feat_2 = output
         output = self.linear(output.view(output.shape[0], -1))
 
         out_idx = 0
         if self.config.model.predict_expression:
             expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
             if self.exp_activation is not None:
-                expr_classification = self.exp_activation(output[:, out_idx:(out_idx + self.num_classes)], dim=1)
+                expr_classification = self.exp_activation(expr_classification, dim=1)
             out_idx += self.num_classes
         else:
             expr_classification = None
@@ -61,12 +62,13 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         if self.config.model.predict_arousal:
             arousal = output[:, out_idx:(out_idx + 1)]
             if self.a_activation is not None:
-                arousal = self.a_activation(output[:, out_idx:(out_idx + 1)])
+                arousal = self.a_activation(arousal)
             out_idx += 1
         else:
             arousal = None
 
         values = {}
+        values["emo_feat_2"] = emo_feat_2
         values["valence"] = valence
         values["arousal"] = arousal
         values["expr_classification"] = expr_classification
@@ -87,7 +89,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         # print(images.shape)
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
-        emotion = self.forward_cnn(images)
+        emotion = self._forward(images)
 
         valence = emotion['valence']
         arousal = emotion['arousal']
