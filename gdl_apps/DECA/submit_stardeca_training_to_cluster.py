@@ -151,13 +151,13 @@ def train_on_selected_sequences():
         ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        # ],
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -354,7 +354,11 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=none',
-        '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
+        # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
+        # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
+        # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
+        #  '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early',
+         '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early',
     ]
 
     fixed_overrides_detail = [
@@ -372,8 +376,11 @@ def train_on_selected_sequences():
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=none',
-
-        '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
+        # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
+        #  '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
+        #  '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
+        #  '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early',
+         '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early',
     ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
@@ -422,7 +429,7 @@ def default_main():
     detail_conf = "deca_train_detail_cluster"
     detail_overrides = []
 
-    cfg_coarse, cfg_detail = train_expdeca.configure(
+    cfg_coarse, cfg_detail = train_stardeca.configure(
         coarse_conf, coarse_overrides,
         detail_conf, detail_overrides)
 
