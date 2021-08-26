@@ -87,7 +87,7 @@ def train_on_selected_sequences():
 
         # NEW GENERATION EXPERIMENTS (AFTER CONFIG SYNC WITH RELEASED DECA)
 
-        [[], [], []],# default, ResNet encoders, without emonet loss
+        # [[], [], []],# default, ResNet encoders, without emonet loss
 
         [['+model.e_flame_type=swin_tiny_patch4_window7_224',
           '+model.e_detail_type=swin_tiny_patch4_window7_224'],

@@ -46,9 +46,10 @@ def download_images(df=None, index=None):
     N = len(df)
 
     local_full_df = df.copy(deep=True)
-    local_full_df = local_full_df.assign(path=pd.Series())
+    local_full_df = local_full_df.assign(path=pd.Series(dtype=str))
     my_column = local_full_df.pop('path')
-    local_full_df.insert(0, my_column.name, my_column)  # Is in-place
+    local_full_df.insert(0, my_column.name, my_column)
+    local_full_df['path'] = local_full_df['path'].astype(str)
     local_full_df.drop("url",1, inplace=True)
     local_full_df.drop("orig_url", 1, inplace=True)
 
@@ -67,7 +68,7 @@ def download_images(df=None, index=None):
 
         success = False
         if abs_dl_path.exists():
-            print(f"File already exists. Skipping ... {abs_dl_path}")
+            # print(f"File already exists. Skipping ... {abs_dl_path}")
             success = True
         else:
             try:
@@ -85,7 +86,8 @@ def download_images(df=None, index=None):
             indices_to_remove += [i]
             continue
 
-        local_full_df.iloc[i]["path"] = rel_path
+        local_full_df["path"][i] = str(rel_path)
+        # print(local_full_df.iloc[i]["path"])
 
     if len(indices_to_remove) > 0:
         local_full_df.drop(index=indices_to_remove, inplace=True)
@@ -94,7 +96,7 @@ def download_images(df=None, index=None):
     if index is None:
         local_full_df.to_csv(Path(output_path) / "image_list.csv", index=False)
     else:
-        local_full_df.to_csv(Path(output_path) / f"image_list_{index}.csv", index=False)
+        local_full_df.to_csv(Path(output_path) / f"image_list_{index:02d}.csv", index=False)
     print(f"The dataset has a total of {len(df)} images")
     print(f"Out of that {len(local_full_df)} were found and downloaded successfully.")
 
