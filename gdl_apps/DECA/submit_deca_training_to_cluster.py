@@ -81,7 +81,24 @@ def train_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
-        [[], [], []],# without emonet loss
+
+        # NEW GENERATION EXPERIMENTS (AFTER CONFIG SYNC WITH RELEASED DECA)
+
+        [[], [], []],# default, ResNet encoders, without emonet loss
+
+        [['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224'],
+         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224'],
+         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224']],# Swin tiny encoders
+
+        [['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224'],
+         ['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224'],
+         ['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224']],  # Swin small encoders
     ]
     fixed_overrides_coarse_pretrain = []
     fixed_overrides_coarse = []
