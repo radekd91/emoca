@@ -343,7 +343,7 @@ def main():
         coarse_pretrain_override = [
                                     'learning/batching=single_gpu_coarse_pretrain_32gb',
                                     # 'learning/batching=single_gpu_coarse_pretrain',
-                                    f'model/neural_rendering={nr}',
+                                    # f'model/neural_rendering={nr}',
                                     f'learning/logging={logger}',
                                     # f'+model.e_flame_type={flame_encoder}',
                                     # f'+model.e_detail_type={detail_encoder}'

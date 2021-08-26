@@ -4,7 +4,7 @@ path: /ps/scratch/face2d3d/
 #path: /home/rdanecek/Workspace/mount/scratch/face2d3d/
 training_datasets:
   - vggface2
-  - vox2
+#  - vox2
   - ethnicity
 validation_datasets:
   - now-val
@@ -15,6 +15,7 @@ testing_datasets:
   - now-val
 #  - papers-val # won't load
   - celeb-val
+  - aflw2000
 scale_min: 1.4
 scale_max: 1.8
 #scale_max: 2.

@@ -18,8 +18,10 @@ use_landmarks: True
 useWlmk: True
 #useWlmk: False
 lmk_weight: 1
-eyed: 1.0
-lipd: 0.1
+#eyed: 1.0
+#lipd: 0.1
+eyed: 0.5
+lipd: 0.5
 photo: 2.
 idw: 0.15
 exp_reg: 1e-4
