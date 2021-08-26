@@ -7,8 +7,11 @@ from omegaconf import OmegaConf
 
 def submit(cfg_coarse_pretrain, cfg_coarse, cfg_detail, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/is/scratch/rdanecek/emoca/submission"
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name

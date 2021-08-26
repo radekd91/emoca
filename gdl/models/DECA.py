@@ -1408,7 +1408,7 @@ class DecaModule(LightningModule):
         if 'predicted_images' in additional.keys():
             visdict['output_images_coarse'] = additional['predicted_images'][visind]
 
-        if 'predicted_translated_image' in additional.keys():
+        if 'predicted_translated_image' in additional.keys() and additional['predicted_translated_image'] is not None:
             visdict['output_translated_images_coarse'] = additional['predicted_translated_image'][visind]
 
         visdict['geometry_coarse'] = shape_images[visind]
@@ -1441,7 +1441,7 @@ class DecaModule(LightningModule):
         if 'uv_texture_gt' in additional.keys():
             visdict['uv_texture_gt'] = additional['uv_texture_gt'][visind]
 
-        if 'translated_uv_texture' in additional.keys():
+        if 'translated_uv_texture' in additional.keys() and additional['translated_uv_texture'] is not None:
             visdict['translated_uv_texture'] = additional['translated_uv_texture'][visind]
 
         if 'uv_vis_mask_patch' in additional.keys():
