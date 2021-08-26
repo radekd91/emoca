@@ -28,7 +28,7 @@ from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _tor
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 from gdl.utils.other import class_from_str
-
+from gdl.layers.losses.VGGLoss import VGG19Loss
 
 class DecaMode(Enum):
     COARSE = 1
@@ -800,6 +800,13 @@ class DecaModule(LightningModule):
                 self._metric_or_loss(losses, metrics, self.deca.config.use_photometric)['photometric_texture'] = \
                     (masks[:geom_losses_idxs, ...] * (predicted_images[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
 
+                if self.deca.vgg_loss is not None:
+                    vggl, _ = self.deca.vgg_loss(
+                        masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...], # masked input image
+                        masks[:geom_losses_idxs, ...] * predicted_images[:geom_losses_idxs, ...], # masked output image
+                    )
+                    self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg'] = vggl * self.deca.config.vggw
+
                 if self.deca._has_neural_rendering():
                     predicted_translated_image = codedict["predicted_translated_image"]
                     photometric_translated = (masks[:geom_losses_idxs, ...] * (
@@ -809,6 +816,14 @@ class DecaModule(LightningModule):
                         losses['photometric_translated_texture'] = photometric_translated
                     else:
                         metrics['photometric_translated_texture'] = photometric_translated
+
+                    if self.deca.vgg_loss is not None:
+                        vggl, _ = self.deca.vgg_loss(
+                            masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                            masks[:geom_losses_idxs, ...] * predicted_translated_image[:geom_losses_idxs, ...],
+                            # masked output image
+                        )
+                        self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg_translated'] = vggl * self.deca.config.vggw
 
             else:
                 raise ValueError("Is this line ever reached?")
@@ -875,6 +890,14 @@ class DecaModule(LightningModule):
             else:
                 metrics['photometric_detailed_texture'] = photometric_detailed
 
+            if self.deca.vgg_loss is not None:
+                vggl, _ = self.deca.vgg_loss(
+                    masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                    masks[:geom_losses_idxs, ...] * predicted_detailed_image[:geom_losses_idxs, ...],
+                    # masked output image
+                )
+                self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg_detailed'] = vggl * self.deca.config.vggw
+
             if self.deca._has_neural_rendering():
                 predicted_detailed_translated_image = codedict["predicted_detailed_translated_image"]
                 photometric_detailed_translated = (masks[:geom_losses_idxs, ...] * (
@@ -884,6 +907,15 @@ class DecaModule(LightningModule):
                     losses['photometric_translated_detailed_texture'] = photometric_detailed_translated
                 else:
                     metrics['photometric_translated_detailed_texture'] = photometric_detailed_translated
+
+                if self.deca.vgg_loss is not None:
+                    vggl, _ = self.deca.vgg_loss(
+                        masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                        masks[:geom_losses_idxs, ...] * photometric_detailed_translated[:geom_losses_idxs, ...],
+                        # masked output image
+                    )
+                    self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)[
+                        'vgg_detailed_translated'] =  vggl * self.deca.config.vggw
 
             if self.emonet_loss is not None:
                 self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
@@ -1483,6 +1515,7 @@ class DECA(torch.nn.Module):
         super().__init__()
         self.perceptual_loss = None
         self.id_loss = None
+        self.vgg_loss = None
         self._reconfigure(config)
         self._reinitialize()
 
@@ -1514,6 +1547,13 @@ class DECA(torch.nn.Module):
             if self.id_loss is None:
                 self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
                 self.id_loss.requires_grad_(False) # TODO, move this to the constructor
+
+        if 'vggw' not in self.config.keys() or self.config.vggw == 0:
+            self.vgg_loss = None
+        else:
+            if self.vgg_loss is None:
+                self.vgg_loss = VGG19Loss(dict(zip(self.config.vgg_loss_layers, self.config.lambda_vgg_layers))).eval()
+                self.vgg_loss.requires_grad_(False) # TODO, move this to the constructor
 
     def _setup_renderer(self):
         self.render = SRenderY(self.config.image_size, obj_filename=self.config.topology_path,

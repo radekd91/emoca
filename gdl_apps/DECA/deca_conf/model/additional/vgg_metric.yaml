@@ -1,0 +1,9 @@
+# @package model
+vggw: 2.
+use_vgg: False
+vgg_loss_layers:
+  - 4
+  - 9
+lambda_vgg_layers:
+  - 0.5
+  - 1
