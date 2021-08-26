@@ -890,7 +890,7 @@ class DecaModule(LightningModule):
                                            with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
                 codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
                 codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
                 codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
                 codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
