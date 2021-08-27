@@ -77,6 +77,9 @@ class EmotioNetDataModule(FaceDataModuleBase):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
+                 bb_center_shift_x = 0.,
+                 bb_center_shift_y = 0.,
+                 processed_ext=".jpg",
                  device=None,
                  augmentation=None,
                  train_batch_size=64,
@@ -92,6 +95,9 @@ class EmotioNetDataModule(FaceDataModuleBase):
                          face_detector=face_detector,
                          face_detector_threshold=face_detector_threshold,
                          image_size=image_size,
+                         bb_center_shift_x=bb_center_shift_x,
+                         bb_center_shift_y=bb_center_shift_y,
+                         processed_ext=processed_ext,
                          scale=scale,
                          device=device)
         # self.subsets = sorted([f.name for f in (Path(input_dir) / "Manually_Annotated" / "Manually_Annotated_Images").glob("*") if f.is_dir()])
@@ -108,6 +114,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
         self.face_detector_type = 'fan'
         self.scale = scale
         self.use_processed = True
+
 
         self.train_dataframe_path = Path(self.root_dir)
         
@@ -186,7 +193,8 @@ class EmotioNetDataModule(FaceDataModuleBase):
         image_file_list = []
         for i in auto.tqdm(range(start_i, end_i)):
             im_file = self.df.loc[i]["subDirectory_filePath"]
-            in_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+            # in_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+            in_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + self.processed_ext)
             if in_detection_fname.is_file():
                 image_file_list += [in_detection_fname]
 
@@ -265,11 +273,19 @@ class EmotioNetDataModule(FaceDataModuleBase):
                 #     print(traceback.print_exc())
                 #     continue
 
-                out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+                if len(detection) == 0:
+                    print(f"Skipping file {im_fullfile} because no face was detected.")
+                    continue
+
+                out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + self.processed_ext)
                 # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
                 out_detection_fname.parent.mkdir(exist_ok=True)
                 detection_fnames += [out_detection_fname]
-                imsave(out_detection_fname, detection[0])
+                # imsave(out_detection_fname, detection[0], plugin="imageio", quality=100)
+                if self.processed_ext in [".jpg", ".JPG"]:
+                    imsave(out_detection_fname, detection[0], quality=100)
+                else:
+                    imsave(out_detection_fname, detection[0])
 
                 # out_segmentation_folders += [self._path_to_segmentations() / Path(im_file).parent]
 
@@ -306,6 +322,29 @@ class EmotioNetDataModule(FaceDataModuleBase):
                                  )
         all_processed = status_array.all()
         return all_processed
+
+    def _split_train_val(self, seed=0, ratio=0.9):
+        self.val_dataframe_path = Path(self.output_dir) / f"validation_set_{seed}_{ratio:0.4f}.csv"
+        self.train_dataframe_path = Path(self.output_dir) / f"training_set_{seed}_{ratio:0.4f}.csv"
+
+        if self.val_dataframe_path.is_file() and self.train_dataframe_path.is_file():
+            # self.train_df = pd.read_csv(self.train_dataframe_path)
+            # self.val_df = pd.read_csv(self.val_dataframe_path)
+            pass
+        else:
+            N = len(self.df)
+            indices = np.arange(N, dtype=np.int32)
+            np.random.seed(seed)
+            np.random.shuffle(indices)
+            train_indices = indices[:int(0.9*N)]
+            val_indices = indices[len(train_indices):]
+            self.train_df = self.df.iloc[train_indices.tolist()]
+            self.val_df = self.df.iloc[val_indices.tolist()]
+            self.train_df.to_csv(self.train_dataframe_path)
+            self.val_df.to_csv(self.val_dataframe_path)
+
+        # return self.train_df, self.val_df
+
 
     def prepare_data(self):
         if self.use_processed:
@@ -346,6 +385,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
             return EmotioNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
                              im_transforms_train,
+                             ext = self.processed_ext
                              # ignore_invalid=self.ignore_invalid,
                              # ring_type=self.ring_type,
                              # ring_size=self.ring_size,
@@ -356,6 +396,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
         return EmotioNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
                          None,
+                         ext=self.processed_ext
                          # ignore_invalid=self.ignore_invalid,
                          # ring_type=None,
                          # ring_size=None,
@@ -366,6 +407,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
         self.training_set = self._new_training_set()
         self.validation_set = EmotioNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None,
+                                        ext=self.processed_ext,
                                         # ignore_invalid=self.ignore_invalid,
                                         # ring_type=None,
                                         # ring_size=None
@@ -373,7 +415,8 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
         self.test_set = EmotioNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None,
+                                  None,
+                                  ext = self.processed_ext,
                                   # ignore_invalid= self.ignore_invalid,
                                   # ring_type=None,
                                   # ring_size=None
@@ -425,132 +468,132 @@ class EmotioNetDataModule(FaceDataModuleBase):
                          )
         return array
 
-    def _path_to_emotion_nn_indices_file(self, prefix, feature_label):
-        nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_indices.memmap")
-        return nn_indices_file
-
-    def _path_to_emotion_nn_distances_file(self,  prefix, feature_label):
-        nn_distances_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
-        return nn_distances_file
-
-    def _path_to_emotion_nn_retrieval_file(self,  prefix, feature_label):
-        outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
-        return outfile_name
-
-    def _load_retrieval_arrays(self, prefix, feature_label):
-        # prefix = self.mode + "_train_"
-        # if self.ignore_invalid:
-        #     prefix += "valid_only_"
-        # feature_label = 'emo_net_emo_feat_2'
-        nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
-        nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
-        try:
-            with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
-                indices_array_dtype = pkl.load(f)
-                indices_array_shape = pkl.load(f)
-        except:
-            indices_array_dtype = np.int64,
-            indices_array_shape = (len(dataset), NUM_NEIGHBORS)
-
-        try:
-            with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
-                distances_array_dtype = pkl.load(f)
-                distances_array_shape = pkl.load(f)
-        except:
-            distances_array_dtype = np.float32,
-            distances_array_shape = (len(dataset), NUM_NEIGHBORS)
-
-        self.nn_indices_array = np.memmap(nn_indices_file,
-                                          # dtype=np.int32,
-                                          dtype=indices_array_dtype,
-                                          mode="r",
-                                          shape=indices_array_shape
-                                          )
-
-        self.nn_distances_array = np.memmap(nn_distances_file,
-                                            dtype=distances_array_dtype,
-                                            # dtype=np.float64,
-                                            mode="r",
-                                            shape=distances_array_shape
-                                            )
-
-    def _prepare_emotion_retrieval(self):
-        prefix = self.mode + "_train_"
-        if self.ignore_invalid:
-            prefix += "valid_only_"
-        feature_label = 'emo_net_emo_feat_2'
-        nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
-        nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
-        NUM_NEIGHBORS = 100
-        if nn_indices_file.is_file() and nn_distances_file.is_file():
-            print("Precomputed nn arrays found.")
-            return
-        dataset = self._new_training_set(for_training=False)
-        dl = DataLoader(dataset, shuffle=False, num_workers=self.num_workers, batch_size=self.train_batch_size)
-
-        array = None
-        if self.ring_type != "emonet_feature":
-            raise ValueError(f"Invalid ring type for emotion retrieval {self.ring_type}")
-
-        outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
-        if not outfile_name.is_file():
-            for bi, batch in enumerate(auto.tqdm(dl)):
-                feat = batch[feature_label].numpy()
-                feat_size = feat.shape[1:]
-                if array is None:
-                    array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype)
-
-                # for i in range(feat.shape[0]):
-                #     idx = bi*self.train_batch_size + i
-                array[bi*self.train_batch_size:bi*self.train_batch_size + feat.shape[0], ...] = feat
-            del array
-        else:
-            print(f"Feature array found in '{outfile_name}'")
-            for bi, batch in enumerate(dl):
-                feat = batch[feature_label].numpy()
-                feat_size = feat.shape[1:]
-                break
-
-        array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
-
-        nbrs = NearestNeighbors(n_neighbors=30, algorithm='auto', n_jobs=-1).fit(array)
-        distances, indices = nbrs.kneighbors(array, NUM_NEIGHBORS)
-
-        indices_array = np.memmap(nn_indices_file,
-                         dtype=indices.dtype,
-                         mode="w+",
-                         shape=indices.shape
-                         )
-        indices_array[...] = indices
-        del indices_array
-        distances_array = np.memmap(nn_distances_file,
-                         dtype=distances.dtype,
-                         mode="w+",
-                         shape=distances.shape
-                         )
-        distances_array[...] = distances
-        del distances_array
-
-        # save sizes a dtypes
-        with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "wb") as f:
-            pkl.dump(indices.dtype, f)
-            pkl.dump(indices.shape, f)
-
-        with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "wb") as f:
-            pkl.dump(distances.dtype, f)
-            pkl.dump(distances.shape, f)
-
-        self.nn_indices_array = np.memmap(nn_indices_file,
-                         dtype=indices.dtype,
-                         mode="r",
-                         shape=indices.shape
-                         )
-
-        self.nn_distances_array = np.memmap(nn_distances_file,
-                         dtype=distances.dtype,
-                         mode="r",
-                         shape=distances.shape
-                         )
+    # def _path_to_emotion_nn_indices_file(self, prefix, feature_label):
+    #     nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_indices.memmap")
+    #     return nn_indices_file
+    #
+    # def _path_to_emotion_nn_distances_file(self,  prefix, feature_label):
+    #     nn_distances_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
+    #     return nn_distances_file
+    #
+    # def _path_to_emotion_nn_retrieval_file(self,  prefix, feature_label):
+    #     outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
+    #     return outfile_name
+    #
+    # def _load_retrieval_arrays(self, prefix, feature_label):
+    #     # prefix = self.mode + "_train_"
+    #     # if self.ignore_invalid:
+    #     #     prefix += "valid_only_"
+    #     # feature_label = 'emo_net_emo_feat_2'
+    #     nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
+    #     nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
+    #     try:
+    #         with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
+    #             indices_array_dtype = pkl.load(f)
+    #             indices_array_shape = pkl.load(f)
+    #     except:
+    #         indices_array_dtype = np.int64,
+    #         indices_array_shape = (len(dataset), NUM_NEIGHBORS)
+    #
+    #     try:
+    #         with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
+    #             distances_array_dtype = pkl.load(f)
+    #             distances_array_shape = pkl.load(f)
+    #     except:
+    #         distances_array_dtype = np.float32,
+    #         distances_array_shape = (len(dataset), NUM_NEIGHBORS)
+    #
+    #     self.nn_indices_array = np.memmap(nn_indices_file,
+    #                                       # dtype=np.int32,
+    #                                       dtype=indices_array_dtype,
+    #                                       mode="r",
+    #                                       shape=indices_array_shape
+    #                                       )
+    #
+    #     self.nn_distances_array = np.memmap(nn_distances_file,
+    #                                         dtype=distances_array_dtype,
+    #                                         # dtype=np.float64,
+    #                                         mode="r",
+    #                                         shape=distances_array_shape
+    #                                         )
+    #
+    # def _prepare_emotion_retrieval(self):
+    #     prefix = self.mode + "_train_"
+    #     if self.ignore_invalid:
+    #         prefix += "valid_only_"
+    #     feature_label = 'emo_net_emo_feat_2'
+    #     nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
+    #     nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
+    #     NUM_NEIGHBORS = 100
+    #     if nn_indices_file.is_file() and nn_distances_file.is_file():
+    #         print("Precomputed nn arrays found.")
+    #         return
+    #     dataset = self._new_training_set(for_training=False)
+    #     dl = DataLoader(dataset, shuffle=False, num_workers=self.num_workers, batch_size=self.train_batch_size)
+    #
+    #     array = None
+    #     if self.ring_type != "emonet_feature":
+    #         raise ValueError(f"Invalid ring type for emotion retrieval {self.ring_type}")
+    #
+    #     outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
+    #     if not outfile_name.is_file():
+    #         for bi, batch in enumerate(auto.tqdm(dl)):
+    #             feat = batch[feature_label].numpy()
+    #             feat_size = feat.shape[1:]
+    #             if array is None:
+    #                 array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype)
+    #
+    #             # for i in range(feat.shape[0]):
+    #             #     idx = bi*self.train_batch_size + i
+    #             array[bi*self.train_batch_size:bi*self.train_batch_size + feat.shape[0], ...] = feat
+    #         del array
+    #     else:
+    #         print(f"Feature array found in '{outfile_name}'")
+    #         for bi, batch in enumerate(dl):
+    #             feat = batch[feature_label].numpy()
+    #             feat_size = feat.shape[1:]
+    #             break
+    #
+    #     array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
+    #
+    #     nbrs = NearestNeighbors(n_neighbors=30, algorithm='auto', n_jobs=-1).fit(array)
+    #     distances, indices = nbrs.kneighbors(array, NUM_NEIGHBORS)
+    #
+    #     indices_array = np.memmap(nn_indices_file,
+    #                      dtype=indices.dtype,
+    #                      mode="w+",
+    #                      shape=indices.shape
+    #                      )
+    #     indices_array[...] = indices
+    #     del indices_array
+    #     distances_array = np.memmap(nn_distances_file,
+    #                      dtype=distances.dtype,
+    #                      mode="w+",
+    #                      shape=distances.shape
+    #                      )
+    #     distances_array[...] = distances
+    #     del distances_array
+    #
+    #     # save sizes a dtypes
+    #     with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "wb") as f:
+    #         pkl.dump(indices.dtype, f)
+    #         pkl.dump(indices.shape, f)
+    #
+    #     with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "wb") as f:
+    #         pkl.dump(distances.dtype, f)
+    #         pkl.dump(distances.shape, f)
+    #
+    #     self.nn_indices_array = np.memmap(nn_indices_file,
+    #                      dtype=indices.dtype,
+    #                      mode="r",
+    #                      shape=indices.shape
+    #                      )
+    #
+    #     self.nn_distances_array = np.memmap(nn_distances_file,
+    #                      dtype=distances.dtype,
+    #                      mode="r",
+    #                      shape=distances.shape
+    #                      )
 
 
 
@@ -563,12 +606,13 @@ class EmotioNet(EmotionalImageDatasetBase):
                  scale = 1.4,
                  transforms : imgaug.augmenters.Augmenter = None,
                  use_gt_bb=True,
-                 ignore_invalid=False,
+                 # ignore_invalid=False,
                  # ring_type=None,
                  # ring_size=None,
                  # load_emotion_feature=False,
                  nn_indices_array=None,
-                 nn_distances_array=None
+                 nn_distances_array=None,
+                 ext=".jpg",
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
@@ -579,7 +623,8 @@ class EmotioNet(EmotionalImageDatasetBase):
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
         self.use_processed = True
-        self.ignore_invalid = ignore_invalid
+        self.ext = ext
+        # self.ignore_invalid = ignore_invalid
         # self.load_emotion_feature = load_emotion_feature
         # self.nn_distances_array = nn_distances_array
 
@@ -697,7 +742,7 @@ class EmotioNet(EmotionalImageDatasetBase):
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
-            im_file = im_file.parent / (im_file.stem + ".png")
+            im_file = im_file.parent / (im_file.stem + self.ext)
             input_img = imread(im_file)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
@@ -706,7 +751,7 @@ class EmotioNet(EmotionalImageDatasetBase):
                 index = index % len(self)
                 im_rel_path = self.df.loc[index]["subDirectory_filePath"]
                 im_file = Path(self.image_path) / im_rel_path
-                im_file = im_file.parent / (im_file.stem + ".png")
+                im_file = im_file.parent / (im_file.stem + self.ext)
                 try:
                     input_img = imread(im_file)
                     success = True
@@ -921,13 +966,24 @@ if __name__ == "__main__":
     #     sample = d[i]
     #     d.visualize_sample(sample)
 
+    # dm = EmotioNetDataModule(
+    #          ## "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+             # "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
+             # "/is/cluster/work/rdanecek/data/emotionet/",
+             # processed_subfolder="processed_2021_Aug_26_19-04-56",
+             # scale=1.25,
+             # ignore_invalid=True,
+             # )
     dm = EmotioNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
              "/is/cluster/work/rdanecek/data/emotionet/",
-             processed_subfolder="processed_2021_Aug_26_19-04-56",
-             scale=1.25,
+             processed_subfolder="processed_2021_Aug_27_18-39-32",
+             scale=1.7,
              ignore_invalid=True,
+             image_size=512,
+             bb_center_shift_x=0,
+             bb_center_shift_y=-0.3,
             )
     print(dm.num_subsets)
     dm.prepare_data()

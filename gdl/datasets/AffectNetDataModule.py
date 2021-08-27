@@ -77,6 +77,9 @@ class AffectNetDataModule(FaceDataModuleBase):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
+                 bb_center_shift_x=0.,
+                 bb_center_shift_y=0.,
+                 processed_ext=".png",
                  device=None,
                  augmentation=None,
                  train_batch_size=64,
@@ -92,7 +95,10 @@ class AffectNetDataModule(FaceDataModuleBase):
                          face_detector=face_detector,
                          face_detector_threshold=face_detector_threshold,
                          image_size=image_size,
+                         bb_center_shift_x=bb_center_shift_x,
+                         bb_center_shift_y=bb_center_shift_y,
                          scale=scale,
+                         processed_ext=processed_ext,
                          device=device)
         # accepted_modes = ['manual', 'automatic', 'all'] # TODO: add support for the other images
         accepted_modes = ['manual']
@@ -269,12 +275,14 @@ class AffectNetDataModule(FaceDataModuleBase):
                 #     print(traceback.print_exc())
                 #     continue
 
-                out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + ".png")
+                out_detection_fname = self._path_to_detections() / Path(im_file).parent / (Path(im_file).stem + self.processed_ext)
                 # detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
                 out_detection_fname.parent.mkdir(exist_ok=True)
                 detection_fnames += [out_detection_fname]
-                imsave(out_detection_fname, detection[0])
-
+                if self.processed_ext in [".jpg", ".JPG"]:
+                    imsave(out_detection_fname, detection[0], quality=100)
+                else:
+                    imsave(out_detection_fname, detection[0])
                 # out_segmentation_folders += [self._path_to_segmentations() / Path(im_file).parent]
 
                 # save landmarks
@@ -355,7 +363,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                              ring_size=self.ring_size,
                              load_emotion_feature=False,
                              nn_indices_array=nn_indices,
-                             nn_distances_array= nn_distances
+                             nn_distances_array= nn_distances,
+                             ext=self.processed_ext,
                              )
 
         return AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
@@ -363,7 +372,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                          ignore_invalid=self.ignore_invalid,
                          ring_type=None,
                          ring_size=None,
-                         load_emotion_feature=True
+                         load_emotion_feature=True,
+                         ext=self.processed_ext,
                          )
 
     def setup(self, stage=None):
@@ -371,14 +381,16 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
-                                        ring_size=None
+                                        ring_size=None,
+                                        ext=self.processed_ext
                                         )
 
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid= self.ignore_invalid,
                                   ring_type=None,
-                                  ring_size=None
+                                  ring_size=None,
+                                  ext=self.processed_ext
                                   )
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
@@ -598,7 +610,8 @@ class AffectNet(EmotionalImageDatasetBase):
                  ring_size=None,
                  load_emotion_feature=False,
                  nn_indices_array=None,
-                 nn_distances_array=None
+                 nn_distances_array=None,
+                 ext=".png",
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
@@ -612,6 +625,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.ignore_invalid = ignore_invalid
         self.load_emotion_feature = load_emotion_feature
         self.nn_distances_array = nn_distances_array
+        self.ext=ext
 
         if ignore_invalid:
             # filter invalid classes
@@ -727,7 +741,7 @@ class AffectNet(EmotionalImageDatasetBase):
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
-            im_file = im_file.parent / (im_file.stem + ".png")
+            im_file = im_file.parent / (im_file.stem + self.ext)
             input_img = imread(im_file)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
@@ -736,7 +750,7 @@ class AffectNet(EmotionalImageDatasetBase):
                 index = index % len(self)
                 im_rel_path = self.df.loc[index]["subDirectory_filePath"]
                 im_file = Path(self.image_path) / im_rel_path
-                im_file = im_file.parent / (im_file.stem + ".png")
+                im_file = im_file.parent / (im_file.stem + self.ext)
                 try:
                     input_img = imread(im_file)
                     success = True
@@ -951,22 +965,44 @@ if __name__ == "__main__":
     #     sample = d[i]
     #     d.visualize_sample(sample)
 
+    ## FIRST VERSION, CLASSIC FAN-LIKE problems from too tight bb (such as forehead cut in half, etc)
+    # dm = AffectNetDataModule(
+    #          # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+    #          "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+    #          # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+    #          # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
+    #          "/is/cluster/work/rdanecek/data/affectnet/",
+    #          # processed_subfolder="processed_2021_Apr_02_03-13-33",
+    #          processed_subfolder="processed_2021_Apr_05_15-22-18",
+    #          mode="manual",
+    #          scale=1.25,
+    #          ignore_invalid=True,
+    #          # ring_type="gt_expression",
+    #          ring_type="gt_va",
+    #          # ring_type="emonet_feature",
+    #          ring_size=4
+    #         )
+
     dm = AffectNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",
-             # processed_subfolder="processed_2021_Apr_02_03-13-33",
-             processed_subfolder="processed_2021_Apr_05_15-22-18",
+             processed_subfolder=None,
+             processed_ext=".jpg",
              mode="manual",
-             scale=1.25,
+             scale=1.7,
+             image_size=512,
+             bb_center_shift_x=0,
+             bb_center_shift_y=-0.3,
              ignore_invalid=True,
              # ring_type="gt_expression",
              ring_type="gt_va",
              # ring_type="emonet_feature",
              ring_size=4
             )
+
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
