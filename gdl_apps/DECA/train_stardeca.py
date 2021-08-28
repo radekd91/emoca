@@ -93,6 +93,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if 'use_vgg' in cfg_coarse.model.keys() and  cfg_coarse.model.use_vgg:
             experiment_name += '_VGGl'
 
+        if not cfg_coarse.model.use_photometric:
+            experiment_name += "_noPho"
+
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
             # experiment_name += '_EmoLossB'
