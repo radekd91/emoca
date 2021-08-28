@@ -457,7 +457,7 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
             "inout_params": checkpoint_kwargs["config"]["inout"],
             "stage_name": "train",
         }
-        deca = instantiate_deca(cfg_pretrain, mode,  checkpoint, deca_checkpoint_kwargs )
+        deca = instantiate_deca(cfg_pretrain, mode, "",  checkpoint, deca_checkpoint_kwargs )
 
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
