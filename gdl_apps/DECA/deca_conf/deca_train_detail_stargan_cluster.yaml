@@ -1,5 +1,5 @@
 defaults:
-  - data/datasets: detail_data
+  - data/datasets: detail_data_cluster
   - data/augmentations: none
   - model/paths : cluster
   - model/settings : detail_train

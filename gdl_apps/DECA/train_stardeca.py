@@ -74,6 +74,18 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]
 
+        e_flame_type = 'ResnetEncoder'
+        if 'e_flame_type' in cfg_coarse.model.keys():
+            e_flame_type = cfg_coarse.model.e_flame_type
+        if e_flame_type != 'ResnetEncoder':
+            experiment_name += "_EF" + e_flame_type[:6]
+
+        e_detail_type = 'ResnetEncoder'
+        if 'e_detail_type' in cfg_detail.model.keys():
+            e_detail_type = cfg_detail.model.e_detail_type
+        if e_detail_type != 'ResnetEncoder':
+            experiment_name += "_ED" + e_detail_type[:6]
+
         if cfg_coarse.model.deca_class == "ExpDECA":
             if cfg_coarse.model.expression_backbone == 'deca_parallel':
                 experiment_name += '_para'
