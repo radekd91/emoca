@@ -459,7 +459,7 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
         }
         deca = instantiate_deca(cfg_pretrain, mode, "",  checkpoint, deca_checkpoint_kwargs )
 
-    train_stardeca(cfg_coarse, cfg_detail,
+    train_stardeca(coarse_conf, detail_conf,
                # start_i=start_at_stage,
                # resume_from_previous=resume_from_previous,
                # force_new_location=True,
