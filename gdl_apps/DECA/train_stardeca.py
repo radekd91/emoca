@@ -443,12 +443,6 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
         checkpoint_mode = 'best'
         mode = "train"
         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain, mode, checkpoint_mode)
-        deca_checkpoint_kwargs = {
-            "model_params": checkpoint_kwargs["config"]["model"],
-            "learning_params": checkpoint_kwargs["config"]["learning"],
-            "inout_params": checkpoint_kwargs["config"]["inout"],
-            "stage_name": "train",
-        }
         # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
         # pretrained DECA)
 
@@ -462,7 +456,7 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
             "inout_params": checkpoint_kwargs["config"]["inout"],
             "stage_name": "train",
         }
-        deca = instantiate_deca(cfg_coarse_pretrain, mode,  checkpoint, checkpoint_kwargs )
+        deca = instantiate_deca(cfg_pretrain, mode,  checkpoint, deca_checkpoint_kwargs )
 
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
