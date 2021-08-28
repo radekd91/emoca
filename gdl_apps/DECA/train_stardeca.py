@@ -442,7 +442,8 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
         ## LOAD the best checkpoint from the pretrained path.
         checkpoint_mode = 'best'
         mode = "train"
-        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain, mode, checkpoint_mode)
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain_, mode, checkpoint_mode=checkpoint_mode,
+                                                                   replace_root = None, relative_to = None)
         # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
         # pretrained DECA)
 
