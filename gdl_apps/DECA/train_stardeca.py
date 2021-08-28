@@ -430,7 +430,7 @@ def configure_and_finetune_from_pretrained(coarse_conf, coarse_override, detail_
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
                # resume_from_previous=resume_from_previous,
-               # force_new_location=True,
+               force_new_location=True,
                deca=deca)
 
 def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
@@ -462,7 +462,7 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
                # resume_from_previous=resume_from_previous,
-               # force_new_location=True,
+               force_new_location=True,
                deca=deca)
 
 
