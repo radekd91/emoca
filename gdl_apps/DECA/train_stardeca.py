@@ -67,7 +67,9 @@ def prepare_data(cfg):
 
 def create_experiment_name(cfg_coarse, cfg_detail, version=2):
     # experiment_name = "ExpDECA"
-    experiment_name = cfg_coarse.model.deca_class + "Star"
+    experiment_name = cfg_coarse.model.deca_class
+    if 'neural_renderer' in cfg_coarse.model.keys() and bool(cfg_coarse.model.neural_renderer):
+        experiment_name += "Star"
     if version <= 2:
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]
