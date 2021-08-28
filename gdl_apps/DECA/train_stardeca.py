@@ -430,7 +430,7 @@ def configure_and_finetune_from_pretrained(coarse_conf, coarse_override, detail_
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
                # resume_from_previous=resume_from_previous,
-               force_new_location=True,
+               # force_new_location=True,
                deca=deca)
 
 def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
@@ -462,7 +462,7 @@ def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
     train_stardeca(cfg_coarse, cfg_detail,
                # start_i=start_at_stage,
                # resume_from_previous=resume_from_previous,
-               force_new_location=True,
+               # force_new_location=True,
                deca=deca)
 
 
@@ -475,7 +475,7 @@ def main():
         detail_conf = "deca_train_detail_stargan"
 
         # path_to_resume_from = None
-        # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"  # My DECA, ResNet backbones
+        path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"  # My DECA, ResNet backbones
         # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
         # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
