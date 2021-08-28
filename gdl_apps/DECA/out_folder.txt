@@ -1,1 +1,1 @@
-/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_13-02-32_DECAStar_Affec_DeSegFalse_Deex_early
+/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_28_23-02-57_ExpDECAStar_DecaD_para_Jaw_VGGl_DeSegFalse_early

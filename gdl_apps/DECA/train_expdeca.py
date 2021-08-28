@@ -148,7 +148,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         elif not cfg_detail.model.background_from_input:
             experiment_name += '_BlackD'
 
-        if hasattr(cfg_coarse.model, 'expression_constrain_type'):
+        if hasattr(cfg_coarse.model, 'expression_constrain_type') and str(cfg_coarse.model.expression_constrain_type).lower() != "none":
             experiment_name += "_Ex" + cfg_coarse.data.ring_type
 
 

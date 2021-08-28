@@ -75,7 +75,26 @@ class DecaModule(LightningModule):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
         self.inout_params = inout_params
-        self.deca._reconfigure(model_params)
+
+        if self.deca.__class__.__name__ != model_params.deca_class:
+            old_deca_class = self.deca.__class__.__name__
+            state_dict = self.deca.state_dict()
+            deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+            self.deca = deca_class(config=model_params)
+
+            diff = set(state_dict.keys()).difference(set(self.deca.state_dict().keys()))
+            if len(diff) > 0:
+                raise RuntimeError(f"Some values from old state dict will not be used. This is probably not what you "
+                                   f"want because it most likely means that the pretrained model's weights won't be used. "
+                                   f"Maybe you messed up backbone compatibility (i.e. SWIN vs ResNet?) {diff}")
+            ret = self.deca.load_state_dict(state_dict, strict=False)
+            if len(ret.unexpected_keys) > 0:
+                raise print(f"Unexpected keys: {ret.unexpected_keys}")
+            missing_modules = set([s.split(".")[0] for s in ret.missing_keys])
+            print(f"Missing modules when upgrading from {old_deca_class} to {model_params.deca_class}:")
+            print(missing_modules)
+        else:
+            self.deca._reconfigure(model_params)
         self.stage_name = stage_name
         if self.stage_name is None:
             self.stage_name = ""
@@ -1524,6 +1543,7 @@ class DECA(torch.nn.Module):
         self.n_cond = 3 + config.n_exp
         self.mode = DecaMode[str(config.mode).upper()]
         self._init_deep_losses()
+        self._setup_neural_rendering()
 
     def _reinitialize(self):
         self._create_model()
@@ -1574,7 +1594,6 @@ class DECA(torch.nn.Module):
         else:
             fixed_uv_dis = torch.zeros([512, 512]).float()
         self.register_buffer('fixed_uv_dis', fixed_uv_dis)
-        self._setup_neural_rendering()
 
 
     def _has_neural_rendering(self):
@@ -1589,22 +1608,21 @@ class DECA(torch.nn.Module):
             else:
                 raise ValueError(f"Unsupported neural renderer class '{self.config.neural_renderer.class_}'")
 
-            if self.deca._has_neural_rendering():
-                if self.deca.image_translator.background_mode == "input" and \
-                        self.deca.config.background_from_input not in [True, "input"]:
+            if self.image_translator.background_mode == "input":
+                if self.config.background_from_input not in [True, "input"]:
                     raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
                                               "Background should be inpainted from the input")
-                elif self.deca.image_translator.background_mode == "black" and \
-                        self.deca.config.background_from_input not in [False, "black"]:
+            elif self.image_translator.background_mode == "black":
+                if self.config.background_from_input not in [False, "black"]:
                     raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
                                               "Background should be black.")
-                elif self.deca.image_translator.background_mode == "none" and \
-                        self.deca.config.background_from_input not in ["none"]:
+            elif self.image_translator.background_mode == "none":
+                if self.config.background_from_input not in ["none"]:
                     raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
                                               "The background should not be handled")
-                else:
-                    raise NotImplementedError(f"Unsupported mode of the neural renderer backroungd: "
-                                              f"'{self.deca.image_translator.background_mode}'")
+            else:
+                raise NotImplementedError(f"Unsupported mode of the neural renderer backroungd: "
+                                          f"'{self.image_translator.background_mode}'")
 
 
     def _create_model(self):

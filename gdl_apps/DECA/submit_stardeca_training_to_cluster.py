@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 import time as t
 
 
-def submit(cfg_coarse, cfg_detail, bid=10):
+def submit(cfg_coarse, cfg_detail, pretrained_run_location=None, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
     # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
@@ -49,6 +49,8 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     cuda_capability_requirement = 6
     mem_gb = 40
     args = f"{coarse_file.name} {detail_file.name}"
+    if pretrained_run_location is not None:
+        args += f" {pretrained_run_location}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -87,11 +89,25 @@ def train_on_selected_sequences():
         #     ['model.useSeg=gt', 'model.exp_deca_jaw_pose=False'],
         #     ['model.useSeg=rend']
         # ],
-        # # DEFAULT
-        # [
-        #     ['model.useSeg=gt'],
-        #     ['model.useSeg=rend']
-        # ],
+
+
+        # DEFAULT
+        [
+            ['model.useSeg=gt'],
+            ['model.useSeg=rend']
+        ],
+
+        # DEFAULT, with VGG perceptual loss
+        [
+            ['model.useSeg=gt', '+model/additional=vgg_loss',],
+            ['model.useSeg=rend', '+model/additional=vgg_loss',]
+        ],
+
+        # DEFAULT, with VGG perceptual loss, without photometric
+        [
+            ['model.useSeg=gt', '+model/additional=vgg_loss', 'model.use_photometric=False'],
+            ['model.useSeg=rend', '+model/additional=vgg_loss', 'model.use_photometric=False']
+        ],
 
         # # DEFAULT, rendered mask
         # [
@@ -141,23 +157,23 @@ def train_on_selected_sequences():
         #      'model.expression_backbone=deca_clone']
         # ],
 
-        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_coarse_32gb',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_detail',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        ],
-
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        ],
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_coarse_32gb',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_detail',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
+        # ],
+        #
+        # # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        # ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -345,19 +361,25 @@ def train_on_selected_sequences():
     emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
 
+    # resume_from = None # resume from Original DECA
+    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
+    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
+    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
+
+
     fixed_overrides_coarse = [
-        # 'model/settings=coarse_train',
+        'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
+        # 'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
         # '+model.mlp_emotion_predictor.detach_detailcode=False',
         # '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
-        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
-        'model.resume_training=True', # load the original DECA model
+        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
+        f'model.resume_training={resume_from == None}', # load the original DECA model
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=input',
@@ -365,17 +387,17 @@ def train_on_selected_sequences():
     ]
 
     fixed_overrides_detail = [
-        # 'model/settings=detail_train',
+        'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
         # 'model/settings=detail_train_expdeca',
-        'model/settings=detail_train_expdeca_emonet',
+        # 'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
         # '+model.mlp_emotion_predictor.detach_detailcode=False',
         # '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
-        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
+        # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
         # 'model.useSeg=False',
         'model.background_from_input=input',
@@ -413,7 +435,7 @@ def train_on_selected_sequences():
         GlobalHydra.instance().clear()
         config_pairs += [cfgs]
 
-        submit(cfgs[0], cfgs[1])
+        submit(cfgs[0], cfgs[1], resume_from)
             # break
         # break
 

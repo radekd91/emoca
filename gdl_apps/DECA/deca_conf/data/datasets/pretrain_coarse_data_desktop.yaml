@@ -15,7 +15,7 @@ testing_datasets:
   - now-val
 #  - papers-val # won't load
   - celeb-val
-  - aflw2000
+#  - aflw2000
 scale_min: 1.4
 scale_max: 1.8
 #scale_max: 2.

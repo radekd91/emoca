@@ -1,4 +1,5 @@
-from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
+from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, create_logger #, get_checkpoint_with_kwargs
+from gdl.models.IO import get_checkpoint_with_kwargs
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule
 from omegaconf import DictConfig, OmegaConf
@@ -89,6 +90,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if cfg_coarse.learning.train_K == 1:
             experiment_name += '_NoRing'
 
+        if 'use_vgg' in cfg_coarse.model.keys() and  cfg_coarse.model.use_vgg:
+            experiment_name += '_VGGl'
+
         experiment_name = experiment_name.replace("/", "_")
         if cfg_coarse.model.use_emonet_loss and cfg_detail.model.use_emonet_loss:
             # experiment_name += '_EmoLossB'
@@ -154,7 +158,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         elif not cfg_detail.model.background_from_input:
             experiment_name += '_BlackD'
 
-        if hasattr(cfg_coarse.model, 'expression_constrain_type'):
+        if hasattr(cfg_coarse.model, 'expression_constrain_type') and str(cfg_coarse.model.expression_constrain_type).lower() != "none":
             experiment_name += "_Ex" + cfg_coarse.data.ring_type
 
 
@@ -217,8 +221,8 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
     return experiment_name
 
 
-def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True,
-               force_new_location=False):
+def train_stardeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True,
+               force_new_location=False, deca=None):
     configs = [cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["train", "test", "train", "test"]
     stages_prefixes = ["", "", "", ""]
@@ -309,7 +313,7 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = True
                          version=version,
                          save_dir=full_run_dir)
 
-    deca = None
+    # deca = None
     if start_i > 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
@@ -334,7 +338,7 @@ def configure_and_train(coarse_cfg_default, coarse_overrides,
                         detail_cfg_default, detail_overrides):
     cfg_coarse, cfg_detail = configure(coarse_cfg_default, coarse_overrides,
                                        detail_cfg_default, detail_overrides)
-    train_expdeca(cfg_coarse, cfg_detail)
+    train_stardeca(cfg_coarse, cfg_detail)
 
 
 def configure_and_resume(run_path,
@@ -345,7 +349,16 @@ def configure_and_resume(run_path,
                                        coarse_cfg_default, coarse_overrides,
                                        detail_cfg_default, detail_overrides)
 
-    cfg_coarse_, cfg_detail_ = load_configs(run_path)
+    cfg_coarse_pretrain_, cfg_coarse_, cfg_detail_ = load_configs(run_path)
+    deca = None
+    if cfg_coarse_pretrain_ is not None:
+        checkpoint_mode = 'best'
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_coarse_pretrain_, "train", checkpoint_mode)
+        deca = instantiate_deca(cfg_coarse_pretrain_, "train",  checkpoint, checkpoint_kwargs )
+
+        if cfg_coarse.model.resume_training:
+            raise ValueError("We just loaded a pretrained model and the config is set to reload the old originam model. "
+                             "Ths is probably not what you want.")
 
     if start_at_stage < 2:
         raise RuntimeError("Resuming before stage 2 makes no sense, that would be training from scratch")
@@ -356,26 +369,106 @@ def configure_and_resume(run_path,
     else:
         raise RuntimeError(f"Cannot resume at stage {start_at_stage}")
 
-    train_expdeca(cfg_coarse, cfg_detail,
+    train_stardeca(cfg_coarse, cfg_detail,
                start_i=start_at_stage,
                resume_from_previous=True, #important, resume from previous stage's checkpoint
-               force_new_location=True)
+               force_new_location=True,
+               deca=deca)
 
 
 def load_configs(run_path):
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
+    if 'coarse_pretraining' in conf.keys():
+        cfg_pretrain = conf.coarse_pretraining
+    else:
+        cfg_pretrain = None
     cfg_coarse = conf.coarse
     cfg_detail = conf.detail
-    return cfg_coarse, cfg_detail
+    return cfg_pretrain, cfg_coarse, cfg_detail
 
 
 def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
-    cfg_coarse, cfg_detail = load_configs(run_path)
-    train_expdeca(cfg_coarse, cfg_detail,
+    cfg_pretrain, cfg_coarse, cfg_detail = load_configs(run_path)
+    train_stardeca(cfg_coarse, cfg_detail,
                start_i=start_at_stage,
                resume_from_previous=resume_from_previous,
                force_new_location=force_new_location)
+
+def configure_and_finetune_from_pretrained(coarse_conf, coarse_override, detail_conf, detail_override, path_to_resume_from,
+                                           replace_root = None, relative_to = None,):
+
+
+    cfg_coarse, cfg_detail = configure(coarse_conf, coarse_override,
+                                       detail_conf, detail_override)
+
+    cfg_pretrain_, cfg_coarse_, cfg_detail_ = load_configs(path_to_resume_from)
+    if cfg_pretrain_ is None:
+        raise ValueError("Pretrained regressor seems to be None")
+    else:
+        ## LOAD the best checkpoint from the pretrained path.
+        checkpoint_mode = 'best'
+        mode = "train"
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain_, mode, checkpoint_mode=checkpoint_mode,
+                                                                   replace_root = replace_root, relative_to = relative_to)
+        # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
+        # pretrained DECA)
+        # cfg_pretrain_.model.deca_class = cfg_coarse.model.deca_class
+        # checkpoint_kwargs["config"]["model"]["deca_class"] = cfg_coarse.model.deca_class
+        # load from configs
+        from gdl.models.DECA import instantiate_deca
+
+        deca_checkpoint_kwargs = {
+            "model_params": checkpoint_kwargs["config"]["model"],
+            "learning_params": checkpoint_kwargs["config"]["learning"],
+            "inout_params": checkpoint_kwargs["config"]["inout"],
+            "stage_name": "train",
+        }
+
+        deca = instantiate_deca(cfg_pretrain_, mode, "",  checkpoint, deca_checkpoint_kwargs )
+
+    train_stardeca(cfg_coarse, cfg_detail,
+               # start_i=start_at_stage,
+               # resume_from_previous=resume_from_previous,
+               # force_new_location=True,
+               deca=deca)
+
+def finetune_from_pretrained(coarse_conf, detail_conf, resume_from_run_path):
+
+    cfg_pretrain, cfg_coarse, cfg_detail = load_configs(resume_from_run_path)
+    if cfg_pretrain is None:
+        raise ValueError("Pretrained regressor seems to be None")
+    else:
+        ## LOAD the best checkpoint from the pretrained path.
+        checkpoint_mode = 'best'
+        mode = "train"
+        checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain, mode, checkpoint_mode)
+        deca_checkpoint_kwargs = {
+            "model_params": checkpoint_kwargs["config"]["model"],
+            "learning_params": checkpoint_kwargs["config"]["learning"],
+            "inout_params": checkpoint_kwargs["config"]["inout"],
+            "stage_name": "train",
+        }
+        # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
+        # pretrained DECA)
+
+        # cfg_pretrain_.model.deca_class = cfg_coarse.model.deca_class
+        # checkpoint_kwargs["config"]["model"]["deca_class"] = cfg_coarse.model.deca_class
+        # load from configs
+        from gdl.models.DECA import instantiate_deca
+        deca_checkpoint_kwargs = {
+            "model_params": checkpoint_kwargs["config"]["model"],
+            "learning_params": checkpoint_kwargs["config"]["learning"],
+            "inout_params": checkpoint_kwargs["config"]["inout"],
+            "stage_name": "train",
+        }
+        deca = instantiate_deca(cfg_coarse_pretrain, mode,  checkpoint, checkpoint_kwargs )
+
+    train_stardeca(cfg_coarse, cfg_detail,
+               # start_i=start_at_stage,
+               # resume_from_previous=resume_from_previous,
+               # force_new_location=True,
+               deca=deca)
 
 
 def main():
@@ -385,10 +478,22 @@ def main():
         coarse_conf = "deca_train_coarse_stargan"
         # coarse_conf = "deca_train_detail_stargan"
         detail_conf = "deca_train_detail_stargan"
+
+        # path_to_resume_from = None
+        # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"  # My DECA, ResNet backbones
+        # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
+        # path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
+
+        # flame_encoder = 'swin_tiny_patch4_window7_224'
+        # detail_encoder = 'swin_tiny_patch4_window7_224'
+        flame_encoder = 'ResnetEncoder'
+        detail_encoder = 'ResnetEncoder'
+
+
         coarse_override = [
             # 'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
-            # 'model/settings=coarse_train_expdeca',
+            'model/settings=coarse_train_expdeca',
             # 'model/settings=coarse_train_expdeca_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model/settings=coarse_train_expdeca_emomlp',
@@ -403,14 +508,14 @@ def main():
             # '+model.mlp_emotion_predictor.detach_jaw=True',
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
 
-            'data/datasets=affectnet_desktop', # affectnet vs deca dataset
+            # 'data/datasets=affectnet_desktop', # affectnet vs deca dataset
             # # f'data.ring_type=gt_va',
             # #  'data.ring_size=4',
             # #  'learning/batching=single_gpu_expdeca_coarse_ring',
             'data.num_workers=0',
-            'model.resume_training=True', # load the original DECA model
+            f'model.resume_training={path_to_resume_from is None}', # load the original DECA model
             'model.useSeg=False', # do not segment out the background from the coarse image
-            'model.background_from_input=none',
+            'model.background_from_input=input',
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
             # 'learning.batch_size_train=4',
@@ -419,10 +524,13 @@ def main():
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
             '+model/additional=vgg_loss',
+            f'+model.e_flame_type={flame_encoder}',
+            f'+model.e_detail_type={detail_encoder}'
                               ]
         detail_override = [
             # 'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
+            'model/settings=detail_train_expdeca',
             # 'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
@@ -434,7 +542,7 @@ def main():
             # '+model.mlp_emotion_predictor.detach_detailcode=True',
             # '+model.mlp_emotion_predictor.detach_jaw=True',
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
-            'data/datasets=affectnet_desktop', # affectnet vs deca dataset
+            # 'data/datasets=affectnet_desktop', # affectnet vs deca dataset
             # f'data.ring_type=gt_va',
             #  'learning/batching=single_gpu_expdeca_detail_ring',
             #  'data.ring_size=4',
@@ -442,14 +550,17 @@ def main():
             'learning/logging=none',
             'data.num_workers=0',
             'model.useSeg=False',
-            'model.background_from_input=none',
+            'model.background_from_input=input',
             # 'learning.batch_size_train=4',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
             '+model/additional=vgg_loss',
+            f'+model.e_flame_type={flame_encoder}',
+            f'+model.e_detail_type={detail_encoder}'
         ]
+
 
         # coarse_conf = detail_conf
         # coarse_override = detail_override
@@ -464,6 +575,12 @@ def main():
         else:
             coarse_conf = sys.argv[1]
             detail_conf = sys.argv[2]
+
+        if len(sys.argv) > 3:
+            path_to_resume_from = sys.argv[3]
+        else:
+            path_to_resume_from = None
+
     else:
         coarse_conf = "deca_finetune_coarse_cluster"
         detail_conf = "deca_finetune_detail_cluster"
@@ -477,9 +594,20 @@ def main():
     #     coarse_override = []
     #     detail_override = []
     if configured:
-        train_expdeca(coarse_conf, detail_conf)
+        if path_to_resume_from is None:
+            train_stardeca(coarse_conf, detail_conf)
+        else:
+            finetune_from_pretrained(coarse_conf, detail_conf, path_to_resume_from)
     else:
-        configure_and_train(coarse_conf, coarse_override, detail_conf, detail_override)
+        if path_to_resume_from is None:
+            configure_and_train(coarse_conf, coarse_override, detail_conf, detail_override)
+        else:
+            relative_to_path = '/ps/scratch/' #local run hack
+            replace_root_path = '/home/rdanecek/Workspace/mount/scratch/' #local run hack
+            configure_and_finetune_from_pretrained(coarse_conf, coarse_override, detail_conf, detail_override,
+                                                   path_to_resume_from,
+                                                   relative_to=relative_to_path,
+                                                   replace_root=replace_root_path)
 
 
 if __name__ == "__main__":
