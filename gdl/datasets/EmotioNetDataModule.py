@@ -596,6 +596,29 @@ class EmotioNetDataModule(FaceDataModuleBase):
     #                      )
 
 
+from enum import Enum
+
+
+class ActionUnitTypes(Enum):
+
+    EMOTIONET = 1
+    ALL = 2
+
+    @staticmethod
+    def AUtype2AUlist(t):
+        if t == ActionUnitTypes.EMOTIONET:
+            return [1, 2, 4, 5, 6, 9, 12, 17, 20, 25, 26, 43]
+        elif t == ActionUnitTypes.ALL:
+            return list(range(1,60))
+        raise ValueError(f"Invalid action unit type {t}")
+
+    @staticmethod
+    def AUtype2AUstring_list(t):
+        l = ActionUnitTypes.AUtype2AUlist(t)
+        string_list = [f"AU{i}" for i in l]
+        return string_list
+
+
 
 class EmotioNet(EmotionalImageDatasetBase):
 
@@ -605,7 +628,7 @@ class EmotioNet(EmotionalImageDatasetBase):
                  image_size,
                  scale = 1.4,
                  transforms : imgaug.augmenters.Augmenter = None,
-                 use_gt_bb=True,
+                 # use_gt_bb=True,
                  # ignore_invalid=False,
                  # ring_type=None,
                  # ring_size=None,
@@ -613,17 +636,20 @@ class EmotioNet(EmotionalImageDatasetBase):
                  nn_indices_array=None,
                  nn_distances_array=None,
                  ext=".jpg",
+                 au_type = ActionUnitTypes.EMOTIONET,
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
         self.df = pd.read_csv(dataframe_path)
         self.image_size = image_size
-        self.use_gt_bb = use_gt_bb
+        # self.use_gt_bb = use_gt_bb
         self.transforms = transforms or imgaug.augmenters.Identity()
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
         self.use_processed = True
         self.ext = ext
+        self.au_type = au_type
+        self.au_strs = ActionUnitTypes.AUtype2AUstring_list(self.au_type)
         # self.ignore_invalid = ignore_invalid
         # self.load_emotion_feature = load_emotion_feature
         # self.nn_distances_array = nn_distances_array
@@ -730,26 +756,17 @@ class EmotioNet(EmotionalImageDatasetBase):
         return len(self.df)
 
     def _get_sample(self, index):
-        left = self.df.loc[index]["face_x"]
-        top = self.df.loc[index]["face_y"]
-        right = left + self.df.loc[index]["face_width"]
-        bottom = top + self.df.loc[index]["face_height"]
-        facial_landmarks = self.df.loc[index]["facial_landmarks"]
-        expression = self.df.loc[index]["expression"]
-        valence = self.df.loc[index]["valence"]
-        arousal = self.df.loc[index]["arousal"]
-
         try:
-            im_rel_path = self.df.loc[index]["subDirectory_filePath"]
+            im_rel_path = self.df.loc[index]["path"]
             im_file = Path(self.image_path) / im_rel_path
             im_file = im_file.parent / (im_file.stem + self.ext)
             input_img = imread(im_file)
         except Exception as e:
-            # if the image is corrupted or missing (there is a few :-/), find some other one
+            # if the image is corrupted or missing (there might be a few :-/), find some other one
             while True:
                 index += 1
                 index = index % len(self)
-                im_rel_path = self.df.loc[index]["subDirectory_filePath"]
+                im_rel_path = self.df.loc[index]["path"]
                 im_file = Path(self.image_path) / im_rel_path
                 im_file = im_file.parent / (im_file.stem + self.ext)
                 try:
@@ -759,89 +776,83 @@ class EmotioNet(EmotionalImageDatasetBase):
                     success = False
                 if success:
                     break
-        input_img_shape = input_img.shape
 
-        if not self.use_processed:
-            # Use AffectNet as is provided (their bounding boxes, and landmarks, no segmentation)
-            old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
-            size = int(old_size * self.scale)
-            input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
-            img, landmark = bbpoint_warp(input_img, center, size, self.image_size, landmarks=input_landmarks)
-            img *= 255.
+        AUs = self.df.loc[index, [self.au_strs]]
+        AUs = np.array(AUs)
 
-            if not self.use_gt_bb:
-                raise NotImplementedError()
-                # landmark_type, landmark = load_landmark(
-                #     self.path_prefix / self.landmark_list[index])
-            landmark = landmark[np.newaxis, ...]
-            seg_image = None
-        else:
-            # use AffectNet processed by me. I used their bounding boxes (to not have to worry about detecting
-            # the correct face in case there's more) and I ran our FAN and segmentation over it
-            img = input_img
+        # input_img_shape = input_img.shape
 
-            # the image has already been cropped in preprocessing (make sure the input root path
-            # is specificed to the processed folder and not the original one
+        # if not self.use_processed:
+        #     # Use AffectNet as is provided (their bounding boxes, and landmarks, no segmentation)
+        #     old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
+        #     size = int(old_size * self.scale)
+        #     input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
+        #     img, landmark = bbpoint_warp(input_img, center, size, self.image_size, landmarks=input_landmarks)
+        #     img *= 255.
+        #
+        #     # if not self.use_gt_bb:
+        #     #     raise NotImplementedError()
+        #     #     # landmark_type, landmark = load_landmark(
+        #     #     #     self.path_prefix / self.landmark_list[index])
+        #     landmark = landmark[np.newaxis, ...]
+        #     seg_image = None
+        # else:
+        img = input_img
 
-            landmark_path = Path(self.image_path).parent / "landmarks" / im_rel_path
-            landmark_path = landmark_path.parent / (landmark_path.stem + ".pkl")
+        # the image has already been cropped in preprocessing (make sure the input root path
+        # is specificed to the processed folder and not the original one
 
-            landmark_type, landmark = load_landmark(
-                landmark_path)
-            landmark = landmark[np.newaxis, ...]
+        landmark_path = Path(self.image_path).parent / "landmarks" / im_rel_path
+        landmark_path = landmark_path.parent / (landmark_path.stem + ".pkl")
 
-            segmentation_path = Path(self.image_path).parent / "segmentations" / im_rel_path
-            segmentation_path = segmentation_path.parent / (segmentation_path.stem + ".pkl")
+        landmark_type, landmark = load_landmark(
+            landmark_path)
+        landmark = landmark[np.newaxis, ...]
 
-            seg_image, seg_type = load_segmentation(
-                segmentation_path)
-            seg_image = seg_image[np.newaxis, :, :, np.newaxis]
+        segmentation_path = Path(self.image_path).parent / "segmentations" / im_rel_path
+        segmentation_path = segmentation_path.parent / (segmentation_path.stem + ".pkl")
 
-            seg_image = process_segmentation(
-                seg_image, seg_type).astype(np.uint8)
+        seg_image, seg_type = load_segmentation(
+            segmentation_path)
+        seg_image = seg_image[np.newaxis, :, :, np.newaxis]
 
-            if self.load_emotion_feature:
-                emotion_path = Path(self.image_path).parent / "emotions" / im_rel_path
-                emotion_path = emotion_path.parent / (emotion_path.stem + ".pkl")
-                emotion_features, emotion_type = load_emotion(emotion_path)
-            else:
-                emotion_features = None
+        seg_image = process_segmentation(
+            seg_image, seg_type).astype(np.uint8)
+
+        # if self.load_emotion_feature:
+        #     emotion_path = Path(self.image_path).parent / "emotions" / im_rel_path
+        #     emotion_path = emotion_path.parent / (emotion_path.stem + ".pkl")
+        #     emotion_features, emotion_type = load_emotion(emotion_path)
+        # else:
+        #     emotion_features = None
 
         img, seg_image, landmark = self._augment(img, seg_image, landmark)
 
         sample = {
             "image": numpy_image_to_torch(img.astype(np.float32)),
             "path": str(im_file),
-            "affectnetexp": torch.tensor([expression, ], dtype=torch.long),
-            "va": torch.tensor([valence, arousal], dtype=torch.float32),
             "label": str(im_file.stem),
-            "expression_weight": self.exp_weight_tensor,
-            "expression_sample_weight": torch.tensor([self.exp_weights[expression], ]),
-            "valence_sample_weight": torch.tensor([self.v_sample_weights[index],], dtype=torch.float32),
-            "arousal_sample_weight": torch.tensor([self.a_sample_weights[index],], dtype=torch.float32),
-            "va_sample_weight": torch.tensor([self.va_sample_weights[index],], dtype=torch.float32),
+            "au": AUs,
         }
 
         if landmark is not None:
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
             sample["mask"] = numpy_image_to_torch(seg_image)
-        if emotion_features is not None:
-            for key, value in emotion_features.items():
-                if isinstance(value, np.ndarray):
-                    sample[emotion_type + "_" + key] = torch.from_numpy(value)
-                else:
-                    sample[emotion_type + "_" + key] = torch.tensor([value])
+        # if emotion_features is not None:
+        #     for key, value in emotion_features.items():
+        #         if isinstance(value, np.ndarray):
+        #             sample[emotion_type + "_" + key] = torch.from_numpy(value)
+        #         else:
+        #             sample[emotion_type + "_" + key] = torch.tensor([value])
         # print(self.df.loc[index])
         return sample
 
     def __getitem__(self, index):
         # if self.ring_type is None or self.ring_size == 1:
-        # #TODO: check if following line is a breaking change
-        # # if self.ring_type is None: # or self.ring_size == 1:
-        #     return self._get_sample(index)
-        #
         sample = self._get_sample(index)
+        return sample
+
         #
         # self.ring_policy = 'random'
 
@@ -896,31 +907,31 @@ class EmotioNet(EmotionalImageDatasetBase):
         #         idx = idx % len(ring_indices)
         # else:
         #     raise ValueError(f"Invalid K policy {self.ring_policy}")
-
-        batches = []
-        batches += [sample]
-        for i in range(self.ring_size - 1):
-            # idx = indices[i]
-            idx = indices[i]
-            batches += [self._get_sample(idx)]
-
-        try:
-            combined_batch = default_collate(batches)
-        except RuntimeError as e:
-            print(f"Failed for index {index}")
-            # print("Failed paths: ")
-            for bi, batch in enumerate(batches):
-                print(f"Index= {bi}")
-                print(f"Path='{batch['path']}")
-                print(f"Label='{batch['label']}")
-                for key in batch:
-                    if isinstance(batch[key], torch.Tensor):
-                        print(f"{key} shape='{batch[key].shape}")
-            raise e
-
-        # end = timer()
-        # print(f"Reading sample {index} took {end - start}s")
-        return combined_batch
+        #
+        # batches = []
+        # batches += [sample]
+        # for i in range(self.ring_size - 1):
+        #     # idx = indices[i]
+        #     idx = indices[i]
+        #     batches += [self._get_sample(idx)]
+        #
+        # try:
+        #     combined_batch = default_collate(batches)
+        # except RuntimeError as e:
+        #     print(f"Failed for index {index}")
+        #     # print("Failed paths: ")
+        #     for bi, batch in enumerate(batches):
+        #         print(f"Index= {bi}")
+        #         print(f"Path='{batch['path']}")
+        #         print(f"Label='{batch['label']}")
+        #         for key in batch:
+        #             if isinstance(batch[key], torch.Tensor):
+        #                 print(f"{key} shape='{batch[key].shape}")
+        #     raise e
+        #
+        # # end = timer()
+        # # print(f"Reading sample {index} took {end - start}s")
+        # return combined_batch
 
 
 def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin=2):
