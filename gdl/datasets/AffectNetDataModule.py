@@ -729,15 +729,6 @@ class AffectNet(EmotionalImageDatasetBase):
         return len(self.df)
 
     def _get_sample(self, index):
-        left = self.df.loc[index]["face_x"]
-        top = self.df.loc[index]["face_y"]
-        right = left + self.df.loc[index]["face_width"]
-        bottom = top + self.df.loc[index]["face_height"]
-        facial_landmarks = self.df.loc[index]["facial_landmarks"]
-        expression = self.df.loc[index]["expression"]
-        valence = self.df.loc[index]["valence"]
-        arousal = self.df.loc[index]["arousal"]
-
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
@@ -758,6 +749,17 @@ class AffectNet(EmotionalImageDatasetBase):
                     success = False
                 if success:
                     break
+
+        left = self.df.loc[index]["face_x"]
+        top = self.df.loc[index]["face_y"]
+        right = left + self.df.loc[index]["face_width"]
+        bottom = top + self.df.loc[index]["face_height"]
+        facial_landmarks = self.df.loc[index]["facial_landmarks"]
+        expression = self.df.loc[index]["expression"]
+        valence = self.df.loc[index]["valence"]
+        arousal = self.df.loc[index]["arousal"]
+
+
         input_img_shape = input_img.shape
 
         if not self.use_processed:
