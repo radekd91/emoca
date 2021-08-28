@@ -35,6 +35,10 @@ class StarGANWrapper(torch.nn.Module):
             self.nets_ema.fan = fan
         self._load_checkpoint('latest')
 
+    @property
+    def background_mode(self):
+        return self.args.deca_background
+
     def _load_checkpoint(self, step):
         self.ckptios = [
             CheckpointIO(str(Path(self.args.checkpoint_dir) / '{:06d}_nets_ema.ckpt'), data_parallel=True, **self.nets_ema)]

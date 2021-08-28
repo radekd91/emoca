@@ -530,8 +530,6 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
-            if self.deca.config.background_from_input in [True, "input"] and self.deca._has_neural_rendering():
-                raise NotImplementedError("Taking backround from the input image and neural rendering is not supported.")
 
             # --- extract texture
             uv_pverts = self.deca.render.world2uv(trans_verts).detach()
@@ -1590,6 +1588,24 @@ class DECA(torch.nn.Module):
                 self.image_translator = StarGANWrapper(self.config.neural_renderer.cfg, self.config.neural_renderer.stargan_repo)
             else:
                 raise ValueError(f"Unsupported neural renderer class '{self.config.neural_renderer.class_}'")
+
+            if self.deca._has_neural_rendering():
+                if self.deca.image_translator.background_mode == "input" and \
+                        self.deca.config.background_from_input not in [True, "input"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "Background should be inpainted from the input")
+                elif self.deca.image_translator.background_mode == "black" and \
+                        self.deca.config.background_from_input not in [False, "black"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "Background should be black.")
+                elif self.deca.image_translator.background_mode == "none" and \
+                        self.deca.config.background_from_input not in ["none"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "The background should not be handled")
+                else:
+                    raise NotImplementedError(f"Unsupported mode of the neural renderer backroungd: "
+                                              f"'{self.deca.image_translator.background_mode}'")
+
 
     def _create_model(self):
         # coarse shape
