@@ -67,7 +67,10 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, **kwargs):
         kwargs['init_weights'] = False
     layers = make_layers(cfgs[cfg], batch_norm=batch_norm)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
+        archname = arch
+        if batch_norm:
+            archname += "_bn"
+        state_dict = load_state_dict_from_url(model_urls[archname],
                                               progress=progress)
         state_dict2 = OrderedDict()
         for key in state_dict.keys():

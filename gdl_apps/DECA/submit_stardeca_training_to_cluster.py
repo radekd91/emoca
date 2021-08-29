@@ -78,7 +78,7 @@ def train_on_selected_sequences():
 
     coarse_conf = "deca_train_coarse_stargan_cluster"
     detail_conf = "deca_train_detail_stargan_cluster"
-    #
+
     # coarse_conf = "deca_train_coarse_cluster"
     # detail_conf = "deca_train_detail_cluster"
 
@@ -93,24 +93,24 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend']
         # ],
 
-
-        # DEFAULT
-        [
-            ['model.useSeg=gt'],
-            ['model.useSeg=rend']
-        ],
+        #
+        # # DEFAULT
+        # [
+        #     ['model.useSeg=gt'],
+        #     ['model.useSeg=rend']
+        # ],
 
         # DEFAULT, with VGG perceptual loss
         [
             ['model.useSeg=gt', '+model/additional=vgg_loss',],
             ['model.useSeg=rend', '+model/additional=vgg_loss',]
         ],
-
-        # DEFAULT, with VGG perceptual loss, without photometric
-        [
-            ['model.useSeg=gt', '+model/additional=vgg_loss', 'model.use_photometric=False'],
-            ['model.useSeg=rend', '+model/additional=vgg_loss', 'model.use_photometric=False']
-        ],
+        #
+        # # DEFAULT, with VGG perceptual loss, without photometric
+        # [
+        #     ['model.useSeg=gt', '+model/additional=vgg_loss', 'model.use_photometric=False'],
+        #     ['model.useSeg=rend', '+model/additional=vgg_loss', 'model.use_photometric=False']
+        # ],
 
         # # DEFAULT, rendered mask
         # [
@@ -359,22 +359,22 @@ def train_on_selected_sequences():
 
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early'
-    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early'
+    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
-    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
 
     # resume_from = None # resume from Original DECA
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
-    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
+    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
+    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
-    # flame_encoder = 'ResnetEncoder'
-    # detail_encoder = 'ResnetEncoder'
+    flame_encoder = 'ResnetEncoder'
+    detail_encoder = 'ResnetEncoder'
     # flame_encoder = 'swin_tiny_patch4_window7_224'
     # detail_encoder = 'swin_tiny_patch4_window7_224'
-    flame_encoder = 'swin_small_patch4_window7_224'
-    detail_encoder = 'swin_small_patch4_window7_224'
+    # flame_encoder = 'swin_small_patch4_window7_224'
+    # detail_encoder = 'swin_small_patch4_window7_224'
 
 
     fixed_overrides_coarse = [
