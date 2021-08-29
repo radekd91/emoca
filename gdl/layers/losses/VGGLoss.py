@@ -20,9 +20,10 @@ except ImportError:
 
 class VGG19Loss(nn.Module):
 
-    def __init__(self, layer_activation_indices_weights, diff=torch.nn.functional.l1_loss):
+    def __init__(self, layer_activation_indices_weights, diff=torch.nn.functional.l1_loss, batch_norm=False):
         super().__init__()
-        self.vgg19 = VGG19(sorted(layer_activation_indices_weights.keys()))
+        self.batch_norm = batch_norm
+        self.vgg19 = VGG19(sorted(layer_activation_indices_weights.keys()), batch_norm=batch_norm)
         self.layer_activation_indices_weights = layer_activation_indices_weights
         self.diff = diff
 

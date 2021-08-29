@@ -1570,7 +1570,8 @@ class DECA(torch.nn.Module):
             self.vgg_loss = None
         else:
             if self.vgg_loss is None:
-                self.vgg_loss = VGG19Loss(dict(zip(self.config.vgg_loss_layers, self.config.lambda_vgg_layers))).eval()
+                vgg_loss_batch_norm = 'vgg_loss_batch_norm' in self.config.keys() and self.config.vgg_loss_batch_norm
+                self.vgg_loss = VGG19Loss(dict(zip(self.config.vgg_loss_layers, self.config.lambda_vgg_layers)), batch_norm=vgg_loss_batch_norm).eval()
                 self.vgg_loss.requires_grad_(False) # TODO, move this to the constructor
 
     def _setup_renderer(self):

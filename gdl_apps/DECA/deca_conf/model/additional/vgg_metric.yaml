@@ -1,6 +1,7 @@
 # @package model
 vggw: 2.
 use_vgg: False
+vgg_loss_batch_norm: True
 vgg_loss_layers:
   - 4
   - 9

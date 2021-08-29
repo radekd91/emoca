@@ -7,10 +7,10 @@ from torch.hub import load_state_dict_from_url
 ## COPY-PASTED and modified from torchvision
 class VGG19(nn.Module):
 
-    def __init__(self, layer_activation_indices):
+    def __init__(self, layer_activation_indices, batch_norm=False):
         super().__init__()
         self.layer_activation_indices = layer_activation_indices
-        self.blocks = _vgg('vgg19', 'E', batch_norm=False, pretrained=True, progress=True)
+        self.blocks = _vgg('vgg19', 'E', batch_norm=batch_norm, pretrained=True, progress=True)
         self.conv_block_indices = []
 
         self.layers = []

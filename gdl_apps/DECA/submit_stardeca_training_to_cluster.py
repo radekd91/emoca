@@ -366,15 +366,15 @@ def train_on_selected_sequences():
 
     # resume_from = None # resume from Original DECA
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
-    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
+    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
+    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
     # flame_encoder = 'ResnetEncoder'
     # detail_encoder = 'ResnetEncoder'
-    flame_encoder = 'swin_tiny_patch4_window7_224'
-    detail_encoder = 'swin_tiny_patch4_window7_224'
     # flame_encoder = 'swin_tiny_patch4_window7_224'
     # detail_encoder = 'swin_tiny_patch4_window7_224'
+    flame_encoder = 'swin_small_patch4_window7_224'
+    detail_encoder = 'swin_small_patch4_window7_224'
 
 
     fixed_overrides_coarse = [
