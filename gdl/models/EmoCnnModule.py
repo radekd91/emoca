@@ -22,17 +22,30 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
     def __init__(self, config):
         super().__init__(config)
         self.n_expression = 9  # we use all affectnet classes (included none) for now
-        self.num_classes = self.n_expression
+
+        self.num_outputs = 0
+        if self.config.model.predict_expression:
+            self.num_outputs += self.n_expression
+
+        if self.config.model.predict_valence:
+            self.num_outputs += 1
+
+        if self.config.model.predict_arousal:
+            self.num_outputs += 1
+
+        if 'predict_AUs' in self.config.model.keys() and self.config.model.predict_AUs:
+            self.num_outputs += self.config.model.predict_AUs
+
         if config.model.backbone == "resnet50":
             self.backbone = resnet50(num_classes=8631, include_top=False)
             if config.model.load_pretrained:
                 # checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
                 load_state_dict(self.backbone, config.model.pretrained_weights)
-                self.linear = Linear(2048, self.num_classes+2) # 2048 is the output of  the resnet50 backbone without the MLP "top"
+                self.linear = Linear(2048, self.num_outputs) # 2048 is the output of  the resnet50 backbone without the MLP "top"
         elif config.model.backbone[:3] == "vgg":
             vgg_constructor = getattr(vgg, config.model.backbone)
             self.backbone = vgg_constructor(pretrained=bool(config.model.load_pretrained), progress=True)
-            self.linear = Linear(1000, self.num_classes+2) #1000 is the number of imagenet classes so the dim of the output of the vgg backbone
+            self.linear = Linear(1000, self.num_outputs) #1000 is the number of imagenet classes so the dim of the output of the vgg backbone
         else:
             raise ValueError(f"Invalid backbone: '{self.config.model.backbone}'")
 
@@ -43,15 +56,15 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         output = self.linear(output.view(output.shape[0], -1))
 
         out_idx = 0
-        if self.config.model.predict_expression:
-            expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
+        if self.predicts_expression():
+            expr_classification = output[:, out_idx:(out_idx + self.n_expression)]
             if self.exp_activation is not None:
                 expr_classification = self.exp_activation(expr_classification, dim=1)
-            out_idx += self.num_classes
+            out_idx += self.n_expression
         else:
             expr_classification = None
 
-        if self.config.model.predict_valence:
+        if self.predicts_valence():
             valence = output[:, out_idx:(out_idx + 1)]
             if self.v_activation is not None:
                 valence = self.v_activation(valence)
@@ -59,7 +72,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         else:
             valence = None
 
-        if self.config.model.predict_arousal:
+        if self.predicts_arousal():
             arousal = output[:, out_idx:(out_idx + 1)]
             if self.a_activation is not None:
                 arousal = self.a_activation(arousal)
@@ -67,11 +80,23 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         else:
             arousal = None
 
+        if self.predicts_AUs():
+            num_AUs = self.config.model.predict_AUs
+            AUs = output[:, out_idx:(out_idx + num_AUs)]
+            if self.AU_activation is not None:
+                AUs = self.AU_activation(AUs)
+            out_idx += num_AUs
+        else:
+            AUs = None
+
+        assert out_idx == output.shape[1]
+
         values = {}
         values["emo_feat_2"] = emo_feat_2
         values["valence"] = valence
         values["arousal"] = arousal
         values["expr_classification"] = expr_classification
+        values["AUs"] = AUs
         return values
 
 
@@ -97,15 +122,20 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         # emotion['expression'] = emotion['expression']
 
         # classes_probs = F.softmax(emotion['expression'])
-        expression = self.exp_activation(emotion['expr_classification'], dim=1)
+        # expression = self.exp_activation(emotion['expr_classification'], dim=1)
 
         values = {}
-        values['valence'] = valence.view(-1,1)
-        values['arousal'] = arousal.view(-1,1)
-        values['expr_classification'] = expression
+        if self.predicts_valence():
+            values['valence'] = valence.view(-1,1)
+        if self.predicts_arousal():
+            values['arousal'] = arousal.view(-1,1)
+        # values['expr_classification'] = expression
+        values['expr_classification'] = emotion['expr_classification']
+        values['AUs'] = emotion['AUs']
 
         # TODO: WARNING: HACK
         if self.n_expression == 8:
+            raise NotImplementedError("This here should not be called")
             values['expr_classification'] = torch.cat([
                 values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
                                                + 2*values['expr_classification'].min()],

@@ -618,7 +618,8 @@ class AffectNet(EmotionalImageDatasetBase):
         self.df = pd.read_csv(dataframe_path)
         self.image_size = image_size
         self.use_gt_bb = use_gt_bb
-        self.transforms = transforms or imgaug.augmenters.Identity()
+        # self.transforms = transforms or imgaug.augmenters.Identity()
+        self.transforms = transforms or imgaug.augmenters.Resize((image_size, image_size))
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
         self.use_processed = True

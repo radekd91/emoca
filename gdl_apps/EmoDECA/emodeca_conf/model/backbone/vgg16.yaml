@@ -1,0 +1,6 @@
+# @package model
+emodeca_type: EmoCnnModule
+#backbone: resnet50
+backbone: vgg16
+load_pretrained: True
+

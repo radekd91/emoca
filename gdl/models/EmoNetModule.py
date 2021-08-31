@@ -52,7 +52,8 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         # emotion['expression'] = emotion['expression']
 
         # classes_probs = F.softmax(emotion['expression'])
-        expression = self.exp_activation(emotion['expression'], dim=1)
+        if self.exp_activation is not None:
+            expression = self.exp_activation(emotion['expression'], dim=1)
 
         values = {}
         values['valence'] = valence.view(-1,1)

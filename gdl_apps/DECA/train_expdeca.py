@@ -1,6 +1,7 @@
 from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule
+from gdl.datasets.EmotioNetDataModule import EmotioNetDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
 from pathlib import Path
@@ -24,7 +25,14 @@ def prepare_data(cfg):
 
         dm = DecaDataModule(cfg)
         sequence_name = "DecaData"
-    elif data_class == 'AffectNetDataModule':
+        return dm, sequence_name
+
+    if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
+        augmentation = OmegaConf.to_container(cfg.data.augmentation)
+    else:
+        augmentation = None
+
+    if data_class == 'AffectNetDataModule':
         if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
             augmentation = OmegaConf.to_container(cfg.data.augmentation)
         else:
@@ -59,6 +67,20 @@ def prepare_data(cfg):
             sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
         )
         sequence_name = "AffNet"
+    elif data_class == 'EmotioNetDataModule':
+
+        dm = EmotioNetDataModule(
+            input_dir=cfg.data.input_dir,
+            output_dir=cfg.data.output_dir,
+            processed_subfolder=cfg.data.processed_subfolder,
+            scale=cfg.data.scale,
+            image_size=cfg.data.image_size,
+            bb_center_shift_x=cfg.data.bb_center_shift_x,
+            bb_center_shift_y=cfg.data.bb_center_shift_y,
+            augmentation=augmentation
+        )
+
+        sequence_name = "EmotioNet"
     else:
         raise ValueError(f"Invalid data_class '{data_class}'")
     return dm, sequence_name

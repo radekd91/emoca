@@ -1,17 +1,12 @@
 # @package model
-emodeca_type: EmoSwinModule
-#swin_type: swin_base_patch4_window7_224
-swin_type: swin_large_patch4_window7_224_22k
-#swin_type: swin_small_patch4_window7_224
-#swin_type: swin_tiny_patch4_window7_224
-swin_cfg: todo
-load_pretrained_swin: True
 
 predict_expression: true
 predict_valence: true
 predict_arousal: true
+predict_AUs: false
 
 
+continuous_va_balancing: none
 #continuous_va_balancing: 1d
 #continuous_va_balancing: 2d
 #continuous_va_balancing: expr
@@ -20,13 +15,13 @@ predict_arousal: true
 a_loss:
 #  - a_ccc: 0.5
 #  - a_pcc: 0.5
-  a_mse: 1.
+  a_mse_weighted: 1.
 
 #v_loss: mse_loss
 v_loss:
 #  - v_ccc: 0.5
 #  - v_pcc: 0.5
-  v_mse: 1.
+  v_mse_weighted: 1.
 
 va_loss:
   va_lpcc: 1.
@@ -38,6 +33,11 @@ va_loss_scheme: shake
 #va_loss_scheme: norm
 #va_loss_scheme: none
 
+#exp_loss: cross_entropy
+#a_loss: mse_loss
+#v_loss: mse_loss
+#exp_loss: nll_loss
+##exp_loss: cross_entropy
 
 a_activation: none
 #a_activation: tanh
@@ -45,6 +45,3 @@ v_activation: none
 #v_activation: tanh
 exp_activation: log_softmax
 #exp_activation: none
-
-expression_balancing: false
-

@@ -1,10 +1,10 @@
 # @package model
-emodeca_type: EmoNetModule
-load_pretrained_emonet: False
+
 
 predict_expression: true
 predict_valence: true
 predict_arousal: true
+predict_AUs: false
 
 continuous_va_balancing: 1d
 #continuous_va_balancing: 2d

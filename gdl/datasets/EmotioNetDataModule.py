@@ -27,44 +27,6 @@ from torch.utils.data._utils.collate import default_collate
 from torch.utils.data.sampler import WeightedRandomSampler
 
 
-# class EmotioNetExpressions(Enum):
-#     Neutral = 0
-#     Happy = 1
-#     Sad = 2
-#     Surprise = 3
-#     Fear = 4
-#     Disgust = 5
-#     Anger = 6
-#     Contempt = 7
-#     None_ = 8
-#     Uncertain = 9
-#     Occluded = 10
-#     xxx = 11
-# 
-# 
-#     @staticmethod
-#     def from_str(string : str):
-#         string = string[0].upper() + string[1:]
-#         return AffectNetExpressions[string]
-# 
-#     _expressions = {0: 'neutral', 1:'happy', 2:'sad', 3:'surprise', 4:'fear', 5:'disgust', 6:'anger', 7:'contempt', 8:'none'}
-# 
-
-# def make_class_balanced_sampler(labels):
-#     class_counts = np.bincount(labels)
-#     class_weights = 1. / class_counts
-#     weights = class_weights[labels]
-#     return WeightedRandomSampler(weights, len(weights))
-# 
-# def make_va_balanced_sampler(labels):
-#     class_counts = np.bincount(labels)
-#     class_weights = 1. / class_counts
-#     weights = class_weights[labels]
-#     return WeightedRandomSampler(weights, len(weights))
-# 
-# def make_balanced_sample_by_weights(weights):
-#     return WeightedRandomSampler(weights, len(weights))
-
 
 class EmotioNetDataModule(FaceDataModuleBase):
 
@@ -113,14 +75,10 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
         self.face_detector_type = 'fan'
         self.scale = scale
-        self.use_processed = True
-
-
-        self.train_dataframe_path = Path(self.root_dir)
-        
+        # self.use_processed = True
 
         self.image_path = Path(self.output_dir) / "detections"
-        
+
 
         # self.ignore_invalid = ignore_invalid
 
@@ -326,12 +284,30 @@ class EmotioNetDataModule(FaceDataModuleBase):
     def _split_train_val(self, seed=0, ratio=0.9):
         self.val_dataframe_path = Path(self.output_dir) / f"validation_set_{seed}_{ratio:0.4f}.csv"
         self.train_dataframe_path = Path(self.output_dir) / f"training_set_{seed}_{ratio:0.4f}.csv"
+        self.full_dataframe_path = Path(self.output_dir) / f"full_dataset.csv"
 
         if self.val_dataframe_path.is_file() and self.train_dataframe_path.is_file():
-            # self.train_df = pd.read_csv(self.train_dataframe_path)
-            # self.val_df = pd.read_csv(self.val_dataframe_path)
+            self.train_df = pd.read_csv(self.train_dataframe_path)
+            self.val_df = pd.read_csv(self.val_dataframe_path)
             pass
         else:
+
+            if self.full_dataframe_path.is_file():
+                cleaned_df = pd.read_csv(self.full_dataframe_path)
+            else:
+                indices_to_delete = []
+                for i in auto.tqdm(range(len(self.df))):
+                    detection_path = Path(self.output_dir) / "detections" / self.df["path"][i]
+                    if not detection_path.is_file():
+                        indices_to_delete += [i]
+                    # if i == 5000:
+                    #     break
+                cleaned_df = self.df.drop(indices_to_delete)
+                cleaned_df.to_csv(self.full_dataframe_path)
+
+                print(f"Kept {len(cleaned_df)}/{len(self.df)} images because the detection was missing. Dropping {len(indices_to_delete)}")
+                # sys.exit()
+
             N = len(self.df)
             indices = np.arange(N, dtype=np.int32)
             np.random.seed(seed)
@@ -340,32 +316,48 @@ class EmotioNetDataModule(FaceDataModuleBase):
             val_indices = indices[len(train_indices):]
             self.train_df = self.df.iloc[train_indices.tolist()]
             self.val_df = self.df.iloc[val_indices.tolist()]
+
             self.train_df.to_csv(self.train_dataframe_path)
             self.val_df.to_csv(self.val_dataframe_path)
+
 
         # return self.train_df, self.val_df
 
 
+    def _dataset_anaylysis(self):
+        cleaned_df = pd.read_csv(self.full_dataframe_path)
+        arr = cleaned_df[ActionUnitTypes.AUtype2AUstring_list(ActionUnitTypes.EMOTIONET)].to_numpy(np.float)
+        unique_au_configs, counts = np.unique(arr, return_counts=True, axis=0)
+        print("There is {len(unique_au_configs)} configurations in the dataset. ")
+        import matplotlib.pyplot  as plt
+        plt.figure()
+        plt.plot(counts)
+        plt.figure()
+        plt.plot(np.sort(counts))
+        plt.show()
+
+
     def prepare_data(self):
-        if self.use_processed:
-            if not self.status_array_path.is_file():
-                print(f"Status file does not exist. Creating '{self.status_array_path}'")
-                self.status_array_path.parent.mkdir(exist_ok=True, parents=True)
-                status_array = np.memmap(self.status_array_path,
-                                         dtype=np.bool,
-                                         mode='w+',
-                                         shape=(self.num_subsets,)
-                                         )
-                status_array[...] = False
-                del status_array
+        # if self.use_processed:
+        if not self.status_array_path.is_file():
+            print(f"Status file does not exist. Creating '{self.status_array_path}'")
+            self.status_array_path.parent.mkdir(exist_ok=True, parents=True)
+            status_array = np.memmap(self.status_array_path,
+                                     dtype=np.bool,
+                                     mode='w+',
+                                     shape=(self.num_subsets,)
+                                     )
+            status_array[...] = False
+            del status_array
 
-            all_processed = self.is_processed
-            if not all_processed:
-                self._detect_faces()
+        all_processed = self.is_processed
+        if not all_processed:
+            self._detect_faces()
 
+        self._split_train_val(0,0.9)
 
-        if self.ring_type == "emonet_feature":
-            self._prepare_emotion_retrieval()
+        # if self.ring_type == "emonet_feature":
+        #     self._prepare_emotion_retrieval()
 
     def _new_training_set(self, for_training=True):
         if for_training:
@@ -412,15 +404,15 @@ class EmotioNetDataModule(FaceDataModuleBase):
                                         # ring_type=None,
                                         # ring_size=None
                                         )
-
-        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
-        self.test_set = EmotioNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                  None,
-                                  ext = self.processed_ext,
-                                  # ignore_invalid= self.ignore_invalid,
-                                  # ring_type=None,
-                                  # ring_size=None
-                                  )
+        # self.test_set = None
+        # self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        # self.test_set = EmotioNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+        #                           None,
+        #                           ext = self.processed_ext,
+        #                           # ignore_invalid= self.ignore_invalid,
+        #                           # ring_type=None,
+        #                           # ring_size=None
+        #                           )
         # if self.mode in ['all', 'manual']:
         #     # self.image_list += sorted(list((Path(self.path) / "Manually_Annotated").rglob(".jpg")))
         #     self.dataframe = pd.load_csv(self.path / "Manually_Annotated" / "Manually_Annotated.csv")
@@ -618,6 +610,9 @@ class ActionUnitTypes(Enum):
         string_list = [f"AU{i}" for i in l]
         return string_list
 
+    @staticmethod
+    def numAUs(t):
+        return len(ActionUnitTypes.AUtype2AUlist(t))
 
 
 class EmotioNet(EmotionalImageDatasetBase):
@@ -643,13 +638,22 @@ class EmotioNet(EmotionalImageDatasetBase):
         self.df = pd.read_csv(dataframe_path)
         self.image_size = image_size
         # self.use_gt_bb = use_gt_bb
-        self.transforms = transforms or imgaug.augmenters.Identity()
+        # self.transforms = transforms or imgaug.augmenters.Identity()
+        self.transforms = transforms or imgaug.augmenters.Resize((image_size, image_size))
         self.scale = scale
         self.landmark_normalizer = KeypointNormalization()
-        self.use_processed = True
+        # self.use_processed = True
         self.ext = ext
         self.au_type = au_type
         self.au_strs = ActionUnitTypes.AUtype2AUstring_list(self.au_type)
+
+        # # 1 - mean occurence of action units (in case we want to use a balanced loss)
+        # self.au_positive_weights = (1.-self.df[ActionUnitTypes.AUtype2AUstring_list(au_type)].to_numpy().astype(np.float64).mean(axis=0)).astype(np.float32)
+        num_positive = self.df[ActionUnitTypes.AUtype2AUstring_list(au_type)].to_numpy().astype(np.float64).sum(axis=0)
+        num_negative = len(self.df) - num_positive
+        self.au_positive_weights = (num_negative / num_positive).astype(np.float32)
+
+
         # self.ignore_invalid = ignore_invalid
         # self.load_emotion_feature = load_emotion_feature
         # self.nn_distances_array = nn_distances_array
@@ -777,8 +781,11 @@ class EmotioNet(EmotionalImageDatasetBase):
                 if success:
                     break
 
-        AUs = self.df.loc[index, [self.au_strs]]
-        AUs = np.array(AUs)
+        AUs = self.df.loc[index, self.au_strs]
+        AUs = np.array(AUs).astype(np.float64)
+
+        if np.prod(np.logical_or(AUs == 1., AUs == 0.)) != 1:
+            raise RuntimeError(f"It seems an AU label value in sample idx:{index}, {im_rel_path} is undefined. AUs: {AUs}")
 
         # input_img_shape = input_img.shape
 
@@ -833,6 +840,7 @@ class EmotioNet(EmotionalImageDatasetBase):
             "path": str(im_file),
             "label": str(im_file.stem),
             "au": AUs,
+            "au_pos_weights": self.au_positive_weights,
         }
 
         if landmark is not None:
@@ -985,24 +993,29 @@ if __name__ == "__main__":
              # scale=1.25,
              # ignore_invalid=True,
              # )
+    import yaml
+    augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
+
     dm = EmotioNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
              "/is/cluster/work/rdanecek/data/emotionet/",
-             processed_subfolder="processed_2021_Aug_27_18-39-32",
+             # processed_subfolder="processed_2021_Aug_27_18-39-32",
+             processed_subfolder=None,
              scale=1.7,
              ignore_invalid=True,
              image_size=512,
              bb_center_shift_x=0,
              bb_center_shift_y=-0.3,
+            augmentation=augmenter
             )
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
     # dm._extract_emotion_features()
     # dl = dm.val_dataloader()
-    print(f"len training set: {len(dm.training_set)}")
-    print(f"len validation set: {len(dm.validation_set)}")
+    # print(f"len training set: {len(dm.training_set)}")
+    # print(f"len validation set: {len(dm.validation_set)}")
     # dl = dm.train_dataloader()
     # for bi, batch in enumerate(dl):
         # if bi == 10:
@@ -1012,13 +1025,11 @@ if __name__ == "__main__":
 
     # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
     # sample_representative_set(dm.validation_set, out_path)
-    #
-    # validation_set = AffectNet(
-    #     dm.image_path, out_path, dm.image_size, dm.scale, None,
-    # )
-    # for i in range(len(validation_set)):
-    #     sample = validation_set[i]
-    #     validation_set.visualize_sample(sample)
+
+    training_set = dm.training_set
+    for i in range(len(training_set)):
+        sample = training_set[i]
+        training_set.visualize_sample(sample)
     #
     # # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
 

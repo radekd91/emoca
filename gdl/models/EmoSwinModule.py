@@ -86,15 +86,19 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         # emotion['expression'] = emotion['expression']
 
         # classes_probs = F.softmax(emotion['expression'])
-        expression = self.exp_activation(emotion['expr_classification'], dim=1)
+        # expression = self.exp_activation(emotion['expr_classification'], dim=1)
 
         values = {}
-        values['valence'] = valence.view(-1,1)
-        values['arousal'] = arousal.view(-1,1)
-        values['expr_classification'] = expression
+        if self.predicts_valence():
+            values['valence'] = valence.view(-1,1)
+        if self.predicts_arousal():
+            values['arousal'] = arousal.view(-1,1)
+        # values['expr_classification'] = expression
+        values['expr_classification'] = emotion['expr_classification']
 
         # TODO: WARNING: HACK
         if self.n_expression == 8:
+            raise NotImplementedError("This here should not be called")
             values['expr_classification'] = torch.cat([
                 values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
                                                + 2*values['expr_classification'].min()],

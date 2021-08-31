@@ -134,8 +134,8 @@ def validation_set_pass(cfg,
     for ie in range(num_epochs):
 
         pl.utilities.seed.seed_everything(ie)
-        dl = DataLoader(dm.validation_set, shuffle=True, num_workers=dm.num_workers,
-                              batch_size=dm.val_batch_size, drop_last=True)
+        dl = DataLoader(dm.training_set, shuffle=True, num_workers=dm.num_workers,
+                        batch_size=dm.val_batch_size, drop_last=True)
 
         for bi, batch in enumerate(auto.tqdm(dl)):
             # if bi == 50:

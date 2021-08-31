@@ -76,11 +76,7 @@ def submit(cfg_coarse, cfg_detail, pretrained_run_location=None, bid=10):
 def train_on_selected_sequences():
     from hydra.core.global_hydra import GlobalHydra
 
-    coarse_conf = "deca_train_coarse_stargan_cluster"
-    detail_conf = "deca_train_detail_stargan_cluster"
 
-    # coarse_conf = "deca_train_coarse_cluster"
-    # detail_conf = "deca_train_detail_cluster"
 
     # ring_type = "gt_expression"
     # ring_type = "gt_va"
@@ -100,11 +96,11 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend']
         # ],
 
-        # DEFAULT, with VGG perceptual loss
-        [
-            ['model.useSeg=gt', '+model/additional=vgg_loss',],
-            ['model.useSeg=rend', '+model/additional=vgg_loss',]
-        ],
+        # # DEFAULT, with VGG perceptual loss
+        # [
+        #     ['model.useSeg=gt', '+model/additional=vgg_loss',],
+        #     ['model.useSeg=rend', '+model/additional=vgg_loss',]
+        # ],
         #
         # # DEFAULT, with VGG perceptual loss, without photometric
         # [
@@ -160,20 +156,20 @@ def train_on_selected_sequences():
         #      'model.expression_backbone=deca_clone']
         # ],
 
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_coarse_32gb',
-        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_detail',
-        #      # 'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        # ],
-        #
+        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+             # 'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
+        ],
+
         # # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
         # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
         #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
         #         #'model.shape_constrain_type=None',
         #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
         # ],
@@ -359,29 +355,44 @@ def train_on_selected_sequences():
 
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early'
-    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early'
+    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early'
+    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
-    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
 
-    # resume_from = None # resume from Original DECA
-    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
+    resume_from = None # resume from Original DECA
+    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
     flame_encoder = 'ResnetEncoder'
     detail_encoder = 'ResnetEncoder'
-    # flame_encoder = 'swin_tiny_patch4_window7_224'
-    # detail_encoder = 'swin_tiny_patch4_window7_224'
     # flame_encoder = 'swin_small_patch4_window7_224'
     # detail_encoder = 'swin_small_patch4_window7_224'
+    # flame_encoder = 'swin_tiny_patch4_window7_224'
+    # detail_encoder = 'swin_tiny_patch4_window7_224'
+
+    # dataset_coarse =  "data/datasets=coarse_data_cluster"
+    # dataset_detail =  "data/datasets=detail_data_cluster"
+    dataset_coarse = "data/datasets=affectnet_cluster"
+    dataset_detail = "data/datasets=affectnet_cluster"
+
+    augmentation = "data/augmentations=default"
+    # augmentation = "data/augmentations=none"
+
+    # coarse_conf = "deca_train_coarse_stargan_cluster" # uses neural rendering
+    # detail_conf = "deca_train_detail_stargan_cluster" # uses neural rendering
+
+    coarse_conf = "deca_train_coarse_cluster"
+    detail_conf = "deca_train_detail_cluster"
 
 
     fixed_overrides_coarse = [
-        'model/settings=coarse_train',
+        # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
         # 'model/settings=coarse_train_expdeca',
-        # 'model/settings=coarse_train_expdeca_emonet',
+        'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -395,14 +406,16 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         f'+model.e_flame_type={flame_encoder}',
-        f'+model.e_detail_type={detail_encoder}'
+        f'+model.e_detail_type={detail_encoder}',
+        dataset_coarse,
+        augmentation,
     ]
 
     fixed_overrides_detail = [
-        'model/settings=detail_train',
+        # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
         # 'model/settings=detail_train_expdeca',
-        # 'model/settings=detail_train_expdeca_emonet',
+        'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -415,7 +428,9 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         f'+model.e_flame_type={flame_encoder}',
-        f'+model.e_detail_type={detail_encoder}'
+        f'+model.e_detail_type={detail_encoder}',
+        dataset_detail,
+        augmentation,
     ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]

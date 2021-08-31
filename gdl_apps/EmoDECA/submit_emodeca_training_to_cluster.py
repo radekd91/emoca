@@ -211,12 +211,12 @@ def train_emodeca_on_cluster():
     # # #2 EMOSWIN
     conf = "emoswin"
     fixed_overrides_cfg = [
-        # 'model/settings=swin',
-        # 'model/settings=resnet50_cluster',
-        # 'model/settings=vgg13',
-        # 'model/settings=vgg16',
-        # 'model/settings=vgg16_bn',
-        'model/settings=vgg19',
+        # 'model/backbone=swin',
+        # 'model/backbone=resnet50_cluster',
+        # 'model/backbone=vgg13',
+        # 'model/backbone=vgg16',
+        # 'model/backbone=vgg16_bn',
+        'model/backbone=vgg19_bn',
         # '+learning/lr_scheduler=reduce_on_plateau',
         # '+learning/lr_scheduler=exponential',
         # 'learning.batch_size_train=32',

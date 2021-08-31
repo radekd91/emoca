@@ -1849,6 +1849,7 @@ class ExpDECA(DECA):
             ## Attach a parallel flow of FCs onto deca coarse backbone
             self.E_expression = SecondHeadResnet(self.E_flame, self.n_exp_param, 'same')
         elif self.config.expression_backbone == 'deca_clone':
+            #TODO this will only work for Resnet. Make this work for the other backbones (Swin) as well.
             self.E_expression = ResnetEncoder(self.n_exp_param)
             # clone parameters of the ResNet
             self.E_expression.encoder.load_state_dict(self.E_flame.encoder.state_dict())

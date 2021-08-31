@@ -83,6 +83,9 @@ def create_experiment_name(cfg, version=1):
     if 'sampler' in cfg.data.keys() and cfg.data.sampler != "uniform":
         experiment_name += f"_samp-{cfg.data.sampler}"
 
+    if 'predict_AUs' in cfg.model.keys() and cfg.model.predict_AUs:
+        experiment_name += "_AU"
+
     if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
         experiment_name += "_Aug"
 
@@ -152,6 +155,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         os.environ['LOCAL_RANK'] = '0'
 
     loss_to_monitor = 'val_loss_total'
+    dm.prepare_data()
     dm.setup()
     val_data = dm.val_dataloader()
     if isinstance(val_data, list):
@@ -388,7 +392,8 @@ def main():
             # 'learning.val_check_interval=1',
             # 'learning.learning_rate=0',
             # 'learning/optimizer=adabound',
-            'data/datasets=affectnet_desktop',
+            # 'data/datasets=affectnet_desktop',
+            'data/datasets=emotionet_desktop',
             # 'data/augmentations=default',
             'data.sampler=balanced_expr',
             # 'data.sampler=balanced_va',
@@ -464,10 +469,12 @@ def main():
         #3) EmoSWIN or EmoCNN
         emodeca_default = "emoswin"
         emodeca_overrides = [
-            # 'model/settings=swin',
-            # 'model/settings=resnet50',
-            # 'model/settings=vgg19',
-            'model/settings=vgg16_bn',
+            # 'model/backbone=swin',
+            # 'model/backbone=resnet50',
+            # 'model/backbone=vgg19_bn',
+            # 'model/backbone=vgg16_bn',
+            'model/backbone=vgg13_bn',
+            'model/settings=AU_emotionet',
             'learning/logging=none',
             # 'learning.max_steps=1',
             'learning.max_epochs=1',
@@ -482,7 +489,9 @@ def main():
             # 'learning.learning_rate=0',
             # 'learning/optimizer=adabound',
             # 'data/datasets=affectnet_desktop',
+            'data/datasets=emotionet_desktop',
             # 'data/augmentations=default',
+            'data/augmentations=default_with_resize',
         ]
         deca_conf = None
         deca_conf_path = None

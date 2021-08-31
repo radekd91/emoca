@@ -73,7 +73,7 @@ def test(dm, image_index = None, values = None):
     if image_index is None and values is None:
         raise ValueError("Specify either an image to encode-decode or values to decode.")
     print(f"Training set size: {len(dm.training_set)}")
-    print(f"Validation set size: {len(dm.validation_set)}")
+    print(f"Validation set size: {len(dm.training_set)}")
     print(f"Test set size: {len(dm.test_set)}")
 
     import numpy as np
