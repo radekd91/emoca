@@ -29,8 +29,8 @@ predict_AUs: 12
 
 AU_loss:
 #  AU_bce : 1.0
-#  AU_bce_weighted : 1.0
-  AU_l1 : 1.0
+  AU_bce_weighted : 1.0
+#  AU_l1 : 1.0
 
 
 #va_loss_scheme: shake

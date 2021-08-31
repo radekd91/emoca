@@ -490,8 +490,8 @@ def main():
             # 'learning/optimizer=adabound',
             # 'data/datasets=affectnet_desktop',
             'data/datasets=emotionet_desktop',
-            # 'data/augmentations=default',
-            'data/augmentations=default_with_resize',
+            'data/augmentations=default',
+            # 'data/augmentations=default_with_resize',
         ]
         deca_conf = None
         deca_conf_path = None

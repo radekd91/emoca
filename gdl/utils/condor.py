@@ -136,7 +136,7 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
 
     print("Called the following on the cluster: ")
     print(cmd)
-    # subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
-    subprocess.call(["ssh", "%s@login1.cluster.is.localnet" % (username,)] + [cmd])
+    subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
+    # subprocess.call(["ssh", "%s@login1.cluster.is.localnet" % (username,)] + [cmd])
     # subprocess.call(["ssh", "%s@login2.cluster.is.localnet" % (username,)] + [cmd])
     print("Done")

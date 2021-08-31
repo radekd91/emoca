@@ -86,14 +86,14 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        # [
-        #     [],
-        #     []
-        # ],
         [
-            ['data.sampler=balanced_expr'],
+            [],
             []
         ],
+        # [
+        #     ['data.sampler=balanced_expr'],
+        #     []
+        # ],
         # [
         #     ['data.sampler=balanced_va'],
         #     []
@@ -217,6 +217,9 @@ def train_emodeca_on_cluster():
         # 'model/backbone=vgg16',
         # 'model/backbone=vgg16_bn',
         'model/backbone=vgg19_bn',
+        # 'model/settings=AU_emotionet',
+        # 'model/settings=AU_emotionet_bce',
+        'model/settings=AU_emotionet_bce_weighted',
         # '+learning/lr_scheduler=reduce_on_plateau',
         # '+learning/lr_scheduler=exponential',
         # 'learning.batch_size_train=32',
@@ -227,7 +230,8 @@ def train_emodeca_on_cluster():
         # 'model.swin_type=swin_large_patch4_window7_224_22k',
         # 'model.swin_type=swin_base_patch4_window7_224',
         # 'model.swin_type=swin_tiny_patch4_window7_224',
-        'data/datasets=affectnet_cluster',
+        # 'data/datasets=affectnet_cluster',
+        'data/datasets=emotionet_cluster',
         # 'learning.max_steps=0',
         # 'learning.max_epochs=0',
         # 'learning/optimizer=adabound',
