@@ -27,6 +27,35 @@ from torch.utils.data._utils.collate import default_collate
 from torch.utils.data.sampler import WeightedRandomSampler
 
 
+from enum import Enum
+
+
+class ActionUnitTypes(Enum):
+
+    EMOTIONET12 = 1
+    EMOTIONET23 = 2
+    ALL = 3
+
+    @staticmethod
+    def AUtype2AUlist(t):
+        if t == ActionUnitTypes.EMOTIONET12:
+            return [1, 2, 4, 5, 6, 9, 12, 17, 20, 25, 26, 43]
+        elif t == ActionUnitTypes.EMOTIONET23:
+            return [1, 2, 4, 5, 6, 9, 10, 12, 15, 17, 18, 20, 24, 25, 26, 28, 43, 51, 52, 53, 54, 55, 56]
+        elif t == ActionUnitTypes.ALL:
+            return list(range(1,60))
+        raise ValueError(f"Invalid action unit type {t}")
+
+    @staticmethod
+    def AUtype2AUstring_list(t):
+        l = ActionUnitTypes.AUtype2AUlist(t)
+        string_list = [f"AU{i}" for i in l]
+        return string_list
+
+    @staticmethod
+    def numAUs(t):
+        return len(ActionUnitTypes.AUtype2AUlist(t))
+
 
 class EmotioNetDataModule(FaceDataModuleBase):
 
@@ -51,6 +80,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
                  # ring_type=None,
                  # ring_size=None,
                  drop_last=False,
+                 au_type = ActionUnitTypes.EMOTIONET12
                  # sampler=None,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
@@ -78,7 +108,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
         # self.use_processed = True
 
         self.image_path = Path(self.output_dir) / "detections"
-
+        self.au_type = au_type
 
         # self.ignore_invalid = ignore_invalid
 
@@ -326,7 +356,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
     def _dataset_anaylysis(self):
         cleaned_df = pd.read_csv(self.full_dataframe_path)
-        arr = cleaned_df[ActionUnitTypes.AUtype2AUstring_list(ActionUnitTypes.EMOTIONET)].to_numpy(np.float)
+        arr = cleaned_df[ActionUnitTypes.AUtype2AUstring_list(ActionUnitTypes.EMOTIONET12)].to_numpy(np.float)
         unique_au_configs, counts = np.unique(arr, return_counts=True, axis=0)
         print("There is {len(unique_au_configs)} configurations in the dataset. ")
         import matplotlib.pyplot  as plt
@@ -377,7 +407,8 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
             return EmotioNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
                              im_transforms_train,
-                             ext = self.processed_ext
+                             ext = self.processed_ext,
+                             au_type=self.au_type,
                              # ignore_invalid=self.ignore_invalid,
                              # ring_type=self.ring_type,
                              # ring_size=self.ring_size,
@@ -388,7 +419,8 @@ class EmotioNetDataModule(FaceDataModuleBase):
 
         return EmotioNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
                          None,
-                         ext=self.processed_ext
+                         ext=self.processed_ext,
+                             au_type=self.au_type,
                          # ignore_invalid=self.ignore_invalid,
                          # ring_type=None,
                          # ring_size=None,
@@ -400,6 +432,7 @@ class EmotioNetDataModule(FaceDataModuleBase):
         self.validation_set = EmotioNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None,
                                         ext=self.processed_ext,
+                                        au_type=self.au_type,
                                         # ignore_invalid=self.ignore_invalid,
                                         # ring_type=None,
                                         # ring_size=None
@@ -588,31 +621,6 @@ class EmotioNetDataModule(FaceDataModuleBase):
     #                      )
 
 
-from enum import Enum
-
-
-class ActionUnitTypes(Enum):
-
-    EMOTIONET = 1
-    ALL = 2
-
-    @staticmethod
-    def AUtype2AUlist(t):
-        if t == ActionUnitTypes.EMOTIONET:
-            return [1, 2, 4, 5, 6, 9, 12, 17, 20, 25, 26, 43]
-        elif t == ActionUnitTypes.ALL:
-            return list(range(1,60))
-        raise ValueError(f"Invalid action unit type {t}")
-
-    @staticmethod
-    def AUtype2AUstring_list(t):
-        l = ActionUnitTypes.AUtype2AUlist(t)
-        string_list = [f"AU{i}" for i in l]
-        return string_list
-
-    @staticmethod
-    def numAUs(t):
-        return len(ActionUnitTypes.AUtype2AUlist(t))
 
 
 class EmotioNet(EmotionalImageDatasetBase):
@@ -631,7 +639,8 @@ class EmotioNet(EmotionalImageDatasetBase):
                  nn_indices_array=None,
                  nn_distances_array=None,
                  ext=".jpg",
-                 au_type = ActionUnitTypes.EMOTIONET,
+                 au_type = ActionUnitTypes.EMOTIONET12,
+                 allow_missing_gt = None
                  ):
         self.dataframe_path = dataframe_path
         self.image_path = image_path
@@ -646,6 +655,8 @@ class EmotioNet(EmotionalImageDatasetBase):
         self.ext = ext
         self.au_type = au_type
         self.au_strs = ActionUnitTypes.AUtype2AUstring_list(self.au_type)
+
+        self.allow_missing_gt = allow_missing_gt or au_type == ActionUnitTypes.EMOTIONET23
 
         # # 1 - mean occurence of action units (in case we want to use a balanced loss)
         # self.au_positive_weights = (1.-self.df[ActionUnitTypes.AUtype2AUstring_list(au_type)].to_numpy().astype(np.float64).mean(axis=0)).astype(np.float32)
@@ -784,7 +795,7 @@ class EmotioNet(EmotionalImageDatasetBase):
         AUs = self.df.loc[index, self.au_strs]
         AUs = np.array(AUs).astype(np.float64)
 
-        if np.prod(np.logical_or(AUs == 1., AUs == 0.)) != 1:
+        if not self.allow_missing_gt and np.prod(np.logical_or(AUs == 1., AUs == 0.)) != 1:
             raise RuntimeError(f"It seems an AU label value in sample idx:{index}, {im_rel_path} is undefined. AUs: {AUs}")
 
         # input_img_shape = input_img.shape
@@ -1000,14 +1011,15 @@ if __name__ == "__main__":
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
              "/is/cluster/work/rdanecek/data/emotionet/",
-             # processed_subfolder="processed_2021_Aug_27_18-39-32",
-             processed_subfolder=None,
+             processed_subfolder="processed_2021_Aug_27_18-39-32",
+             # processed_subfolder=None,
              scale=1.7,
              ignore_invalid=True,
              image_size=512,
              bb_center_shift_x=0,
              bb_center_shift_y=-0.3,
-            augmentation=augmenter
+            augmentation=augmenter,
+            au_type=ActionUnitTypes.EMOTIONET23
             )
     print(dm.num_subsets)
     dm.prepare_data()

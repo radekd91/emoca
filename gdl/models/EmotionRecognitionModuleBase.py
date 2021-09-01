@@ -237,7 +237,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         if self.predicts_AUs():
             if self.predicts_AUs() == 12:
-                au_type = ActionUnitTypes.EMOTIONET
+                au_type = ActionUnitTypes.EMOTIONET12
             else:
                 raise ValueError(f"Predicting {self.predicts_AUs()} is not supported.")
             losses, metrics = AU_loss(self.AU_loss, pred, gt, metrics, losses, au_type,
@@ -678,10 +678,14 @@ def AU_loss(loss, pred, gt, metrics, losses, AU_type, class_weights=None, pred_p
         #     weight = class_weight
         # else:
         #     weight = torch.ones_like(class_weight)
+
+        # AU coded as 999. or some other value where either not coded (at all) or possibly occluded, we skip thise
+        validity_mask = torch.logical_or(gt["AUs"] == 0., gt["AUs"] == 1.).float().detach()
+
         metrics[pred_prefix + "AU_l1"] = F.l1_loss(pred[pred_prefix + "AUs"],
                                                    gt["AUs"],
                                                    None,
-                                                   reduction = "none")
+                                                   reduction = "none") * validity_mask
         num_AUs = metrics[pred_prefix + "AU_l1"].shape[1]
 
         AU_idxs = ActionUnitTypes.AUtype2AUlist(AU_type)
@@ -695,7 +699,7 @@ def AU_loss(loss, pred, gt, metrics, losses, AU_type, class_weights=None, pred_p
         metrics[pred_prefix + "AU_bce"] = F.binary_cross_entropy_with_logits(pred[pred_prefix + "AUs"],
                                                                              gt["AUs"],
                                                                              None,
-                                                                             reduction="none")
+                                                                             reduction="none") * validity_mask
 
         for i in range(num_AUs):
             au_num = AU_idxs[i]
@@ -708,7 +712,7 @@ def AU_loss(loss, pred, gt, metrics, losses, AU_type, class_weights=None, pred_p
             metrics[pred_prefix + "AU_bce_weighted"] = F.binary_cross_entropy_with_logits(pred[pred_prefix + "AUs"],
                                                                     gt["AUs"],
                                                                     class_weights,
-                                                                     reduction="none")
+                                                                     reduction="none") * validity_mask
 
             for i in range(num_AUs):
                 au_num = AU_idxs[i]
@@ -721,13 +725,12 @@ def AU_loss(loss, pred, gt, metrics, losses, AU_type, class_weights=None, pred_p
 
         for i in range(num_AUs):
             au_num = AU_idxs[i]
-            metrics[pred_prefix + f"AU_{au_num:02d}_acc"] = metrics[pred_prefix + "AU_acc"][:, i, ...].mean()
+            metrics[pred_prefix + f"AU_{au_num:02d}_acc"] = metrics[pred_prefix + "AU_acc"][:, i, ...].mean() * validity_mask
         metrics[pred_prefix + "AU_acc"] = metrics[pred_prefix + "AU_acc"].mean()
 
         if loss is not None:
             if callable(loss):
-                losses[pred_prefix + "AUs"] = loss(pred[pred_prefix + "AUs"],
-                                                             gt["AUs"][:, 0], weight)
+                losses[pred_prefix + "AUs"] = loss(pred[pred_prefix + "AUs"], gt["AUs"])
             elif isinstance(loss, dict):
                 for name, weight in loss.items():
                     losses[pred_prefix + name] = metrics[pred_prefix + name] * weight
