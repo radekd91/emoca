@@ -53,13 +53,15 @@ class EmoDECA(EmotionRecognitionBaseModule):
         hidden_layer_sizes = config.model.num_mlp_layers * [in_size * dim_factor]
 
         out_size = 0
-        if self.config.model.predict_expression:
+        if self.predicts_expression():
             self.num_classes = 9
             out_size += self.num_classes
-        if self.config.model.predict_valence:
+        if self.predicts_valence():
             out_size += 1
-        if self.config.model.predict_arousal:
+        if self.predicts_arousal():
             out_size += 1
+        if self.predicts_AUs():
+            out_size += self.predicts_AUs()
 
         if "use_mlp" not in self.config.model.keys() or self.config.model.use_mlp:
             if 'mlp_norm_layer' in self.config.model.keys():
@@ -166,7 +168,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
             output = self.mlp(input)
 
             out_idx = 0
-            if self.config.model.predict_expression:
+            if self.predicts_expression():
                 expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
                 if self.exp_activation is not None:
                     expr_classification = self.exp_activation(output[:, out_idx:(out_idx + self.num_classes)], dim=1)
@@ -174,7 +176,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
             else:
                 expr_classification = None
 
-            if self.config.model.predict_valence:
+            if self.predicts_valence():
                 valence = output[:, out_idx:(out_idx+1)]
                 if self.v_activation is not None:
                     valence = self.v_activation(valence)
@@ -182,7 +184,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
             else:
                 valence = None
 
-            if self.config.model.predict_arousal:
+            if self.predicts_arousal():
                 arousal = output[:, out_idx:(out_idx+1)]
                 if self.a_activation is not None:
                     arousal = self.a_activation(output[:, out_idx:(out_idx + 1)])
@@ -190,9 +192,19 @@ class EmoDECA(EmotionRecognitionBaseModule):
             else:
                 arousal = None
 
+            if self.predicts_AUs():
+                num_AUs = self.config.model.predict_AUs
+                AUs = output[:, out_idx:(out_idx + num_AUs)]
+                if self.AU_activation is not None:
+                    AUs = self.AU_activation(AUs)
+                out_idx += num_AUs
+            else:
+                AUs = None
+
             values["valence"] = valence
             values["arousal"] = arousal
             values["expr_classification"] = expr_classification
+            values["AUs"] = AUs
 
         if self.emonet is not None:
         # if 'use_coarse_image_emonet' in self.config.model.keys() and self.config.model.use_coarse_image_emonet:
@@ -248,20 +260,20 @@ class EmoDECA(EmotionRecognitionBaseModule):
                      **kwargs):
 
         if self.mlp is not None:
-            losses_mlp, metrics_mlp = super()._compute_loss(pred, gt, class_weight, training)
+            losses_mlp, metrics_mlp = super()._compute_loss(pred, gt, class_weight, training, **kwargs)
         else:
             losses_mlp, metrics_mlp = {}, {}
 
         if self.emonet is not None:
             if self.config.model.use_coarse_image_emonet:
                 losses_emonet_c, metrics_emonet_c = super()._compute_loss(pred, gt, class_weight, training,
-                                                                      pred_prefix="emonet_coarse_")
+                                                                      pred_prefix="emonet_coarse_", **kwargs)
             else:
                 losses_emonet_c, metrics_emonet_c = {}, {}
 
             if self.config.model.use_detail_image_emonet:
                 losses_emonet_d, metrics_emonet_d = super()._compute_loss(pred, gt, class_weight, training,
-                                                                      pred_prefix="emonet_detail_")
+                                                                      pred_prefix="emonet_detail_", **kwargs)
             else:
                 losses_emonet_d, metrics_emonet_d = {}, {}
             losses_emonet = {**losses_emonet_c, **losses_emonet_d}

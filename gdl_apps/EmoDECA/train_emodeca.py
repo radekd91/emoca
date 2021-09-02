@@ -408,38 +408,43 @@ def main():
 
 
         # #2 EMODECA
-        # emodeca_default = "emodeca_emonet_coarse"
-        # emodeca_overrides = ['learning/logging=none',
-        #                      'model/settings=coarse_emodeca',
-        #                      # 'model/settings=coarse_emodeca_emonet',
-        #                      # '+model.mlp_norm_layer=BatchNorm1d',
-        #                      # 'model.unpose_global_emonet=false',
-        #                      # 'model.use_coarse_image_emonet=false',
-        #                      # 'model.use_detail_image_emonet=true',
-        #                      # 'model.static_cam_emonet=false',
-        #                      # 'model.static_light=false',
-        #
-        #                      'model.mlp_dimension_factor=4',
-        #                      ]
+        emodeca_default = "emodeca_emonet_coarse"
+        emodeca_overrides = ['learning/logging=none',
+                             'model/backbone=coarse_emodeca',
+                             # 'model/backbone=coarse_emodeca_emonet',
+                             'model/settings=AU_emotionet',
+                             '+model.mlp_norm_layer=BatchNorm1d',
+                             # 'model.unpose_global_emonet=false',
+                             # 'model.use_coarse_image_emonet=false',
+                             # 'model.use_detail_image_emonet=true',
+                             # 'model.static_cam_emonet=false',
+                             # 'model.static_light=false',
 
-        # deca_default = "deca_train_coarse_cluster"
-        # deca_overrides = [
-        #     # 'model/settings=coarse_train',
-        #     'model/settings=detail_train',
-        #     'model/paths=desktop',
-        #     'model/flame_tex=bfm_desktop',
-        #     'model.resume_training=True',  # load the original DECA model
-        #     'model.useSeg=rend', 'model.idw=0',
-        #     'learning/batching=single_gpu_coarse',
-        #     'learning/logging=none',
-        #     # 'learning/batching=single_gpu_detail',
-        #     #  'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None',
-        #     'data/datasets=affectnet_cluster',
-        #      'learning.batch_size_test=1'
-        # ]
-        # # deca_conf_path = None
-        # # stage = None
+                            'model.mlp_dimension_factor=4',
+                            'data/datasets=emotionet_desktop',
+                            'data/augmentations=default_with_resize',
+                            'data.num_workers=0'
+                             ]
+
+        deca_default = "deca_train_coarse_cluster"
+        deca_overrides = [
+            # 'model/settings=coarse_train',
+            'model/settings=detail_train',
+            'model/paths=desktop',
+            'model/flame_tex=bfm_desktop',
+            'model.resume_training=True',  # load the original DECA model
+            'model.useSeg=rend', 'model.idw=0',
+            'learning/batching=single_gpu_coarse',
+            'learning/logging=none',
+            # 'learning/batching=single_gpu_detail',
+             'model.shape_constrain_type=None',
+             # 'model.detail_constrain_type=None',
+            # 'data/datasets=affectnet_cluster',
+            'data/datasets=emotionet_desktop',
+             'learning.batch_size_test=1'
+        ]
+        deca_conf_path = None
+        stage = None
 
 
 
@@ -466,42 +471,42 @@ def main():
         # # relative_to_path = None
         # # replace_root_path = None
         #
-        #3) EmoSWIN or EmoCNN
-        emodeca_default = "emoswin"
-        emodeca_overrides = [
-            # 'model/backbone=swin',
-            # 'model/backbone=resnet50',
-            # 'model/backbone=vgg19_bn',
-            # 'model/backbone=vgg16_bn',
-            'model/backbone=vgg13_bn',
-            # 'model/settings=AU_emotionet',
-            'model/settings=AU_emotionet_bce_weighted',
-            'learning/logging=none',
-            # 'learning.max_steps=1',
-            'learning.max_epochs=1',
-            'learning.checkpoint_after_training=latest',
-            # 'learning.batch_size_train=32',
-            # 'learning.batch_size_val=1',
-            # '+learning/lr_scheduler=reduce_on_plateau',
-            # 'model.continuous_va_balancing=1d',
-            # 'model.continuous_va_balancing=2d',
-            # 'model.continuous_va_balancing=expr',
-            # 'learning.val_check_interval=1',
-            # 'learning.learning_rate=0',
-            # 'learning/optimizer=adabound',
-            # 'data/datasets=affectnet_desktop',
-            # 'data/datasets=affectnet_v1_desktop',
-            'data/datasets=emotionet_desktop',
-            # 'data/augmentations=default',
-            'data/augmentations=default_with_resize',
-            'data.num_workers=0'
-        ]
-        deca_conf = None
-        deca_conf_path = None
-        fixed_overrides_deca = None
-        stage = None
-        deca_default = None
-        deca_overrides = None
+        # #3) EmoSWIN or EmoCNN
+        # emodeca_default = "emoswin"
+        # emodeca_overrides = [
+        #     # 'model/backbone=swin',
+        #     # 'model/backbone=resnet50',
+        #     # 'model/backbone=vgg19_bn',
+        #     # 'model/backbone=vgg16_bn',
+        #     'model/backbone=vgg13_bn',
+        #     # 'model/settings=AU_emotionet',
+        #     'model/settings=AU_emotionet_bce_weighted',
+        #     'learning/logging=none',
+        #     # 'learning.max_steps=1',
+        #     'learning.max_epochs=1',
+        #     'learning.checkpoint_after_training=latest',
+        #     # 'learning.batch_size_train=32',
+        #     # 'learning.batch_size_val=1',
+        #     # '+learning/lr_scheduler=reduce_on_plateau',
+        #     # 'model.continuous_va_balancing=1d',
+        #     # 'model.continuous_va_balancing=2d',
+        #     # 'model.continuous_va_balancing=expr',
+        #     # 'learning.val_check_interval=1',
+        #     # 'learning.learning_rate=0',
+        #     # 'learning/optimizer=adabound',
+        #     # 'data/datasets=affectnet_desktop',
+        #     # 'data/datasets=affectnet_v1_desktop',
+        #     'data/datasets=emotionet_desktop',
+        #     # 'data/augmentations=default',
+        #     'data/augmentations=default_with_resize',
+        #     'data.num_workers=0'
+        # ]
+        # deca_conf = None
+        # deca_conf_path = None
+        # fixed_overrides_deca = None
+        # stage = None
+        # deca_default = None
+        # deca_overrides = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,
