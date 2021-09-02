@@ -132,7 +132,8 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
             values['arousal'] = arousal.view(-1,1)
         # values['expr_classification'] = expression
         values['expr_classification'] = emotion['expr_classification']
-        values['AUs'] = emotion['AUs']
+        if self.predicts_AUs():
+            values['AUs'] = emotion['AUs']
 
         # TODO: WARNING: HACK
         if self.n_expression == 8:

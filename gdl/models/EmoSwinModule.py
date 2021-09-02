@@ -20,9 +20,25 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
     def __init__(self, config):
         super().__init__(config)
         self.n_expression = 9  # we use all affectnet classes (included none) for now
+
+        self.num_outputs = 0
+        if self.config.model.predict_expression:
+            self.num_outputs += self.n_expression
+            self.num_classes = self.n_expression
+
+        if self.config.model.predict_valence:
+            self.num_outputs += 1
+
+        if self.config.model.predict_arousal:
+            self.num_outputs += 1
+
+        if 'predict_AUs' in self.config.model.keys() and self.config.model.predict_AUs:
+            self.num_outputs += self.config.model.predict_AUs
+
+
         with open_dict(config.model.swin_cfg):
             self.swin = create_swin_backbone(config.model.swin_cfg,
-                                             self.n_expression + 2,
+                                             self.num_outputs,
                                              config.data.image_size,
                                              config.model.load_pretrained_swin,
                                              self.config.model.swin_type )
@@ -32,15 +48,15 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
     def _forward(self, images):
         output, emo_feat_2 = self.swin(images, include_features=True)
         out_idx = 0
-        if self.config.model.predict_expression:
-            expr_classification = output[:, out_idx:(out_idx + self.num_classes)]
+        if self.predicts_expression():
+            expr_classification = output[:, out_idx:(out_idx + self.n_expression)]
             if self.exp_activation is not None:
                 expr_classification = self.exp_activation(expr_classification, dim=1)
-            out_idx += self.num_classes
+            out_idx += self.n_expression
         else:
             expr_classification = None
 
-        if self.config.model.predict_valence:
+        if self.predicts_valence():
             valence = output[:, out_idx:(out_idx + 1)]
             if self.v_activation is not None:
                 valence = self.v_activation(valence)
@@ -48,7 +64,7 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         else:
             valence = None
 
-        if self.config.model.predict_arousal:
+        if self.predicts_arousal():
             arousal = output[:, out_idx:(out_idx + 1)]
             if self.a_activation is not None:
                 arousal = self.a_activation(arousal)
@@ -56,11 +72,23 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
         else:
             arousal = None
 
+        if self.predicts_AUs():
+            num_AUs = self.config.model.predict_AUs
+            AUs = output[:, out_idx:(out_idx + num_AUs)]
+            if self.AU_activation is not None:
+                AUs = self.AU_activation(AUs)
+            out_idx += num_AUs
+        else:
+            AUs = None
+
+        assert out_idx == output.shape[1]
+
         values = {}
         values["emo_feat_2"] = emo_feat_2
         values["valence"] = valence
         values["arousal"] = arousal
         values["expr_classification"] = expr_classification
+        values["AUs"] = AUs
         return values
 
 
@@ -95,6 +123,9 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
             values['arousal'] = arousal.view(-1,1)
         # values['expr_classification'] = expression
         values['expr_classification'] = emotion['expr_classification']
+
+        if self.predicts_AUs():
+            values['AUs'] = emotion['AUs']
 
         # TODO: WARNING: HACK
         if self.n_expression == 8:
