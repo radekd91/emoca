@@ -370,14 +370,14 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         gt = {}
         if self.predicts_valence():
-            gt["valence"] = valence_gt
             valence_gt = batch["va"][:, 0:1]
+            gt["valence"] = valence_gt
         if self.predicts_arousal():
-            gt["arousal"] = arousal_gt
             arousal_gt = batch["va"][:, 1:2]
+            gt["arousal"] = arousal_gt
         if self.predicts_expression():
-            gt["expr_classification"] = expr_classification_gt
             expr_classification_gt = batch["affectnetexp"]
+            gt["expr_classification"] = expr_classification_gt
             if "expression_weight" in batch.keys():
                 class_weight = batch["expression_weight"][0]
             else:

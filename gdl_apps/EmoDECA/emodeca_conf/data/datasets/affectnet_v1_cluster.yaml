@@ -38,5 +38,5 @@ image_size: 224
 scale: 1.25
 face_detector: 'fan'
 face_detector_threshold: 0.9
-
+processed_ext: .jpg
 sampler: uniform

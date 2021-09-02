@@ -377,34 +377,34 @@ def main():
     if len(sys.argv) < 2:
 
         #1 EMONET
-        emodeca_default = "emonet"
-        emodeca_overrides = [
-            'model/settings=emonet_trainable',
-            # 'model/settings=emonet_trainable_weighted_va',
-            'learning/logging=none',
-            # 'learning.max_steps=1',
-            'learning.max_epochs=1',
-            'learning.checkpoint_after_training=latest',
-            '+learning/lr_scheduler=reduce_on_plateau',
-            # 'model.continuous_va_balancing=1d',
-            # 'model.continuous_va_balancing=2d',
-            # 'model.continuous_va_balancing=expr',
-            # 'learning.val_check_interval=1',
-            # 'learning.learning_rate=0',
-            # 'learning/optimizer=adabound',
-            # 'data/datasets=affectnet_desktop',
-            'data/datasets=emotionet_desktop',
-            # 'data/augmentations=default',
-            'data.sampler=balanced_expr',
-            # 'data.sampler=balanced_va',
-
-        ]
-        deca_conf = None
-        deca_conf_path = None
-        fixed_overrides_deca = None
-        stage = None
-        deca_default = None
-        deca_overrides = None
+        # emodeca_default = "emonet"
+        # emodeca_overrides = [
+        #     'model/settings=emonet_trainable',
+        #     # 'model/settings=emonet_trainable_weighted_va',
+        #     'learning/logging=none',
+        #     # 'learning.max_steps=1',
+        #     'learning.max_epochs=1',
+        #     'learning.checkpoint_after_training=latest',
+        #     '+learning/lr_scheduler=reduce_on_plateau',
+        #     # 'model.continuous_va_balancing=1d',
+        #     # 'model.continuous_va_balancing=2d',
+        #     # 'model.continuous_va_balancing=expr',
+        #     # 'learning.val_check_interval=1',
+        #     # 'learning.learning_rate=0',
+        #     # 'learning/optimizer=adabound',
+        #     # 'data/datasets=affectnet_desktop',
+        #     'data/datasets=emotionet_desktop',
+        #     # 'data/augmentations=default',
+        #     'data.sampler=balanced_expr',
+        #     # 'data.sampler=balanced_va',
+        #
+        # ]
+        # deca_conf = None
+        # deca_conf_path = None
+        # fixed_overrides_deca = None
+        # stage = None
+        # deca_default = None
+        # deca_overrides = None
 
 
         # #2 EMODECA
@@ -471,10 +471,10 @@ def main():
         emodeca_overrides = [
             # 'model/backbone=swin',
             # 'model/backbone=resnet50',
-            # 'model/backbone=vgg19_bn',
+            'model/backbone=vgg19_bn',
             # 'model/backbone=vgg16_bn',
-            'model/backbone=vgg13_bn',
-            'model/settings=AU_emotionet',
+            # 'model/backbone=vgg13_bn',
+            # 'model/settings=AU_emotionet',
             'learning/logging=none',
             # 'learning.max_steps=1',
             'learning.max_epochs=1',
@@ -489,9 +489,11 @@ def main():
             # 'learning.learning_rate=0',
             # 'learning/optimizer=adabound',
             # 'data/datasets=affectnet_desktop',
-            'data/datasets=emotionet_desktop',
-            'data/augmentations=default',
-            # 'data/augmentations=default_with_resize',
+            'data/datasets=affectnet_v1_desktop',
+            # 'data/datasets=emotionet_desktop',
+            # 'data/augmentations=default',
+            'data/augmentations=default_with_resize',
+            'data.num_workers=0'
         ]
         deca_conf = None
         deca_conf_path = None

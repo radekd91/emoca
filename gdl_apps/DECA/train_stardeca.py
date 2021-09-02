@@ -58,6 +58,7 @@ def prepare_data(cfg):
             ring_size=ring_size,
             drop_last=drop_last,
             sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
+            processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
         )
         sequence_name = "AffNet"
     else:

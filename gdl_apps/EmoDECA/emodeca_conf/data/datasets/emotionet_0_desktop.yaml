@@ -20,3 +20,4 @@ face_detector: 'fan'
 face_detector_threshold: 0.9
 
 sampler: uniform
+processed_ext: .jpg

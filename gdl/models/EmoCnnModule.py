@@ -26,6 +26,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         self.num_outputs = 0
         if self.config.model.predict_expression:
             self.num_outputs += self.n_expression
+            self.num_classes = self.n_expression
 
         if self.config.model.predict_valence:
             self.num_outputs += 1
