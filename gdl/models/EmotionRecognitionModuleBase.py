@@ -414,8 +414,6 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         gt = {}
         if self.predicts_valence():
-            print("----------------------")
-            print(batch.keys())
             valence_gt = batch["va"][:, 0:1]
             gt["valence"] = valence_gt
         if self.predicts_arousal():

@@ -233,7 +233,7 @@ def train_emodeca_on_cluster():
         # 'data/datasets=affectnet_cluster',
         'data/datasets=affectnet_v1_cluster',
         # 'data/datasets=emotionet_0_cluster',
-        'data/datasets=emotionet_cluster',
+        # 'data/datasets=emotionet_cluster',
         # 'learning.max_steps=0',
         # 'learning.max_epochs=0',
         # 'learning/optimizer=adabound',
