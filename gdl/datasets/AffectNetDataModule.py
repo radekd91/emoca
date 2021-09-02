@@ -985,6 +985,8 @@ if __name__ == "__main__":
     #          # ring_type="emonet_feature",
     #          ring_size=4
     #         )
+    import yaml
+    augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
 
     dm = AffectNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
@@ -992,7 +994,7 @@ if __name__ == "__main__":
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",
-             processed_subfolder=None,
+             processed_subfolder="processed_2021_Aug_27_19-58-02",
              processed_ext=".jpg",
              mode="manual",
              scale=1.7,
@@ -1003,7 +1005,8 @@ if __name__ == "__main__":
              # ring_type="gt_expression",
              ring_type="gt_va",
              # ring_type="emonet_feature",
-             ring_size=4
+             ring_size=4,
+            augmentation=augmenter,
             )
 
     print(dm.num_subsets)

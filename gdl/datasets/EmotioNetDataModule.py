@@ -1011,15 +1011,16 @@ if __name__ == "__main__":
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
              "/is/cluster/work/rdanecek/data/emotionet/",
-             processed_subfolder="processed_2021_Aug_27_18-39-32",
+             processed_subfolder="processed_2021_Aug_31_21-33-44",
              # processed_subfolder=None,
              scale=1.7,
              ignore_invalid=True,
-             image_size=512,
+             # image_size=512,
+             image_size=224,
              bb_center_shift_x=0,
              bb_center_shift_y=-0.3,
             augmentation=augmenter,
-            au_type=ActionUnitTypes.EMOTIONET23
+            # au_type=ActionUnitTypes.EMOTIONET23
             )
     print(dm.num_subsets)
     dm.prepare_data()
@@ -1041,10 +1042,26 @@ if __name__ == "__main__":
     training_set = dm.training_set
     for i in range(len(training_set)):
         sample = training_set[i]
+        # sample = training_set[0]
         training_set.visualize_sample(sample)
-    #
+
     # # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
 
     # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
 
     # dm._detect_faces()
+
+    # failures = [106, 112, 155, 15, 175, 1, 200, 208, 210, 23, 250, 263, 268, 346, 355, 360, 37, 389, 432, 441, 443, 452,
+    #             465, 482, 491, 4, 523, 590, 600, 629, 647, 653, 658, 660, 676, 729, 737, 748, 760, 789, 798, 818, 878,
+    #             89, 90, 921, 924, ]
+
+
+    # failures = [
+    #     355,
+    #     389, 590, 600, 647, 676]
+
+
+    # for sid in failures:
+    #     dm._detect_landmarks_and_segment_subset(dm.subset_size * sid,
+    #                                               min((sid + 1) * dm.subset_size, len(dm.df)))
+

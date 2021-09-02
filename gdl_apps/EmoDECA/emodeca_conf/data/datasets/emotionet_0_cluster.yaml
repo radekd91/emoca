@@ -2,7 +2,7 @@
 data_class: EmotioNetDataModule
 input_dir: /ps/project/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/
 output_dir: /is/cluster/work/rdanecek/data/emotionet/
-processed_subfolder: processed_2021_Aug_31_21-33-44
+processed_subfolder: processed_2021_Aug_27_18-39-32
 num_workers: 8
 
 ignore_invalid: true

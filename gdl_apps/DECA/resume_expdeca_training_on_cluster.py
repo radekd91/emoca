@@ -121,11 +121,11 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    stage = 2
-    resume_from_previous = True
-    force_new_location = False
+    # stage = 2
+    # resume_from_previous = True
+    # force_new_location = False
 
-    resume_folders = []
+    # resume_folders = []
     # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
     # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
     # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
@@ -138,10 +138,10 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    # stage = 2
-    # resume_from_previous = False
-    # force_new_location = False
-    # resume_folders = []
+    stage = 2
+    resume_from_previous = False
+    force_new_location = False
+    resume_folders = []
     # resume_folders += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early']
     # resume_folders += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
     # resume_folders += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early']
