@@ -400,6 +400,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                                             arousal_sample_weight=arousal_sample_weight,
                                             va_sample_weight=va_sample_weight,
                                             expression_sample_weight=expression_sample_weight,
+                                            au_positive_weights=au_positive_weights,
                                             )
 
         self._log_losses_and_metrics(losses, metrics, "train")
@@ -498,7 +499,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                 else:
                     au_positive_weights = None
             else:
-                au_positive_weights
+                au_positive_weights = None
 
             pred = values
             losses, metrics = self.compute_loss(pred, gt, class_weight,
