@@ -501,10 +501,10 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             else:
                 au_positive_weights = None
 
-            pred = values
-            losses, metrics = self.compute_loss(pred, gt, class_weight,
-                                                au_positive_weights=au_positive_weights,
-                                                training=False)
+        pred = values
+        losses, metrics = self.compute_loss(pred, gt, class_weight,
+                                            au_positive_weights=au_positive_weights,
+                                            training=False)
 
         if self.config.learning.test_vis_frequency > 0:
             if batch_idx % self.config.learning.test_vis_frequency == 0:

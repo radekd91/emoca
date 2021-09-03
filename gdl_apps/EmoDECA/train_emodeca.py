@@ -408,7 +408,8 @@ def main():
 
 
         # #2 EMODECA
-        emodeca_default = "emodeca_emonet_coarse"
+        # emodeca_default = "emodeca_emonet_coarse"
+        emodeca_default = "emodeca_coarse"
         emodeca_overrides = ['learning/logging=none',
                              'model/backbone=coarse_emodeca',
                              # 'model/backbone=coarse_emodeca_emonet',
@@ -437,8 +438,8 @@ def main():
             'learning/batching=single_gpu_coarse',
             'learning/logging=none',
             # 'learning/batching=single_gpu_detail',
-             'model.shape_constrain_type=None',
-             # 'model.detail_constrain_type=None',
+            #  'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
             # 'data/datasets=affectnet_cluster',
             'data/datasets=emotionet_desktop',
              'learning.batch_size_test=1'

@@ -157,22 +157,22 @@ def train_on_selected_sequences():
         # ],
 
         # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        ],
-
-        # # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
         # [
         #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
         #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
         # ],
+
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -388,6 +388,10 @@ def train_on_selected_sequences():
     detail_conf = "deca_train_detail_cluster"
 
 
+    # sampler="data.sampler=uniform"
+    sampler="data.sampler=balanced_expr"
+
+
     fixed_overrides_coarse = [
         # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
@@ -409,6 +413,7 @@ def train_on_selected_sequences():
         f'+model.e_detail_type={detail_encoder}',
         dataset_coarse,
         augmentation,
+        sampler
     ]
 
     fixed_overrides_detail = [
@@ -431,6 +436,7 @@ def train_on_selected_sequences():
         f'+model.e_detail_type={detail_encoder}',
         dataset_detail,
         augmentation,
+        sampler
     ]
 
     # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
