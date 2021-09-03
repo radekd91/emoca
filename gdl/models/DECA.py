@@ -54,22 +54,45 @@ class DecaModule(LightningModule):
             self.stage_name = ""
         if len(self.stage_name) > 0:
             self.stage_name += "_"
+        self.emonet_loss = None
+        self._init_emotion_loss()
+
+        if 'mlp_emotion_predictor' in self.deca.config.keys():
+            # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
+            self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
+        else:
+            self.emotion_mlp = None
+
+    def _init_emotion_loss(self):
         if 'emonet_weight' in self.deca.config.keys():
+            if self.emonet_loss is not None:
+                emoloss_force_override = True if 'emoloss_force_override' in self.deca.config.keys() and self.deca.config.emoloss_force_override else False
+                if self.emonet_loss.is_trainable():
+                    if not emoloss_force_override:
+                        print("The old emonet loss is trainable and will not be overrided or replaced.")
+                        return
+                        # raise NotImplementedError("The old emonet loss was trainable. Changing a trainable loss is probably now "
+                        #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
+                    else:
+                        print("The old emonet loss is trainable but override is set so it will be replaced.")
+
             if 'emonet_model_path' in self.deca.config.keys():
                 emonet_model_path = self.deca.config.emonet_model_path
             else:
                 emonet_model_path=None
             # self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
             emoloss_trainable = True if 'emoloss_trainable' in self.deca.config.keys() and self.deca.config.emoloss_trainable else False
-            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable)
+            emoloss_dual = True if 'emoloss_dual' in self.deca.config.keys() and self.deca.config.emoloss_dual else False
+            old_emonet_loss = self.emonet_loss
+
+            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable, dual=emoloss_dual)
+
+            if old_emonet_loss is not None and type(old_emonet_loss) != self.emonet_loss:
+                print(f"The old emonet loss {old_emonet_loss.__class__.__name__} will be replaced during reconfiguration by "
+                      f"new emotion loss {self.emonet_loss.__class__.__name__}")
+
         else:
             self.emonet_loss = None
-            
-        if 'mlp_emotion_predictor' in self.deca.config.keys():
-            # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
-            self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
-        else:
-            self.emotion_mlp = None
 
     def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
@@ -95,6 +118,9 @@ class DecaModule(LightningModule):
             print(missing_modules)
         else:
             self.deca._reconfigure(model_params)
+
+        self._init_emotion_loss()
+
         self.stage_name = stage_name
         if self.stage_name is None:
             self.stage_name = ""

@@ -130,7 +130,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             if 'emonet_model_path' in cfg_coarse.model.keys():
                 experiment_name += Path(cfg_coarse.model.emonet_model_path).name[20:30]
                 experiment_name += '_'
-                if 'emoloss_trainable' in cfg_coarse.model.keys() and cfg_coarse.model.emoloss_trainable:
+                if 'emoloss_dual' in cfg_coarse.model.keys() and cfg_coarse.model.emoloss_dual:
+                    experiment_name += "du_"
+                elif 'emoloss_trainable' in cfg_coarse.model.keys() and cfg_coarse.model.emoloss_trainable:
                     experiment_name += "ft_"
             if cfg_coarse.model.use_emonet_feat_1:
                 experiment_name += 'F1'
@@ -540,6 +542,8 @@ def main():
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
+            '+model.emoloss_dual=true',
+            # '+model.emoloss_trainable=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}'
@@ -547,8 +551,8 @@ def main():
         detail_override = [
             # 'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
-            'model/settings=detail_train_expdeca',
-            # 'model/settings=detail_train_expdeca_emonet',
+            # 'model/settings=detail_train_expdeca',
+            'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
             # 'model.expression_constrain_use_jaw_pose=True',
@@ -573,6 +577,7 @@ def main():
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
+            '+model.emoloss_dual=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}'

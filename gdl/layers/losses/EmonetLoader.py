@@ -9,7 +9,7 @@ def get_emonet(device=None, load_pretrained=True):
     device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     path_to_emonet = Path(__file__).absolute().resolve().parent.parent.parent.parent.parent / "emonet"
     if not(str(path_to_emonet) in sys.path  or str(path_to_emonet.absolute()) in sys.path):
-        print(f"Adding EmoNet path '{path_to_emonet}'")
+        # print(f"Adding EmoNet path '{path_to_emonet}'")
         sys.path += [str(path_to_emonet)]
 
     from emonet.models import EmoNet

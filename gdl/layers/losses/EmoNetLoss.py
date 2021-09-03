@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from gdl.layers.losses.EmonetLoader import get_emonet
 from pathlib import Path
@@ -11,7 +13,7 @@ import sys
 
 
 def emo_network_from_path(path):
-    print(f"Loading trained EmoNet from: '{path}'")
+    print(f"Loading trained emotion network from: '{path}'")
 
     def load_configs(run_path):
         from omegaconf import OmegaConf
@@ -40,7 +42,7 @@ def emo_network_from_path(path):
     return emonet_module
 
 
-def create_emo_loss(device, emoloss = None, trainable=False):
+def create_emo_loss(device, emoloss = None, trainable=False, dual=False):
     if emoloss is None:
         return EmoNetLoss(device, emonet=emoloss)
     if isinstance(emoloss, str):
@@ -50,9 +52,15 @@ def create_emo_loss(device, emoloss = None, trainable=False):
 
             if isinstance(emo_loss, EmoNetModule):
                 emonet = emo_loss.emonet
+                print("Creating EmoNetLoss")
                 return EmoNetLoss(device, emonet=emonet, trainable=trainable)
             else:
-                return EmoBackboneLoss(device, emo_loss, trainable=trainable)
+                if not dual:
+                    print(f"Creating EmoBackboneLoss, trainable={trainable}")
+                    return EmoBackboneLoss(device, emo_loss, trainable=trainable)
+                else:
+                    print(f"Creating EmoBackboneDualLoss")
+                    return EmoBackboneDualLoss(device, emo_loss, trainable=trainable, clone_is_trainable=True)
         else:
             raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
 
@@ -79,15 +87,21 @@ class EmoLossBase(torch.nn.Module):
     def output_emo(self):
         return self.output_emotion
 
+    def _forward_input(self, images):
+        # there is no need to keep gradients for input (even if we're finetuning, which we don't, it's the output image we'd wannabe finetuning on)
+        with torch.no_grad():
+            result = self(images)
+        return result
+
+    def _forward_output(self, images):
+        return self(images)
+
     def compute_loss(self, input_images, output_images):
         # input_emotion = None
         # self.output_emotion = None
 
-        # there is no need to keep gradients for input (even if we're finetuning, which we don't, it's the output image we'd wannabe finetuning on)
-        with torch.no_grad():
-            input_emotion = self(input_images)
-
-        output_emotion = self(output_images)
+        input_emotion = self._forward_input(input_images)
+        output_emotion = self._forward_output(output_images)
         self.input_emotion = input_emotion
         self.output_emotion = output_emotion
 
@@ -111,6 +125,9 @@ class EmoLossBase(torch.nn.Module):
         if self.trainable:
             return list(self.parameters())
         return []
+
+    def is_trainable(self):
+        return self._get_trainable_params() == 0
 
 
 class EmoNetLoss(EmoLossBase):
@@ -204,56 +221,53 @@ class EmoNetLoss(EmoLossBase):
             return self.emonet.emo_parameters
         return []
 
-class EmoBackboneLoss(EmoLossBase):
-# class EmoNetLoss(object):
 
-    # def __init__(self, device, backbone=None):
+class EmoBackboneLoss(EmoLossBase):
+
     def __init__(self, device, backbone, trainable=False):
         super().__init__(trainable)
-        # if backbone is None:
-        #     self.backbone = get_emonet(device).eval()
-        # el
-        # if isinstance(backbone, str):
-        #     path = Path(backbone)
-        #     if path.is_dir():
-        #         print(f"Loading trained EmoNet from: '{path}'")
-        #         def load_configs(run_path):
-        #             from omegaconf import OmegaConf
-        #             with open(Path(run_path) / "cfg.yaml", "r") as f:
-        #                 conf = OmegaConf.load(f)
-        #             return conf
-        #
-        #         cfg = load_configs(path)
-        #         checkpoint_mode = 'best'
-        #         stages_prefixes = ""
-        #
-        #         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixes,
-        #                                                                    checkpoint_mode=checkpoint_mode,
-        #                                                                    # relative_to=relative_to_path,
-        #                                                                    # replace_root=replace_root_path
-        #                                                                    )
-        #         checkpoint_kwargs = checkpoint_kwargs or {}
-        #
-        #         from gdl.utils.other import class_from_str
-        #         module_class = class_from_str(config.model.emodeca_type)
-        #
-        #         emonet_module = module_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
-        #         self.backbone = emonet_module.backbone
-        #     else:
-        #         raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
-        #
-        # else:
         self.backbone = backbone
-        if trainable:
+        if not trainable:
             self.backbone.requires_grad_(False)
             self.backbone.eval()
         else:
             self.backbone.requires_grad_(True)
+        self.backbone.to(device)
+
+    def _get_trainable_params(self):
+        if self.trainable:
+            return list(self.backbone.parameters())
+        return []
 
     def forward(self, images):
         return self.backbone._forward(images)
-        # return self.backbone(images)
 
-#
-# if __name__ == "__main__":
-#     net = get_emonet(load_pretrained=False)
+
+
+class EmoBackboneDualLoss(EmoBackboneLoss):
+
+    def __init__(self, device, backbone, trainable=False, clone_is_trainable=True):
+        super().__init__(device, backbone, trainable)
+        assert not trainable
+
+        if not clone_is_trainable:
+            raise ValueError("The second cloned backbone (used to be finetuned on renderings) is not trainable. "
+                             "Probably not what you want.")
+        self.clone_is_trainable = clone_is_trainable
+        self.trainable_backbone = copy.deepcopy(backbone)
+        if not clone_is_trainable:
+            self.trainable_backbone.requires_grad_(False)
+            self.trainable_backbone.eval()
+        else:
+            self.trainable_backbone.requires_grad_(True)
+        self.trainable_backbone.to(device)
+
+    def _get_trainable_params(self):
+        trainable_params = super()._get_trainable_params()
+        if self.clone_is_trainable:
+            return list(self.trainable_backbone.parameters())
+        return trainable_params
+
+    def _forward_output(self, images):
+        return self.trainable_backbone._forward(images)
+

@@ -130,7 +130,7 @@ def main():
     # stage = 2
     # resume_from_previous = False
     # force_new_location = False
-
+    # resume_folders = []
     ## ExpDECASTAR (neural rendering, different emonetion networks)
 
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-43_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Exnone_DwC_early"]
