@@ -543,7 +543,6 @@ def main():
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
             '+model.emoloss_dual=true',
-            # '+model.emoloss_trainable=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}'

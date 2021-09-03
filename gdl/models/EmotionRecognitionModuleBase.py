@@ -490,16 +490,13 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             expr_classification_gt = batch["affectnetexp"]
             if self.predicts_expression():
                 gt["expr_classification"] = expr_classification_gt
+
+        au_positive_weights = None
         if "AUs" in batch.keys():
             if self.predicts_AUs():
                 gt["AUs"] = batch["AUs"]
-
                 if 'au_pos_weights' in batch.keys():
                     au_positive_weights = batch['au_pos_weights'][0]
-                else:
-                    au_positive_weights = None
-            else:
-                au_positive_weights = None
 
         pred = values
         losses, metrics = self.compute_loss(pred, gt, class_weight,
