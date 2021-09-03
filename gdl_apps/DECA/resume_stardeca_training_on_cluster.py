@@ -79,11 +79,11 @@ def submit(
 
 
 def main():
-    # stage = 0
-    # resume_from_previous = False
-    # force_new_location = False
+    stage = 0
+    resume_from_previous = False
+    force_new_location = False
     #
-    # resume_folders = []
+    resume_folders = []
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] # later
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early"]
@@ -104,8 +104,8 @@ def main():
     ## resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"]
 
 
-    # for resume_folder in resume_folders:
-    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+    for resume_folder in resume_folders:
+        submit(resume_folder, stage, resume_from_previous, force_new_location)
 
     # stage = 2
     # resume_from_previous = False
@@ -127,9 +127,9 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    stage = 2
-    resume_from_previous = False
-    force_new_location = False
+    # stage = 2
+    # resume_from_previous = False
+    # force_new_location = False
 
     ## ExpDECASTAR (neural rendering, different emonetion networks)
 
@@ -145,8 +145,8 @@ def main():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_24_00-13-33_ExpDECAStar_Affec_para_Jaw_EmoB_F2VAE_DeSegrend_Exnone_DeNo_early/"]
 
 
-    for resume_folder in resume_folders:
-        submit(resume_folder, stage, resume_from_previous, force_new_location)
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 #
 
 

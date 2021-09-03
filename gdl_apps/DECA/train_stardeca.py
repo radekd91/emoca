@@ -75,6 +75,10 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if cfg_coarse.data.data_class:
             experiment_name += '_' + cfg_coarse.data.data_class[:5]
 
+        if 'sampler' in cfg_coarse.data.keys() and cfg_coarse.data.sampler != 'uniform':
+            experiment_name += '_' + cfg_coarse.data.sampler
+
+
         e_flame_type = 'ResnetEncoder'
         if 'e_flame_type' in cfg_coarse.model.keys():
             e_flame_type = cfg_coarse.model.e_flame_type
