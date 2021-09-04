@@ -127,7 +127,7 @@ class EmoLossBase(torch.nn.Module):
         return []
 
     def is_trainable(self):
-        return self._get_trainable_params() == 0
+        return len(self._get_trainable_params()) != 0
 
 
 class EmoNetLoss(EmoLossBase):

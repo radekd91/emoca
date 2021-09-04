@@ -75,6 +75,8 @@ class DecaModule(LightningModule):
                         #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
                     else:
                         print("The old emonet loss is trainable but override is set so it will be replaced.")
+                else:
+                    print("The old emonet loss is not trainable. It will be replaced.")
 
             if 'emonet_model_path' in self.deca.config.keys():
                 emonet_model_path = self.deca.config.emonet_model_path
@@ -88,7 +90,7 @@ class DecaModule(LightningModule):
             self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable, dual=emoloss_dual)
 
             if old_emonet_loss is not None and type(old_emonet_loss) != self.emonet_loss:
-                print(f"The old emonet loss {old_emonet_loss.__class__.__name__} will be replaced during reconfiguration by "
+                print(f"The old emonet loss {old_emonet_loss.__class__.__name__} is replaced during reconfiguration by "
                       f"new emotion loss {self.emonet_loss.__class__.__name__}")
 
         else:
