@@ -166,13 +166,13 @@ def train_on_selected_sequences():
         ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        # [
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
-        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
-        #         #'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        # ],
+        [
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+                #'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -410,7 +410,7 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         # '+model.emoloss_trainable=true',
-        # '+model.emoloss_dual=true',
+        '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
         dataset_coarse,
@@ -435,7 +435,7 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         # '+model.emoloss_trainable=true',
-        # '+model.emoloss_dual=true',
+        '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
         dataset_detail,

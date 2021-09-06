@@ -190,7 +190,8 @@ class VGGFace2(nn.Module):
     def __init__(self, pretrained_data='vggface2'):
         super(VGGFace2, self).__init__()
         self.reg_model = resnet50(num_classes=8631, include_top=False).eval() #.cuda()
-        checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
+        # checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
+        checkpoint = '/ps/scratch/rdanecek/FaceRecognition/resnet50_ft_weight.pkl'
         load_state_dict(self.reg_model, checkpoint)
         self._freeze_layer(self.reg_model)
 

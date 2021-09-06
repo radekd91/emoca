@@ -891,7 +891,8 @@ class VGGFace2Loss(nn.Module):
         super(VGGFace2Loss, self).__init__()
         self.reg_model = resnet50(num_classes=8631, include_top=False).eval()#.cuda()
         checkpoint = pretrained_checkpoint_path or \
-                     '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
+                     '/ps/scratch/rdanecek/FaceRecognition/resnet50_ft_weight.pkl'
+                     # '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
         load_state_dict(self.reg_model, checkpoint)
         # self.mean_bgr = torch.tensor([91.4953, 103.8827, 131.0912])#.cuda()
         self.register_buffer('mean_bgr', torch.tensor([91.4953, 103.8827, 131.0912]))

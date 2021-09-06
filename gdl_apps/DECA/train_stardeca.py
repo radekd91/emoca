@@ -269,6 +269,12 @@ def train_stardeca(cfg_coarse, cfg_detail, start_i=0, resume_from_previous = Tru
             print(f"Resuming checkpoint from stage {resume_i} (and will start from the same stage {start_i})")
             checkpoint_mode = 'latest' # resuminng in the same stage, we want to pick up where we left of
         checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(configs[resume_i], stages_prefixes[resume_i], checkpoint_mode)
+        # checkpoint_kwargs = {
+        #     "model_params": checkpoint_kwargs["config"]["model"],
+        #     "learning_params": checkpoint_kwargs["config"]["learning"],
+        #     "inout_params": checkpoint_kwargs["config"]["inout"],
+        #     "stage_name": stages_prefixes[resume_i]
+        # }
     else:
         checkpoint, checkpoint_kwargs = None, None
 
@@ -414,10 +420,41 @@ def load_configs(run_path):
 
 def resume_training(run_path, start_at_stage, resume_from_previous, force_new_location):
     cfg_pretrain, cfg_coarse, cfg_detail = load_configs(run_path)
+
     train_stardeca(cfg_coarse, cfg_detail,
                start_i=start_at_stage,
                resume_from_previous=resume_from_previous,
                force_new_location=force_new_location)
+
+
+# def resume_training_(run_path, start_at_stage, resume_from_previous, force_new_location):
+#     cfg_coarse, cfg_detail = load_configs(run_path)
+#
+#     ## LOAD the best checkpoint from the pretrained path.
+#     checkpoint_mode = 'best'
+#     mode = "train"
+#     checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg_pretrain_, mode, checkpoint_mode=checkpoint_mode,
+#                                                                replace_root=replace_root, relative_to=relative_to)
+#     # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
+#     # pretrained DECA)
+#     # cfg_pretrain_.model.deca_class = cfg_coarse.model.deca_class
+#     # checkpoint_kwargs["config"]["model"]["deca_class"] = cfg_coarse.model.deca_class
+#     # load from configs
+#     from gdl.models.DECA import instantiate_deca
+#
+#     deca_checkpoint_kwargs = {
+#         "model_params": checkpoint_kwargs["config"]["model"],
+#         "learning_params": checkpoint_kwargs["config"]["learning"],
+#         "inout_params": checkpoint_kwargs["config"]["inout"],
+#         "stage_name": "train",
+#     }
+#
+#     deca = instantiate_deca(cfg_pretrain_, mode, "", checkpoint, deca_checkpoint_kwargs)
+#
+#     train_stardeca(cfg_coarse, cfg_detail,
+#                    start_i=start_at_stage,
+#                    resume_from_previous=resume_from_previous,
+#                    force_new_location=force_new_location)
 
 def configure_and_finetune_from_pretrained(coarse_conf, coarse_override, detail_conf, detail_override, path_to_resume_from,
                                            replace_root = None, relative_to = None,):
