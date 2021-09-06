@@ -956,7 +956,7 @@ class DecaModule(LightningModule):
                 if self.deca.vgg_loss is not None:
                     vggl, _ = self.deca.vgg_loss(
                         masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
-                        masks[:geom_losses_idxs, ...] * photometric_detailed_translated[:geom_losses_idxs, ...],
+                        masks[:geom_losses_idxs, ...] * predicted_detailed_translated_image[:geom_losses_idxs, ...],
                         # masked output image
                     )
                     self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)[
