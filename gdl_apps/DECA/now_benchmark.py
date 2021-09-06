@@ -165,7 +165,7 @@ def get_now_point_indices(mode='handpicked', verts=None, landmark3d=None, dense_
         raise ValueError(f"Invalid mode '{mode}'")
 
 
-def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name):
+def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode='best'):
     stage = 'detail'
     # relative_to_path = '/ps/scratch/'
     # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
@@ -174,7 +174,7 @@ def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_na
 
     dense_template = np.load(dense_template_path, allow_pickle=True, encoding='latin1').item()
 
-    deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path)
+    deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path, mode=mode)
 
     # deca.deca.config.resume_training = True
     # deca.deca._load_old_checkpoint()
@@ -232,7 +232,7 @@ def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_na
                       dense_faces,
                       colors=dense_colors,
                       inverse_face_order=True)
-
+        print(f"Saved: {out_mesh_fname}")
         landmarks = get_now_point_indices(landmark_mode, verts=vertices, dense_verts=dense_vertices,
                                           landmark3d=result_dict['landmarks3d'][0].detach().cpu())
         np.savetxt(res_folder / (Path(sample["imagepath"]).stem + ".txt"), landmarks)
@@ -249,8 +249,9 @@ def main():
     dense_template_path = '/home/rdanecek/workspace/repos/DECA/data/texture_data_256.npy'
 
     run_name = sys.argv[1]
+    mode = sys.argv[2]
 
-    now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name)
+    now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode)
 
 
 

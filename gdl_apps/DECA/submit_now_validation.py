@@ -5,8 +5,8 @@ import datetime
 from omegaconf import OmegaConf
 import time as t
 
-# def submit(cfg, model_folder_name, mode, bid=10):
-def submit(cfg, model_folder_name, bid=10):
+def submit(cfg, model_folder_name, mode, bid=10):
+# def submit(cfg, model_folder_name, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
     submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/now_validation_submission"
@@ -37,8 +37,8 @@ def submit(cfg, model_folder_name, bid=10):
     job_name = "deca_now"
     cuda_capability_requirement = 6
     mem_gb = 18
-    # args = f"{model_folder_name} {mode}"
-    args = f"{model_folder_name}"
+    args = f"{model_folder_name} {mode}"
+    # args = f"{model_folder_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -67,12 +67,20 @@ def main():
 
     run_names = []
     run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
-
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] # later
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-53-04_DECA_DecaD_EFswin_s_EDswin_s_DeSegrend_Deex_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
+    mode = 'latest'
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
-        submit(conf, run_name)
+        submit(conf, run_name, mode)
 
 
 if __name__ == "__main__":

@@ -259,7 +259,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     filename_pattern = 'deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}'
     if isinstance(val_data, list):
         loss_to_monitor = loss_to_monitor + "/dataloader_idx_0"
-        filename_pattern = 'deca-{epoch:02d}-{' + loss_to_monitor[1:] + ':.8f}'
+        filename_pattern = 'deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}'
         # loss_to_monitor = '0_' + loss_to_monitor + "/dataloader_idx_0"
     # if len(prefix) > 0:
     #     loss_to_monitor = prefix + "_" + loss_to_monitor

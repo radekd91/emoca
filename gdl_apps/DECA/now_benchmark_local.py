@@ -199,9 +199,11 @@ def main():
 
 
     # SWIN tests
-    run_names += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] # DECA SWIN S
+    # run_names += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] # DECA SWIN S
     # run_names += ['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] # DECA SWIN T
     # run_names += ['2021_06_24_10-44-02_DECA__DeSegFalse_early'] # DECA ResNet 19
+
+    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
 
     for run_name in run_names:
 

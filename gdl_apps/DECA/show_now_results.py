@@ -2,7 +2,8 @@ import os, sys
 from pathlib import Path
 
 # import NoW related stuff
-sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+# sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+sys.path.insert(0, str(Path(__file__).absolute().parents[3] / "now_evaluation"))
 from main import generating_cumulative_error_plots
 
 
