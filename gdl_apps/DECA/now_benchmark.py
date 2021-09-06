@@ -183,7 +183,7 @@ def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_na
     deca.eval()
     deca.cuda()
     # load_data('/home/rdanecek/Workspace/mount/scratch/face2d3d', 224)
-    dataset = load_data(path_to_now,
+    dataset = load_data(path_to_now_data,
                         deca.deca.config.image_size)
 
     use_dense_topology = False
