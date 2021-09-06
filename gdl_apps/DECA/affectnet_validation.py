@@ -1,5 +1,5 @@
-from .test_and_finetune_deca import single_stage_deca_pass
-from .interactive_deca_decoder import load_deca
+from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass
+from gdl_apps.DECA.interactive_deca_decoder import load_deca
 from omegaconf import DictConfig, OmegaConf
 import os, sys
 from pathlib import Path
