@@ -14,8 +14,7 @@ from tqdm import auto
 from gdl.utils.DecaUtils import write_obj
 
 # import NoW related stuff
-path_to_now = str(Path(__file__).absolute().parents[3] / "now_evaluation")
-sys.path += [path_to_now]
+sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
 from main import metric_computation
 
 class NowDataset(torch.utils.data.Dataset):
@@ -164,93 +163,115 @@ def get_now_point_indices(mode='handpicked', verts=None, landmark3d=None, dense_
         raise ValueError(f"Invalid mode '{mode}'")
 
 
-def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name):
-    stage = 'detail'
-    # relative_to_path = '/ps/scratch/'
-    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    relative_to_path = None
-    replace_root_path = None
-
-    dense_template = np.load(dense_template_path, allow_pickle=True, encoding='latin1').item()
-
-    deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path)
-
-    # deca.deca.config.resume_training = True
-    # deca.deca._load_old_checkpoint()
-    # run_name = "Original_DECA"
-
-    deca.eval()
-    deca.cuda()
-    # load_data('/home/rdanecek/Workspace/mount/scratch/face2d3d', 224)
-    dataset = load_data(path_to_now,
-                        deca.deca.config.image_size)
-
-    use_dense_topology = False
-    # use_dense_topology = True
-
-    N = len(dataset)
-    if use_dense_topology:
-        savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
-        landmark_mode = 'handpicked'
-        # landmark_mode = 'nn_flame'
-    else:
-        savefolder = Path(path_to_models) / run_name / stage / "NoW_flame"
-        landmark_mode = 'flame'
-    savefolder.mkdir(exist_ok=True, parents=True)
-
-    for i in auto.tqdm(range(N)):
-        sample = dataset[i]
-        for key, value in sample.items():
-            if isinstance(value, torch.Tensor):
-                sample[key] = value.cuda()
-
-        with torch.no_grad():
-            values = deca.encode(sample, training=False)
-            values['expcode'] = torch.zeros_like(values['expcode'])
-            values['posecode'] = torch.zeros_like(values['posecode'])
-            result_dict = deca.decode(values)
-
-        res_folder = savefolder / sample["subject"] / sample["challenge"]
-        res_folder.mkdir(exist_ok=True, parents=True)
-
-        vertices, faces, texture, uvcoords, uvfaces, normal_map, dense_vertices, dense_faces, dense_colors \
-            = deca.deca.create_mesh(result_dict, dense_template)
-
-        # deca.deca.save_obj(res_folder / (Path(sample["imagepath"]).stem + ".obj"),
-        #                    result_dict, dense_template, mode='detail')
-        out_mesh_fname = str(res_folder / (Path(sample["imagepath"]).stem + ".obj"))
-        if not use_dense_topology:
-            write_obj(out_mesh_fname, vertices, faces,
-                      texture=texture,
-                      uvcoords=uvcoords,
-                      uvfaces=uvfaces,
-                      normal_map=normal_map)
-        else:
-            write_obj(out_mesh_fname,
-                      dense_vertices,
-                      dense_faces,
-                      colors=dense_colors,
-                      inverse_face_order=True)
-
-        landmarks = get_now_point_indices(landmark_mode, verts=vertices, dense_verts=dense_vertices,
-                                          landmark3d=result_dict['landmarks3d'][0].detach().cpu())
-        np.savetxt(res_folder / (Path(sample["imagepath"]).stem + ".txt"), landmarks)
-
-    metric_computation(path_to_now_data, str(savefolder))
-
-
 def main():
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
-    # path_to_now_data = '/home/rdanecek/Workspace/Data/now/NoW_Dataset/final_release_version/'
-    path_to_now_data = '/home/rdanecek/workspace/repos/DECA'
-    # dense_template_path = '/home/rdanecek/Workspace/Repos/DECA/data/texture_data_256.npy'
-    dense_template_path = '/home/rdanecek/workspace/repos/DECA/data/texture_data_256.npy'
+    path_to_now = '/home/rdanecek/Workspace/Data/now/NoW_Dataset/final_release_version/'
+    dense_template_path = '/home/rdanecek/Workspace/Repos/DECA/data/texture_data_256.npy'
+    dense_template = np.load(dense_template_path, allow_pickle=True, encoding='latin1').item()
 
-    run_name = sys.argv[1]
+    run_names = []
+    # run_names += ['2021_03_25_19-42-13_DECA_training'] # DECA EmoNet
+    # run_names += ['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] # DECA EmoNet 2
+    # run_names += ['2021_03_18_21-10-25_DECA_training'] # Basic DECA
+    # run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early'] # Detail with coarse
+    # run_names += ['2021_03_26_14-36-03_DECA__DeSegFalse_DeNone_early'] # No detail exchange
 
-    now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name)
+    # # aff-wild 2 models
+    # run_names += ['2021_04_02_18-46-31_va_DeSegFalse_Aug_early'] # DECA
+    # run_names += ['2021_04_02_18-46-47_va_EmoLossB_F2VAEw-0.00150_DeSegFalse_Aug_early'] # DECA with EmoNet
+    # run_names += ['2021_04_02_18-46-34_va_DeSegFalse_Aug_DwC_early'] # DECA detail with coarse
+    # run_names += ['2021_04_02_18-46-51_va_DeSegFalse_DeNone_Aug_DwC_early'] # DECA detail with coarse , no exchange
 
+    ### no-RING DECAs
+    # DECA dataset
+    # run_names += ['2021_04_23_17-06-29_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early'] # ran
+    # run_names += ['2021_04_23_17-05-49_ExpDECA_DecaD_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early']  # ran
+    # run_names += ['2021_04_23_17-00-40_ExpDECA_DecaD_NoRing_DeSegrend_early']  # ran
+    # # run_names += ['']
+    #
+    # # # AffectNet
+    # run_names += ['2021_04_23_17-12-20_DECA_Affec_NoRing_DeSegrend_DwC_early']  # ran
+    # run_names += ['2021_04_23_17-12-05_DECA_Affec_NoRing_DeSegrend_early']  # ran
+    # run_names += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # ran
+    # run_names += ['2021_04_23_17-10-53_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_early'] # ran
+
+
+    # SWIN tests
+    run_names += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] # DECA SWIN S
+    # run_names += ['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] # DECA SWIN T
+    # run_names += ['2021_06_24_10-44-02_DECA__DeSegFalse_early'] # DECA ResNet 19
+
+    for run_name in run_names:
+
+        stage = 'detail'
+        relative_to_path = '/ps/scratch/'
+        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path)
+
+        # deca.deca.config.resume_training = True
+        # deca.deca._load_old_checkpoint()
+        # run_name = "Original_DECA"
+
+        deca.eval()
+        deca.cuda()
+        # load_data('/home/rdanecek/Workspace/mount/scratch/face2d3d', 224)
+        dataset = load_data(path_to_now,
+                            deca.deca.config.image_size)
+
+        use_dense_topology = False
+        # use_dense_topology = True
+
+        N = len(dataset)
+        if use_dense_topology:
+            savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
+            landmark_mode = 'handpicked'
+            # landmark_mode = 'nn_flame'
+        else:
+            savefolder = Path(path_to_models) / run_name / stage / "NoW_flame"
+            landmark_mode = 'flame'
+        savefolder.mkdir(exist_ok=True, parents=True)
+
+        for i in auto.tqdm(range(N)):
+            sample = dataset[i]
+            for key, value in sample.items():
+                if isinstance(value, torch.Tensor):
+                    sample[key] = value.cuda()
+
+            with torch.no_grad():
+                values = deca.encode(sample, training=False)
+                values['expcode'] = torch.zeros_like(values['expcode'])
+                values['posecode'] = torch.zeros_like(values['posecode'])
+                result_dict = deca.decode(values)
+
+            res_folder = savefolder / sample["subject"] / sample["challenge"]
+            res_folder.mkdir(exist_ok=True, parents=True)
+
+            vertices, faces, texture, uvcoords, uvfaces, normal_map, dense_vertices, dense_faces, dense_colors \
+                = deca.deca.create_mesh(result_dict, dense_template)
+
+            # deca.deca.save_obj(res_folder / (Path(sample["imagepath"]).stem + ".obj"),
+            #                    result_dict, dense_template, mode='detail')
+            out_mesh_fname = str(res_folder / (Path(sample["imagepath"]).stem + ".obj"))
+            if not use_dense_topology:
+                write_obj(out_mesh_fname, vertices, faces,
+                                texture=texture,
+                                uvcoords=uvcoords,
+                                uvfaces=uvfaces,
+                                normal_map=normal_map)
+            else:
+                write_obj(out_mesh_fname,
+                                dense_vertices,
+                                dense_faces,
+                                colors = dense_colors,
+                                inverse_face_order=True)
+
+            landmarks = get_now_point_indices(landmark_mode, verts=vertices, dense_verts=dense_vertices,
+                                              landmark3d=result_dict['landmarks3d'][0].detach().cpu())
+            np.savetxt(res_folder / (Path(sample["imagepath"]).stem + ".txt"), landmarks)
+
+
+        metric_computation(path_to_now, str(savefolder))
 
 
 if __name__ == "__main__":

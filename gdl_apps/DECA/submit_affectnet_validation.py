@@ -162,13 +162,13 @@ def main():
 
 
     # ExpDECA with different emotion networks (coarse and detail separate), uniform sampling
-    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-33-29_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Aug_early']
+    # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-33-29_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Aug_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-33-26_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Aug_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-33-07_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoCnn_res_F2VAE_DeSegrend_Aug_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-32-41_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoCnn_vgg_F2VAE_DeSegrend_Aug_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-32-20_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoCnn_vgg_F2VAE_DeSegrend_Aug_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_31_12-30-25_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoNet_sha_F2VAE_DeSegrend_Aug_early']
-    #
+
     # # ExpDECA with different emotion networks (coarse and detail separate), expression-balanced sampling
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_03_15-04-12_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_F2VAE_DeSegrend_Aug_early/']
     #
