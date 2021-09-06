@@ -244,7 +244,7 @@ def main():
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
     # path_to_now_data = '/home/rdanecek/Workspace/Data/now/NoW_Dataset/final_release_version/'
-    path_to_now_data = '/home/rdanecek/workspace/repos/DECA'
+    path_to_now_data = '/home/rdanecek/workspace/data/now/NoW_Dataset/final_release_version/'
     # dense_template_path = '/home/rdanecek/Workspace/Repos/DECA/data/texture_data_256.npy'
     dense_template_path = '/home/rdanecek/workspace/repos/DECA/data/texture_data_256.npy'
 
