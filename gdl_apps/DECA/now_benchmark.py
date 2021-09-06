@@ -15,7 +15,8 @@ from gdl.utils.DecaUtils import write_obj
 
 # import NoW related stuff
 path_to_now = str(Path(__file__).absolute().parents[3] / "now_evaluation")
-sys.path += [path_to_now]
+sys.path.insert(0,  path_to_now)
+# sys.path += [path_to_now]
 from main import metric_computation
 
 class NowDataset(torch.utils.data.Dataset):

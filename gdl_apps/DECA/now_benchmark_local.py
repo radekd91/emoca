@@ -14,7 +14,8 @@ from tqdm import auto
 from gdl.utils.DecaUtils import write_obj
 
 # import NoW related stuff
-sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+# sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+sys.path.insert(0, str(Path(__file__).absolute().parents[3] / "now_evaluation"))
 from main import metric_computation
 
 class NowDataset(torch.utils.data.Dataset):
