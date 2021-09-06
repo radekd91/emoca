@@ -63,7 +63,8 @@ def main():
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
     # conf[mode].inout.name = "affectnet_test"
-    conf[mode].inout.name = "affectnet_test_" + conf[mode].inout.name
+    # conf[mode].inout.name = "affectnet_test_" + conf[mode].inout.name
+    conf[mode].inout.name = "afft_" + conf[mode].inout.name
     import datetime
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     conf[mode].inout.random_id = str(hash(time))
