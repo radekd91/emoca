@@ -66,16 +66,17 @@ def main():
     path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
 
     run_names = []
-    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] # later
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-53-04_DECA_DecaD_EFswin_s_EDswin_s_DeSegrend_Deex_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
+    # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] # later
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-53-04_DECA_DecaD_EFswin_s_EDswin_s_DeSegrend_Deex_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
     mode = 'latest'
+
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
