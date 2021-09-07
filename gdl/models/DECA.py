@@ -85,9 +85,14 @@ class DecaModule(LightningModule):
             # self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
             emoloss_trainable = True if 'emoloss_trainable' in self.deca.config.keys() and self.deca.config.emoloss_trainable else False
             emoloss_dual = True if 'emoloss_dual' in self.deca.config.keys() and self.deca.config.emoloss_dual else False
+            normalize_features = self.deca.config.normalize_features if 'normalize_features' in self.deca.config.keys() else None
+            emo_feat_loss = self.deca.config.emo_feat_loss if 'emo_feat_loss' in self.deca.config.keys() else None
             old_emonet_loss = self.emonet_loss
 
-            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable, dual=emoloss_dual)
+            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable,
+                                               dual=emoloss_dual,
+                                               normalize_features=normalize_features,
+                                               emo_feat_loss=emo_feat_loss)
 
             if old_emonet_loss is not None and type(old_emonet_loss) != self.emonet_loss:
                 print(f"The old emonet loss {old_emonet_loss.__class__.__name__} is replaced during reconfiguration by "

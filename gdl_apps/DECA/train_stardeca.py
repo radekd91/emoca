@@ -138,6 +138,10 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
                 experiment_name += 'F1'
             if cfg_coarse.model.use_emonet_feat_2:
                 experiment_name += 'F2'
+                if 'normalize_features' in cfg_coarse.model.keys() and cfg_coarse.model.normalize_features:
+                    experiment_name += 'n'
+                if 'emo_feat_loss' in cfg_coarse.model.keys() and cfg_coarse.model.emo_feat_loss != 'l1_loss':
+                    experiment_name += cfg_coarse.model.emo_feat_loss[:3]
             if cfg_coarse.model.use_emonet_valence:
                 experiment_name += 'V'
             if cfg_coarse.model.use_emonet_arousal:
@@ -549,8 +553,8 @@ def main():
         coarse_override = [
             # 'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
-            'model/settings=coarse_train_expdeca',
-            # 'model/settings=coarse_train_expdeca_emonet',
+            # 'model/settings=coarse_train_expdeca',
+            'model/settings=coarse_train_expdeca_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
@@ -582,7 +586,10 @@ def main():
             '+model.emoloss_dual=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
-            f'+model.e_detail_type={detail_encoder}'
+            f'+model.e_detail_type={detail_encoder}',
+            '+model.normalize_features=true', # normalize emonet features before applying loss
+            # '+model.emo_feat_loss=l1_loss', # emonet feature loss
+            '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
                               ]
         detail_override = [
             # 'model/settings=detail_train',
@@ -616,7 +623,10 @@ def main():
             '+model.emoloss_dual=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
-            f'+model.e_detail_type={detail_encoder}'
+            f'+model.e_detail_type={detail_encoder}',
+            '+model.normalize_features=true',  # normalize emonet features before applying loss
+            # '+model.emo_feat_loss=l1_loss',  # emonet feature loss
+            '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         ]
 
 

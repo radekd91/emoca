@@ -42,7 +42,7 @@ def emo_network_from_path(path):
     return emonet_module
 
 
-def create_emo_loss(device, emoloss = None, trainable=False, dual=False):
+def create_emo_loss(device, emoloss = None, trainable=False, dual=False, normalize_features=False, emo_feat_loss=None):
     if emoloss is None:
         return EmoNetLoss(device, emonet=emoloss)
     if isinstance(emoloss, str):
@@ -53,23 +53,30 @@ def create_emo_loss(device, emoloss = None, trainable=False, dual=False):
             if isinstance(emo_loss, EmoNetModule):
                 emonet = emo_loss.emonet
                 print("Creating EmoNetLoss")
-                return EmoNetLoss(device, emonet=emonet, trainable=trainable)
+                return EmoNetLoss(device, emonet=emonet, trainable=trainable,
+                                  normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
             else:
                 if not dual:
                     print(f"Creating EmoBackboneLoss, trainable={trainable}")
-                    return EmoBackboneLoss(device, emo_loss, trainable=trainable)
+                    return EmoBackboneLoss(device, emo_loss, trainable=trainable,
+                                           normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
                 else:
                     print(f"Creating EmoBackboneDualLoss")
-                    return EmoBackboneDualLoss(device, emo_loss, trainable=trainable, clone_is_trainable=True)
+                    return EmoBackboneDualLoss(device, emo_loss, trainable=trainable, clone_is_trainable=True,
+                                               normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
         else:
             raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
 
 
 class EmoLossBase(torch.nn.Module):
 
-    def __init__(self, trainable=False):
+    def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None):
         super().__init__()
-        self.emo_feat_loss = F.l1_loss
+        if isinstance(emo_feat_loss, str):
+            emo_feat_loss = class_from_str(emo_feat_loss, F)
+        self.emo_feat_loss = emo_feat_loss or F.l1_loss
+        self.normalize_features = normalize_features
+        # F.cosine_similarity
         self.valence_loss = F.l1_loss
         self.arousal_loss = F.l1_loss
         # self.expression_loss = F.kl_div
@@ -106,10 +113,25 @@ class EmoLossBase(torch.nn.Module):
         self.output_emotion = output_emotion
 
         if 'emo_feat' in input_emotion.keys():
-            emo_feat_loss_1 = self.emo_feat_loss(input_emotion['emo_feat'], output_emotion['emo_feat'])
+            input_emofeat = input_emotion['emo_feat']
+            output_emofeat = output_emotion['emo_feat']
+
+            if self.normalize_features:
+                input_emofeat = input_emofeat / input_emofeat.view(input_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
+                output_emofeat = output_emofeat / output_emofeat.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
+
+            emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat).mean()
         else:
             emo_feat_loss_1 = None
-        emo_feat_loss_2 = self.emo_feat_loss(input_emotion['emo_feat_2'], output_emotion['emo_feat_2'])
+
+        input_emofeat_2 = input_emotion['emo_feat_2']
+        output_emofeat_2 = output_emotion['emo_feat_2']
+
+        if self.normalize_features:
+            input_emofeat_2 = input_emofeat_2 / input_emofeat_2.view(input_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
+            output_emofeat_2 = output_emofeat_2 / output_emofeat_2.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
+
+        emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2).mean()
         valence_loss = self.valence_loss(input_emotion['valence'], output_emotion['valence'])
         arousal_loss = self.arousal_loss(input_emotion['arousal'], output_emotion['arousal'])
         if 'expression' in input_emotion.keys():
@@ -133,8 +155,8 @@ class EmoLossBase(torch.nn.Module):
 class EmoNetLoss(EmoLossBase):
 # class EmoNetLoss(object):
 
-    def __init__(self, device, emonet=None, trainable=False):
-        super().__init__(trainable)
+    def __init__(self, device, emonet=None, trainable=False, normalize_features=False, emo_feat_loss=None):
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
         if emonet is None:
             self.emonet = get_emonet(device).eval()
         # elif isinstance(emonet, str):
@@ -175,13 +197,13 @@ class EmoNetLoss(EmoLossBase):
         # self.emonet = self.emonet.requires_grad_(False)
         # self.transforms = Resize((256, 256))
         self.size = (256, 256)
-        self.emo_feat_loss = F.l1_loss
-        self.valence_loss = F.l1_loss
-        self.arousal_loss = F.l1_loss
-        # self.expression_loss = F.kl_div
-        self.expression_loss = F.l1_loss
-        self.input_emotion = None
-        self.output_emotion = None
+        # self.emo_feat_loss = F.l1_loss
+        # self.valence_loss = F.l1_loss
+        # self.arousal_loss = F.l1_loss
+        # # self.expression_loss = F.kl_div
+        # self.expression_loss = F.l1_loss
+        # self.input_emotion = None
+        # self.output_emotion = None
 
     @property
     def network(self):
@@ -224,8 +246,8 @@ class EmoNetLoss(EmoLossBase):
 
 class EmoBackboneLoss(EmoLossBase):
 
-    def __init__(self, device, backbone, trainable=False):
-        super().__init__(trainable)
+    def __init__(self, device, backbone, trainable=False, normalize_features=False, emo_feat_loss=None):
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
         self.backbone = backbone
         if not trainable:
             self.backbone.requires_grad_(False)
@@ -246,8 +268,9 @@ class EmoBackboneLoss(EmoLossBase):
 
 class EmoBackboneDualLoss(EmoBackboneLoss):
 
-    def __init__(self, device, backbone, trainable=False, clone_is_trainable=True):
-        super().__init__(device, backbone, trainable)
+    def __init__(self, device, backbone, trainable=False, clone_is_trainable=True,
+                 normalize_features=False, emo_feat_loss=None):
+        super().__init__(device, backbone, trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
         assert not trainable
 
         if not clone_is_trainable:

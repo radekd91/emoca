@@ -174,6 +174,24 @@ def train_on_selected_sequences():
              'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
         ],
 
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1', '+model/additional=vgg_loss'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1', '+model/additional=vgg_loss']
+        # ],
+        #
+        # # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1', '+model/additional=vgg_loss'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true', 'learning.batch_size_test=1', '+model/additional=vgg_loss']
+        # ],
+
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
         #     ['model.useSeg=rend', 'model.idw=0',
@@ -443,40 +461,40 @@ def train_on_selected_sequences():
         sampler
     ]
 
-    # emomlp_weights = [1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
-    # for emomlp_weight in emomlp_weights:
-    for fmode in finetune_modes:
-        coarse_overrides = fixed_overrides_coarse.copy()
-        detail_overrides = fixed_overrides_detail.copy()
-        # if len(fmode[0]) != "":
-        coarse_overrides += fmode[0]
-        detail_overrides += fmode[1]
+    for emonet_weight in emonet_weights:
+        for fmode in finetune_modes:
+            coarse_overrides = fixed_overrides_coarse.copy()
+            detail_overrides = fixed_overrides_detail.copy()
+            # if len(fmode[0]) != "":
+            coarse_overrides += fmode[0]
+            detail_overrides += fmode[1]
 
-        # data_override = f'data.sequence_index={video_index}'
-        # pretrain_coarse_overrides += [data_override]
-        # coarse_overrides += [data_override]
-        # detail_overrides += [data_override]
-        # emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
-        # coarse_overrides += [emonet_weight_override]
-        # detail_overrides += [emonet_weight_override]
+            # data_override = f'data.sequence_index={video_index}'
+            # pretrain_coarse_overrides += [data_override]
+            # coarse_overrides += [data_override]
+            # detail_overrides += [data_override]
+            emonet_weight_override = f'model.emonet_weight={emonet_weight}'
+            coarse_overrides += [emonet_weight_override]
+            detail_overrides += [emonet_weight_override]
 
-        cfgs = train_stardeca.configure(
-            coarse_conf, coarse_overrides,
-            detail_conf, detail_overrides
-        )
+            cfgs = train_stardeca.configure(
+                coarse_conf, coarse_overrides,
+                detail_conf, detail_overrides
+            )
 
-        GlobalHydra.instance().clear()
-        config_pairs += [cfgs]
+            GlobalHydra.instance().clear()
+            config_pairs += [cfgs]
 
-        submit(cfgs[0], cfgs[1], resume_from)
+            submit(cfgs[0], cfgs[1], resume_from)
+                # break
             # break
-        # break
 
     # for cfg_pair in config_pairs:
     #     submit(cfg_pair[0], cfg_pair[1])
