@@ -413,8 +413,8 @@ def train_on_selected_sequences():
     fixed_overrides_coarse = [
         # 'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
-        # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
+        'model/settings=coarse_train_expdeca',
+        # 'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -434,16 +434,17 @@ def train_on_selected_sequences():
         dataset_coarse,
         augmentation,
         sampler,
-        '+model.normalize_features=true',  # normalize emonet features before applying loss
-        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
-        '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+        # '+model.normalize_features=true',  # normalize emonet features before applying loss
+        '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+        '+model/additional=au_loss_dual', # emonet feature loss
     ]
 
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        # 'model/settings=detail_train_expdeca',
-        'model/settings=detail_train_expdeca_emonet',
+        'model/settings=detail_train_expdeca',
+        # 'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
         # '+model.mlp_emotion_predictor.detach_expression=False',
@@ -462,44 +463,50 @@ def train_on_selected_sequences():
         dataset_detail,
         augmentation,
         sampler,
-        '+model.normalize_features=true',  # normalize emonet features before applying loss
-        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
-        '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+        # '+model.normalize_features=true',  # normalize emonet features before applying loss
+        '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+        '+model/additional=au_loss_dual',  # emonet feature loss
     ]
 
-    # emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    # emonet_weights = [0.015]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
-    # for emonet_weight in emonet_weights:
-    for fmode in finetune_modes:
-        coarse_overrides = fixed_overrides_coarse.copy()
-        detail_overrides = fixed_overrides_detail.copy()
-        # if len(fmode[0]) != "":
-        coarse_overrides += fmode[0]
-        detail_overrides += fmode[1]
+    for emonet_weight in emonet_weights:
+        for fmode in finetune_modes:
+            coarse_overrides = fixed_overrides_coarse.copy()
+            detail_overrides = fixed_overrides_detail.copy()
+            # if len(fmode[0]) != "":
+            coarse_overrides += fmode[0]
+            detail_overrides += fmode[1]
 
-        # data_override = f'data.sequence_index={video_index}'
-        # pretrain_coarse_overrides += [data_override]
-        # coarse_overrides += [data_override]
-        # detail_overrides += [data_override]
+            # data_override = f'data.sequence_index={video_index}'
+            # pretrain_coarse_overrides += [data_override]
+            # coarse_overrides += [data_override]
+            # detail_overrides += [data_override]
 
-        # emonet_weight_override = f'model.emonet_weight={emonet_weight}'
-        # coarse_overrides += [emonet_weight_override]
-        # detail_overrides += [emonet_weight_override]
+            # au_weight_override = f'model.emonet_weight={emonet_weight}'
+            # coarse_overrides += [au_weight_override]
+            # detail_overrides += [au_weight_override]
 
-        cfgs = train_stardeca.configure(
-            coarse_conf, coarse_overrides,
-            detail_conf, detail_overrides
-        )
+            au_weight_override = f'model.au_loss.au_weight={emonet_weight}'
+            coarse_overrides += [au_weight_override]
+            detail_overrides += [au_weight_override]
 
-        GlobalHydra.instance().clear()
-        config_pairs += [cfgs]
+            cfgs = train_stardeca.configure(
+                coarse_conf, coarse_overrides,
+                detail_conf, detail_overrides
+            )
 
-        submit(cfgs[0], cfgs[1], resume_from)
+            GlobalHydra.instance().clear()
+            config_pairs += [cfgs]
+
+            submit(cfgs[0], cfgs[1], resume_from)
                 # break
             # break
 

@@ -55,6 +55,7 @@ class DecaModule(LightningModule):
         if len(self.stage_name) > 0:
             self.stage_name += "_"
         self.emonet_loss = None
+        self.au_loss = None
         self._init_emotion_loss()
         self._init_au_loss()
 

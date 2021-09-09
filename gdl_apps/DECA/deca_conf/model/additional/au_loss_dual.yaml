@@ -9,7 +9,7 @@ au_loss:
   normalize_features: false
   trainable: false
   dual: true
-  au_weight: 0.05
+  au_weight: 0.0015
   use_as_loss: true # false to use as a metric only
 
   use_feat_1: false
