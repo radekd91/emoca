@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
-from ..layers.losses.EmoNetLoss import EmoNetLoss, create_emo_loss
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, create_emo_loss, create_au_loss
 import numpy as np
 # from time import time
 from skimage.io import imread
@@ -56,6 +56,7 @@ class DecaModule(LightningModule):
             self.stage_name += "_"
         self.emonet_loss = None
         self._init_emotion_loss()
+        self._init_au_loss()
 
         if 'mlp_emotion_predictor' in self.deca.config.keys():
             # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
@@ -101,6 +102,27 @@ class DecaModule(LightningModule):
         else:
             self.emonet_loss = None
 
+    def _init_au_loss(self):
+        if 'au_loss' in self.deca.config.keys():
+            if self.au_loss is not None:
+                force_override = True if 'force_override' in self.deca.config.au_loss.config.keys() \
+                                         and self.deca.config.au_loss.force_override else False
+                if self.au_loss.is_trainable():
+                    if not force_override:
+                        print("The old AU loss is trainable and will not be overrided or replaced.")
+                        return
+                        # raise NotImplementedError("The old emonet loss was trainable. Changing a trainable loss is probably now "
+                        #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
+                    else:
+                        print("The old AU loss is trainable but override is set so it will be replaced.")
+                else:
+                    print("The old AU loss is not trainable. It will be replaced.")
+
+            old_au_loss = self.emonet_loss
+            self.au_loss = create_au_loss(self.device, self.deca.config.au_loss)
+        else:
+            self.au_loss = None
+
     def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
@@ -127,6 +149,7 @@ class DecaModule(LightningModule):
             self.deca._reconfigure(model_params)
 
         self._init_emotion_loss()
+        self._init_au_loss()
 
         self.stage_name = stage_name
         if self.stage_name is None:
@@ -682,12 +705,12 @@ class DecaModule(LightningModule):
         # if self.deca.config.use_emonet_loss:
         if with_grad:
             d = loss_dict
-            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
+            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
                 self.emonet_loss.compute_loss(images, predicted_images)
         else:
             d = metric_dict
             with torch.no_grad():
-                emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
+                emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
                     self.emonet_loss.compute_loss(images, predicted_images)
 
 
@@ -743,6 +766,59 @@ class DecaModule(LightningModule):
         #     affectnet_gt = torch.tensor(np.array(affectnet_gt), device=self.device, dtype=torch.long)
         #     d[prefix + '_emo_sup_expr_CE'] = F.cross_entropy(self.emonet_loss.output_emotion['expression'], affectnet_gt) * self.deca.config.gt_emotion_reg
         #     metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
+
+
+    def _compute_au_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, au=None, with_grad=True):
+        def loss_or_metric(name, loss, is_loss):
+            if not is_loss:
+                metric_dict[name] = loss
+            else:
+                loss_dict[name] = loss
+
+        # if self.deca.config.use_emonet_loss:
+        if with_grad:
+            d = loss_dict
+            au_feat_loss_1, au_feat_loss_2, _, _, _, au_loss = \
+                self.au_loss.compute_loss(images, predicted_images)
+        else:
+            d = metric_dict
+            with torch.no_grad():
+                au_feat_loss_1, au_feat_loss_2, _, _, _, au_loss = \
+                    self.au_loss.compute_loss(images, predicted_images)
+
+
+
+        # EmoNet self-consistency loss terms
+        if au_feat_loss_1 is not None:
+            loss_or_metric(prefix + '_au_feat_1_L1', au_feat_loss_1 * self.deca.config.au_loss.au_weight,
+                           self.deca.config.au_loss.use_feat_1 and self.deca.config.au_loss.use_as_loss)
+        loss_or_metric(prefix + '_au_feat_2_L1', au_feat_loss_2 * self.deca.config.au_loss.au_weight,
+                       self.deca.config.au_loss.use_feat_2 and self.deca.config.au_loss.use_as_loss)
+        loss_or_metric(prefix + '_au_loss', au_loss * self.deca.config.au_loss.au_weight,
+                       self.deca.config.au_loss.use_aus and self.deca.config.au_loss.use_as_loss)
+        # loss_or_metric(prefix + '_au_losses_L1', arousal_loss * self.deca.config.au_loss.au_weight,
+        #                self.deca.config.au_loss.use_emonet_arousal and self.deca.config.au_loss.use_as_loss)
+        # loss_or_metric(prefix + 'emonet_expression_KL', expression_loss * self.deca.config.au_loss.au_weight) # KL seems to be causing NaN's
+
+        # # Log also the VA
+        # metric_dict[prefix + "_valence_input"] = self.emonet_loss.input_emotion['valence'].mean().detach()
+        # metric_dict[prefix + "_valence_output"] = self.emonet_loss.output_emotion['valence'].mean().detach()
+        # metric_dict[prefix + "_arousal_input"] = self.emonet_loss.input_emotion['arousal'].mean().detach()
+        # metric_dict[prefix + "_arousal_output"] = self.emonet_loss.output_emotion['arousal'].mean().detach()
+
+        # input_ex = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
+        # input_ex = np.argmax(input_ex, axis=1).mean()
+        # output_ex = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
+        # output_ex = np.argmax(output_ex, axis=1).mean()
+        # metric_dict[prefix + "_expression_input"] = torch.tensor(input_ex, device=self.device)
+        # metric_dict[prefix + "_expression_output"] = torch.tensor(output_ex, device=self.device)
+
+        # # GT emotion loss terms
+        # if self.deca.config.use_gt_emotion_loss:
+        #     d = loss_dict
+        # else:
+        #     d = metric_dict
+
 
 
     def _metric_or_loss(self, loss_dict, metric_dict, is_loss):
@@ -924,6 +1000,17 @@ class DecaModule(LightningModule):
                     codedict["coarse_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
                     codedict["coarse_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
+            if self.au_loss is not None:
+                # with torch.no_grad():
+
+                self._compute_au_loss(images, predicted_images, losses, metrics, "coarse",
+                                      au=None,
+                                      with_grad=self.deca.config.au_loss.use_as_loss and not self.deca._has_neural_rendering())
+                if self.deca._has_neural_rendering():
+                    self._compute_au_loss(images, predicted_translated_image, losses, metrics, "coarse",
+                                          au=None,
+                                          with_grad=self.deca.config.au_loss.use_as_loss and self.deca._has_neural_rendering())
+
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
             predicted_detailed_image = codedict["predicted_detailed_image"]
@@ -997,6 +1084,16 @@ class DecaModule(LightningModule):
                     codedict["detail_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
                     codedict["detail_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
                     codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+
+            if self.au_loss is not None:
+                self._compute_au_loss(images, predicted_images, losses, metrics, "detail",
+                                      au=None,
+                                      with_grad=self.deca.config.au_loss.use_as_loss and not self.deca._has_neural_rendering())
+
+                if self.deca._has_neural_rendering():
+                    self._compute_au_loss(images, predicted_detailed_translated_image, losses, metrics, "detail",
+                                          au=None,
+                                          with_grad=self.deca.config.au_loss.use_as_loss and self.deca._has_neural_rendering())
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 if self.deca.config.sfsw[pi] != 0:

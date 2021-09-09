@@ -151,6 +151,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             if cfg_coarse.model.use_emonet_combined:
                 experiment_name += 'C'
 
+        if 'au_loss' in cfg_coarse.model.keys():
+            experiment_name += '_AU'
+
         # if expression exchange and geometric errors are to be computed even for the exchanged
         if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
                 cfg_coarse.model.use_geometric_losses_expression_exchange and \
@@ -536,8 +539,10 @@ def main():
 
     if len(sys.argv) <= 2:
         coarse_conf = "deca_train_coarse_stargan"
+        # coarse_conf = "deca_train_coarse"
         # coarse_conf = "deca_train_detail_stargan"
         detail_conf = "deca_train_detail_stargan"
+        # detail_conf = "deca_train_detail"
 
         # path_to_resume_from = None
         path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"  # My DECA, ResNet backbones
@@ -588,8 +593,9 @@ def main():
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}',
             '+model.normalize_features=true', # normalize emonet features before applying loss
-            # '+model.emo_feat_loss=l1_loss', # emonet feature loss
-            '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
+            '+model.emo_feat_loss=l1_loss', # emonet feature loss
+            # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
+            '+model/additional=au_loss_dual', # emonet feature loss
                               ]
         detail_override = [
             # 'model/settings=detail_train',
@@ -625,8 +631,9 @@ def main():
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}',
             '+model.normalize_features=true',  # normalize emonet features before applying loss
-            # '+model.emo_feat_loss=l1_loss',  # emonet feature loss
-            '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+            '+model.emo_feat_loss=l1_loss',  # emonet feature loss
+            # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+            '+model/additional=au_loss_dual',  # emonet feature loss
         ]
 
 

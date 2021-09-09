@@ -433,7 +433,10 @@ def train_on_selected_sequences():
         f'+model.e_detail_type={detail_encoder}',
         dataset_coarse,
         augmentation,
-        sampler
+        sampler,
+        '+model.normalize_features=true',  # normalize emonet features before applying loss
+        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
     ]
 
     fixed_overrides_detail = [
@@ -458,41 +461,45 @@ def train_on_selected_sequences():
         f'+model.e_detail_type={detail_encoder}',
         dataset_detail,
         augmentation,
-        sampler
+        sampler,
+        '+model.normalize_features=true',  # normalize emonet features before applying loss
+        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
     ]
 
-    emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    # emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
     config_pairs = []
-    for emonet_weight in emonet_weights:
-        for fmode in finetune_modes:
-            coarse_overrides = fixed_overrides_coarse.copy()
-            detail_overrides = fixed_overrides_detail.copy()
-            # if len(fmode[0]) != "":
-            coarse_overrides += fmode[0]
-            detail_overrides += fmode[1]
+    # for emonet_weight in emonet_weights:
+    for fmode in finetune_modes:
+        coarse_overrides = fixed_overrides_coarse.copy()
+        detail_overrides = fixed_overrides_detail.copy()
+        # if len(fmode[0]) != "":
+        coarse_overrides += fmode[0]
+        detail_overrides += fmode[1]
 
-            # data_override = f'data.sequence_index={video_index}'
-            # pretrain_coarse_overrides += [data_override]
-            # coarse_overrides += [data_override]
-            # detail_overrides += [data_override]
-            emonet_weight_override = f'model.emonet_weight={emonet_weight}'
-            coarse_overrides += [emonet_weight_override]
-            detail_overrides += [emonet_weight_override]
+        # data_override = f'data.sequence_index={video_index}'
+        # pretrain_coarse_overrides += [data_override]
+        # coarse_overrides += [data_override]
+        # detail_overrides += [data_override]
 
-            cfgs = train_stardeca.configure(
-                coarse_conf, coarse_overrides,
-                detail_conf, detail_overrides
-            )
+        # emonet_weight_override = f'model.emonet_weight={emonet_weight}'
+        # coarse_overrides += [emonet_weight_override]
+        # detail_overrides += [emonet_weight_override]
 
-            GlobalHydra.instance().clear()
-            config_pairs += [cfgs]
+        cfgs = train_stardeca.configure(
+            coarse_conf, coarse_overrides,
+            detail_conf, detail_overrides
+        )
 
-            submit(cfgs[0], cfgs[1], resume_from)
+        GlobalHydra.instance().clear()
+        config_pairs += [cfgs]
+
+        submit(cfgs[0], cfgs[1], resume_from)
                 # break
             # break
 

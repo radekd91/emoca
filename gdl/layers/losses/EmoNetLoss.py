@@ -1,5 +1,6 @@
 import copy
 
+import omegaconf
 import torch
 from gdl.layers.losses.EmonetLoader import get_emonet
 from pathlib import Path
@@ -68,12 +69,53 @@ def create_emo_loss(device, emoloss = None, trainable=False, dual=False, normali
             raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
 
 
+def create_au_loss(device, au_loss):
+    if au_loss is None:
+        raise NotImplementedError("Pass an au_loss config.")
+        # return EmoNetLoss(device, emonet=au_loss)
+    if isinstance(au_loss, (dict, omegaconf.DictConfig)):
+        path = Path(au_loss.path)
+        if path.is_dir():
+            au_loss_net = emo_network_from_path(path)
+
+            if isinstance(au_loss_net, EmoNetModule):
+                emonet = au_loss_net.emonet
+                print("Creating EmoNetLoss")
+                return EmoNetLoss(device,
+                                  emonet=emonet,
+                                  trainable=au_loss.trainable,
+                                  normalize_features=au_loss.normalize_features,
+                                  emo_feat_loss=au_loss.feat_loss,
+                                   au_loss=au_loss.au_loss)
+            else:
+                if not au_loss.dual:
+                    print(f"Creating EmoBackboneLoss, trainable={au_loss.trainable}")
+                    return EmoBackboneLoss(device, au_loss_net,
+                                           trainable=au_loss.trainable,
+                                           normalize_features=au_loss.normalize_features,
+                                           emo_feat_loss=au_loss.feat_loss, 
+                                           au_loss=au_loss.au_loss
+                                           )
+                else:
+                    print(f"Creating EmoBackboneDualLoss")
+                    return EmoBackboneDualLoss(device, au_loss_net,
+                                               trainable=au_loss.trainable,
+                                               clone_is_trainable=True,
+                                               normalize_features=au_loss.normalize_features,
+                                               emo_feat_loss=au_loss.feat_loss,
+                                           au_loss=au_loss.au_loss)
+        else:
+            raise ValueError("Please specify the config to instantiate AU loss")
+
+
 class EmoLossBase(torch.nn.Module):
 
-    def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None):
+    def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
         super().__init__()
         if isinstance(emo_feat_loss, str):
             emo_feat_loss = class_from_str(emo_feat_loss, F)
+        if isinstance(au_loss, str):
+            au_loss = class_from_str(au_loss, F)
         self.emo_feat_loss = emo_feat_loss or F.l1_loss
         self.normalize_features = normalize_features
         # F.cosine_similarity
@@ -81,6 +123,7 @@ class EmoLossBase(torch.nn.Module):
         self.arousal_loss = F.l1_loss
         # self.expression_loss = F.kl_div
         self.expression_loss = F.l1_loss
+        self.au_loss = au_loss or F.l1_loss
         self.input_emotion = None
         self.output_emotion = None
         self.trainable = trainable
@@ -132,15 +175,30 @@ class EmoLossBase(torch.nn.Module):
             output_emofeat_2 = output_emofeat_2 / output_emofeat_2.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
 
         emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2).mean()
-        valence_loss = self.valence_loss(input_emotion['valence'], output_emotion['valence'])
-        arousal_loss = self.arousal_loss(input_emotion['arousal'], output_emotion['arousal'])
-        if 'expression' in input_emotion.keys():
+        if 'valence' in input_emotion.keys() and input_emotion['valence'] is not None:
+            valence_loss = self.valence_loss(input_emotion['valence'], output_emotion['valence'])
+        else:
+            valence_loss = None
+
+        if 'arousal' in input_emotion.keys() and input_emotion['arousal'] is not None:
+            arousal_loss = self.arousal_loss(input_emotion['arousal'], output_emotion['arousal'])
+        else:
+            arousal_loss = None
+
+        if 'expression' in input_emotion.keys() and input_emotion['expression'] is not None:
             expression_loss = self.expression_loss(input_emotion['expression'], output_emotion['expression'])
-        elif 'expr_classification' in input_emotion.keys():
+        elif 'expr_classification' in input_emotion.keys() and input_emotion['expr_classification'] is not None:
             expression_loss = self.expression_loss(input_emotion['expr_classification'], output_emotion['expr_classification'])
         else:
-            raise ValueError("Missing expression")
-        return emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss
+            expression_loss = None
+        #     raise ValueError("Missing expression")
+
+        if 'AUs' in input_emotion.keys() and input_emotion['AUs'] is not None:
+            au_loss = self.au_loss(input_emotion['AUs'], output_emotion['AUs'])
+        else:
+            au_loss = None
+
+        return emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss
 
 
     def _get_trainable_params(self):
@@ -155,8 +213,8 @@ class EmoLossBase(torch.nn.Module):
 class EmoNetLoss(EmoLossBase):
 # class EmoNetLoss(object):
 
-    def __init__(self, device, emonet=None, trainable=False, normalize_features=False, emo_feat_loss=None):
-        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
+    def __init__(self, device, emonet=None, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss)
         if emonet is None:
             self.emonet = get_emonet(device).eval()
         # elif isinstance(emonet, str):
@@ -246,8 +304,8 @@ class EmoNetLoss(EmoLossBase):
 
 class EmoBackboneLoss(EmoLossBase):
 
-    def __init__(self, device, backbone, trainable=False, normalize_features=False, emo_feat_loss=None):
-        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
+    def __init__(self, device, backbone, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss)
         self.backbone = backbone
         if not trainable:
             self.backbone.requires_grad_(False)
@@ -269,8 +327,8 @@ class EmoBackboneLoss(EmoLossBase):
 class EmoBackboneDualLoss(EmoBackboneLoss):
 
     def __init__(self, device, backbone, trainable=False, clone_is_trainable=True,
-                 normalize_features=False, emo_feat_loss=None):
-        super().__init__(device, backbone, trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss)
+                 normalize_features=False, emo_feat_loss=None, au_loss=None):
+        super().__init__(device, backbone, trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss)
         assert not trainable
 
         if not clone_is_trainable:
