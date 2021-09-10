@@ -106,7 +106,7 @@ class DecaModule(LightningModule):
     def _init_au_loss(self):
         if 'au_loss' in self.deca.config.keys():
             if self.au_loss is not None:
-                force_override = True if 'force_override' in self.deca.config.au_loss.config.keys() \
+                force_override = True if 'force_override' in self.deca.config.au_loss.keys() \
                                          and self.deca.config.au_loss.force_override else False
                 if self.au_loss.is_trainable():
                     if not force_override:
