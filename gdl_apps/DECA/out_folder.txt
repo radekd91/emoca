@@ -1,1 +1,1 @@
-/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_14-55-14_ExpDECAStar_DecaD_para_Jaw_VGGl_EmoB_EmoCnn_vgg_du_F2nVAE_AU_DeSegFalse_early
+/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_10_10-54-51_ExpDECAStar_DecaD_para_Jaw_VGGl_EmoB_EmoCnn_vgg_du_F2nVAE_AUf-kl__DeSegFalse_early

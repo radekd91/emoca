@@ -153,10 +153,10 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
 
         if 'au_loss' in cfg_coarse.model.keys():
             experiment_name += '_AU'
-            if cfg_coarse.au_loss.feat_loss != 'l1_loss':
-                experiment_name += 'f-' + cfg_coarse.au_loss.feat_loss[:3]
-            if cfg_coarse.au_loss.au_loss != 'l1_loss':
-                experiment_name += '_c-' + cfg_coarse.au_loss.au_loss[:3]
+            if cfg_coarse.model.au_loss.feat_loss != 'l1_loss':
+                experiment_name += 'f-' + cfg_coarse.model.au_loss.feat_loss[:3]
+            if cfg_coarse.model.au_loss.au_loss != 'l1_loss':
+                experiment_name += '_c-' + cfg_coarse.model.au_loss.au_loss[:3]
 
         # if expression exchange and geometric errors are to be computed even for the exchanged
         if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
@@ -600,6 +600,8 @@ def main():
             '+model.emo_feat_loss=l1_loss', # emonet feature loss
             # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
             '+model/additional=au_loss_dual', # emonet feature loss
+            'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
+            # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
                               ]
         detail_override = [
             # 'model/settings=detail_train',
@@ -638,6 +640,8 @@ def main():
             '+model.emo_feat_loss=l1_loss',  # emonet feature loss
             # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
             '+model/additional=au_loss_dual',  # emonet feature loss
+            'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
+            # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
         ]
 
 

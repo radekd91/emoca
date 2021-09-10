@@ -439,6 +439,7 @@ def train_on_selected_sequences():
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         '+model/additional=au_loss_dual', # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss
+        'model.au_loss.feat_loss=cosine_similarity',
         'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
@@ -470,6 +471,7 @@ def train_on_selected_sequences():
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         '+model/additional=au_loss_dual',  # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity',  # emonet feature loss
+        'model.au_loss.feat_loss=cosine_similarity',
         'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
