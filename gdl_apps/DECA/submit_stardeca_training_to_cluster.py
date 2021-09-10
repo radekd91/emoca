@@ -438,6 +438,8 @@ def train_on_selected_sequences():
         '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         '+model/additional=au_loss_dual', # emonet feature loss
+        # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss
+        'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
     fixed_overrides_detail = [
@@ -467,10 +469,12 @@ def train_on_selected_sequences():
         '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         '+model/additional=au_loss_dual',  # emonet feature loss
+        # 'model.au_loss.au_loss=cosine_similarity',  # emonet feature loss
+        'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
-    emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
-    # emonet_weights = [0.015]
+    # emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emonet_weights = [0.0015]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
