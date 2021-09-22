@@ -144,5 +144,5 @@ if __name__ == "__main__":
     path_to_net += ["/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"]
     path_to_net += ['/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early']
     visualizer = setup_visualizer(path_to_net)
-    visualizer.serve(debug=True)
+    visualizer.serve(debug=True, bind_all=True)
 
