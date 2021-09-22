@@ -65,7 +65,8 @@ def baseline_func(input):
 def formatted_data_iter():
     dm = AffectNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-             "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+             # "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+             "/ps/project/EmotionalFacialAnimation/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",
