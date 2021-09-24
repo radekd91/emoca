@@ -102,8 +102,8 @@ def get_dataseat():
     # dm = AffectNetDataModule(
     dm = AffectNetTestModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-             "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
-             # "/ps/project/EmotionalFacialAnimation/data/affectnet/",
+             # "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+             "/ps/project/EmotionalFacialAnimation/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",

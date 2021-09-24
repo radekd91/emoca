@@ -8,17 +8,20 @@ import time as t
 def submit(resume_folder, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
     # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_local_mount = "/ps/scratch/rdanecek/nterpretableEmotion/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/nterpretableEmotion/submission"
+    # submission_dir_local_mount = "/ps/scratch/rdanecek/InterpretableEmotion/submission"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/InterpretableEmotion/submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/InterpretableEmotion/submission"
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/InterpretableEmotion/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/InterpretableEmotion/submission"
 
     # submission_dir_local_mount = "/is/cluster/work/rdanecek/nterpretableEmotion/submission"
     # submission_dir_cluster_side = "/is/cluster/work/rdanecek/nterpretableEmotion/submission"
 
-    # result_dir_local_mount = "/is/cluster/work/rdanecek/emoca/finetune_deca"
-    # result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/finetune_deca"
-    # result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/emodeca"
-    result_dir_local_mount = "/ps/scratch/rdanecek/nterpretableEmotion/results"
-    result_dir_cluster_side = "/ps/scratch/rdanecek/nterpretableEmotion/results"
+    result_dir_local_mount = "/is/cluster/work/rdanecek/InterpretableEmotion/results"
+    result_dir_cluster_side = "/is/cluster/work/rdanecek/InterpretableEmotion/results"
+    # result_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/InterpretableEmotion/results"
+    # result_dir_local_mount = "/ps/scratch/rdanecek/InterpretableEmotion/results"
+    # result_dir_cluster_side = "/ps/scratch/rdanecek/InterpretableEmotion/results"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
@@ -69,7 +72,7 @@ def submit(resume_folder, bid=10):
                        max_price=max_price,
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement,
-                       chmod=False
+                       chmod=True
                        )
     t.sleep(1)
 
