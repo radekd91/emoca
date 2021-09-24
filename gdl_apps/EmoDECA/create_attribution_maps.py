@@ -28,23 +28,32 @@ from matplotlib.colors import LinearSegmentedColormap
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions, AffectNetDataModule, AffectNetTestModule
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
 from gdl.layers.losses.EmoNetLoss import emo_network_from_path
+from gdl.models.DECA import DECA, DecaModule
+from gdl.models.IO import locate_checkpoint
+from gdl_apps.DECA.load_data import hack_paths
 
 from tqdm.auto import tqdm
 from gdl_apps.DECA.test_and_finetune_deca import create_logger
 
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
 from wandb import Image
 
+
 project_name = "InterpretableEmotion"
+
 
 def get_classes():
     classes = [e.name for e in AffectNetExpressions]
     return classes
 
 
-def get_pretrained_model(path):
-    emo_net = emo_network_from_path(path)
+def get_pretrained_model_from_path(path):
+    return get_pretrained_model(emo_network_from_path(path))
+    
+
+def get_pretrained_model(emo_net):
+    # emo_net = emo_network_from_path(path)
     emo_net.cuda()
 
     class Net(nn.Module):
@@ -344,10 +353,76 @@ def create_attribution_maps(root_folder, model, input_batch, sample_index, prefi
 
     # sys.exit(0)
 
+def load_deca(conf,
+              stage,
+              mode,
+              relative_to_path=None,
+              replace_root_path=None,
+              ):
+    print(f"Taking config of stage '{stage}'")
+    print(conf.keys())
+    if stage is not None:
+        cfg = conf[stage]
+    else:
+        cfg = conf
+    if relative_to_path is not None and replace_root_path is not None:
+        cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+    cfg.model.resume_training = False
+
+    checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+    print(f"Loading checkpoint '{checkpoint}'")
+    # if relative_to_path is not None and replace_root_path is not None:
+    #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
+
+    checkpoint_kwargs = {
+        "model_params": cfg.model,
+        "learning_params": cfg.learning,
+        "inout_params": cfg.inout,
+        "stage_name": "testing",
+    }
+    deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+    return deca
+
+def load_deca_model(deca_path,
+              stage="detail",
+              relative_to_path=None,
+              replace_root_path=None,
+              mode='best'
+              ):
+    run_path = Path(deca_path)
+    with open(Path(run_path) / "cfg.yaml", "r") as f:
+        conf = OmegaConf.load(f)
+    deca = load_deca(conf,
+              stage,
+              mode,
+              relative_to_path,
+              replace_root_path,
+              )
+    return deca, conf
+
+
 import datetime
-def create_attribution_maps_for_models(model_path):
+def create_attribution_maps_for_models(emonet_model_path, deca_model_path=None, deca_image_name=None, load_emonet_from_deca=False):
     # models = [get_pretrained_model(path) for path in model_paths]
-    model = get_pretrained_model(model_path)
+    if deca_model_path is not None:
+        stage="detail"
+        deca_model, deca_conf = load_deca_model(deca_model_path, stage)
+        deca_model.eval()
+        assert deca_image_name is not None
+        if load_emonet_from_deca:
+            assert deca_conf[stage].model.emoloss_dual is True
+            # state_dict = deca_model.emonet_loss.trainable_backbone.state_dict()
+            model = get_pretrained_model(deca_model.emonet_loss.trainable_backbone)
+
+    else:
+        deca_model = None
+        deca_conf = None
+
+    if not load_emonet_from_deca:
+        model = get_pretrained_model_from_path(emonet_model_path)
+    # else:
+    #     model = None
+    assert model is not None
 
     dataset = get_dataseat()
     data_loader = iter(
@@ -360,21 +435,46 @@ def create_attribution_maps_for_models(model_path):
 
     root = Path("/ps/scratch/rdanecek/InterpretableEmotion")
 
-    full_run_dir = root / (version + "_" + model.net.config.inout.name)
+    if deca_model is None:
+        folder_name = (version + "_" + model.net.config.inout.name)
+        conf = OmegaConf.to_container(model.net.config)
+    else:
+        deca_name = deca_conf[stage].inout.name
+        deca_name = deca_name.split("_")[0]
+        suf = ""
+        if load_emonet_from_deca:
+            suf = "synth_"
+        folder_name = (version + "_" + deca_name + "_" + deca_image_name + "_" + suf + model.net.config.inout.name)
+        conf = DictConfig({})
+        conf.emonet = model.net.config
+        conf.deca = deca_conf
+        conf = OmegaConf.to_container(conf)
+
+    full_run_dir = root / folder_name
     full_run_dir.mkdir(parents=True, exist_ok=True)
+
+    name = full_run_dir.name[len(version)+1:]
 
     logger = create_logger(
                          "WandbLogger",
                          # name=model.net.config.model.experiment_name,
-                         name=full_run_dir.name[len(version)+1:],
+                         name=name,
                          project_name=project_name,
-                         config=OmegaConf.to_container(model.net.config),
+                         config=conf,
                          version=version + str(hash(datetime.datetime.now())),
                          save_dir=str(full_run_dir))
 
-
     for bi in tqdm(range(min(len(dataset), max_samples))):
         batch = next(data_loader, None)
+
+        if deca_model is not None:
+            # deca_batch = batch.clone()
+            deca_batch = {}
+            deca_batch["image"] = F.interpolate(batch["image"],
+                                       (deca_conf[stage].data.image_size, deca_conf[stage].data.image_size), mode='bilinear')
+            deca_out = deca_model(deca_batch)
+            batch["image"] = deca_out[deca_image_name]
+
         if batch is None:
             break
         # for model in models:
@@ -396,5 +496,24 @@ if __name__ == "__main__":
         # model_paths += ["/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"]
         # model_paths += ['/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early']
 
-    create_attribution_maps_for_models(model_path)
+    if len(sys.argv) > 2:
+        deca_path = sys.argv[2]
+        deca_image = sys.argv[3]
+    else:
+        # deca_path = None
+        # deca_image = None
+        deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"
+        # deca_image = "predicted_images"
+        deca_image = "predicted_detailed_image"
+        # deca_image = "predicted_translated_image"
+        # deca_image = "predicted_detailed_translated_image"
+
+    if len(sys.argv) > 4:
+        trainable_deca_emonet = bool(int(sys.argv[4]))
+    else:
+        trainable_deca_emonet = True
+        # trainable_deca_emonet = False
+
+    assert deca_image in [None, "predicted_images", "predicted_detailed_image", "predicted_translated_image", "predicted_detailed_translated_image"]
+    create_attribution_maps_for_models(model_path, deca_path, deca_image, trainable_deca_emonet)
 
