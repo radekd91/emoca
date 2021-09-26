@@ -56,6 +56,36 @@ class ActionUnitTypes(Enum):
     def numAUs(t):
         return len(ActionUnitTypes.AUtype2AUlist(t))
 
+    @staticmethod
+    def AU_num_2_name(num):
+        d = {}
+        d[1] = "Inner Brow Raiser"
+        d[2] = "Outer Brow Raiser"
+        d[4] = "Brow Lowerer"
+        d[5] = "Upper Lid Raiser"
+        d[6] = "Cheek Raiser"
+        d[9] = "Nose Wrinkler"
+        d[10] = "Upper Lip Raiser"
+        d[12] = "Lip Corner Puller"
+        d[15] = "Lip Corner Depressor"
+        d[17] = "Chin Raiser"
+        d[18] = "Lip Puckerer"
+        d[20] = "Lip Stretcher"
+        d[24] = "Lip Pressor"
+        d[25] = "Lips Part"
+        d[26] = "Jaw Drop"
+        d[28] = "Lip Suck"
+        d[43] = "Eyes Closed"
+        # d[51] = "Eyes Closed"
+        # d[52] = "Eyes Closed"
+        # d[53] = "Eyes Closed"
+        # d[54] = "Eyes Closed"
+        # d[55] = "Eyes Closed"
+        # d[56] = "Eyes Closed"
+        if num not in d.keys():
+            raise ValueError(f"invalid AU {num}")
+        return d[num]
+
 
 class EmotioNetDataModule(FaceDataModuleBase):
 

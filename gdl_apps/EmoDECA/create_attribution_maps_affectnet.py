@@ -502,7 +502,8 @@ if __name__ == "__main__":
     else:
         # deca_path = None
         # deca_image = None
-        deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"
+        # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"
+        deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"
         # deca_image = "predicted_images"
         deca_image = "predicted_detailed_image"
         # deca_image = "predicted_translated_image"
@@ -516,4 +517,4 @@ if __name__ == "__main__":
 
     assert deca_image in [None, "predicted_images", "predicted_detailed_image", "predicted_translated_image", "predicted_detailed_translated_image"]
     create_attribution_maps_for_models(model_path, deca_path, deca_image, trainable_deca_emonet)
-
+    sys.exit(0)
