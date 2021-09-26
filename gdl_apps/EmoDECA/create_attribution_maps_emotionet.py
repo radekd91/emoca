@@ -416,7 +416,7 @@ def create_attribution_maps_for_models(emonet_model_path, deca_model_path=None, 
 
     version = model.net.config.inout.time
 
-    root = Path("/ps/scratch/rdanecek/InterpretableEmotion")
+    root = Path("/ps/scratch/rdanecek/InterpretableAUs")
 
     if deca_model is None:
         folder_name = (version + "_" + model.net.config.inout.name)
