@@ -394,8 +394,8 @@ def create_attribution_maps_for_models(emonet_model_path, deca_model_path=None, 
         assert deca_image_name is not None
         if load_emonet_from_deca:
             assert deca_conf[stage].model.emoloss_dual is True
-            # state_dict = deca_model.emonet_loss.trainable_backbone.state_dict()
-            model = get_pretrained_model(deca_model.emonet_loss.trainable_backbone)
+            # state_dict = deca_model.au_loss.trainable_backbone.state_dict()
+            model = get_pretrained_model(deca_model.au_loss.trainable_backbone)
 
     else:
         deca_model = None
@@ -499,7 +499,7 @@ if __name__ == "__main__":
         deca_path = None
         deca_image = None
         # # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"
-        # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"
+        # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"
         # # deca_image = "predicted_images"
         # deca_image = "predicted_detailed_image"
         # # deca_image = "predicted_translated_image"

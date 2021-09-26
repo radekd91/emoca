@@ -83,27 +83,24 @@ def compute_confusion_matrix_on_cluster():
     deca_path = None
     ##deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"
 
-    # Emo VGG19BN
-    # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"
+    # Emo-AU VGG19BN
+    deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early/"
 
-    # Emo SWIN Base
-    # deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_03_10-22-52_ExpDECA_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Aug_DwC_early"
-
-    deca_image = None
-    # deca_image = "predicted_images"
+    # deca_image = None
+    deca_image = "predicted_images"
     # deca_image = "predicted_detailed_image"
     # deca_image = "predicted_translated_image"
     # deca_image = "predicted_detailed_translated_image",
 
-    # trainable_deca_emonet = 1
-    trainable_deca_emonet = 0
+    trainable_deca_emonet = 1
+    # trainable_deca_emonet = 0
 
     resume_folders = []
     resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-05_EmoCnn_vgg19_bn_none_AU_Aug_early']
-    resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-02_EmoCnn_vgg19_bn_none_AU_Aug_early']
-    resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-24_EmoCnn_vgg19_bn_none_AU_Aug_early']
-    resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-41-13_EmoSwin_swin_small_patch4_window7_224_none_AU_Aug_early']
-    resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-41-28_EmoSwin_swin_small_patch4_window7_224_none_AU_Aug_early']
+    # resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-02_EmoCnn_vgg19_bn_none_AU_Aug_early']
+    # resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-24_EmoCnn_vgg19_bn_none_AU_Aug_early']
+    # resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-41-13_EmoSwin_swin_small_patch4_window7_224_none_AU_Aug_early']
+    # resume_folders += ['/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-41-28_EmoSwin_swin_small_patch4_window7_224_none_AU_Aug_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, deca_path, deca_image, trainable_deca_emonet)
