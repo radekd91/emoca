@@ -1231,7 +1231,8 @@ if __name__ == "__main__":
         model_name = sys.argv[5]
         model_folder = sys.argv[6]
         stage = None if sys.argv[7] == "None" else sys.argv[7]
-        starting_image_index = int(sys.argv[8])
+        # starting_image_index = int(sys.argv[8])
+        starting_image_path = sys.argv[8]
         target_image = sys.argv[9]
         # loss_keyword = sys.argv[10]
         num_repeats= int(sys.argv[10])
@@ -1242,14 +1243,14 @@ if __name__ == "__main__":
         replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
 
     optimization_with_specified_loss_v2(path_to_models,
-                                       relative_to_path,
-                                       replace_root_path,
-                                       out_folder,
-                                       model_name,
-                                       model_folder,
-                                       stage,
-                                       starting_image_index,
-                                       target_image,
-                                       # loss_keyword,
-                                       num_repeats,
-                                       optim_kwargs)
+                                        relative_to_path,
+                                        replace_root_path,
+                                        out_folder,
+                                        model_name,
+                                        model_folder,
+                                        stage,
+                                        starting_image_path,
+                                        target_image,
+                                        # loss_keyword,
+                                        num_repeats,
+                                        optim_kwargs)
