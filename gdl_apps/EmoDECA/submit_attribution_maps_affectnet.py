@@ -94,8 +94,8 @@ def compute_confusion_matrix_on_cluster():
     # deca_image = "predicted_translated_image"
     # deca_image = "predicted_detailed_translated_image",
 
-    # trainable_deca_emonet = 1
-    trainable_deca_emonet = 0
+    trainable_deca_emonet = 1
+    # trainable_deca_emonet = 0
 
     resume_folders = []
     # resume_folders += ["/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"]

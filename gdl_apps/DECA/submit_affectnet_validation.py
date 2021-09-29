@@ -185,7 +185,92 @@ def main():
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_04_22-00-22_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early']
     # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_04_22-00-04_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early']
 
+    #
+    # # ExpDECA with trainable dual emotion network, cosine similarity
+    #
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-14-14_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2ncosVAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-44_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2ncosVAE_DeSegrend_Aug_early"]
+    #
+    # # ExpDECA with trainable dual emotion network, emo loss but features are normalized before computing loss
+    #
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_21-13-32_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2nVAE_DeSegrend_Aug_early"]
 
+    ## ExpDECA with trainable dual emotion network, different emo loss weights
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-26_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-25_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-15_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-13_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-12_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-12_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-09_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-19-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-10-49_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_07_19-10-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_early"]
+
+    # ExpDECA with  AU supervision
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_10_11-04-25_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AUf-cos_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-31_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-15_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-10_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_10_11-04-42_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AUf-cos_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-24-47_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-45_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-39_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-38_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-37_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-25_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-24_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-59_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-32_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
 
     # mode = 'coarse'
     mode = 'detail'

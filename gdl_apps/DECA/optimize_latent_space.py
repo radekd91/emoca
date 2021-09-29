@@ -3,8 +3,9 @@ from venv import create
 import torch
 import torch.functional as F
 from gdl_apps.DECA.interactive_deca_decoder import load_deca_and_data, test #, plot_results
+from affectnet_validation import load_model
 import copy
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, emo_network_from_path
 from gdl.models.DECA import DecaModule, DECA, DecaMode
 from skimage.io import imread, imsave
 from skimage.transform import resize, rescale
@@ -61,7 +62,7 @@ class TargetEmotionCriterion(torch.nn.Module):
 
         # self.target_image = target_image
         self.register_buffer('target_image', target_image)
-        self.target_emotion = self.emonet_loss.emonet_out(target_image)
+        self.target_emotion = self.emonet_loss(target_image)
 
         self.use_feat_1 = use_feat_1
         self.use_feat_2 = use_feat_2
@@ -76,15 +77,20 @@ class TargetEmotionCriterion(torch.nn.Module):
         return self.compute(image)
 
     def compute(self, image):
-        input_emotion = self.emonet_loss.emonet_out(image)
-        emo_feat_loss_1 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat'], self.target_emotion['emo_feat'])
+        input_emotion = self.emonet_loss(image)
+
         emo_feat_loss_2 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat_2'], self.target_emotion['emo_feat_2'])
         valence_loss = self.emonet_loss.valence_loss(input_emotion['valence'], self.target_emotion['valence'])
         arousal_loss = self.emonet_loss.arousal_loss(input_emotion['arousal'], self.target_emotion['arousal'])
-        expression_loss = self.emonet_loss.expression_loss(input_emotion['expression'], self.target_emotion['expression'])
+        if 'expression' in input_emotion.keys():
+            expression_loss = self.emonet_loss.expression_loss(input_emotion['expression'], self.target_emotion['expression'])
+        else:
+            expression_loss = self.emonet_loss.expression_loss(input_emotion['expr_classification'], self.target_emotion['expr_classification'])
 
-        total_loss = torch.zeros_like(emo_feat_loss_1)
+
+        total_loss = torch.zeros_like(emo_feat_loss_2)
         if self.use_feat_1:
+            emo_feat_loss_1 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat'], self.target_emotion['emo_feat'])
             total_loss = total_loss + emo_feat_loss_1
 
         if self.use_feat_2:
@@ -524,7 +530,7 @@ def optimize(deca,
     losses_by_step = []
 
 
-    losses_and_metrics = deca.compute_loss(values, training=True)
+    losses_and_metrics = deca.compute_loss(values, {}, training=True)
     loss = criterion(values, losses_and_metrics, logs)
     losses_by_step += [loss.item()]
 
@@ -554,7 +560,7 @@ def optimize(deca,
             optimizer.zero_grad()
             values_ = deca.decode(values, training=False)
             # losses_and_metrics = deca.compute_loss(values_, training=False)
-            losses_and_metrics = deca.compute_loss(values_, training=True)
+            losses_and_metrics = deca.compute_loss(values_, {}, training=True)
             loss = criterion(values_, losses_and_metrics)
             loss.backward(retain_graph=True)
             return loss
@@ -563,7 +569,7 @@ def optimize(deca,
 
         values = deca.decode(values, training=False)
         # losses_and_metrics = deca.compute_loss(values, training=False)
-        losses_and_metrics = deca.compute_loss(values, training=True)
+        losses_and_metrics = deca.compute_loss(values, {}, training=True)
 
         loss = criterion(values, losses_and_metrics, logs)
         loss.backward(retain_graph=True)
@@ -608,7 +614,7 @@ def optimize(deca,
 
 
     values = deca.decode(best_values, training=False)
-    losses_and_metrics = deca.compute_loss(values, training=False)
+    losses_and_metrics = deca.compute_loss(values, {}, training=False)
 
     save_visualization(deca, values,
                        save_path=save_path / f"best.png" if save_path is not None else None,
@@ -698,7 +704,8 @@ def loss_function_config(target_image, keyword, emonet=None):
 
     losses = []
     if keyword == "emotion":
-        losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
+        losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet),
+                                    "predicted_detailed_image")]
         return losses
 
     if keyword == "emotion_f1_reg_exp":
@@ -710,7 +717,8 @@ def loss_function_config(target_image, keyword, emonet=None):
 
     if keyword == "emotion_f2_reg_exp":
         losses += [CriterionWrapper(TargetEmotionCriterion(
-            target_image, use_feat_2=True, emonet_loss_instance=emonet), "predicted_detailed_image")]
+            target_image, use_feat_2=True, emonet_loss_instance=emonet),
+            "predicted_detailed_image")]
         losses += ["loss_expression_reg"]
         return losses
 
@@ -763,6 +771,10 @@ def loss_function_config(target_image, keyword, emonet=None):
 
 def loss_function_config_v2(target_image, loss_dict, emonet=None):
 
+    if emonet is not None and isinstance(emonet, str):
+        emonet = EmoBackboneLoss( torch.device('cuda:0'), emo_network_from_path(emonet))
+
+
     losses = []
     loss_weights = []
     for keyword, weight in loss_dict.items():
@@ -803,10 +815,10 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None):
     return losses, loss_weights
 
 
-def loss_function_configs(target_image):
+def loss_function_configs(target_image, emonet=None):
     loss_configs = {}
 
-    target_emo = TargetEmotionCriterion(target_image)
+    target_emo = TargetEmotionCriterion(target_image, ememonet_loss_instance=emonet)
     emonet = target_emo.emonet_loss
 
     loss_configs["emotion"] = loss_function_config(target_image, "emotion", emonet)
@@ -819,6 +831,25 @@ def loss_function_configs(target_image):
     loss_configs["emotion_f12vae_reg_exp"] = loss_function_config(target_image, "emotion_f12vae_reg_exp", emonet)
     loss_configs["emotion_reg_exp_detail"] = loss_function_config(target_image, "emotion_reg_exp_detail", emonet)
     return loss_configs
+
+
+def loss_function_configs_v2(target_image, emonet=None):
+    loss_configs = {}
+
+    target_emo = TargetEmotionCriterion(target_image, ememonet_loss_instance=emonet)
+    emonet = target_emo.emonet_loss
+
+    loss_configs["emotion"] = loss_function_config(target_image, "emotion", emonet)
+    # loss_configs["emotion_f1_reg_exp"] = loss_function_config(target_image, "emotion_f1_reg_exp", emonet)
+    loss_configs["emotion_f2_reg_exp"] = loss_function_config(target_image, "emotion_f2_reg_exp", emonet)
+    loss_configs["emotion_f12_reg_exp"] = loss_function_config(target_image, "emotion_f12_reg_exp", emonet)
+    loss_configs["emotion_va_reg_exp"] = loss_function_config(target_image, "emotion_va_reg_exp", emonet)
+    loss_configs["emotion_e_reg_exp"] = loss_function_config(target_image, "emotion_e_reg_exp", emonet)
+    loss_configs["emotion_vae_reg_exp"] = loss_function_config(target_image, "emotion_vae_reg_exp", emonet)
+    loss_configs["emotion_f12vae_reg_exp"] = loss_function_config(target_image, "emotion_f12vae_reg_exp", emonet)
+    loss_configs["emotion_reg_exp_detail"] = loss_function_config(target_image, "emotion_reg_exp_detail", emonet)
+    return loss_configs
+
 
 
 def replace_codes(values_from, values_to,
@@ -949,6 +980,68 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
                      **kwargs)
 
 
+def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
+                           model_folder, stage, start_image, target_image,
+                           num_repeats=1,
+                           losses_to_use: dict = None,
+                           **kwargs):
+
+    if losses_to_use is None:
+        raise RuntimeError("No losses specified. ")
+
+    emonet = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet = emonet)
+    deca, _ = load_model(path_to_models, model_folder, stage)
+    deca.deca.config.train_coarse = True
+    deca.deca.config.mode = DecaMode.DETAIL
+    deca.eval()
+    deca.cuda()
+
+    start_batch = {}
+    start_batch["image"] = load_image_to_batch(start_image)
+    values_input, visdict_input = test(deca, batch=start_batch)
+
+    initializations = {}
+    initializations["from_input"] = [values_input, visdict_input]
+
+    # if initialize_from_target:
+    batch = {}
+    batch["image"] = load_image_to_batch(target_image)
+    values_target, visdict_target = test(deca, batch=batch)
+    values_target = replace_codes(values_input, values_target, **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["from_target"] = [values_target, visdict_target]
+    # TODO: possibly add an option for randomized
+
+    # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
+    Path(out_folder ).mkdir(exist_ok=True, parents=True)
+    with open("out_folder.txt", "w") as f:
+        f.write(str(out_folder))
+    with open(Path(out_folder) / "submission_folder.txt", "w") as f:
+        f.write(os.getcwd())
+
+    for key, vals in initializations.items():
+        values, visdict = vals[0], vals[1]
+        # num_repeats = 5
+        # num_repeats = 1
+        for i in range(num_repeats):
+            # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
+            save_path = Path(out_folder) / key / f"{i:02d}"
+            save_path.mkdir(parents=True, exist_ok=True)
+            print(f"Saving to '{save_path}'")
+            save_visualization_step(visdict_input, "Source", save_path / "source.png")
+            save_visualization_step(visdict_target, "Target", save_path / "target.png")
+            optimize(deca,
+                     copy_values(values),  #important to copy
+                     losses_to_use=losses_to_use,
+                     loss_weights=loss_weights,
+                     # max_iters=max_iters,
+                     verbose=True,
+                     # visualize_progress=False,
+                     save_path=save_path,
+                     **kwargs)
+
+
 def optimization_with_different_losses(path_to_models,
                                        relative_to_path,
                                        replace_root_path,
@@ -960,7 +1053,13 @@ def optimization_with_different_losses(path_to_models,
                                        target_image,
                                         num_repeats,
                                        optim_kwargs):
-    loss_configs = loss_function_configs(target_image)
+    if 'emonet' in optim_kwargs.keys():
+        emonet = optim_kwargs.pop("emonet")
+    else:
+        emonet = None
+
+    # loss_configs = loss_function_configs(target_image, emonet=emonet)
+    loss_configs = loss_function_configs_v2(target_image, emonet=emonet)
     for key, loss_list in loss_configs.items():
         single_optimization(path_to_models,
                             relative_to_path,
@@ -1005,6 +1104,36 @@ def optimization_with_specified_loss(path_to_models,
                         **optim_kwargs)
 
 
+def optimization_with_specified_loss_v2(path_to_models,
+                                     relative_to_path,
+                                     replace_root_path,
+                                     out_folder,
+                                     model_name,
+                                     model_folder,
+                                     stage,
+                                     starting_image,
+                                     target_image,
+                                     # loss_keyword,
+                                     num_repeats,
+                                     optim_kwargs):
+    # loss_list = loss_function_config(target_image, loss_keyword)
+
+    single_optimization_v2(path_to_models,
+                        relative_to_path,
+                        replace_root_path,
+                        # out_folder / loss_keyword,
+                        out_folder,
+                        model_name,
+                        model_folder,
+                        stage,
+                        starting_image,
+                        target_image,
+                        # loss_list,
+                        num_repeats,
+                        **optim_kwargs)
+
+
+
 def optimization_for_different_targets(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
                                        model_folder, stage, starting_image_index, target_images, optim_kwargs):
     for target_image in target_images:
@@ -1016,16 +1145,24 @@ def optimization_for_different_targets(path_to_models, relative_to_path, replace
 
 def main():
     deca_models = {}
-    deca_models["Octavia"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
-    deca_models["Rachel"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
-    deca_models["General1"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
-    deca_models["General2"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
+    # deca_models["Octavia"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
+    # deca_models["Rachel"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
+    # deca_models["General1"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
+    # deca_models["General2"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
 
-    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+
+    # ExpDECA with VGG net for emotions, trainable
+    deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] \
+        = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+          "2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early/"
+    # deca_models["ExpDECA_emonet"] = ""
+
+    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
 
     target_images = [
         target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
@@ -1053,11 +1190,14 @@ def main():
     # out_folder = '/ps/scratch/rdanecek/emoca/finetune_deca/optimize_emotion'
 
     # not on cluster
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = '/ps/scratch/'
-    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
+    # relative_to_path = '/ps/scratch/'
+    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    relative_to_path = None
+    replace_root_path = None
+    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
 
     for name, cfg in deca_models.items():
         model_folder = cfg[0]
@@ -1082,19 +1222,24 @@ if __name__ == "__main__":
     print("Running:" + __file__)
     for i, arg in enumerate(sys.argv):
         print(f"arg[{i}] = {arg}")
-    path_to_models = Path(sys.argv[1])
-    relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
-    replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
-    out_folder = Path(sys.argv[4])
-    model_name = sys.argv[5]
-    model_folder = sys.argv[6]
-    stage = None if sys.argv[7] == "None" else sys.argv[7]
-    starting_image_index = int(sys.argv[8])
-    target_image = sys.argv[9]
-    # loss_keyword = sys.argv[10]
-    num_repeats= int(sys.argv[10])
-    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
 
+    if len(sys.argv) > 1:
+        path_to_models = Path(sys.argv[1])
+        relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
+        replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
+        out_folder = Path(sys.argv[4])
+        model_name = sys.argv[5]
+        model_folder = sys.argv[6]
+        stage = None if sys.argv[7] == "None" else sys.argv[7]
+        starting_image_index = int(sys.argv[8])
+        target_image = sys.argv[9]
+        # loss_keyword = sys.argv[10]
+        num_repeats= int(sys.argv[10])
+        optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
+    else:
+        path_to_models = Path(sys.argv[1])
+        relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
+        replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
 
     optimization_with_specified_loss(path_to_models,
                                        relative_to_path,

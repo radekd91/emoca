@@ -87,8 +87,8 @@ def compute_confusion_matrix_on_cluster():
     deca_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early/"
 
     # deca_image = None
-    deca_image = "predicted_images"
-    # deca_image = "predicted_detailed_image"
+    # deca_image = "predicted_images"
+    deca_image = "predicted_detailed_image"
     # deca_image = "predicted_translated_image"
     # deca_image = "predicted_detailed_translated_image",
 
