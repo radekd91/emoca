@@ -1241,7 +1241,7 @@ if __name__ == "__main__":
         relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
         replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
 
-    optimization_with_specified_loss(path_to_models,
+    optimization_with_specified_loss_v2(path_to_models,
                                        relative_to_path,
                                        replace_root_path,
                                        out_folder,
