@@ -7,6 +7,8 @@ from omegaconf import DictConfig, OmegaConf
 from gdl.utils.condor import execute_on_cluster
 import time as t
 import random
+import pytorch3d.transforms as trans
+import torch
 
 def submit_single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
                                model_folder, stage, image_index, target_image,
@@ -189,8 +191,6 @@ def main():
         ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
          'detail', start_image]
 
-
-
     target_images = [
         # target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
         # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
@@ -253,7 +253,7 @@ def main():
     kw["optimize_detail"] = True
     kw["optimize_expression"] = True
     # kw["optimize_neck_pose"] = True
-    # kw["optimize_jaw_pose"] = True
+    kw["optimize_jaw_pose"] = True
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
         "emotion_f2": 1.,
@@ -266,7 +266,36 @@ def main():
         "loss_expression_reg" : 10.,
         # "loss_z_reg" : 10.,
     }
-    
+
+    # expression, detail, jaw pose regularized
+    # kw = copy.deepcopy(optim_kwargs)
+    # kw["optimize_detail"] = True
+    # kw["optimize_expression"] = True
+    # # kw["optimize_neck_pose"] = True
+    # kw["optimize_jaw_pose"] = True
+    # kw["losses_to_use"] = {
+    #     # "emotion_f1": 1.,
+    #     "emotion_f2": 1.,
+    #     # "emotion_va": 1.,
+    #     # "emotion_vae": 1.,
+    #     # "emotion_e": 1.,
+    #     # "emotion_f12vae": 1.,
+    #     # "loss_shape_reg": 100.,
+    #     # "loss_expression_reg" : 100.,
+    #     "loss_expression_reg": 10.,
+    #     # "loss_z_reg" : 10.,
+    #     "jaw_reg": {
+    #         "loss_type": "l1",
+    #         # "loss_type": "l2",
+    #         "reference_type": "euler",
+    #         "reference_pose": torch.deg2rad(torch.tensor([0., 10., 0.])).numpy().tolist(),
+    #         # "reference_type": "quat",
+    #         # "reference_pose": trans.euler_angles_to_quaternion(torch.deg2rad([0., 0., 0.])).numpy().tolist(),
+    #         "weight" : 0.1,
+    #     }
+    # }
+
+    #
     # kw["emonet"] = None
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
@@ -278,7 +307,10 @@ def main():
 
     experiment_name = ""
     for key in kw["losses_to_use"].keys():
-        experiment_name += f"{key}_{kw['losses_to_use'][key]:.2f}_"
+        if key == "jaw_reg":
+            experiment_name += f"{key}_"
+        else:
+            experiment_name += f"{key}_{kw['losses_to_use'][key]:.2f}_"
     experiment_name += kw["optimizer_type"] + "_" + str(kw["lr"])
 
     # experiment_name = f"f12vae_exp_{kw['losses_to_use']['loss_expression_reg']:.2f}_det"

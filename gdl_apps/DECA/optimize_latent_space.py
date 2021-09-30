@@ -14,6 +14,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import sys, os
 from tqdm import auto
+import pytorch3d.transforms as trans
 
 
 def load_image_to_batch(image):
@@ -43,6 +44,7 @@ class TargetEmotionCriterion(torch.nn.Module):
                  ):
         super().__init__()
         self.emonet_loss = emonet_loss_instance or EmoNetLoss('cuda')
+        self.emonet_loss.eval()
 
         # if isinstance(target_image, str) or isinstance(target_image, Path):
         #     target_image = imread(target_image)[:,:,:3]
@@ -119,6 +121,47 @@ class TargetEmotionCriterion(torch.nn.Module):
         im = self.get_target_image()
         print(im.shape)
         imsave(path, im)
+
+
+class TargetJawCriterion(torch.nn.Module):
+
+    def __init__(self,
+                 reference_pose,
+                 reference_type,
+                 loss_type="l1"
+                 ):
+        super().__init__()
+        self.reference_pose = torch.tensor(reference_pose).cuda()
+        self.reference_type = reference_type
+        self.loss_type = loss_type
+
+    def __call__(self, posecode):
+        return self.forward(posecode)
+
+    def forward(self, posecode):
+        return self.compute(posecode)
+
+    @property
+    def name(self):
+        return f"JawReg {self.reference_type} {self.loss_type} "
+
+    def compute(self, posecode):
+        jaw_pose = posecode[:, 3:]
+
+        if self.reference_type == "aa":
+            pass # already in axis angle
+        elif self.reference_type == "quat":
+            jaw_pose = trans.axis_angle_to_quaternion(jaw_pose)
+        elif self.reference_type == "euler":
+            jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(jaw_pose), "XYZ")
+
+        if self.loss_type == "l1":
+            reg = torch.abs(jaw_pose - self.reference_pose).sum()
+        elif self.loss_type == "l2":
+            reg = torch.square(jaw_pose - self.reference_pose).sum()
+        else:
+            raise NotImplementedError(f"Invalid loss: '{self.loss_type}'")
+        return reg
 
 
 class CriterionWrapper(torch.nn.Module):
@@ -782,7 +825,10 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None):
     losses = []
     loss_weights = []
     for keyword, weight in loss_dict.items():
-        loss_weights += [weight]
+        if isinstance(weight, dict):
+            loss_weights += [weight["weight"]]
+        else:
+            loss_weights += [weight]
         if keyword == "emotion_f2":
             losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
         elif keyword == "emotion_f1":
@@ -813,6 +859,12 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None):
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_feat_1=True, use_feat_2=True, use_valence=True, use_arousal=True, use_expression=True, emonet_loss_instance=emonet),
                 "predicted_detailed_image")]
+        elif keyword == "jaw_reg":
+            losses += [CriterionWrapper(TargetJawCriterion(
+                weight["reference_pose"],
+                weight["reference_type"],
+                weight["loss_type"],
+            ), "posecode")]
         else:
             losses += [keyword]
 
