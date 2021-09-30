@@ -26,13 +26,11 @@ class EmoNetModule(EmotionRecognitionBaseModule):
 
         self.size = (256, 256) # predefined input image size
 
-    def emonet_out(self, images):
+    def emonet_out(self, images, intermediate_features=False):
         images = F.interpolate(images, self.size, mode='bilinear')
-        return self.emonet(images, intermediate_features=False)
+        return self.emonet(images, intermediate_features=intermediate_features)
 
-    def forward(self, batch):
-        images = batch['image']
-
+    def _forward(self, images):
         if len(images.shape) == 5:
             K = images.shape[1]
         elif len(images.shape) == 4:
@@ -44,7 +42,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         # print(images.shape)
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
-        emotion = self.emonet_out(images)
+        emotion = self.emonet_out(images, intermediate_features=True)
 
         valence = emotion['valence']
         arousal = emotion['arousal']
@@ -68,6 +66,11 @@ class EmoNetModule(EmotionRecognitionBaseModule):
                 dim=1)
 
         return values
+
+    def forward(self, batch):
+        images = batch['image']
+        return self._forward(images)
+
 
     def _get_trainable_parameters(self):
         return list(self.emonet.parameters())

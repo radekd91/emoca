@@ -5,7 +5,7 @@ import torch.functional as F
 from gdl_apps.DECA.interactive_deca_decoder import load_deca_and_data, test #, plot_results
 from affectnet_validation import load_model
 import copy
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, emo_network_from_path
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, emo_network_from_path, EmoNetModule
 from gdl.models.DECA import DecaModule, DECA, DecaMode
 from skimage.io import imread, imsave
 from skimage.transform import resize, rescale
@@ -772,8 +772,12 @@ def loss_function_config(target_image, keyword, emonet=None):
 def loss_function_config_v2(target_image, loss_dict, emonet=None):
 
     if emonet is not None and isinstance(emonet, str):
-        emonet = EmoBackboneLoss( torch.device('cuda:0'), emo_network_from_path(emonet))
-
+        emonet = emo_network_from_path(emonet)
+        if isinstance(emonet, EmoNetModule):
+            emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet)
+        else:
+            emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet)
+        emonet.cuda()
 
     losses = []
     loss_weights = []
