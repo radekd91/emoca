@@ -194,9 +194,9 @@ def main():
     target_images = [
         # target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
         # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
-        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
-        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
-        # target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
+        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
+        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
+        target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
         # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
         # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
         # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
@@ -209,8 +209,8 @@ def main():
             print(t)
         # print(t.exists())
 
-    num_repeats = 5
-    # num_repeats = 1
+    # num_repeats = 5
+    num_repeats = 1
 
     optim_kwargs = {
         "optimize_detail": False,
@@ -221,7 +221,8 @@ def main():
         "optimize_texture": False,
         "optimize_cam": False,
         "optimize_light": False,
-        "lr": 0.1,
+        # "lr": 0.1,
+        "lr": 1.0,
         # "lr": 0.01,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
@@ -249,25 +250,6 @@ def main():
     # kw["optimize_jaw_pose"] = True
 
     # expression, detail
-    kw = copy.deepcopy(optim_kwargs)
-    kw["optimize_detail"] = True
-    kw["optimize_expression"] = True
-    # kw["optimize_neck_pose"] = True
-    kw["optimize_jaw_pose"] = True
-    kw["losses_to_use"] = {
-        # "emotion_f1": 1.,
-        "emotion_f2": 1.,
-        # "emotion_va": 1.,
-        # "emotion_vae": 1.,
-        # "emotion_e": 1.,
-        # "emotion_f12vae": 1.,
-        # "loss_shape_reg": 100.,
-        # "loss_expression_reg" : 100.,
-        "loss_expression_reg" : 10.,
-        # "loss_z_reg" : 10.,
-    }
-
-    # expression, detail, jaw pose regularized
     # kw = copy.deepcopy(optim_kwargs)
     # kw["optimize_detail"] = True
     # kw["optimize_expression"] = True
@@ -282,27 +264,46 @@ def main():
     #     # "emotion_f12vae": 1.,
     #     # "loss_shape_reg": 100.,
     #     # "loss_expression_reg" : 100.,
-    #     "loss_expression_reg": 10.,
+    #     "loss_expression_reg" : 10.,
     #     # "loss_z_reg" : 10.,
-    #     "jaw_reg": {
-    #         "loss_type": "l1",
-    #         # "loss_type": "l2",
-    #         "reference_type": "euler",
-    #         "reference_pose": torch.deg2rad(torch.tensor([0., 10., 0.])).numpy().tolist(),
-    #         # "reference_type": "quat",
-    #         # "reference_pose": trans.euler_angles_to_quaternion(torch.deg2rad([0., 0., 0.])).numpy().tolist(),
-    #         "weight" : 0.1,
-    #     }
     # }
+
+    # expression, detail, jaw pose regularized
+    kw = copy.deepcopy(optim_kwargs)
+    kw["optimize_detail"] = True
+    kw["optimize_expression"] = True
+    # kw["optimize_neck_pose"] = True
+    kw["optimize_jaw_pose"] = True
+    kw["losses_to_use"] = {
+        # "emotion_f1": 1.,
+        "emotion_f2": 1.,
+        # "emotion_va": 1.,
+        # "emotion_vae": 1.,
+        # "emotion_e": 1.,
+        # "emotion_f12vae": 1.,
+        # "loss_shape_reg": 100.,
+        # "loss_expression_reg" : 100.,
+        "loss_expression_reg": 10.,
+        # "loss_z_reg" : 10.,
+        # "jaw_reg": {
+        #     "loss_type": "l1",
+        #     # "loss_type": "l2",
+        #     "reference_type": "euler",
+        #     "reference_pose": torch.deg2rad(torch.tensor([15., 0., 0.])).numpy().tolist(),
+        #     # "reference_type": "quat",
+        #     # "reference_pose": trans.euler_angles_to_quaternion(torch.deg2rad([0., 0., 0.])).numpy().tolist(),
+        #     "weight" : 0.1,
+        # }
+    }
 
     #
     # kw["emonet"] = None
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
-    # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
+    kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_24_00-17-40_EmoCnn_vgg19_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
-    kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
+    # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
     # kw["emonet"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
     experiment_name = ""

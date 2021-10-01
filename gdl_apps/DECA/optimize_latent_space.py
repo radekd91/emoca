@@ -143,7 +143,7 @@ class TargetJawCriterion(torch.nn.Module):
 
     @property
     def name(self):
-        return f"JawReg {self.reference_type} {self.loss_type} "
+        return f"JawReg_{self.reference_type}_{self.loss_type}_"
 
     def compute(self, posecode):
         jaw_pose = posecode[:, 3:]
@@ -162,6 +162,10 @@ class TargetJawCriterion(torch.nn.Module):
         else:
             raise NotImplementedError(f"Invalid loss: '{self.loss_type}'")
         return reg
+
+
+    def save_target_image(self, path):
+        pass
 
 
 class CriterionWrapper(torch.nn.Module):
@@ -578,7 +582,7 @@ def optimize(deca,
     losses_by_step += [loss.item()]
 
     save_visualization(deca, values,
-                       save_path=save_path / f"step_00.png" if save_path is not None else None,
+                       save_path=save_path / f"step_{0:02d}.png" if save_path is not None else None,
                        title=f"Start, loss={loss:.10f}",
                        show=visualize_result,
                        detail=deca.mode == DecaMode.DETAIL,
@@ -610,9 +614,9 @@ def optimize(deca,
 
         optimizer.zero_grad()
 
-        values = deca.decode(values, training=False)
+        values_ = deca.decode(values, training=False)
         # losses_and_metrics = deca.compute_loss(values, training=False)
-        losses_and_metrics = deca.compute_loss(values, {}, training=True)
+        losses_and_metrics = deca.compute_loss(values_, {}, training=True)
 
         loss = criterion(values, losses_and_metrics, logs)
         loss.backward(retain_graph=True)
@@ -908,7 +912,7 @@ def loss_function_configs_v2(target_image, emonet=None):
 
 
 
-def replace_codes(values_from, values_to,
+def replace_codes(values_input, values_target,
                   optimize_detail=False,
                   optimize_identity=False,
                   optimize_expression=False,
@@ -917,37 +921,42 @@ def replace_codes(values_from, values_to,
                   optimize_texture=False,
                   optimize_cam=False,
                   optimize_light=False,
+                  replace_detail=True, replace_exp=True, replace_pose=True,
                   **kwargs):
-    if optimize_detail:
-        values_to['detailcode'] = values_from['detailcode'].detach().clone()
+    # if optimize_detail:
+    #     values_target['detailcode'] = values_input['detailcode'].detach().clone()
 
     # always copy identity
     # if optimize_identity:
-    values_to['shapecode'] = values_from['shapecode'].detach().clone()
+    if not replace_detail:
+        values_target['shapecode'] = values_input['shapecode'].detach().clone()
 
-    if optimize_expression:
-        values_to['expcode'] = values_from['expcode'].detach().clone()
+    # if optimize_expression:
+    if not replace_exp:
+        values_target['expcode'] = values_input['expcode'].detach().clone()
 
-    if optimize_neck_pose and optimize_jaw_pose:
-        values_to['posecode'] = values_from['posecode'].detach().clone()
-    elif optimize_neck_pose:
-        posecode = values_from['posecode'].detach().clone()
-        neck_pose = posecode[:,:3]
-        values_to['posecode'] = torch.cat([neck_pose, posecode[:,3:]], dim=1)
-    elif optimize_jaw_pose:
-        posecode = values_from['posecode'].detach().clone()
-        jaw_pose = posecode[:, 3:]
-        values_to['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
+    if not replace_pose:
+        values_target['posecode'] = values_input['posecode'].detach().clone()
+    # if optimize_neck_pose and optimize_jaw_pose:
+    #     values_target['posecode'] = values_input['posecode'].detach().clone()
+    # elif optimize_neck_pose:
+    #     posecode = values_input['posecode'].detach().clone()
+    #     neck_pose = posecode[:,:3]
+    #     values_target['posecode'] = torch.cat([neck_pose, posecode[:, 3:]], dim=1)
+    # elif optimize_jaw_pose:
+    #     posecode = values_input['posecode'].detach().clone()
+    #     jaw_pose = posecode[:, 3:]
+    #     values_target['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
 
     # if optimize_texture:
-    values_to['texcode'] = values_from['texcode'].detach().clone()
+    values_target['texcode'] = values_input['texcode'].detach().clone()
 
     # if optimize_cam:
-    values_to['cam'] = values_from['cam'].detach().clone()
+    values_target['cam'] = values_input['cam'].detach().clone()
 
     # if optimize_light: # always copy light
-    values_to['lightcode'] = values_from['lightcode'].detach().clone()
-    return values_to
+    values_target['lightcode'] = values_input['lightcode'].detach().clone()
+    return values_target
 
 
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
@@ -1050,6 +1059,8 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     deca, _ = load_model(path_to_models, model_folder, stage)
     deca.deca.config.train_coarse = True
     deca.deca.config.mode = DecaMode.DETAIL
+    deca.deca.config.background_from_input = False
+
     deca.eval()
     deca.cuda()
 
@@ -1058,15 +1069,47 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     values_input, visdict_input = test(deca, batch=start_batch)
 
     initializations = {}
-    initializations["from_input"] = [values_input, visdict_input]
+    initializations["all_from_input"] = [values_input, visdict_input]
 
     # if initialize_from_target:
     batch = {}
     batch["image"] = load_image_to_batch(target_image)
-    values_target, visdict_target = test(deca, batch=batch)
-    values_target = replace_codes(values_input, values_target, **kwargs)
+    values_target_, visdict_target_ = test(deca, batch=batch)
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),  replace_detail=True, replace_exp=True, replace_pose=True, **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
-    initializations["from_target"] = [values_target, visdict_target]
+    initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    # values_target = replace_codes(values_input, copy.deepcopy(values_target_), replace_exp=False, replace_pose=False, **kwargs)
+    # values_target["images"] = values_input[
+    #     "images"]  # we don't want the target image but the input image (for inpainting by mask)
+
+    values_target_detail = replace_codes(values_input, copy.deepcopy(values_target_), replace_detail=True, replace_exp=False, replace_pose=False, **kwargs)
+    values_target_detail["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_from_target"] = [values_target_detail, copy.deepcopy(visdict_target_)]
+
+    values_target_detail_exp = replace_codes(values_input, copy.deepcopy(values_target_), replace_detail=False, replace_exp=True, replace_pose=False, **kwargs)
+    values_target_detail_exp["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_from_target"] = [values_target_detail_exp, copy.deepcopy(visdict_target_)]
+
+    values_target_exp = replace_codes(values_input, copy.deepcopy(values_target_), replace_detail=True, replace_exp=True, replace_pose=False, **kwargs)
+    values_target_exp["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_from_target"] = [values_target_exp, copy.deepcopy(visdict_target_)]
+
+    values_target_exp_pose = replace_codes(values_input, copy.deepcopy(values_target_), replace_detail=False, replace_exp=True, replace_pose=True, **kwargs)
+    values_target_exp_pose["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_pose_from_target"] = [values_target_exp_pose, copy.deepcopy(visdict_target_)]
+
+
+    values_target_pose = replace_codes(values_input, copy.deepcopy(values_target_), replace_detail=False, replace_exp=False, replace_pose=True, **kwargs)
+    values_target_pose["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_pose_from_target"] = [values_target_pose, copy.deepcopy(visdict_target_)]
+
+
     # TODO: possibly add an option for randomized
 
     # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
@@ -1086,7 +1129,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
             save_path.mkdir(parents=True, exist_ok=True)
             print(f"Saving to '{save_path}'")
             save_visualization_step(visdict_input, "Source", save_path / "source.png")
-            save_visualization_step(visdict_target, "Target", save_path / "target.png")
+            save_visualization_step(visdict_target_, "Target", save_path / "target.png")
             optimize(deca,
                      copy_values(values),  #important to copy
                      losses_to_use=losses_to_use,
