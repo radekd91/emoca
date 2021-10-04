@@ -1221,7 +1221,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     cfg["deca_model_path"] = str(Path(path_to_models) / model_name)
     cfg["out_folder"] = str(out_folder)
     if emonet_path is not None:
-        cfg["emonet_name"] = str(emonet_path.name)
+        cfg["emonet_name"] = str(Path(emonet_path).name)
         cfg["emonet"] = str(emonet_path)
     else:
         cfg["emonet_name"] = "Original Emonet"
