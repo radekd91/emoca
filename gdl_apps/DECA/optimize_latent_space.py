@@ -945,7 +945,10 @@ def replace_codes(values_input, values_target,
                   optimize_texture=False,
                   optimize_cam=False,
                   optimize_light=False,
-                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam=True,
+                  replace_detail=True, replace_exp=True,
+                  replace_jaw=True,
+                  replace_pose=True,
+                  replace_cam=True,
                   **kwargs):
     # if optimize_detail:
 
@@ -960,8 +963,17 @@ def replace_codes(values_input, values_target,
     if not replace_detail:
         values_target['detailcode'] = values_input['detailcode'].detach().clone()
 
-    if not replace_pose:
+    if not replace_pose and not replace_jaw:
         values_target['posecode'] = values_input['posecode'].detach().clone()
+    elif not replace_pose:
+        posecode = values_input['posecode'].detach().clone()
+        global_pose = posecode[:,:3]
+        values_target['posecode'] = torch.cat([global_pose, posecode[:, 3:]], dim=1)
+    elif not replace_jaw:
+        posecode = values_input['posecode'].detach().clone()
+        jaw_pose = posecode[:, 3:]
+        values_target['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
+
     # if optimize_neck_pose and optimize_jaw_pose:
     #     values_target['posecode'] = values_input['posecode'].detach().clone()
     # elif optimize_neck_pose:
@@ -1102,53 +1114,90 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     batch["image"] = load_image_to_batch(target_image)
     values_target_, visdict_target_ = test(deca, batch=batch)
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
-                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = True,
+                                  replace_detail=True,
+                                  replace_jaw=True,
+                                  replace_exp=True,
+                                  replace_pose=True,
+                                  replace_cam = True,
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
-                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = False,
+                                  replace_detail=True,
+                                  replace_exp=True,
+                                  replace_jaw=True,
+                                  replace_pose=False,
+                                  replace_cam = True,
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
-    initializations["all_from_target_but_cam"] = [values_target, copy.deepcopy(visdict_target_)]
+    initializations["all_from_target_but_pose"] = [values_target, copy.deepcopy(visdict_target_)]
 
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=False,
+                                  replace_exp=True,
+                                  replace_jaw=True,
+                                  replace_pose=False,
+                                  replace_cam = True,
+                                  **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target_but_pose_and_detail"] = [values_target, copy.deepcopy(visdict_target_)]
 
     # values_target = replace_codes(values_input, copy.deepcopy(values_target_), replace_exp=False, replace_pose=False, **kwargs)
     # values_target["images"] = values_input[
     #     "images"]  # we don't want the target image but the input image (for inpainting by mask)
 
     values_target_detail = replace_codes(values_input, copy.deepcopy(values_target_),
-                                         replace_detail=True, replace_exp=False, replace_pose=False,  replace_cam = False,
+                                         replace_detail=True,
+                                         replace_exp=False,
+                                         replace_jaw=False,
+                                         replace_pose=False,
+                                         replace_cam = False,
                                          **kwargs)
     values_target_detail["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
     initializations["detail_from_target"] = [values_target_detail, copy.deepcopy(visdict_target_)]
 
     values_target_detail_exp = replace_codes(values_input, copy.deepcopy(values_target_),
-                                             replace_detail=False, replace_exp=True, replace_pose=False, replace_cam = True,
+                                             replace_detail=True,
+                                             replace_exp=True,
+                                             replace_jaw=False,
+                                             replace_pose=False,
+                                             replace_cam = False,
                                              **kwargs)
     values_target_detail_exp["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
     initializations["detail_exp_from_target"] = [values_target_detail_exp, copy.deepcopy(visdict_target_)]
 
-    values_target_exp = replace_codes(values_input, copy.deepcopy(values_target_),
-                                      replace_detail=True, replace_exp=True, replace_pose=False, replace_cam = True,
+    values_target_exp_jaw_detail = replace_codes(values_input, copy.deepcopy(values_target_),
+                                                 replace_detail=True,
+                                                 replace_exp=True,
+                                                 replace_jaw=True,
+                                                 replace_pose=False,
+                                                 replace_cam = False,
                                       **kwargs)
-    values_target_exp["images"] = values_input[
+    values_target_exp_jaw_detail["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
-    initializations["detail_exp_from_target"] = [values_target_exp, copy.deepcopy(visdict_target_)]
+    initializations["detail_exp_jaw_from_target"] = [values_target_exp_jaw_detail, copy.deepcopy(visdict_target_)]
 
-    values_target_exp_pose = replace_codes(values_input, copy.deepcopy(values_target_),
-                                           replace_detail=False, replace_exp=True, replace_pose=True, replace_cam = True,
+    values_target_exp_jaw_pose = replace_codes(values_input, copy.deepcopy(values_target_),
+                                           replace_detail=False,
+                                           replace_exp=True,
+                                           replace_jaw=True,
+                                           replace_pose=True,
+                                           replace_cam = False,
                                            **kwargs)
-    values_target_exp_pose["images"] = values_input[
+    values_target_exp_jaw_pose["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
-    initializations["detail_exp_pose_from_target"] = [values_target_exp_pose, copy.deepcopy(visdict_target_)]
+    initializations["detail_exp_jaw_pose_from_target"] = [values_target_exp_jaw_pose, copy.deepcopy(visdict_target_)]
 
 
     values_target_pose = replace_codes(values_input, copy.deepcopy(values_target_),
-                                       replace_detail=False, replace_exp=False, replace_pose=True, replace_cam = True,
+                                       replace_detail=True,
+                                       replace_exp=False,
+                                       replace_jaw=False,
+                                       replace_pose=True,
+                                       replace_cam = False,
                                        **kwargs)
     values_target_pose["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
