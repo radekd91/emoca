@@ -173,8 +173,8 @@ def main():
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
-    # submit = False
+    # submit = True
+    submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -226,7 +226,8 @@ def main():
         # "lr": 0.01,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
-        "max_iters": 1000,
+        # "max_iters": 1000,
+        "max_iters": 100,
         "patience": 20,
         "visualize_progress" : False,
         "visualize_result" : False,

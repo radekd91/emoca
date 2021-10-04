@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 import sys, os
 from tqdm import auto
 import pytorch3d.transforms as trans
+from pytorch_lightning.loggers import WandbLogger
+import datetime
+import wandb
 
 
 def load_image_to_batch(image):
@@ -482,6 +485,7 @@ def optimize(deca,
              verbose=True,
              save_path=None,
              optimizer_type= "LBFGS",
+             logger= None,
              ):
     if sum([optimize_detail,
              optimize_identity,
@@ -492,6 +496,9 @@ def optimize(deca,
              optimize_cam,
              optimize_light]) == 0:
         raise ValueError("Nothing to optimizze for. Everything is set to false")
+
+    # log_prefix = f"{save_path.parents[1]}/{save_path.parents[0] / save_path.name}"
+    log_prefix = f"{save_path.parents[0].name}/{save_path.name}"
 
     if save_path is not None:
         print(f"Results will be saved to '{save_path}'")
@@ -631,6 +638,13 @@ def optimize(deca,
                                show=visualize_progress,
                                detail=deca.mode == DecaMode.DETAIL,
                                with_input=False)
+            if i == 1:
+                if logger is not None:
+                    logger.log_metrics({f"{log_prefix}/init":
+                                   wandb.Image(str(save_path / f"step_{i:04d}.png"))})
+            if logger is not None:
+                logger.log_metrics({f"{log_prefix}/optim_step":
+                               wandb.Image(str(save_path / f"step_{i:04d}.png"))})
             plot_optimization(losses_by_step, logs, iter=i, save_path=save_path)
 
         losses_by_step += [loss.item()]
@@ -655,6 +669,13 @@ def optimize(deca,
             break
 
 
+        if logger is not None:
+            log_dict = {f"{log_prefix}/opt_step" : i}
+            for key, vals in logs.items():
+                log_dict[f"{log_prefix}/{key}"] = vals[-1]
+            log_dict[f"{log_prefix}/optim"] = losses_by_step[-1]
+
+            logger.log_metrics(log_dict)
 
     if not stopping_condition_hit:
         print(f"[WARNING] Optimization terminated after max number of iterations, not becaused it reached the desired tolerance")
@@ -691,6 +712,9 @@ def optimize(deca,
         plt.show()
 
     if save_path:
+        logger.log_metrics({f"{log_prefix}/best":
+                       wandb.Image(str(save_path / f"best.png"))})
+
         create_video(list(logs.keys()), save_path)
 
     return values
@@ -921,7 +945,7 @@ def replace_codes(values_input, values_target,
                   optimize_texture=False,
                   optimize_cam=False,
                   optimize_light=False,
-                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam=True
+                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam=True,
                   **kwargs):
     # if optimize_detail:
 
@@ -1056,8 +1080,8 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     if losses_to_use is None:
         raise RuntimeError("No losses specified. ")
 
-    emonet = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
-    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet = emonet)
+    emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet = emonet_path)
     deca, _ = load_model(path_to_models, model_folder, stage)
     deca.deca.config.train_coarse = True
     deca.deca.config.mode = DecaMode.DETAIL
@@ -1078,13 +1102,13 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     batch["image"] = load_image_to_batch(target_image)
     values_target_, visdict_target_ = test(deca, batch=batch)
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
-                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = True
+                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = True,
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
-                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = False
+                                  replace_detail=True, replace_exp=True, replace_pose=True, replace_cam = False,
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target_but_cam"] = [values_target, copy.deepcopy(visdict_target_)]
@@ -1095,7 +1119,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     #     "images"]  # we don't want the target image but the input image (for inpainting by mask)
 
     values_target_detail = replace_codes(values_input, copy.deepcopy(values_target_),
-                                         replace_detail=True, replace_exp=False, replace_pose=False,  replace_cam = False
+                                         replace_detail=True, replace_exp=False, replace_pose=False,  replace_cam = False,
                                          **kwargs)
     values_target_detail["images"] = values_input[
         "images"]  # we don't want the target image but the input image (for inpainting by mask)
@@ -1140,6 +1164,19 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     with open(Path(out_folder) / "submission_folder.txt", "w") as f:
         f.write(os.getcwd())
 
+
+    cfg = kwargs.copy()
+    cfg["deca_model"] = model_name
+    cfg["deca_model_path"] = str(Path(path_to_models) / model_name)
+    cfg["out_folder"] = str(out_folder)
+    cfg["emonet"] = str(emonet_path)
+    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+    logger = WandbLogger(name=Path(out_folder).name,
+                     project="EmotionOptimization",
+                     config=cfg,
+                     version=time + "_" + Path(out_folder).name,
+                     save_dir=out_folder)
+
     for key, vals in initializations.items():
         values, visdict = vals[0], vals[1]
         # num_repeats = 5
@@ -1150,7 +1187,14 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
             save_path.mkdir(parents=True, exist_ok=True)
             print(f"Saving to '{save_path}'")
             save_visualization_step(visdict_input, "Source", save_path / "source.png")
+            if logger is not None:
+                logger.log_metrics({f"{key}/{i:02d}/source": wandb.Image(str(Path(save_path / "source.png")))})
+
             save_visualization_step(visdict_target_, "Target", save_path / "target.png")
+
+            if logger is not None:
+                logger.log_metrics({f"{key}/{i:02d}/target": wandb.Image(str(Path(save_path / "target.png")))})
+
             optimize(deca,
                      copy_values(values),  #important to copy
                      losses_to_use=losses_to_use,
@@ -1159,7 +1203,10 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
                      verbose=True,
                      # visualize_progress=False,
                      save_path=save_path,
+                     logger=logger,
                      **kwargs)
+
+            logger.log_metrics({f"{key}/{i:02d}/optimization_vid": wandb.Video(str(Path(save_path / "video.mp4")))})
 
 
 def optimization_with_different_losses(path_to_models,
@@ -1355,8 +1402,9 @@ if __name__ == "__main__":
         starting_image_path = sys.argv[8]
         target_image = sys.argv[9]
         # loss_keyword = sys.argv[10]
-        num_repeats= int(sys.argv[10])
+        num_repeats = int(sys.argv[10])
         optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
+
     else:
         path_to_models = Path(sys.argv[1])
         relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
