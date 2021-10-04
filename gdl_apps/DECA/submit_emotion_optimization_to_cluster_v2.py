@@ -48,7 +48,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     max_price = 8000
     job_name = "optimize_emotion"
     cuda_capability_requirement = 6
-    mem_gb = 10
+    mem_gb = 20
     args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name} " \
                     f"{model_folder} {stage} {image_index} {target_image} {num_repeats} {cgf_name}"
 
@@ -298,7 +298,7 @@ def main():
     }
 
     #
-    # kw["emonet"] = None
+    kw["emonet"] = "None"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"

@@ -1093,6 +1093,8 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
         raise RuntimeError("No losses specified. ")
 
     emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
+    if emonet_path == "None":
+        emonet_path = None
     losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet = emonet_path)
     deca, _ = load_model(path_to_models, model_folder, stage)
     deca.deca.config.train_coarse = True
@@ -1218,8 +1220,13 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     cfg["deca_model"] = model_name
     cfg["deca_model_path"] = str(Path(path_to_models) / model_name)
     cfg["out_folder"] = str(out_folder)
-    cfg["emonet"] = str(emonet_path)
-    cfg["emonet_name"] = str(emonet_path.name)
+    if emonet_path is not None:
+        cfg["emonet_name"] = str(emonet_path.name)
+        cfg["emonet"] = str(emonet_path)
+    else:
+        cfg["emonet_name"] = "Original Emonet"
+        cfg["emonet"] = "Original Emonet"
+
     cfg["source_image"] = str(start_image)
     cfg["target_image"] = str(target_image)
     cfg["deca_stage"] = str(stage)
