@@ -192,16 +192,16 @@ def main():
          'detail', start_image]
 
     target_images = [
-        # target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
-        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
-        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
-        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
+        target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
+        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
+        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
+        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
         target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
-        # target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
+        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
     ]
 
     for t in target_images:
