@@ -844,12 +844,15 @@ def loss_function_config(target_image, keyword, emonet=None):
     raise ValueError(f"Unknown keyword '{keyword}'")
 
 
-def create_emotion_loss(emonet_loss):
+def create_emotion_loss(emonet_loss, deca=None):
     feature_metric = None
     if isinstance(emonet_loss, str):
         emonet = emo_network_from_path(emonet_loss)
     elif isinstance(emonet_loss, dict):
-        emonet = emo_network_from_path(emonet_loss["path"])
+        if emonet_loss["path"] == "Synth":
+            emonet = deca.emonet_loss.trainable_backbone
+        else:
+            emonet = emo_network_from_path(emonet_loss["path"])
         if "feature_metric" in emonet_loss.keys():
             feature_metric = emonet_loss["feature_metric"]
     else:
@@ -863,7 +866,7 @@ def create_emotion_loss(emonet_loss):
     return emonet
 
 
-def loss_function_config_v2(target_image, loss_dict, emonet=None):
+def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None):
     #
     # if emonet is not None and isinstance(emonet, str):
     #     emonet = emo_network_from_path(emonet)
@@ -872,7 +875,7 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None):
     #     else:
     #         emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet)
     #         emonet.cuda()
-    emonet = create_emotion_loss(emonet)
+    emonet = create_emotion_loss(emonet, deca=deca)
 
     losses = []
     loss_weights = []
@@ -1116,10 +1119,6 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     if losses_to_use is None:
         raise RuntimeError("No losses specified. ")
 
-    emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
-    if emonet_path == "None":
-        emonet_path = None
-    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet = emonet_path)
     deca, _ = load_model(path_to_models, model_folder, stage)
     deca.deca.config.train_coarse = True
     deca.deca.config.mode = DecaMode.DETAIL
@@ -1134,6 +1133,12 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
 
     deca.eval()
     deca.cuda()
+
+    emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
+    if emonet_path == "None":
+        emonet_path = None
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca)
+
 
     start_batch = {}
     start_batch["image"] = load_image_to_batch(start_image)

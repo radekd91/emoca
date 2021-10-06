@@ -173,8 +173,8 @@ def main():
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
-    # submit = False
+    # submit = True
+    submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -187,12 +187,12 @@ def main():
     start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png" # Rachel 1
 
     deca_models = {}
-    # deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
-    #     ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
-    #      'detail', start_image]
-    deca_models["Original_DECA"] = \
-        ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
+    deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
+        ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
          'detail', start_image]
+    # deca_models["Original_DECA"] = \
+    #     ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
+    #      'detail', start_image]
     # deca_models["DECA_DecaD_VGGl_DeSegrend_Deex_early"] = \
     #     ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
     #      'detail', start_image]
@@ -309,15 +309,16 @@ def main():
     # kw["emonet"] = "None"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
-    kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
+    # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_24_00-17-40_EmoCnn_vgg19_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
     # kw["emonet"]["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    kw["emonet"]["path"] = "Synth"
 
-    # kw["emonet"]["feature_metric"] = "l1_loss"
+    kw["emonet"]["feature_metric"] = "l1_loss"
     # kw["emonet"]["feature_metric"] = "mse_loss"
-    kw["emonet"]["feature_metric"] = "cosine_similarity"
+    # kw["emonet"]["feature_metric"] = "cosine_similarity"
 
     experiment_name = ""
     for key in kw["losses_to_use"].keys():
