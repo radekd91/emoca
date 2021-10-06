@@ -1125,6 +1125,13 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     deca.deca.config.mode = DecaMode.DETAIL
     deca.deca.config.background_from_input = False
 
+    if model_name == "Original_DECA":
+        # remember, this is the hacky way to load old Yao's model
+        deca.deca.config.resume_training = True
+        # '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
+        deca.deca._load_old_checkpoint()
+        run_name = "Original_DECA"
+
     deca.eval()
     deca.cuda()
 
@@ -1412,7 +1419,10 @@ def main():
 
 
     # ExpDECA with VGG net for emotions, trainable
-    deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] \
+    # deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] \
+    #     = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+    #       "2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early/"
+    deca_models[""] \
         = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
           "2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early/"
     # deca_models["ExpDECA_emonet"] = ""

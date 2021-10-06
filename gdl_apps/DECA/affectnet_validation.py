@@ -54,9 +54,7 @@ def main():
         mode = 'detail'
     deca, conf = load_model(path_to_models, run_name, mode)
 
-    # deca.deca.config.resume_training = True
-    # deca.deca._load_old_checkpoint()
-    # run_name = "Original_DECA"
+
 
     deca.eval()
 

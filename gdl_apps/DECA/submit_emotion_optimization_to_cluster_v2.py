@@ -187,9 +187,16 @@ def main():
     start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png" # Rachel 1
 
     deca_models = {}
-    deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
-        ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
+    # deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
+    #     ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
+    #      'detail', start_image]
+    deca_models["Original_DECA"] = \
+        ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
          'detail', start_image]
+    # deca_models["DECA_DecaD_VGGl_DeSegrend_Deex_early"] = \
+    #     ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
+    #      'detail', start_image]
+
 
     target_images = [
         target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
