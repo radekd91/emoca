@@ -586,11 +586,12 @@ def optimize(deca,
 
     losses_and_metrics = deca.compute_loss(values, {}, training=True)
     loss = criterion(values, losses_and_metrics, logs)
-    losses_by_step += [loss.item()]
+    current_loss = loss.item()
+    losses_by_step += [current_loss]
 
     save_visualization(deca, values,
                        save_path=save_path / f"step_{0:02d}.png" if save_path is not None else None,
-                       title=f"Start, loss={loss:.10f}",
+                       title=f"Start, loss={current_loss:.10f}",
                        show=visualize_result,
                        detail=deca.mode == DecaMode.DETAIL,
                        with_input=False)
@@ -628,13 +629,14 @@ def optimize(deca,
         loss = criterion(values, losses_and_metrics, logs)
         loss.backward(retain_graph=True)
         # closure()
+        current_loss = loss.item()
 
         optimizer.step(closure=closure)
 
         if visualize_progress or save_path is not None:
             save_visualization(deca, values,
                                save_path=save_path / f"step_{i:04d}.png" if save_path is not None else None,
-                               title=f"Iter {i:04d}, loss={loss:.10f}",
+                               title=f"Iter {i:04d}, loss={current_loss:.10f}",
                                show=visualize_progress,
                                detail=deca.mode == DecaMode.DETAIL,
                                with_input=False)
@@ -647,20 +649,21 @@ def optimize(deca,
                                wandb.Image(str(save_path / f"step_{i:04d}.png"))})
             plot_optimization(losses_by_step, logs, iter=i, save_path=save_path)
 
-        losses_by_step += [loss.item()]
+
+        losses_by_step += [current_loss]
 
         if verbose:
-            print(f"Iter {i:04d}, loss={loss:.10f}")
+            print(f"Iter {i:04d}, loss={current_loss:.10f}")
 
         if loss < eps:
             stopping_condition_hit = True
             break
 
         since_last_improvement += 1
-        if best_loss > loss.item():
+        if best_loss > current_loss:
             since_last_improvement = 0
             best_iter = i
-            best_loss = loss.item()
+            best_loss = current_loss
             best_values = copy_values(values)
 
         if since_last_improvement > patience:
