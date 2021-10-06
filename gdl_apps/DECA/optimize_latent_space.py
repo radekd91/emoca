@@ -484,7 +484,7 @@ def optimize(deca,
              patience = 20,
              verbose=True,
              save_path=None,
-             optimizer_type= "LBFGS",
+             optimizer_type= "SGD",
              logger= None,
              ):
     if sum([optimize_detail,
@@ -604,6 +604,7 @@ def optimize(deca,
     optimizer = optimizer_class(parameters, lr=lr)
 
     best_loss = 99999999999999.
+    best_values = copy_values(values)
     eps = 1e-6
 
     stopping_condition_hit = False

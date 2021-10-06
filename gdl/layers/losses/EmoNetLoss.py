@@ -113,7 +113,14 @@ class EmoLossBase(torch.nn.Module):
     def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
         super().__init__()
         if isinstance(emo_feat_loss, str):
-            emo_feat_loss = class_from_str(emo_feat_loss, F)
+            if emo_feat_loss == "cosine_similarity":
+                def metric(*args, **kwargs):
+                    return 1.-F.cosine_similarity(*args, **kwargs)
+
+                emo_feat_loss = metric
+            else:
+                emo_feat_loss = class_from_str(emo_feat_loss, F)
+
         if isinstance(au_loss, str):
             au_loss = class_from_str(au_loss, F)
         self.emo_feat_loss = emo_feat_loss or F.l1_loss
