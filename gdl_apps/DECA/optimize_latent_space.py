@@ -840,15 +840,35 @@ def loss_function_config(target_image, keyword, emonet=None):
     raise ValueError(f"Unknown keyword '{keyword}'")
 
 
-def loss_function_config_v2(target_image, loss_dict, emonet=None):
+def create_emotion_loss(emonet_loss):
+    feature_metric = None
+    if isinstance(emonet_loss, str):
+        emonet = emo_network_from_path(emonet_loss)
+    elif isinstance(emonet_loss, dict):
+        emonet = emo_network_from_path(emonet_loss["path"])
+        if "feature_metric" in emonet_loss.keys():
+            feature_metric = emonet_loss["feature_metric"]
+    else:
+        raise ValueError(f"Invalid input argument type '{type(emonet_loss)}'")
 
-    if emonet is not None and isinstance(emonet, str):
-        emonet = emo_network_from_path(emonet)
-        if isinstance(emonet, EmoNetModule):
-            emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet)
-        else:
-            emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet)
-        emonet.cuda()
+    if isinstance(emonet, EmoNetModule):
+        emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet, emo_feat_loss=feature_metric)
+    else:
+        emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet, emo_feat_loss=feature_metric)
+    emonet.cuda()
+    return emonet
+
+
+def loss_function_config_v2(target_image, loss_dict, emonet=None):
+    #
+    # if emonet is not None and isinstance(emonet, str):
+    #     emonet = emo_network_from_path(emonet)
+    #     if isinstance(emonet, EmoNetModule):
+    #         emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet)
+    #     else:
+    #         emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet)
+    #         emonet.cuda()
+    emonet = create_emotion_loss(emonet)
 
     losses = []
     loss_weights = []
