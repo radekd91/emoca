@@ -211,6 +211,9 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             if cfg_coarse.model.idw:
                 experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
+        if 'id_metric' in cfg_coarse.model.keys():
+            experiment_name += "idBTH_"
+
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
             experiment_name += "NoLmk"
 
