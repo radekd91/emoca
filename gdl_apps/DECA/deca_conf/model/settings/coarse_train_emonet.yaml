@@ -17,8 +17,10 @@ use_landmarks: True
 useWlmk: True
 #useWlmk: False
 lmk_weight: 1
-eyed: 1.0
-lipd: 0.1
+#eyed: 1.0
+#lipd: 0.1
+eyed: 0.5
+lipd: 0.5
 #idw: 0.15 # from Yao's code
 idw: 0.2 # value written in the paper
 exp_reg: 1e-4

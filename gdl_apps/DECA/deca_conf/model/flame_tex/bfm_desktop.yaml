@@ -1,3 +1,4 @@
 # @package model
 tex_type: BFM
-tex_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/texture/FLAME_albedo_from_BFM.npz
+#tex_path: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/FLAME/texture/FLAME_albedo_from_BFM.npz
+tex_path: /ps/scratch/rdanecek/data/FLAME/texture/FLAME_albedo_from_BFM.npz

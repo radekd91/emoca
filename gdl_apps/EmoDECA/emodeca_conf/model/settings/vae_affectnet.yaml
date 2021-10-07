@@ -1,20 +1,13 @@
 # @package model
-emodeca_type: EmoSwinModule
-#swin_type: swin_base_patch4_window7_224
-swin_type: swin_large_patch4_window7_224_22k
-#swin_type: swin_small_patch4_window7_224
-#swin_type: swin_tiny_patch4_window7_224
-swin_cfg: todo
-load_pretrained_swin: True
 
 predict_expression: true
 predict_valence: true
 predict_arousal: true
-
+predict_AUs: false
 
 #continuous_va_balancing: 1d
 #continuous_va_balancing: 2d
-continuous_va_balancing: expr
+#continuous_va_balancing: expr
 
 #a_loss: mse_loss
 a_loss:
@@ -46,5 +39,6 @@ v_activation: none
 exp_activation: log_softmax
 #exp_activation: none
 
-expression_balancing: false
+AU_activation: none
 
+expression_balancing: false

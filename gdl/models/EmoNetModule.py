@@ -1,11 +1,9 @@
 import torch
-import pytorch_lightning as pl
 import numpy as np
-from gdl.utils.other import class_from_str
 import torch.nn.functional as F
-from omegaconf import DictConfig, OmegaConf
+# from gdl_apps.DECA.train_deca_modular import get_checkpoint
 from pytorch_lightning.loggers import WandbLogger
-from gdl.layers.losses.EmoNetLoss import get_emonet
+from gdl.layers.losses.EmonetLoader import get_emonet
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
 from gdl.datasets.FaceVideoDataset import Expression7
 from pathlib import Path
@@ -28,13 +26,11 @@ class EmoNetModule(EmotionRecognitionBaseModule):
 
         self.size = (256, 256) # predefined input image size
 
-    def emonet_out(self, images):
+    def emonet_out(self, images, intermediate_features=False):
         images = F.interpolate(images, self.size, mode='bilinear')
-        return self.emonet(images, intermediate_features=False)
+        return self.emonet(images, intermediate_features=intermediate_features)
 
-    def forward(self, batch):
-        images = batch['image']
-
+    def _forward(self, images):
         if len(images.shape) == 5:
             K = images.shape[1]
         elif len(images.shape) == 4:
@@ -46,7 +42,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         # print(images.shape)
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
-        emotion = self.emonet_out(images)
+        emotion = self.emonet_out(images, intermediate_features=True)
 
         valence = emotion['valence']
         arousal = emotion['arousal']
@@ -54,7 +50,8 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         # emotion['expression'] = emotion['expression']
 
         # classes_probs = F.softmax(emotion['expression'])
-        expression = self.exp_activation(emotion['expression'], dim=1)
+        if self.exp_activation is not None:
+            expression = self.exp_activation(emotion['expression'], dim=1)
 
         values = {}
         values['valence'] = valence.view(-1,1)
@@ -69,6 +66,11 @@ class EmoNetModule(EmotionRecognitionBaseModule):
                 dim=1)
 
         return values
+
+    def forward(self, batch):
+        images = batch['image']
+        return self._forward(images)
+
 
     def _get_trainable_parameters(self):
         return list(self.emonet.parameters())

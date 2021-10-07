@@ -14,7 +14,7 @@ import torch
 
 def swin_cfg_from_name(name):
     swin_cfg = OmegaConf.load(
-        Path(__file__).parents[2] / "SwinTransformer" / "configs" / (name + ".yaml"))
+        Path(swin_path) / "configs" / (name + ".yaml"))
     OmegaConf.set_struct(swin_cfg, True)
     return swin_cfg
 
@@ -66,7 +66,7 @@ def create_swin_backbone(swin_cfg, num_classes, img_size, load_pretrained_swin=F
 
     if load_pretrained_swin:
         # load the pretrained model from the official repo
-        path_to_model = Path(__file__).parents[2] / "SwinTransformer" / "pretrained_models" / (
+        path_to_model = swin_path / "pretrained_models" / (
                     pretrained_model + ".pth")
         state_dict = torch.load(path_to_model)
         # delete the head of the model from the state_dict - we have a different number of outputs

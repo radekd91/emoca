@@ -1,0 +1,10 @@
+# @package model
+emodeca_type: EmoNetModule
+load_pretrained_emonet: True
+
+predict_expression: true
+predict_valence: true
+predict_arousal: true
+
+expression_balancing: false
+

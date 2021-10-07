@@ -1,13 +1,12 @@
 import os, sys
 from pathlib import Path
-from omegaconf import DictConfig, OmegaConf
-from gdl.datasets.AffectNetDataModule import AffectNetDataModule
+from omegaconf import OmegaConf
 from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
-from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
-from gdl.models.EmoNetModule import EmoNetModule
 from gdl.models.EmoSwinModule import EmoSwinModule
+from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
@@ -66,6 +65,9 @@ def create_experiment_name(cfg, version=1):
     elif cfg.model.emodeca_type == "EmoSwinModule":
         experiment_name = "EmoSwin"
         experiment_name += "_" + cfg.model.swin_type
+    elif cfg.model.emodeca_type == "EmoCnnModule":
+        experiment_name = "EmoCnn"
+        experiment_name += "_" + cfg.model.backbone
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
@@ -77,6 +79,12 @@ def create_experiment_name(cfg, version=1):
 
     if cfg.model.expression_balancing:
         experiment_name += "_balanced"
+
+    if 'sampler' in cfg.data.keys() and cfg.data.sampler != "uniform":
+        experiment_name += f"_samp-{cfg.data.sampler}"
+
+    if 'predict_AUs' in cfg.model.keys() and cfg.model.predict_AUs:
+        experiment_name += "_AU"
 
     if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
         experiment_name += "_Aug"
@@ -147,6 +155,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         os.environ['LOCAL_RANK'] = '0'
 
     loss_to_monitor = 'val_loss_total'
+    dm.prepare_data()
     dm.setup()
     val_data = dm.val_dataloader()
     if isinstance(val_data, list):
@@ -228,20 +237,6 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     if logger is not None:
         logger.finalize("")
     return deca
-
-
-def get_checkpoint_with_kwargs(cfg, prefix, replace_root = None, relative_to = None, checkpoint_mode=None):
-    checkpoint = get_checkpoint(cfg, replace_root = replace_root,
-                                relative_to = relative_to, checkpoint_mode=checkpoint_mode)
-    cfg.model.resume_training = False  # make sure the training is not magically resumed by the old code
-    # checkpoint_kwargs = {
-    #     "model_params": cfg.model,
-    #     "learning_params": cfg.learning,
-    #     "inout_params": cfg.inout,
-    #     "stage_name": prefix
-    # }
-    checkpoint_kwargs = {'config': cfg}
-    return checkpoint, checkpoint_kwargs
 
 
 def train_emodeca(cfg, start_i=0, resume_from_previous = True,
@@ -381,11 +376,11 @@ def resume_training(run_path, start_at_stage, resume_from_previous, force_new_lo
 def main():
     if len(sys.argv) < 2:
 
-        # #1 EMONET
+        #1 EMONET
         # emodeca_default = "emonet"
         # emodeca_overrides = [
-        #     # 'model/settings=emonet_trainable',
-        #     'model/settings=emonet_trainable_weighted_va',
+        #     'model/settings=emonet_trainable',
+        #     # 'model/settings=emonet_trainable_weighted_va',
         #     'learning/logging=none',
         #     # 'learning.max_steps=1',
         #     'learning.max_epochs=1',
@@ -398,7 +393,10 @@ def main():
         #     # 'learning.learning_rate=0',
         #     # 'learning/optimizer=adabound',
         #     # 'data/datasets=affectnet_desktop',
+        #     'data/datasets=emotionet_desktop',
         #     # 'data/augmentations=default',
+        #     'data.sampler=balanced_expr',
+        #     # 'data.sampler=balanced_va',
         #
         # ]
         # deca_conf = None
@@ -407,94 +405,109 @@ def main():
         # stage = None
         # deca_default = None
         # deca_overrides = None
-        #
 
-        #2 EMODECA
-        emodeca_default = "emodeca_emonet_coarse"
+
+        # #2 EMODECA
+        # emodeca_default = "emodeca_emonet_coarse"
+        emodeca_default = "emodeca_coarse"
         emodeca_overrides = ['learning/logging=none',
-                             'model/settings=coarse_emodeca',
-                             # 'model/settings=coarse_emodeca_emonet',
-                             # '+model.mlp_norm_layer=BatchNorm1d',
+                             'model/backbone=coarse_emodeca',
+                             # 'model/backbone=coarse_emodeca_emonet',
+                             'model/settings=AU_emotionet',
+                             '+model.mlp_norm_layer=BatchNorm1d',
                              # 'model.unpose_global_emonet=false',
                              # 'model.use_coarse_image_emonet=false',
                              # 'model.use_detail_image_emonet=true',
                              # 'model.static_cam_emonet=false',
                              # 'model.static_light=false',
 
-                             'model.mlp_dimension_factor=4',
+                            'model.mlp_dimension_factor=4',
+                            'data/datasets=emotionet_desktop',
+                            'data/augmentations=default_with_resize',
+                            'data.num_workers=0'
                              ]
 
-        # deca_default = "deca_train_coarse_cluster"
-        # deca_overrides = [
-        #     # 'model/settings=coarse_train',
-        #     'model/settings=detail_train',
-        #     'model/paths=desktop',
-        #     'model/flame_tex=bfm_desktop',
-        #     'model.resume_training=True',  # load the original DECA model
-        #     'model.useSeg=rend', 'model.idw=0',
-        #     'learning/batching=single_gpu_coarse',
-        #     'learning/logging=none',
-        #     # 'learning/batching=single_gpu_detail',
-        #     #  'model.shape_constrain_type=None',
-        #      'model.detail_constrain_type=None',
-        #     'data/datasets=affectnet_cluster',
-        #      'learning.batch_size_test=1'
-        # ]
-        # # deca_conf_path = None
-        # # stage = None
+        deca_default = "deca_train_coarse_cluster"
+        deca_overrides = [
+            # 'model/settings=coarse_train',
+            'model/settings=detail_train',
+            'model/paths=desktop',
+            'model/flame_tex=bfm_desktop',
+            'model.resume_training=True',  # load the original DECA model
+            'model.useSeg=rend', 'model.idw=0',
+            'learning/batching=single_gpu_coarse',
+            'learning/logging=none',
+            # 'learning/batching=single_gpu_detail',
+            #  'model.shape_constrain_type=None',
+             'model.detail_constrain_type=None',
+            # 'data/datasets=affectnet_cluster',
+            'data/datasets=emotionet_desktop',
+             'learning.batch_size_test=1'
+        ]
+        deca_conf_path = None
+        stage = None
 
 
 
-        deca_default = None
-        deca_overrides = None
-        deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        # deca_conf = None
-        stage = 'detail'
-
-        relative_to_path = '/ps/scratch/'
-        # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
-        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-
-        # replace_root_path = None
-        # relative_to_path = None
-
-        # emodeca_default = "emonet"
-        # emodeca_overrides = ['model/settings=emonet_trainable']
         # deca_default = None
         # deca_overrides = None
+        # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
+        # # deca_conf = None
+        # stage = 'detail'
+        #
+        relative_to_path = '/ps/scratch/'
+        # # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
+        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        #
+        # # replace_root_path = None
+        # # relative_to_path = None
+        #
+        # # emodeca_default = "emonet"
+        # # emodeca_overrides = ['model/settings=emonet_trainable']
+        # # deca_default = None
+        # # deca_overrides = None
+        # # deca_conf_path = None
+        # # stage = None
+        # # relative_to_path = None
+        # # replace_root_path = None
+        #
+        # #3) EmoSWIN or EmoCNN
+        # emodeca_default = "emoswin"
+        # emodeca_overrides = [
+        #     # 'model/backbone=swin',
+        #     # 'model/backbone=resnet50',
+        #     # 'model/backbone=vgg19_bn',
+        #     # 'model/backbone=vgg16_bn',
+        #     'model/backbone=vgg13_bn',
+        #     # 'model/settings=AU_emotionet',
+        #     'model/settings=AU_emotionet_bce_weighted',
+        #     'learning/logging=none',
+        #     # 'learning.max_steps=1',
+        #     'learning.max_epochs=1',
+        #     'learning.checkpoint_after_training=latest',
+        #     # 'learning.batch_size_train=32',
+        #     # 'learning.batch_size_val=1',
+        #     # '+learning/lr_scheduler=reduce_on_plateau',
+        #     # 'model.continuous_va_balancing=1d',
+        #     # 'model.continuous_va_balancing=2d',
+        #     # 'model.continuous_va_balancing=expr',
+        #     # 'learning.val_check_interval=1',
+        #     # 'learning.learning_rate=0',
+        #     # 'learning/optimizer=adabound',
+        #     # 'data/datasets=affectnet_desktop',
+        #     # 'data/datasets=affectnet_v1_desktop',
+        #     'data/datasets=emotionet_desktop',
+        #     # 'data/augmentations=default',
+        #     'data/augmentations=default_with_resize',
+        #     'data.num_workers=0'
+        # ]
+        # deca_conf = None
         # deca_conf_path = None
+        # fixed_overrides_deca = None
         # stage = None
-        # relative_to_path = None
-        # replace_root_path = None
-
-        #3) EmoSWIN
-        emodeca_default = "emoswin"
-        emodeca_overrides = [
-            # 'model/settings=emonet_trainable',
-            'model/settings=swin',
-            'learning/logging=none',
-            # 'learning.max_steps=1',
-            'learning.max_epochs=1',
-            'learning.checkpoint_after_training=latest',
-            # 'learning.batch_size_train=32',
-            # 'learning.batch_size_val=1',
-            # '+learning/lr_scheduler=reduce_on_plateau',
-            # 'model.continuous_va_balancing=1d',
-            # 'model.continuous_va_balancing=2d',
-            # 'model.continuous_va_balancing=expr',
-            # 'learning.val_check_interval=1',
-            # 'learning.learning_rate=0',
-            # 'learning/optimizer=adabound',
-            # 'data/datasets=affectnet_desktop',
-            # 'data/augmentations=default',
-        ]
-        deca_conf = None
-        deca_conf_path = None
-        fixed_overrides_deca = None
-        stage = None
-        deca_default = None
-        deca_overrides = None
+        # deca_default = None
+        # deca_overrides = None
 
         cfg = configure(emodeca_default,
                         emodeca_overrides,

@@ -256,8 +256,10 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     loss_to_monitor = 'val_loss'
     dm.setup()
     val_data = dm.val_dataloader()
+    filename_pattern = 'deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}'
     if isinstance(val_data, list):
         loss_to_monitor = loss_to_monitor + "/dataloader_idx_0"
+        filename_pattern = 'deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}'
         # loss_to_monitor = '0_' + loss_to_monitor + "/dataloader_idx_0"
     # if len(prefix) > 0:
     #     loss_to_monitor = prefix + "_" + loss_to_monitor
@@ -265,7 +267,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     callbacks = []
     checkpoint_callback = ModelCheckpoint(
         monitor=loss_to_monitor,
-        filename='deca-{epoch:02d}-{' + loss_to_monitor + ':.8f}',
+        filename=filename_pattern,
         save_top_k=3,
         save_last=True,
         mode='min',

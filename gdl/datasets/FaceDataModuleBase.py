@@ -25,10 +25,16 @@ class FaceDataModuleBase(pl.LightningDataModule):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
+                 bb_center_shift_x=0., # in relative numbers
+                 bb_center_shift_y=0., # in relative numbers (i.e. -0.1 for 10% shift upwards, ...)
+                 processed_ext=".png",
                  ):
         super().__init__()
         self.root_dir = root_dir
         self.output_dir = output_dir
+        self.bb_center_shift_x = bb_center_shift_x
+        self.bb_center_shift_y = bb_center_shift_y
+        self.processed_ext = processed_ext
 
         if processed_subfolder is None:
             import datetime
@@ -66,7 +72,7 @@ class FaceDataModuleBase(pl.LightningDataModule):
         # imagename = imagepath.split('/')[-1].split('.')[0]
         image = np.array(imread(image_path))
         if len(image.shape) == 2:
-            image = image[:, :, None].repeat(1, 1, 3)
+            image = np.tile(image[:, :, None], (1, 1, 3))
         if len(image.shape) == 3 and image.shape[2] > 3:
             image = image[:, :, :3]
 
@@ -97,6 +103,10 @@ class FaceDataModuleBase(pl.LightningDataModule):
             top = bbox[1]
             bottom = bbox[3]
             old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
+
+            center[0] += abs(right-left)*self.bb_center_shift_x
+            center[1] += abs(bottom-top)*self.bb_center_shift_y
+
             size = int(old_size * self.scale)
 
             dst_image, dts_landmark = bbpoint_warp(image, center, size, self.image_size, landmarks=landmarks[bi])
@@ -130,9 +140,9 @@ class FaceDataModuleBase(pl.LightningDataModule):
         for di, detection in enumerate(detection_ims):
             # save detection
             stem = frame_fname.stem + "_%.03d" % di
-            out_detection_fname = out_detection_folder / (stem + ".png")
+            out_detection_fname = out_detection_folder / (stem + self.processed_ext)
             detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
-            imsave(out_detection_fname, detection)
+            imsave(out_detection_fname, detection, quality=100 if self.processed_ext in [".jpg", ".JPG"] else None)
 
             # save landmarks
             out_landmark_fname = out_landmark_folder / (stem + ".pkl")
@@ -215,7 +225,7 @@ class FaceDataModuleBase(pl.LightningDataModule):
 
     def _get_segmentation_net(self, device):
 
-        path_to_segnet = Path(__file__).parent.parent.parent / "face-parsing.PyTorch"
+        path_to_segnet = Path(__file__).parents[3] / "face-parsing.PyTorch"
         if not(str(path_to_segnet) in sys.path  or str(path_to_segnet.absolute()) in sys.path):
             sys.path += [str(path_to_segnet)]
 

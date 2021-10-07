@@ -1,7 +1,6 @@
+from gdl.models.IO import locate_checkpoint
 from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass#, locate_checkpoint
-from gdl.datasets.DecaDataModule import DecaDataModule
 from omegaconf import DictConfig, OmegaConf
-import sys
 from pathlib import Path
 from pytorch_lightning.loggers import WandbLogger
 import datetime
@@ -41,57 +40,6 @@ def get_checkpoint(cfg, replace_root = None, relative_to = None, checkpoint_mode
             checkpoint_mode = cfg.learning.checkpoint_after_training
     checkpoint = locate_checkpoint(cfg, replace_root = replace_root,
                                    relative_to = relative_to, mode=checkpoint_mode)
-    return checkpoint
-
-
-def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
-    checkpoint_dir = cfg.inout.checkpoint_dir
-    if replace_root is not None and relative_to is not None:
-        try:
-            checkpoint_dir = str(Path(replace_root) / Path(checkpoint_dir).relative_to(relative_to))
-        except ValueError as e:
-            print(f"Not replacing the root of checkpoint_dir '{checkpoint_dir}' beacuse the specified root does not fit:"
-                  f"'{replace_root}'")
-    print(f"Looking for checkpoint in '{checkpoint_dir}'")
-    checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
-    if len(checkpoints) == 0:
-        print(f"Did not found checkpoints. Looking in subfolders")
-        checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
-        if len(checkpoints) == 0:
-            print(f"Did not find checkpoints to resume from. Terminating")
-            sys.exit()
-        print(f"Found {len(checkpoints)} checkpoints")
-    else:
-        print(f"Found {len(checkpoints)} checkpoints")
-    for ckpt in checkpoints:
-        print(f" - {str(ckpt)}")
-
-    if isinstance(mode, int):
-        checkpoint = str(checkpoints[mode])
-    elif mode == 'latest':
-        checkpoint = str(checkpoints[-1])
-    elif mode == 'best':
-        min_value = 999999999999999.
-        min_idx = -1
-        for idx, ckpt in enumerate(checkpoints):
-            if ckpt.stem == "last": # disregard last
-                continue
-            end_idx = str(ckpt.stem).rfind('=') + 1
-            loss_str = str(ckpt.stem)[end_idx:]
-            try:
-                loss_value = float(loss_str)
-            except ValueError as e:
-                print(f"Unable to convert '{loss_str}' to float. Skipping this checkpoint.")
-                continue
-            if loss_value <= min_value:
-                min_value = loss_value
-                min_idx = idx
-        if min_idx == -1:
-            raise RuntimeError("Finding the best checkpoint failed")
-        checkpoint = str(checkpoints[min_idx])
-    else:
-        raise ValueError(f"Invalid checkpoint loading mode '{mode}'")
-    print(f"Selecting checkpoint '{checkpoint}'")
     return checkpoint
 
 

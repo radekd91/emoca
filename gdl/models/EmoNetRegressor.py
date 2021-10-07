@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from gdl.layers.losses.EmoNetLoss import get_emonet
+from gdl.layers.losses.EmonetLoader import get_emonet
 
 
 class EmoNetRegressor(torch.nn.Module):

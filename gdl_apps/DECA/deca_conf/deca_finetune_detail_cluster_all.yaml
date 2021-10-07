@@ -4,6 +4,7 @@ defaults:
   - model/paths : cluster
   - model/settings : default_detail
   - model/sizes : default
+  - model/neural_rendering : none
   - model/flame_tex: bfm
   - learning/optimizer: finetune_adam_detail
   - learning/batching: single_gpu_detail_32gb

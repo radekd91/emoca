@@ -1,7 +1,7 @@
 from gdl.models.DECA import DecaModule
+from gdl.models.IO import locate_checkpoint
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
-from gdl_apps.DECA.train_deca_modular import locate_checkpoint
 from gdl_apps.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
@@ -73,7 +73,7 @@ def test(dm, image_index = None, values = None):
     if image_index is None and values is None:
         raise ValueError("Specify either an image to encode-decode or values to decode.")
     print(f"Training set size: {len(dm.training_set)}")
-    print(f"Validation set size: {len(dm.validation_set)}")
+    print(f"Validation set size: {len(dm.training_set)}")
     print(f"Test set size: {len(dm.test_set)}")
 
     import numpy as np

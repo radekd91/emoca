@@ -121,11 +121,11 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    stage = 2
-    resume_from_previous = True
-    force_new_location = False
+    # stage = 2
+    # resume_from_previous = True
+    # force_new_location = False
 
-    resume_folders = []
+    # resume_folders = []
     # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
     # resume_folders += ['2021_04_20_19-10-57_ExpDECA_DecaD_para_Jaw_DeSegrend_early'] # resumed
     # resume_folders += ['2021_04_23_17-11-08_DECA_Affec_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early']  # resumed
@@ -138,10 +138,10 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    # stage = 2
-    # resume_from_previous = False
-    # force_new_location = False
-    # resume_folders = []
+    stage = 2
+    resume_from_previous = False
+    force_new_location = False
+    resume_folders = []
     # resume_folders += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early']
     # resume_folders += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
     # resume_folders += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early']
@@ -183,6 +183,20 @@ def main():
     ## ExpDECA emo ring emonet featue ge ex
     # resume_folders += ['2021_05_28_17-59-11_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_DeSegrend_BlackB_Exgt_va_CoNo_DwC_early']
     # resume_folders += ['2021_05_28_18-12-17_ExpDECA_Affec_para_Jaw_EmoB_F2VAE_GeEx_DeSegrend_BlackB_Exgt_va_CoNo_DwC_early']
+
+
+    ## ExpDECASTAR (neural rendering, different emonetion networks)
+
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-43_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Exnone_DwC_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-30_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Exnone_DwC_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-29_ExpDECAStar_Affec_para_Jaw_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Exnone_DeNo_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-18_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoCnn_res_F2VAE_DeSegrend_Exnone_DwC_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-13_ExpDECAStar_Affec_para_Jaw_EmoB_EmoSwin_sw_F2VAE_DeSegrend_Exnone_DeNo_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-52-13_ExpDECAStar_Affec_para_Jaw_EmoB_EmoCnn_res_F2VAE_DeSegrend_Exnone_DeNo_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-51-59_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoCnn_vgg_F2VAE_DeSegrend_Exnone_DwC_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-51-58_ExpDECAStar_Affec_para_Jaw_NoRing_EmoB_EmoNet_sha_F2VAE_DeSegrend_Exnone_DwC_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_10-51-44_ExpDECAStar_Affec_para_Jaw_EmoB_EmoCnn_vgg_F2VAE_DeSegrend_Exnone_DeNo_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_24_00-13-33_ExpDECAStar_Affec_para_Jaw_EmoB_F2VAE_DeSegrend_Exnone_DeNo_early/"]
 
 
 

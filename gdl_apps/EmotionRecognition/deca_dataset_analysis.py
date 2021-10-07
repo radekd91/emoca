@@ -1,7 +1,7 @@
 from omegaconf import DictConfig, OmegaConf
 from gdl.datasets.DecaDataModule import DecaDataModule
 from tqdm.auto import tqdm
-from gdl.layers.losses.EmoNetLoss import get_emonet
+from gdl.layers.losses.EmonetLoader import get_emonet
 from torch.utils.data import DataLoader
 import torch
 import matplotlib.pyplot as plt

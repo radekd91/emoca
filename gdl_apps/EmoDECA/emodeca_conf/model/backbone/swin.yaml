@@ -1,0 +1,8 @@
+# @package model
+emodeca_type: EmoSwinModule
+#swin_type: swin_base_patch4_window7_224
+swin_type: swin_large_patch4_window7_224_22k
+#swin_type: swin_small_patch4_window7_224
+#swin_type: swin_tiny_patch4_window7_224
+swin_cfg: todo
+load_pretrained_swin: True

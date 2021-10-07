@@ -5,13 +5,12 @@ import torch.nn.functional as F
 import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, create_emo_loss, create_au_loss
 import numpy as np
 # from time import time
 from skimage.io import imread
 import cv2
 from pathlib import Path
-from skimage.io import imsave
 
 from .Renderer import SRenderY
 from .DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
@@ -22,16 +21,14 @@ from .EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
 import gdl.utils.DecaUtils as util
-from wandb import Image
-from gdl.datasets.FaceVideoDataset import Expression7, expr7_to_affect_net
+from gdl.datasets.FaceVideoDataset import Expression7
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 
 torch.backends.cudnn.benchmark = True
 from enum import Enum
 from gdl.utils.other import class_from_str
-from omegaconf import OmegaConf
-
+from gdl.layers.losses.VGGLoss import VGG19Loss
 
 class DecaMode(Enum):
     COARSE = 1
@@ -45,7 +42,7 @@ class DecaModule(LightningModule):
         self.learning_params = learning_params
         self.inout_params = inout_params
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
-            print(f"Deca class is not specified. Defaulting to '{DECA.__name__}'")
+            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
             deca_class = DECA
         else:
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
@@ -57,22 +54,104 @@ class DecaModule(LightningModule):
             self.stage_name = ""
         if len(self.stage_name) > 0:
             self.stage_name += "_"
-        if 'emonet_weight' in self.deca.config.keys():
-            self.emonet_loss = EmoNetLoss(self.device)
-        else:
-            self.emonet_loss = None
-            
+        self.emonet_loss = None
+        self.au_loss = None
+        self._init_emotion_loss()
+        self._init_au_loss()
+
         if 'mlp_emotion_predictor' in self.deca.config.keys():
             # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
             self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
         else:
             self.emotion_mlp = None
 
+    def _init_emotion_loss(self):
+        if 'emonet_weight' in self.deca.config.keys():
+            if self.emonet_loss is not None:
+                emoloss_force_override = True if 'emoloss_force_override' in self.deca.config.keys() and self.deca.config.emoloss_force_override else False
+                if self.emonet_loss.is_trainable():
+                    if not emoloss_force_override:
+                        print("The old emonet loss is trainable and will not be overrided or replaced.")
+                        return
+                        # raise NotImplementedError("The old emonet loss was trainable. Changing a trainable loss is probably now "
+                        #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
+                    else:
+                        print("The old emonet loss is trainable but override is set so it will be replaced.")
+                else:
+                    print("The old emonet loss is not trainable. It will be replaced.")
+
+            if 'emonet_model_path' in self.deca.config.keys():
+                emonet_model_path = self.deca.config.emonet_model_path
+            else:
+                emonet_model_path=None
+            # self.emonet_loss = EmoNetLoss(self.device, emonet=emonet_model_path)
+            emoloss_trainable = True if 'emoloss_trainable' in self.deca.config.keys() and self.deca.config.emoloss_trainable else False
+            emoloss_dual = True if 'emoloss_dual' in self.deca.config.keys() and self.deca.config.emoloss_dual else False
+            normalize_features = self.deca.config.normalize_features if 'normalize_features' in self.deca.config.keys() else None
+            emo_feat_loss = self.deca.config.emo_feat_loss if 'emo_feat_loss' in self.deca.config.keys() else None
+            old_emonet_loss = self.emonet_loss
+
+            self.emonet_loss = create_emo_loss(self.device, emoloss=emonet_model_path, trainable=emoloss_trainable,
+                                               dual=emoloss_dual,
+                                               normalize_features=normalize_features,
+                                               emo_feat_loss=emo_feat_loss)
+
+            if old_emonet_loss is not None and type(old_emonet_loss) != self.emonet_loss:
+                print(f"The old emonet loss {old_emonet_loss.__class__.__name__} is replaced during reconfiguration by "
+                      f"new emotion loss {self.emonet_loss.__class__.__name__}")
+
+        else:
+            self.emonet_loss = None
+
+    def _init_au_loss(self):
+        if 'au_loss' in self.deca.config.keys():
+            if self.au_loss is not None:
+                force_override = True if 'force_override' in self.deca.config.au_loss.keys() \
+                                         and self.deca.config.au_loss.force_override else False
+                if self.au_loss.is_trainable():
+                    if not force_override:
+                        print("The old AU loss is trainable and will not be overrided or replaced.")
+                        return
+                        # raise NotImplementedError("The old emonet loss was trainable. Changing a trainable loss is probably now "
+                        #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
+                    else:
+                        print("The old AU loss is trainable but override is set so it will be replaced.")
+                else:
+                    print("The old AU loss is not trainable. It will be replaced.")
+
+            old_au_loss = self.emonet_loss
+            self.au_loss = create_au_loss(self.device, self.deca.config.au_loss)
+        else:
+            self.au_loss = None
+
     def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
         self.inout_params = inout_params
-        self.deca._reconfigure(model_params)
+
+        if self.deca.__class__.__name__ != model_params.deca_class:
+            old_deca_class = self.deca.__class__.__name__
+            state_dict = self.deca.state_dict()
+            deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+            self.deca = deca_class(config=model_params)
+
+            diff = set(state_dict.keys()).difference(set(self.deca.state_dict().keys()))
+            if len(diff) > 0:
+                raise RuntimeError(f"Some values from old state dict will not be used. This is probably not what you "
+                                   f"want because it most likely means that the pretrained model's weights won't be used. "
+                                   f"Maybe you messed up backbone compatibility (i.e. SWIN vs ResNet?) {diff}")
+            ret = self.deca.load_state_dict(state_dict, strict=False)
+            if len(ret.unexpected_keys) > 0:
+                raise print(f"Unexpected keys: {ret.unexpected_keys}")
+            missing_modules = set([s.split(".")[0] for s in ret.missing_keys])
+            print(f"Missing modules when upgrading from {old_deca_class} to {model_params.deca_class}:")
+            print(missing_modules)
+        else:
+            self.deca._reconfigure(model_params)
+
+        self._init_emotion_loss()
+        self._init_au_loss()
+
         self.stage_name = stage_name
         if self.stage_name is None:
             self.stage_name = ""
@@ -87,7 +166,7 @@ class DecaModule(LightningModule):
         else:
             shape_constraint = None
         if 'expression_constrain_type' in self.deca.config.keys() and str(self.deca.config.expression_constrain_type).lower() != 'none':
-            expression_constraint = self.deca.config.shape_constrain_type
+            expression_constraint = self.deca.config.expression_constrain_type
         else:
             expression_constraint = None
 
@@ -441,7 +520,8 @@ class DecaModule(LightningModule):
                                       ops['grid'].detach(),
                                       align_corners=False)
         # images
-        predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
+        predicted_images = ops['images']
+        # predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
         # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
         segmentation_type = None
         if isinstance(self.deca.config.useSeg, bool):
@@ -460,6 +540,21 @@ class DecaModule(LightningModule):
         if masks is None: # if mask not provided, the only mask available is the rendered one
             segmentation_type = 'rend'
 
+        elif masks.shape[-1] != predicted_images.shape[-1] or masks.shape[-2] != predicted_images.shape[-2]:
+            # resize masks if need be (this is only done if configuration was changed at some point after training)
+            dims = masks.ndim == 3
+            if dims:
+                masks = masks[:, None, :, :]
+            masks = F.interpolate(masks, size=predicted_images.shape[-2:], mode='bilinear')
+            if dims:
+                masks = masks[:, 0, ...]
+
+        # resize images if need be (this is only done if configuration was changed at some point after training)
+        if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+            ## special case only for inference time if the rendering image sizes have been changed
+            images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
+        else:
+            images_resized = images
 
         if segmentation_type == "gt":
             masks = masks[:, None, :, :]
@@ -473,17 +568,18 @@ class DecaModule(LightningModule):
             raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
 
 
-        if self.deca.config.background_from_input:
+        if self.deca.config.background_from_input in [True, "input"]:
             if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                 ## special case only for inference time if the rendering image sizes have been changed
-                images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
                 predicted_images = (1. - masks) * images_resized + masks * predicted_images
             else:
-                images_resized = images
                 predicted_images = (1. - masks) * images + masks * predicted_images
-        else:
-            images_resized = images
+        elif self.deca.config.background_from_input in [False, "black"]:
             predicted_images = masks * predicted_images
+        elif self.deca.config.background_from_input in ["none"]:
+            predicted_images = predicted_images
+        else:
+            raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
@@ -493,15 +589,23 @@ class DecaModule(LightningModule):
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
             uv_texture = albedo.detach() * uv_shading
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
-            if self.deca.config.background_from_input:
+            if self.deca.config.background_from_input in [True, "input"]:
                 if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                     ## special case only for inference time if the rendering image sizes have been changed
                     # images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
-                    predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                    ## before bugfix
+                    # predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                    ## after bugfix
+                    predicted_detailed_image = (1. - masks) * images_resized + masks * predicted_detailed_image
                 else:
-                    predicted_images = (1. - masks) * images + masks * predicted_images
-            else:
+                    predicted_detailed_image = (1. - masks) * images + masks * predicted_detailed_image
+            elif self.deca.config.background_from_input in [False, "black"]:
                 predicted_detailed_image = masks * predicted_detailed_image
+            elif self.deca.config.background_from_input in ["none"]:
+                predicted_detailed_image = predicted_detailed_image
+            else:
+                raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
+
 
             # --- extract texture
             uv_pverts = self.deca.render.world2uv(trans_verts).detach()
@@ -521,13 +625,52 @@ class DecaModule(LightningModule):
             uv_detail_normals = None
             predicted_detailed_image = None
 
+
+        ## NEURAL RENDERING
+        # if hasattr(self, 'image_translator') and self.image_translator is not None:
+        if self.deca._has_neural_rendering():
+            predicted_translated_image = self.deca.image_translator(
+                {
+                    "input_image" : predicted_images,
+                    "ref_image" : images,
+                    "target_domain" : torch.tensor([0]*predicted_images.shape[0],
+                                                   dtype=torch.int64, device=predicted_images.device)
+                }
+            )
+
+            if self.mode == DecaMode.DETAIL:
+                predicted_detailed_translated_image = self.deca.image_translator(
+                        {
+                            "input_image" : predicted_detailed_image,
+                            "ref_image" : images,
+                            "target_domain" : torch.tensor([0]*predicted_detailed_image.shape[0],
+                                                           dtype=torch.int64, device=predicted_detailed_image.device)
+                        }
+                    )
+                translated_uv = F.grid_sample(torch.cat([predicted_detailed_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                                      mode='bilinear')
+                translated_uv_texture = translated_uv[:, :3, :, :].detach()
+
+            else:
+                predicted_detailed_translated_image = None
+
+                translated_uv_texture = None
+                # no need in coarse mode
+                # translated_uv = F.grid_sample(torch.cat([predicted_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                #                       mode='bilinear')
+                # translated_uv_texture = translated_uv_gt[:, :3, :, :].detach()
+        else:
+            predicted_translated_image = None
+            predicted_detailed_translated_image = None
+            translated_uv_texture = None
+
         if self.emotion_mlp is not None:
             codedict = self.emotion_mlp(codedict, "emo_mlp_")
-
 
         # populate the value dict for metric computation/visualization
         codedict['predicted_images'] = predicted_images
         codedict['predicted_detailed_image'] = predicted_detailed_image
+        codedict['predicted_translated_image'] = predicted_translated_image
         codedict['verts'] = verts
         codedict['albedo'] = albedo
         codedict['mask_face_eye'] = mask_face_eye
@@ -540,6 +683,8 @@ class DecaModule(LightningModule):
         codedict['normals'] = ops['normals']
 
         if self.mode == DecaMode.DETAIL:
+            codedict['predicted_detailed_translated_image'] = predicted_detailed_translated_image
+            codedict['translated_uv_texture'] = translated_uv_texture
             codedict['uv_texture_gt'] = uv_texture_gt
             codedict['uv_texture'] = uv_texture
             codedict['uv_detail_normals'] = uv_detail_normals
@@ -551,26 +696,30 @@ class DecaModule(LightningModule):
 
         return codedict
 
-    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None):
-        if self.deca.config.use_emonet_loss:
-            d = loss_dict
-            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
-                self.emonet_loss.compute_loss(images, predicted_images)
-        else:
-            d = metric_dict
-            # with torch.no_grad():
-            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss = \
-                self.emonet_loss.compute_loss(images, predicted_images)
-
+    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None, with_grad=True):
         def loss_or_metric(name, loss, is_loss):
             if not is_loss:
                 metric_dict[name] = loss
             else:
                 loss_dict[name] = loss
 
+        # if self.deca.config.use_emonet_loss:
+        if with_grad:
+            d = loss_dict
+            emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
+                self.emonet_loss.compute_loss(images, predicted_images)
+        else:
+            d = metric_dict
+            with torch.no_grad():
+                emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
+                    self.emonet_loss.compute_loss(images, predicted_images)
+
+
+
         # EmoNet self-consistency loss terms
-        loss_or_metric(prefix + '_emonet_feat_1_L1', emo_feat_loss_1 * self.deca.config.emonet_weight,
-                       self.deca.config.use_emonet_feat_1 and self.deca.config.use_emonet_loss)
+        if emo_feat_loss_1 is not None:
+            loss_or_metric(prefix + '_emonet_feat_1_L1', emo_feat_loss_1 * self.deca.config.emonet_weight,
+                           self.deca.config.use_emonet_feat_1 and self.deca.config.use_emonet_loss)
         loss_or_metric(prefix + '_emonet_feat_2_L1', emo_feat_loss_2 * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_feat_2 and self.deca.config.use_emonet_loss)
         loss_or_metric(prefix + '_emonet_valence_L1', valence_loss * self.deca.config.emonet_weight,
@@ -580,7 +729,8 @@ class DecaModule(LightningModule):
         # loss_or_metric(prefix + 'emonet_expression_KL', expression_loss * self.deca.config.emonet_weight) # KL seems to be causing NaN's
         loss_or_metric(prefix + '_emonet_expression_L1',expression_loss * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_expression and self.deca.config.use_emonet_loss)
-        loss_or_metric(prefix + '_emonet_combined', (emo_feat_loss_1 + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_weight,
+        loss_or_metric(prefix + '_emonet_combined', ((emo_feat_loss_1 if emo_feat_loss_1 is not None else 0)
+                                                     + emo_feat_loss_2 + valence_loss + arousal_loss + expression_loss) * self.deca.config.emonet_weight,
                        self.deca.config.use_emonet_combined and self.deca.config.use_emonet_loss)
 
         # Log also the VA
@@ -589,18 +739,18 @@ class DecaModule(LightningModule):
         metric_dict[prefix + "_arousal_input"] = self.emonet_loss.input_emotion['arousal'].mean().detach()
         metric_dict[prefix + "_arousal_output"] = self.emonet_loss.output_emotion['arousal'].mean().detach()
 
-        input_ex = self.emonet_loss.input_emotion['expression'].detach().cpu().numpy()
+        input_ex = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
         input_ex = np.argmax(input_ex, axis=1).mean()
-        output_ex = self.emonet_loss.output_emotion['expression'].detach().cpu().numpy()
+        output_ex = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
         output_ex = np.argmax(output_ex, axis=1).mean()
         metric_dict[prefix + "_expression_input"] = torch.tensor(input_ex, device=self.device)
         metric_dict[prefix + "_expression_output"] = torch.tensor(output_ex, device=self.device)
 
-        # GT emotion loss terms
-        if self.deca.config.use_gt_emotion_loss:
-            d = loss_dict
-        else:
-            d = metric_dict
+        # # GT emotion loss terms
+        # if self.deca.config.use_gt_emotion_loss:
+        #     d = loss_dict
+        # else:
+        #     d = metric_dict
 
         # TODO: uncomment this after you handle the case when certain entries are NaN (GT missing, not a bug)
         # if va is not None:
@@ -617,6 +767,59 @@ class DecaModule(LightningModule):
         #     affectnet_gt = torch.tensor(np.array(affectnet_gt), device=self.device, dtype=torch.long)
         #     d[prefix + '_emo_sup_expr_CE'] = F.cross_entropy(self.emonet_loss.output_emotion['expression'], affectnet_gt) * self.deca.config.gt_emotion_reg
         #     metric_dict[prefix + "_expr_gt"] = affectnet_gt.mean().detach()
+
+
+    def _compute_au_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, au=None, with_grad=True):
+        def loss_or_metric(name, loss, is_loss):
+            if not is_loss:
+                metric_dict[name] = loss
+            else:
+                loss_dict[name] = loss
+
+        # if self.deca.config.use_emonet_loss:
+        if with_grad:
+            d = loss_dict
+            au_feat_loss_1, au_feat_loss_2, _, _, _, au_loss = \
+                self.au_loss.compute_loss(images, predicted_images)
+        else:
+            d = metric_dict
+            with torch.no_grad():
+                au_feat_loss_1, au_feat_loss_2, _, _, _, au_loss = \
+                    self.au_loss.compute_loss(images, predicted_images)
+
+
+
+        # EmoNet self-consistency loss terms
+        if au_feat_loss_1 is not None:
+            loss_or_metric(prefix + '_au_feat_1_L1', au_feat_loss_1 * self.deca.config.au_loss.au_weight,
+                           self.deca.config.au_loss.use_feat_1 and self.deca.config.au_loss.use_as_loss)
+        loss_or_metric(prefix + '_au_feat_2_L1', au_feat_loss_2 * self.deca.config.au_loss.au_weight,
+                       self.deca.config.au_loss.use_feat_2 and self.deca.config.au_loss.use_as_loss)
+        loss_or_metric(prefix + '_au_loss', au_loss * self.deca.config.au_loss.au_weight,
+                       self.deca.config.au_loss.use_aus and self.deca.config.au_loss.use_as_loss)
+        # loss_or_metric(prefix + '_au_losses_L1', arousal_loss * self.deca.config.au_loss.au_weight,
+        #                self.deca.config.au_loss.use_emonet_arousal and self.deca.config.au_loss.use_as_loss)
+        # loss_or_metric(prefix + 'emonet_expression_KL', expression_loss * self.deca.config.au_loss.au_weight) # KL seems to be causing NaN's
+
+        # # Log also the VA
+        # metric_dict[prefix + "_valence_input"] = self.emonet_loss.input_emotion['valence'].mean().detach()
+        # metric_dict[prefix + "_valence_output"] = self.emonet_loss.output_emotion['valence'].mean().detach()
+        # metric_dict[prefix + "_arousal_input"] = self.emonet_loss.input_emotion['arousal'].mean().detach()
+        # metric_dict[prefix + "_arousal_output"] = self.emonet_loss.output_emotion['arousal'].mean().detach()
+
+        # input_ex = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
+        # input_ex = np.argmax(input_ex, axis=1).mean()
+        # output_ex = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification'].detach().cpu().numpy()
+        # output_ex = np.argmax(output_ex, axis=1).mean()
+        # metric_dict[prefix + "_expression_input"] = torch.tensor(input_ex, device=self.device)
+        # metric_dict[prefix + "_expression_output"] = torch.tensor(output_ex, device=self.device)
+
+        # # GT emotion loss terms
+        # if self.deca.config.use_gt_emotion_loss:
+        #     d = loss_dict
+        # else:
+        #     d = metric_dict
+
 
 
     def _metric_or_loss(self, loss_dict, metric_dict, is_loss):
@@ -709,7 +912,7 @@ class DecaModule(LightningModule):
                         lossfunc.landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
                 d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.eyed
-                d['lip_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
+                d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
                 #TODO: fix this on the next iteration lipd_loss
                 # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
@@ -723,6 +926,35 @@ class DecaModule(LightningModule):
                 # d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
                 self._metric_or_loss(losses, metrics, self.deca.config.use_photometric)['photometric_texture'] = \
                     (masks[:geom_losses_idxs, ...] * (predicted_images[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
+
+                if self.deca.vgg_loss is not None:
+                    vggl, _ = self.deca.vgg_loss(
+                        masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...], # masked input image
+                        masks[:geom_losses_idxs, ...] * predicted_images[:geom_losses_idxs, ...], # masked output image
+                    )
+                    self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg'] = vggl * self.deca.config.vggw
+
+                if self.deca._has_neural_rendering():
+                    predicted_translated_image = codedict["predicted_translated_image"]
+                    photometric_translated = (masks[:geom_losses_idxs, ...] * (
+                            predicted_translated_image[:geom_losses_idxs, ...] -
+                            images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
+                    if self.deca.config.use_photometric:
+                        losses['photometric_translated_texture'] = photometric_translated
+                    else:
+                        metrics['photometric_translated_texture'] = photometric_translated
+
+                    if self.deca.vgg_loss is not None:
+                        vggl, _ = self.deca.vgg_loss(
+                            masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                            masks[:geom_losses_idxs, ...] * predicted_translated_image[:geom_losses_idxs, ...],
+                            # masked output image
+                        )
+                        self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg_translated'] = vggl * self.deca.config.vggw
+
+            else:
+                raise ValueError("Is this line ever reached?")
+
 
             # if self.deca.config.idw > 1e-3:
             if self.deca.id_loss is not None:
@@ -739,13 +971,16 @@ class DecaModule(LightningModule):
 
             if self.emonet_loss is not None:
                 # with torch.no_grad():
-                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse", va, expr7)
+
+                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse",
+                                           va, expr7, with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
+
                 codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
                 codedict["coarse_valence_output"] = self.emonet_loss.output_emotion['valence']
                 codedict["coarse_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression']
+                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
                 if va is not None:
                     codedict["coarse_valence_gt"] = va[:, 0]
@@ -753,7 +988,29 @@ class DecaModule(LightningModule):
                 if expr7 is not None:
                     codedict["coarse_expression_gt"] = expr7
 
+                if self.deca._has_neural_rendering():
+                    #TODO possible to make this more GPU efficient by not recomputing emotion for input image
+                    self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, "coarse_translated",
+                                               va, expr7,
+                                               with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
 
+                    # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
+                    # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                    # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                    codedict["coarse_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
+                    codedict["coarse_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                    codedict["coarse_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+
+            if self.au_loss is not None:
+                # with torch.no_grad():
+
+                self._compute_au_loss(images, predicted_images, losses, metrics, "coarse",
+                                      au=None,
+                                      with_grad=self.deca.config.au_loss.use_as_loss and not self.deca._has_neural_rendering())
+                if self.deca._has_neural_rendering():
+                    self._compute_au_loss(images, predicted_translated_image, losses, metrics, "coarse",
+                                          au=None,
+                                          with_grad=self.deca.config.au_loss.use_as_loss and self.deca._has_neural_rendering())
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -763,27 +1020,81 @@ class DecaModule(LightningModule):
             uv_vis_mask = codedict["uv_vis_mask"] # uv_mask of what is visible
 
             photometric_detailed = (masks[:geom_losses_idxs, ...] * (
-                    predicted_detailed_image[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
+                    predicted_detailed_image[:geom_losses_idxs, ...] -
+                    images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
 
             if self.deca.config.use_detailed_photo:
                 losses['photometric_detailed_texture'] = photometric_detailed
             else:
                 metrics['photometric_detailed_texture'] = photometric_detailed
 
+            if self.deca.vgg_loss is not None:
+                vggl, _ = self.deca.vgg_loss(
+                    masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                    masks[:geom_losses_idxs, ...] * predicted_detailed_image[:geom_losses_idxs, ...],
+                    # masked output image
+                )
+                self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)['vgg_detailed'] = vggl * self.deca.config.vggw
+
+            if self.deca._has_neural_rendering():
+                predicted_detailed_translated_image = codedict["predicted_detailed_translated_image"]
+                photometric_detailed_translated = (masks[:geom_losses_idxs, ...] * (
+                        predicted_detailed_translated_image[:geom_losses_idxs, ...] - images[:geom_losses_idxs,
+                                                                           ...]).abs()).mean() * self.deca.config.photow
+                if self.deca.config.use_detailed_photo:
+                    losses['photometric_translated_detailed_texture'] = photometric_detailed_translated
+                else:
+                    metrics['photometric_translated_detailed_texture'] = photometric_detailed_translated
+
+                if self.deca.vgg_loss is not None:
+                    vggl, _ = self.deca.vgg_loss(
+                        masks[:geom_losses_idxs, ...] * images[:geom_losses_idxs, ...],  # masked input image
+                        masks[:geom_losses_idxs, ...] * predicted_detailed_translated_image[:geom_losses_idxs, ...],
+                        # masked output image
+                    )
+                    self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)[
+                        'vgg_detailed_translated'] =  vggl * self.deca.config.vggw
+
             if self.emonet_loss is not None:
-                self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail")
+                self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
+                                           with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
                 codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
                 codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
                 codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression']
+                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
                 if va is not None:
                     codedict["detail_valence_gt"] = va[:,0]
                     codedict["detail_arousal_gt"] = va[:,1]
                 if expr7 is not None:
                     codedict["detail_expression_gt"] = expr7
+
+
+                if self.deca._has_neural_rendering():
+                    #TODO possible to make this more GPU efficient by not recomputing emotion for input image
+                    self._compute_emotion_loss(images, predicted_detailed_translated_image,
+                                               losses, metrics, "detail_translated",
+                                               va, expr7,
+                                               with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
+
+                    # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
+                    # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                    # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                    codedict["detail_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
+                    codedict["detail_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                    codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+
+            if self.au_loss is not None:
+                self._compute_au_loss(images, predicted_images, losses, metrics, "detail",
+                                      au=None,
+                                      with_grad=self.deca.config.au_loss.use_as_loss and not self.deca._has_neural_rendering())
+
+                if self.deca._has_neural_rendering():
+                    self._compute_au_loss(images, predicted_detailed_translated_image, losses, metrics, "detail",
+                                          au=None,
+                                          with_grad=self.deca.config.au_loss.use_as_loss and self.deca._has_neural_rendering())
 
             for pi in range(3):  # self.deca.face_attr_mask.shape[0]):
                 if self.deca.config.sfsw[pi] != 0:
@@ -808,19 +1119,53 @@ class DecaModule(LightningModule):
 
                     detail_l1 = (uv_texture_patch * uv_vis_mask_patch - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
                                                         self.deca.config.sfsw[pi]
-                    if self.deca.config.use_detail_l1:
+                    if self.deca.config.use_detail_l1 and not self.deca._has_neural_rendering():
                         losses['detail_l1_{}'.format(pi)] = detail_l1
                     else:
                         metrics['detail_l1_{}'.format(pi)] = detail_l1
 
-                    mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
-                                                    uv_texture_gt_patch * uv_vis_mask_patch) * \
-                                                    self.deca.config.sfsw[pi] * self.deca.config.mrfwr
-                    if self.deca.config.use_detail_mrf:
+                    if self.deca.config.use_detail_mrf and not self.deca._has_neural_rendering():
+                        mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                                                        uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                                        self.deca.config.sfsw[pi] * self.deca.config.mrfwr
                         losses['detail_mrf_{}'.format(pi)] = mrf
                     else:
-                        metrics['detail_mrf_{}'.format(pi)] = mrf
+                        with torch.no_grad():
+                            mrf = self.deca.perceptual_loss(uv_texture_patch * uv_vis_mask_patch,
+                                                            uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                  self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                            metrics['detail_mrf_{}'.format(pi)] = mrf
 
+                    if self.deca._has_neural_rendering():
+                        # raise NotImplementedError("Gotta implement the texture extraction first.")
+                        translated_uv_texture = codedict["translated_uv_texture"]
+                        translated_uv_texture_patch = F.interpolate(
+                            translated_uv_texture[:geom_losses_idxs, :,
+                            self.deca.face_attr_mask[pi][2]:self.deca.face_attr_mask[pi][3],
+                            self.deca.face_attr_mask[pi][0]:self.deca.face_attr_mask[pi][1]],
+                            [new_size, new_size], mode='bilinear')
+
+                        translated_detail_l1 = (translated_uv_texture_patch * uv_vis_mask_patch
+                                     - uv_texture_gt_patch * uv_vis_mask_patch).abs().mean() * \
+                                    self.deca.config.sfsw[pi]
+
+                        if self.deca.config.use_detail_l1:
+                            losses['detail_translated_l1_{}'.format(pi)] = translated_detail_l1
+                        else:
+                            metrics['detail_translated_l1_{}'.format(pi)] = translated_detail_l1
+
+                        if self.deca.config.use_detail_mrf:
+                            translated_mrf = self.deca.perceptual_loss(translated_uv_texture_patch * uv_vis_mask_patch,
+                                                            uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                  self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                            losses['detail_translated_mrf_{}'.format(pi)] = translated_mrf
+                        else:
+                            with torch.no_grad():
+                                mrf = self.deca.perceptual_loss(translated_uv_texture_patch * uv_vis_mask_patch,
+                                                                uv_texture_gt_patch * uv_vis_mask_patch) * \
+                                      self.deca.config.sfsw[pi] * self.deca.config.mrfwr
+                                metrics['detail_translated_mrf_{}'.format(pi)] = mrf
+                # Old piece of debug code. Good to delete.
                 # if pi == 2:
                 #     uv_texture_gt_patch_ = uv_texture_gt_patch
                 #     uv_texture_patch_ = uv_texture_patch
@@ -832,7 +1177,8 @@ class DecaModule(LightningModule):
             losses['z_sym'] = (nonvis_mask * (uv_z - torch.flip(uv_z, [-1]).detach()).abs()).sum() * self.deca.config.zsymw
 
         if self.emotion_mlp is not None:# and not testing:
-            mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(codedict, batch, training=training, pred_prefix="emo_mlp_")
+            mlp_losses, mlp_metrics = self.emotion_mlp.compute_loss(
+                codedict, batch, training=training, pred_prefix="emo_mlp_")
             for key in mlp_losses.keys():
                 if key in losses.keys():
                     raise RuntimeError(f"Duplicate loss label {key}")
@@ -1155,6 +1501,14 @@ class DecaModule(LightningModule):
                                 caption += self.vae_2_str(values[mode_ + "_valence_output"][i].detach().cpu().item(),
                                                                  values[mode_ + "_arousal_output"][i].detach().cpu().item(),
                                                                  np.argmax(values[mode_ + "_expression_output"][i].detach().cpu().numpy())) + "\n"
+
+                        elif key == 'output_translated_images_' + mode_:
+                            if mode_ + "_translated_valence_output" in values.keys():
+                                caption += self.vae_2_str(values[mode_ + "_translated_valence_output"][i].detach().cpu().item(),
+                                                                 values[mode_ + "_translated_arousal_output"][i].detach().cpu().item(),
+                                                                 np.argmax(values[mode_ + "_translated_expression_output"][i].detach().cpu().numpy())) + "\n"
+
+
                         # elif key == 'output_images_detail':
                         #     caption += "\n" + self.vae_2_str(values["detail_output_valence"][i].detach().cpu().item(),
                         #                                  values["detail_output_valence"][i].detach().cpu().item(),
@@ -1202,6 +1556,9 @@ class DecaModule(LightningModule):
         if 'predicted_images' in additional.keys():
             visdict['output_images_coarse'] = additional['predicted_images'][visind]
 
+        if 'predicted_translated_image' in additional.keys() and additional['predicted_translated_image'] is not None:
+            visdict['output_translated_images_coarse'] = additional['predicted_translated_image'][visind]
+
         visdict['geometry_coarse'] = shape_images[visind]
         if shape_detail_images is not None:
             visdict['geometry_detail'] = shape_detail_images[visind]
@@ -1217,6 +1574,9 @@ class DecaModule(LightningModule):
         if 'predicted_detailed_image' in additional.keys() and additional['predicted_detailed_image'] is not None:
             visdict['output_images_detail'] = additional['predicted_detailed_image'][visind]
 
+        if 'predicted_detailed_translated_image' in additional.keys() and additional['predicted_detailed_translated_image'] is not None:
+            visdict['output_translated_images_detail'] = additional['predicted_detailed_translated_image'][visind]
+
         if 'shape_detail_images' in additional.keys():
             visdict['shape_detail_images'] = additional['shape_detail_images'][visind]
 
@@ -1228,6 +1588,9 @@ class DecaModule(LightningModule):
 
         if 'uv_texture_gt' in additional.keys():
             visdict['uv_texture_gt'] = additional['uv_texture_gt'][visind]
+
+        if 'translated_uv_texture' in additional.keys() and additional['translated_uv_texture'] is not None:
+            visdict['translated_uv_texture'] = additional['translated_uv_texture'][visind]
 
         if 'uv_vis_mask_patch' in additional.keys():
             visdict['uv_vis_mask_patch'] = additional['uv_vis_mask_patch'][visind]
@@ -1252,6 +1615,9 @@ class DecaModule(LightningModule):
 
         if self.emotion_mlp is not None:
             trainable_params += list(self.emotion_mlp.parameters())
+
+        if self.emonet_loss is not None:
+            trainable_params += self.emonet_loss._get_trainable_params()
 
         return trainable_params
 
@@ -1297,6 +1663,7 @@ class DECA(torch.nn.Module):
         super().__init__()
         self.perceptual_loss = None
         self.id_loss = None
+        self.vgg_loss = None
         self._reconfigure(config)
         self._reinitialize()
 
@@ -1307,6 +1674,7 @@ class DECA(torch.nn.Module):
         self.n_cond = 3 + config.n_exp
         self.mode = DecaMode[str(config.mode).upper()]
         self._init_deep_losses()
+        self._setup_neural_rendering()
 
     def _reinitialize(self):
         self._create_model()
@@ -1329,6 +1697,14 @@ class DECA(torch.nn.Module):
                 self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
                 self.id_loss.requires_grad_(False) # TODO, move this to the constructor
 
+        if 'vggw' not in self.config.keys() or self.config.vggw == 0:
+            self.vgg_loss = None
+        else:
+            if self.vgg_loss is None:
+                vgg_loss_batch_norm = 'vgg_loss_batch_norm' in self.config.keys() and self.config.vgg_loss_batch_norm
+                self.vgg_loss = VGG19Loss(dict(zip(self.config.vgg_loss_layers, self.config.lambda_vgg_layers)), batch_norm=vgg_loss_batch_norm).eval()
+                self.vgg_loss.requires_grad_(False) # TODO, move this to the constructor
+
     def _setup_renderer(self):
         self.render = SRenderY(self.config.image_size, obj_filename=self.config.topology_path,
                                uv_size=self.config.uv_size)  # .to(self.device)
@@ -1350,6 +1726,36 @@ class DECA(torch.nn.Module):
         else:
             fixed_uv_dis = torch.zeros([512, 512]).float()
         self.register_buffer('fixed_uv_dis', fixed_uv_dis)
+
+
+    def _has_neural_rendering(self):
+        return hasattr(self.config, "neural_renderer") and bool(self.config.neural_renderer)
+
+    def _setup_neural_rendering(self):
+        if self._has_neural_rendering():
+            if self.config.neural_renderer.class_ == "StarGAN":
+                from .StarGAN import StarGANWrapper
+                print("Creating StarGAN neural renderer")
+                self.image_translator = StarGANWrapper(self.config.neural_renderer.cfg, self.config.neural_renderer.stargan_repo)
+            else:
+                raise ValueError(f"Unsupported neural renderer class '{self.config.neural_renderer.class_}'")
+
+            if self.image_translator.background_mode == "input":
+                if self.config.background_from_input not in [True, "input"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "Background should be inpainted from the input")
+            elif self.image_translator.background_mode == "black":
+                if self.config.background_from_input not in [False, "black"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "Background should be black.")
+            elif self.image_translator.background_mode == "none":
+                if self.config.background_from_input not in ["none"]:
+                    raise NotImplementedError("The background mode of the neural renderer and deca is not synchronized. "
+                                              "The background should not be handled")
+            else:
+                raise NotImplementedError(f"Unsupported mode of the neural renderer backroungd: "
+                                          f"'{self.image_translator.background_mode}'")
+
 
     def _create_model(self):
         # coarse shape
@@ -1436,7 +1842,7 @@ class DECA(torch.nn.Module):
     def _load_old_checkpoint(self):
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
-            print(f"Loading OLD PRETRAINED model state from '{model_path}'")
+            print(f"Loading model state from '{model_path}'")
             checkpoint = torch.load(model_path)
             # model
             util.copy_state_dict(self.E_flame.state_dict(), checkpoint['E_flame'])
@@ -1470,20 +1876,6 @@ class DECA(torch.nn.Module):
         # shapecode, texcode, expcode, posecode, cam, lightcode = code_list
         code_list[-1] = code_list[-1].reshape(code.shape[0], 9, 3)
         return code_list
-
-    def add_detail_to_coarse_verts(self, uv_z, coarse_verts, coarse_normals):
-        uv_coarse_vertices = self.render.world2uv(coarse_verts).detach()
-        uv_coarse_normals = self.render.world2uv(coarse_normals).detach()
-        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
-        return self.add_detail_to_coarse_verts_uv(uv_z, uv_coarse_vertices, uv_coarse_normals)
-
-    def add_detail_to_coarse_verts_uv(self, uv_z, uv_coarse_vertices, uv_coarse_normals):
-        # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
-        uv_detail_vertices = uv_coarse_vertices + \
-                             uv_z * uv_coarse_normals + \
-                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals.detach()
-        return uv_detail_vertices
-
 
     def displacement2normal(self, uv_z, coarse_verts, coarse_normals):
         batch_size = uv_z.shape[0]
@@ -1588,6 +1980,7 @@ class ExpDECA(DECA):
             ## Attach a parallel flow of FCs onto deca coarse backbone
             self.E_expression = SecondHeadResnet(self.E_flame, self.n_exp_param, 'same')
         elif self.config.expression_backbone == 'deca_clone':
+            #TODO this will only work for Resnet. Make this work for the other backbones (Swin) as well.
             self.E_expression = ResnetEncoder(self.n_exp_param)
             # clone parameters of the ResNet
             self.E_expression.encoder.load_state_dict(self.E_flame.encoder.state_dict())

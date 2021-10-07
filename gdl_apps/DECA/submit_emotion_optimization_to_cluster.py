@@ -288,7 +288,7 @@ def main():
     #                  "emotion_vae_reg_exp",
     #                  "emotion_f12vae_reg_exp"]
 
-    for name, cfg in deca_from gdl.models.items():
+    for name, cfg in deca_models.items():
         model_folder = cfg[0]
         stage = cfg[1]
         starting_image_index = cfg[2]

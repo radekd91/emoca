@@ -7,8 +7,11 @@ from omegaconf import OmegaConf
 
 def submit(cfg_coarse_pretrain, cfg_coarse, cfg_detail, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
-    submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
-    submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/submission"
+    # submission_dir_cluster_side = "/ps/scratch/rdanecek/emoca/submission"
+    # submission_dir_local_mount = "/is/scratch/rdanecek/emoca/submission"
+    submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/submission"
+    submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     submission_folder_name = time + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
@@ -81,7 +84,24 @@ def train_on_selected_sequences():
         # [['model/settings=default_coarse_emonet', 'model.useSeg=true'], ['model/settings=default_detail_emonet', 'model.useSeg=true']], # with emonet loss, segmentation both
         # [['model/settings=default_coarse_emonet'], ['model/settings=default_detail_emonet']], # with emonet loss
         # [['model.useSeg=true'], []], # segmentation coarse
-        [[], [], []],# without emonet loss
+
+        # NEW GENERATION EXPERIMENTS (AFTER CONFIG SYNC WITH RELEASED DECA)
+
+        # [[], [], []],# default, ResNet encoders, without emonet loss
+
+        [['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224'],
+         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224'],
+         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+          '+model.e_detail_type=swin_tiny_patch4_window7_224']],# Swin tiny encoders
+
+        [['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224'],
+         ['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224'],
+         ['+model.e_flame_type=swin_small_patch4_window7_224',
+          '+model.e_detail_type=swin_small_patch4_window7_224']],  # Swin small encoders
     ]
     fixed_overrides_coarse_pretrain = []
     fixed_overrides_coarse = []

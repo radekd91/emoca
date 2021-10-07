@@ -1,0 +1,45 @@
+# @package data
+
+
+# Newer version of AffecetNet processed with higher resolution 512 and the bb is larger and shifter upwards to safely include
+# forehead. It can be cropped later on the fly using data augmentation.
+
+#dm = AffectNetDataModule(
+#             # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+#             "/ps/project/EmotionalFacialAnimation/data/affectnet/",
+#             # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+#             # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
+#             "/is/cluster/work/rdanecek/data/affectnet/",
+#             processed_subfolder="processed_2021_Aug_27_19-58-02",
+#             processed_ext=".jpg",
+#             mode="manual",
+#             scale=1.7,
+#             image_size=512,
+#             bb_center_shift_x=0,
+#             bb_center_shift_y=-0.3,
+#             ignore_invalid=True,
+#             # ring_type="gt_expression",
+#             ring_type="gt_va",
+#             # ring_type="emonet_feature",
+#             ring_size=4
+#            )
+
+
+data_class: AffectNetDataModule
+#input_dir: /home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet
+input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/affectnet
+#output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/
+output_dir: /is/cluster/work/rdanecek/data/affectnet/
+processed_subfolder: processed_2021_Aug_27_19-58-02
+num_workers: 8
+
+ignore_invalid: true
+# default parameters:
+mode: manual # the original AffectNet train/val split
+image_size: 224
+scale: 1.7
+face_detector: 'fan'
+face_detector_threshold: 0.9
+
+processed_ext: .jpg
+sampler: uniform

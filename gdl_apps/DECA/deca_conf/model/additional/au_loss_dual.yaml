@@ -1,0 +1,17 @@
+# @package model
+
+au_loss:
+  path: /ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-05_EmoCnn_vgg19_bn_none_AU_Aug_early # bgg19 with BN, binary cross entropy loss
+#  path: /ps/scratch/rdanecek/emoca/emodeca/2021_09_02_20-39-05_EmoCnn_vgg19_bn_none_AU_Aug_early
+  feat_loss: l1_loss
+  au_loss: l1_loss
+
+  normalize_features: false
+  trainable: false
+  dual: true
+  au_weight: 0.0015
+  use_as_loss: true # false to use as a metric only
+
+  use_feat_1: false
+  use_feat_2: true
+  use_aus: true

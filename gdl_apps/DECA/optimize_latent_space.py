@@ -3,8 +3,9 @@ from venv import create
 import torch
 import torch.functional as F
 from gdl_apps.DECA.interactive_deca_decoder import load_deca_and_data, test #, plot_results
+from affectnet_validation import load_model
 import copy
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, emo_network_from_path, EmoNetModule
 from gdl.models.DECA import DecaModule, DECA, DecaMode
 from skimage.io import imread, imsave
 from skimage.transform import resize, rescale
@@ -13,6 +14,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import sys, os
 from tqdm import auto
+import pytorch3d.transforms as trans
+from pytorch_lightning.loggers import WandbLogger
+import datetime
+import wandb
 
 
 def load_image_to_batch(image):
@@ -42,6 +47,7 @@ class TargetEmotionCriterion(torch.nn.Module):
                  ):
         super().__init__()
         self.emonet_loss = emonet_loss_instance or EmoNetLoss('cuda')
+        self.emonet_loss.eval()
 
         # if isinstance(target_image, str) or isinstance(target_image, Path):
         #     target_image = imread(target_image)[:,:,:3]
@@ -61,7 +67,7 @@ class TargetEmotionCriterion(torch.nn.Module):
 
         # self.target_image = target_image
         self.register_buffer('target_image', target_image)
-        self.target_emotion = self.emonet_loss.emonet_out(target_image)
+        self.target_emotion = self.emonet_loss(target_image)
 
         self.use_feat_1 = use_feat_1
         self.use_feat_2 = use_feat_2
@@ -76,15 +82,20 @@ class TargetEmotionCriterion(torch.nn.Module):
         return self.compute(image)
 
     def compute(self, image):
-        input_emotion = self.emonet_loss.emonet_out(image)
-        emo_feat_loss_1 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat'], self.target_emotion['emo_feat'])
+        input_emotion = self.emonet_loss(image)
+
         emo_feat_loss_2 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat_2'], self.target_emotion['emo_feat_2'])
         valence_loss = self.emonet_loss.valence_loss(input_emotion['valence'], self.target_emotion['valence'])
         arousal_loss = self.emonet_loss.arousal_loss(input_emotion['arousal'], self.target_emotion['arousal'])
-        expression_loss = self.emonet_loss.expression_loss(input_emotion['expression'], self.target_emotion['expression'])
+        if 'expression' in input_emotion.keys():
+            expression_loss = self.emonet_loss.expression_loss(input_emotion['expression'], self.target_emotion['expression'])
+        else:
+            expression_loss = self.emonet_loss.expression_loss(input_emotion['expr_classification'], self.target_emotion['expr_classification'])
 
-        total_loss = torch.zeros_like(emo_feat_loss_1)
+
+        total_loss = torch.zeros_like(emo_feat_loss_2)
         if self.use_feat_1:
+            emo_feat_loss_1 = self.emonet_loss.emo_feat_loss(input_emotion['emo_feat'], self.target_emotion['emo_feat'])
             total_loss = total_loss + emo_feat_loss_1
 
         if self.use_feat_2:
@@ -113,6 +124,51 @@ class TargetEmotionCriterion(torch.nn.Module):
         im = self.get_target_image()
         print(im.shape)
         imsave(path, im)
+
+
+class TargetJawCriterion(torch.nn.Module):
+
+    def __init__(self,
+                 reference_pose,
+                 reference_type,
+                 loss_type="l1"
+                 ):
+        super().__init__()
+        self.reference_pose = torch.tensor(reference_pose).cuda()
+        self.reference_type = reference_type
+        self.loss_type = loss_type
+
+    def __call__(self, posecode):
+        return self.forward(posecode)
+
+    def forward(self, posecode):
+        return self.compute(posecode)
+
+    @property
+    def name(self):
+        return f"JawReg_{self.reference_type}_{self.loss_type}_"
+
+    def compute(self, posecode):
+        jaw_pose = posecode[:, 3:]
+
+        if self.reference_type == "aa":
+            pass # already in axis angle
+        elif self.reference_type == "quat":
+            jaw_pose = trans.axis_angle_to_quaternion(jaw_pose)
+        elif self.reference_type == "euler":
+            jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(jaw_pose), "XYZ")
+
+        if self.loss_type == "l1":
+            reg = torch.abs(jaw_pose - self.reference_pose).sum()
+        elif self.loss_type == "l2":
+            reg = torch.square(jaw_pose - self.reference_pose).sum()
+        else:
+            raise NotImplementedError(f"Invalid loss: '{self.loss_type}'")
+        return reg
+
+
+    def save_target_image(self, path):
+        pass
 
 
 class CriterionWrapper(torch.nn.Module):
@@ -428,7 +484,8 @@ def optimize(deca,
              patience = 20,
              verbose=True,
              save_path=None,
-             optimizer_type= "LBFGS",
+             optimizer_type= "SGD",
+             logger= None,
              ):
     if sum([optimize_detail,
              optimize_identity,
@@ -439,6 +496,9 @@ def optimize(deca,
              optimize_cam,
              optimize_light]) == 0:
         raise ValueError("Nothing to optimizze for. Everything is set to false")
+
+    # log_prefix = f"{save_path.parents[1]}/{save_path.parents[0] / save_path.name}"
+    log_prefix = f"{save_path.parents[0].name}/{save_path.name}"
 
     if save_path is not None:
         print(f"Results will be saved to '{save_path}'")
@@ -524,13 +584,14 @@ def optimize(deca,
     losses_by_step = []
 
 
-    losses_and_metrics = deca.compute_loss(values, training=True)
+    losses_and_metrics = deca.compute_loss(values, {}, training=True)
     loss = criterion(values, losses_and_metrics, logs)
-    losses_by_step += [loss.item()]
+    current_loss = loss.item()
+    losses_by_step += [current_loss]
 
     save_visualization(deca, values,
-                       save_path=save_path / f"step_00.png" if save_path is not None else None,
-                       title=f"Start, loss={loss:.10f}",
+                       save_path=save_path / f"step_{0:02d}.png" if save_path is not None else None,
+                       title=f"Start, loss={current_loss:.10f}",
                        show=visualize_result,
                        detail=deca.mode == DecaMode.DETAIL,
                        with_input=False)
@@ -543,6 +604,7 @@ def optimize(deca,
     optimizer = optimizer_class(parameters, lr=lr)
 
     best_loss = 99999999999999.
+    best_values = copy_values(values)
     eps = 1e-6
 
     stopping_condition_hit = False
@@ -554,46 +616,55 @@ def optimize(deca,
             optimizer.zero_grad()
             values_ = deca.decode(values, training=False)
             # losses_and_metrics = deca.compute_loss(values_, training=False)
-            losses_and_metrics = deca.compute_loss(values_, training=True)
+            losses_and_metrics = deca.compute_loss(values_, {}, training=True)
             loss = criterion(values_, losses_and_metrics)
             loss.backward(retain_graph=True)
             return loss
 
         optimizer.zero_grad()
 
-        values = deca.decode(values, training=False)
+        values_ = deca.decode(values, training=False)
         # losses_and_metrics = deca.compute_loss(values, training=False)
-        losses_and_metrics = deca.compute_loss(values, training=True)
+        losses_and_metrics = deca.compute_loss(values_, {}, training=True)
 
         loss = criterion(values, losses_and_metrics, logs)
         loss.backward(retain_graph=True)
         # closure()
+        current_loss = loss.item()
 
         optimizer.step(closure=closure)
 
         if visualize_progress or save_path is not None:
             save_visualization(deca, values,
                                save_path=save_path / f"step_{i:04d}.png" if save_path is not None else None,
-                               title=f"Iter {i:04d}, loss={loss:.10f}",
+                               title=f"Iter {i:04d}, loss={current_loss:.10f}",
                                show=visualize_progress,
                                detail=deca.mode == DecaMode.DETAIL,
                                with_input=False)
+            if i == 1:
+                if logger is not None:
+                    logger.log_metrics({f"{log_prefix}/init":
+                                   wandb.Image(str(save_path / f"step_{i:04d}.png"))})
+            if logger is not None:
+                logger.log_metrics({f"{log_prefix}/optim_step":
+                               wandb.Image(str(save_path / f"step_{i:04d}.png"))})
             plot_optimization(losses_by_step, logs, iter=i, save_path=save_path)
 
-        losses_by_step += [loss.item()]
+
+        losses_by_step += [current_loss]
 
         if verbose:
-            print(f"Iter {i:04d}, loss={loss:.10f}")
+            print(f"Iter {i:04d}, loss={current_loss:.10f}")
 
         if loss < eps:
             stopping_condition_hit = True
             break
 
         since_last_improvement += 1
-        if best_loss > loss.item():
+        if best_loss > current_loss:
             since_last_improvement = 0
             best_iter = i
-            best_loss = loss.item()
+            best_loss = current_loss
             best_values = copy_values(values)
 
         if since_last_improvement > patience:
@@ -602,13 +673,20 @@ def optimize(deca,
             break
 
 
+        if logger is not None:
+            log_dict = {f"{log_prefix}/opt_step" : i}
+            for key, vals in logs.items():
+                log_dict[f"{log_prefix}/{key}"] = vals[-1]
+            log_dict[f"{log_prefix}/optim"] = losses_by_step[-1]
+
+            logger.log_metrics(log_dict)
 
     if not stopping_condition_hit:
         print(f"[WARNING] Optimization terminated after max number of iterations, not becaused it reached the desired tolerance")
 
 
     values = deca.decode(best_values, training=False)
-    losses_and_metrics = deca.compute_loss(values, training=False)
+    losses_and_metrics = deca.compute_loss(values, {}, training=False)
 
     save_visualization(deca, values,
                        save_path=save_path / f"best.png" if save_path is not None else None,
@@ -638,6 +716,9 @@ def optimize(deca,
         plt.show()
 
     if save_path:
+        logger.log_metrics({f"{log_prefix}/best":
+                       wandb.Image(str(save_path / f"best.png"))})
+
         create_video(list(logs.keys()), save_path)
 
     return values
@@ -698,7 +779,8 @@ def loss_function_config(target_image, keyword, emonet=None):
 
     losses = []
     if keyword == "emotion":
-        losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
+        losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet),
+                                    "predicted_detailed_image")]
         return losses
 
     if keyword == "emotion_f1_reg_exp":
@@ -710,7 +792,8 @@ def loss_function_config(target_image, keyword, emonet=None):
 
     if keyword == "emotion_f2_reg_exp":
         losses += [CriterionWrapper(TargetEmotionCriterion(
-            target_image, use_feat_2=True, emonet_loss_instance=emonet), "predicted_detailed_image")]
+            target_image, use_feat_2=True, emonet_loss_instance=emonet),
+            "predicted_detailed_image")]
         losses += ["loss_expression_reg"]
         return losses
 
@@ -761,12 +844,46 @@ def loss_function_config(target_image, keyword, emonet=None):
     raise ValueError(f"Unknown keyword '{keyword}'")
 
 
-def loss_function_config_v2(target_image, loss_dict, emonet=None):
+def create_emotion_loss(emonet_loss, deca=None):
+    feature_metric = None
+    if isinstance(emonet_loss, str):
+        emonet = emo_network_from_path(emonet_loss)
+    elif isinstance(emonet_loss, dict):
+        if emonet_loss["path"] == "Synth":
+            emonet = deca.emonet_loss.trainable_backbone
+        else:
+            emonet = emo_network_from_path(emonet_loss["path"])
+        if "feature_metric" in emonet_loss.keys():
+            feature_metric = emonet_loss["feature_metric"]
+    else:
+        raise ValueError(f"Invalid input argument type '{type(emonet_loss)}'")
+
+    if isinstance(emonet, EmoNetModule):
+        emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet, emo_feat_loss=feature_metric)
+    else:
+        emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet, emo_feat_loss=feature_metric)
+    emonet.cuda()
+    return emonet
+
+
+def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None):
+    #
+    # if emonet is not None and isinstance(emonet, str):
+    #     emonet = emo_network_from_path(emonet)
+    #     if isinstance(emonet, EmoNetModule):
+    #         emonet = EmoNetLoss( torch.device('cuda:0'), emonet.emonet)
+    #     else:
+    #         emonet = EmoBackboneLoss( torch.device('cuda:0'), emonet)
+    #         emonet.cuda()
+    emonet = create_emotion_loss(emonet, deca=deca)
 
     losses = []
     loss_weights = []
     for keyword, weight in loss_dict.items():
-        loss_weights += [weight]
+        if isinstance(weight, dict):
+            loss_weights += [weight["weight"]]
+        else:
+            loss_weights += [weight]
         if keyword == "emotion_f2":
             losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
         elif keyword == "emotion_f1":
@@ -797,16 +914,22 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None):
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_feat_1=True, use_feat_2=True, use_valence=True, use_arousal=True, use_expression=True, emonet_loss_instance=emonet),
                 "predicted_detailed_image")]
+        elif keyword == "jaw_reg":
+            losses += [CriterionWrapper(TargetJawCriterion(
+                weight["reference_pose"],
+                weight["reference_type"],
+                weight["loss_type"],
+            ), "posecode")]
         else:
             losses += [keyword]
 
     return losses, loss_weights
 
 
-def loss_function_configs(target_image):
+def loss_function_configs(target_image, emonet=None):
     loss_configs = {}
 
-    target_emo = TargetEmotionCriterion(target_image)
+    target_emo = TargetEmotionCriterion(target_image, ememonet_loss_instance=emonet)
     emonet = target_emo.emonet_loss
 
     loss_configs["emotion"] = loss_function_config(target_image, "emotion", emonet)
@@ -821,7 +944,26 @@ def loss_function_configs(target_image):
     return loss_configs
 
 
-def replace_codes(values_from, values_to,
+def loss_function_configs_v2(target_image, emonet=None):
+    loss_configs = {}
+
+    target_emo = TargetEmotionCriterion(target_image, ememonet_loss_instance=emonet)
+    emonet = target_emo.emonet_loss
+
+    loss_configs["emotion"] = loss_function_config(target_image, "emotion", emonet)
+    # loss_configs["emotion_f1_reg_exp"] = loss_function_config(target_image, "emotion_f1_reg_exp", emonet)
+    loss_configs["emotion_f2_reg_exp"] = loss_function_config(target_image, "emotion_f2_reg_exp", emonet)
+    loss_configs["emotion_f12_reg_exp"] = loss_function_config(target_image, "emotion_f12_reg_exp", emonet)
+    loss_configs["emotion_va_reg_exp"] = loss_function_config(target_image, "emotion_va_reg_exp", emonet)
+    loss_configs["emotion_e_reg_exp"] = loss_function_config(target_image, "emotion_e_reg_exp", emonet)
+    loss_configs["emotion_vae_reg_exp"] = loss_function_config(target_image, "emotion_vae_reg_exp", emonet)
+    loss_configs["emotion_f12vae_reg_exp"] = loss_function_config(target_image, "emotion_f12vae_reg_exp", emonet)
+    loss_configs["emotion_reg_exp_detail"] = loss_function_config(target_image, "emotion_reg_exp_detail", emonet)
+    return loss_configs
+
+
+
+def replace_codes(values_input, values_target,
                   optimize_detail=False,
                   optimize_identity=False,
                   optimize_expression=False,
@@ -830,37 +972,56 @@ def replace_codes(values_from, values_to,
                   optimize_texture=False,
                   optimize_cam=False,
                   optimize_light=False,
+                  replace_detail=True, replace_exp=True,
+                  replace_jaw=True,
+                  replace_pose=True,
+                  replace_cam=True,
                   **kwargs):
-    if optimize_detail:
-        values_to['detailcode'] = values_from['detailcode'].detach().clone()
+    # if optimize_detail:
 
     # always copy identity
     # if optimize_identity:
-    values_to['shapecode'] = values_from['shapecode'].detach().clone()
+    values_target['shapecode'] = values_input['shapecode'].detach().clone()
 
-    if optimize_expression:
-        values_to['expcode'] = values_from['expcode'].detach().clone()
+    # if optimize_expression:
+    if not replace_exp:
+        values_target['expcode'] = values_input['expcode'].detach().clone()
 
-    if optimize_neck_pose and optimize_jaw_pose:
-        values_to['posecode'] = values_from['posecode'].detach().clone()
-    elif optimize_neck_pose:
-        posecode = values_from['posecode'].detach().clone()
-        neck_pose = posecode[:,:3]
-        values_to['posecode'] = torch.cat([neck_pose, posecode[:,3:]], dim=1)
-    elif optimize_jaw_pose:
-        posecode = values_from['posecode'].detach().clone()
+    if not replace_detail:
+        values_target['detailcode'] = values_input['detailcode'].detach().clone()
+
+    if not replace_pose and not replace_jaw:
+        values_target['posecode'] = values_input['posecode'].detach().clone()
+    elif not replace_pose:
+        posecode = values_input['posecode'].detach().clone()
+        global_pose = posecode[:,:3]
+        values_target['posecode'] = torch.cat([global_pose, posecode[:, 3:]], dim=1)
+    elif not replace_jaw:
+        posecode = values_input['posecode'].detach().clone()
         jaw_pose = posecode[:, 3:]
-        values_to['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
+        values_target['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
+
+    # if optimize_neck_pose and optimize_jaw_pose:
+    #     values_target['posecode'] = values_input['posecode'].detach().clone()
+    # elif optimize_neck_pose:
+    #     posecode = values_input['posecode'].detach().clone()
+    #     neck_pose = posecode[:,:3]
+    #     values_target['posecode'] = torch.cat([neck_pose, posecode[:, 3:]], dim=1)
+    # elif optimize_jaw_pose:
+    #     posecode = values_input['posecode'].detach().clone()
+    #     jaw_pose = posecode[:, 3:]
+    #     values_target['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
 
     # if optimize_texture:
-    values_to['texcode'] = values_from['texcode'].detach().clone()
+    values_target['texcode'] = values_input['texcode'].detach().clone()
 
     # if optimize_cam:
-    values_to['cam'] = values_from['cam'].detach().clone()
+    if not replace_cam:
+        values_target['cam'] = values_input['cam'].detach().clone()
 
     # if optimize_light: # always copy light
-    values_to['lightcode'] = values_from['lightcode'].detach().clone()
-    return values_to
+    values_target['lightcode'] = values_input['lightcode'].detach().clone()
+    return values_target
 
 
 def single_optimization(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
@@ -949,6 +1110,206 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
                      **kwargs)
 
 
+def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
+                           model_folder, stage, start_image, target_image,
+                           num_repeats=1,
+                           losses_to_use: dict = None,
+                           **kwargs):
+
+    if losses_to_use is None:
+        raise RuntimeError("No losses specified. ")
+
+    deca, _ = load_model(path_to_models, model_folder, stage)
+    deca.deca.config.train_coarse = True
+    deca.deca.config.mode = DecaMode.DETAIL
+    deca.deca.config.background_from_input = False
+
+    if model_name == "Original_DECA":
+        # remember, this is the hacky way to load old Yao's model
+        deca.deca.config.resume_training = True
+        # '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
+        deca.deca._load_old_checkpoint()
+        run_name = "Original_DECA"
+
+    deca.eval()
+    deca.cuda()
+
+    emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
+    if emonet_path == "None":
+        emonet_path = None
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca)
+
+
+    start_batch = {}
+    start_batch["image"] = load_image_to_batch(start_image)
+    values_input, visdict_input = test(deca, batch=start_batch)
+
+    initializations = {}
+    initializations["all_from_input"] = [values_input, visdict_input]
+
+    # if initialize_from_target:
+    batch = {}
+    batch["image"] = load_image_to_batch(target_image)
+    values_target_, visdict_target_ = test(deca, batch=batch)
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=True,
+                                  replace_jaw=True,
+                                  replace_exp=True,
+                                  replace_pose=True,
+                                  replace_cam = True,
+                                  **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=True,
+                                  replace_exp=True,
+                                  replace_jaw=True,
+                                  replace_pose=False,
+                                  replace_cam = True,
+                                  **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target_but_pose"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=False,
+                                  replace_exp=True,
+                                  replace_jaw=True,
+                                  replace_pose=False,
+                                  replace_cam = True,
+                                  **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target_but_pose_and_detail"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    # values_target = replace_codes(values_input, copy.deepcopy(values_target_), replace_exp=False, replace_pose=False, **kwargs)
+    # values_target["images"] = values_input[
+    #     "images"]  # we don't want the target image but the input image (for inpainting by mask)
+
+    values_target_detail = replace_codes(values_input, copy.deepcopy(values_target_),
+                                         replace_detail=True,
+                                         replace_exp=False,
+                                         replace_jaw=False,
+                                         replace_pose=False,
+                                         replace_cam = False,
+                                         **kwargs)
+    values_target_detail["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_from_target"] = [values_target_detail, copy.deepcopy(visdict_target_)]
+
+    values_target_detail_exp = replace_codes(values_input, copy.deepcopy(values_target_),
+                                             replace_detail=True,
+                                             replace_exp=True,
+                                             replace_jaw=False,
+                                             replace_pose=False,
+                                             replace_cam = False,
+                                             **kwargs)
+    values_target_detail_exp["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_from_target"] = [values_target_detail_exp, copy.deepcopy(visdict_target_)]
+
+    values_target_exp_jaw_detail = replace_codes(values_input, copy.deepcopy(values_target_),
+                                                 replace_detail=True,
+                                                 replace_exp=True,
+                                                 replace_jaw=True,
+                                                 replace_pose=False,
+                                                 replace_cam = False,
+                                      **kwargs)
+    values_target_exp_jaw_detail["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_jaw_from_target"] = [values_target_exp_jaw_detail, copy.deepcopy(visdict_target_)]
+
+    values_target_exp_jaw_pose = replace_codes(values_input, copy.deepcopy(values_target_),
+                                           replace_detail=False,
+                                           replace_exp=True,
+                                           replace_jaw=True,
+                                           replace_pose=True,
+                                           replace_cam = False,
+                                           **kwargs)
+    values_target_exp_jaw_pose["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_exp_jaw_pose_from_target"] = [values_target_exp_jaw_pose, copy.deepcopy(visdict_target_)]
+
+
+    values_target_pose = replace_codes(values_input, copy.deepcopy(values_target_),
+                                       replace_detail=True,
+                                       replace_exp=False,
+                                       replace_jaw=False,
+                                       replace_pose=True,
+                                       replace_cam = False,
+                                       **kwargs)
+    values_target_pose["images"] = values_input[
+        "images"]  # we don't want the target image but the input image (for inpainting by mask)
+    initializations["detail_pose_from_target"] = [values_target_pose, copy.deepcopy(visdict_target_)]
+
+
+    # TODO: possibly add an option for randomized
+
+    # Path(out_folder / model_name).mkdir(exist_ok=True, parents=True)
+    Path(out_folder ).mkdir(exist_ok=True, parents=True)
+    with open("out_folder.txt", "w") as f:
+        f.write(str(out_folder))
+    with open(Path(out_folder) / "submission_folder.txt", "w") as f:
+        f.write(os.getcwd())
+
+
+    cfg = kwargs.copy()
+    cfg["deca_model"] = model_name
+    cfg["deca_model_path"] = str(Path(path_to_models) / model_name)
+    cfg["out_folder"] = str(out_folder)
+    if isinstance( emonet_path, str):
+        cfg["emonet"] = str(Path(emonet_path).name)
+        cfg["emonet_name"] = str(Path(emonet_path).name)
+        # cfg["emonet"] = str(emonet_path)
+    elif isinstance( emonet_path, dict):
+        cfg["emonet"] = str(Path(emonet_path["path"]).name)
+        cfg["emonet_name"] = str(Path(emonet_path["path"]).name)
+        cfg["emonet_cfg"] = emonet_path
+    else:
+        cfg["emonet_name"] = "Original Emonet"
+        cfg["emonet"] = "Original Emonet"
+
+    cfg["source_image"] = str(start_image)
+    cfg["target_image"] = str(target_image)
+    cfg["deca_stage"] = str(stage)
+    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+    logger = WandbLogger(name=Path(out_folder).name,
+                     project="EmotionOptimization",
+                     config=cfg,
+                     version=time + "_" + Path(out_folder).name,
+                     save_dir=out_folder)
+
+    for key, vals in initializations.items():
+        values, visdict = vals[0], vals[1]
+        # num_repeats = 5
+        # num_repeats = 1
+        for i in range(num_repeats):
+            # save_path = Path(out_folder) / model_name / key / f"{i:02d}"
+            save_path = Path(out_folder) / key / f"{i:02d}"
+            save_path.mkdir(parents=True, exist_ok=True)
+            print(f"Saving to '{save_path}'")
+            save_visualization_step(visdict_input, "Source", save_path / "source.png")
+            if logger is not None:
+                logger.log_metrics({f"{key}/{i:02d}/source": wandb.Image(str(Path(save_path / "source.png")))})
+
+            save_visualization_step(visdict_target_, "Target", save_path / "target.png")
+
+            if logger is not None:
+                logger.log_metrics({f"{key}/{i:02d}/target": wandb.Image(str(Path(save_path / "target.png")))})
+
+            optimize(deca,
+                     copy_values(values),  #important to copy
+                     losses_to_use=losses_to_use,
+                     loss_weights=loss_weights,
+                     # max_iters=max_iters,
+                     verbose=True,
+                     # visualize_progress=False,
+                     save_path=save_path,
+                     logger=logger,
+                     **kwargs)
+
+            logger.log_metrics({f"{key}/{i:02d}/optimization_vid": wandb.Video(str(Path(save_path / "video.mp4")))})
+
+
 def optimization_with_different_losses(path_to_models,
                                        relative_to_path,
                                        replace_root_path,
@@ -960,7 +1321,13 @@ def optimization_with_different_losses(path_to_models,
                                        target_image,
                                         num_repeats,
                                        optim_kwargs):
-    loss_configs = loss_function_configs(target_image)
+    if 'emonet' in optim_kwargs.keys():
+        emonet = optim_kwargs.pop("emonet")
+    else:
+        emonet = None
+
+    # loss_configs = loss_function_configs(target_image, emonet=emonet)
+    loss_configs = loss_function_configs_v2(target_image, emonet=emonet)
     for key, loss_list in loss_configs.items():
         single_optimization(path_to_models,
                             relative_to_path,
@@ -1005,6 +1372,36 @@ def optimization_with_specified_loss(path_to_models,
                         **optim_kwargs)
 
 
+def optimization_with_specified_loss_v2(path_to_models,
+                                     relative_to_path,
+                                     replace_root_path,
+                                     out_folder,
+                                     model_name,
+                                     model_folder,
+                                     stage,
+                                     starting_image,
+                                     target_image,
+                                     # loss_keyword,
+                                     num_repeats,
+                                     optim_kwargs):
+    # loss_list = loss_function_config(target_image, loss_keyword)
+
+    single_optimization_v2(path_to_models,
+                        relative_to_path,
+                        replace_root_path,
+                        # out_folder / loss_keyword,
+                        out_folder,
+                        model_name,
+                        model_folder,
+                        stage,
+                        starting_image,
+                        target_image,
+                        # loss_list,
+                        num_repeats,
+                        **optim_kwargs)
+
+
+
 def optimization_for_different_targets(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
                                        model_folder, stage, starting_image_index, target_images, optim_kwargs):
     for target_image in target_images:
@@ -1016,16 +1413,27 @@ def optimization_for_different_targets(path_to_models, relative_to_path, replace
 
 def main():
     deca_models = {}
-    deca_models["Octavia"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
-    deca_models["Rachel"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
-    deca_models["General1"] = \
-        ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
-    deca_models["General2"] = \
-        ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
+    # deca_models["Octavia"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 390 * 4 + 1]
+    # deca_models["Rachel"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', 'detail', 90*4]
+    # deca_models["General1"] = \
+    #     ['2021_03_08_22-30-55_VA_Set_videos_Train_Set_119-30-848x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 390*4]
+    # deca_models["General2"] = \
+    #     ['2021_03_05_16-31-05_VA_Set_videos_Train_Set_82-25-854x480.mp4CoPhotoCoLMK_IDW-0.15_Aug_early', None, 90*4]
 
-    target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+
+    # ExpDECA with VGG net for emotions, trainable
+    # deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] \
+    #     = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+    #       "2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early/"
+    deca_models[""] \
+        = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+          "2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early/"
+    # deca_models["ExpDECA_emonet"] = ""
+
+    # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
 
     target_images = [
         target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
@@ -1053,11 +1461,14 @@ def main():
     # out_folder = '/ps/scratch/rdanecek/emoca/finetune_deca/optimize_emotion'
 
     # not on cluster
-    path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
-    relative_to_path = '/ps/scratch/'
-    replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
-    out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
-
+    # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
+    # relative_to_path = '/ps/scratch/'
+    # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+    relative_to_path = None
+    replace_root_path = None
+    # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
+    out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
 
     for name, cfg in deca_models.items():
         model_folder = cfg[0]
@@ -1082,29 +1493,36 @@ if __name__ == "__main__":
     print("Running:" + __file__)
     for i, arg in enumerate(sys.argv):
         print(f"arg[{i}] = {arg}")
-    path_to_models = Path(sys.argv[1])
-    relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
-    replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
-    out_folder = Path(sys.argv[4])
-    model_name = sys.argv[5]
-    model_folder = sys.argv[6]
-    stage = None if sys.argv[7] == "None" else sys.argv[7]
-    starting_image_index = int(sys.argv[8])
-    target_image = sys.argv[9]
-    # loss_keyword = sys.argv[10]
-    num_repeats= int(sys.argv[10])
-    optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
 
+    if len(sys.argv) > 1:
+        path_to_models = Path(sys.argv[1])
+        relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
+        replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
+        out_folder = Path(sys.argv[4])
+        model_name = sys.argv[5]
+        model_folder = sys.argv[6]
+        stage = None if sys.argv[7] == "None" else sys.argv[7]
+        # starting_image_index = int(sys.argv[8])
+        starting_image_path = sys.argv[8]
+        target_image = sys.argv[9]
+        # loss_keyword = sys.argv[10]
+        num_repeats = int(sys.argv[10])
+        optim_kwargs = OmegaConf.to_container(OmegaConf.load(sys.argv[11]))
 
-    optimization_with_specified_loss(path_to_models,
-                                       relative_to_path,
-                                       replace_root_path,
-                                       out_folder,
-                                       model_name,
-                                       model_folder,
-                                       stage,
-                                       starting_image_index,
-                                       target_image,
-                                       # loss_keyword,
-                                       num_repeats,
-                                       optim_kwargs)
+    else:
+        path_to_models = Path(sys.argv[1])
+        relative_to_path = None if sys.argv[2] == "None" else sys.argv[2]
+        replace_root_path = None if sys.argv[3] == "None" else sys.argv[3]
+
+    optimization_with_specified_loss_v2(path_to_models,
+                                        relative_to_path,
+                                        replace_root_path,
+                                        out_folder,
+                                        model_name,
+                                        model_folder,
+                                        stage,
+                                        starting_image_path,
+                                        target_image,
+                                        # loss_keyword,
+                                        num_repeats,
+                                        optim_kwargs)

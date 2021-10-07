@@ -4,7 +4,7 @@ from affectnet_validation import load_model
 from gdl.utils.FaceDetector import FAN
 from gdl.datasets.FaceVideoDataset import TestData
 import matplotlib.pyplot as plt
-import utils.DecaUtils as util
+import gdl.utils.DecaUtils as util
 import numpy as np
 import cv2
 import os

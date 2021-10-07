@@ -1,0 +1,65 @@
+# @package data
+
+# Augmentations designed for datasets processed as or similarly to:
+#
+#    dm = EmotioNetDataModule(
+#             # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+#             "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
+#             "/is/cluster/work/rdanecek/data/emotionet/",
+#             processed_subfolder="processed_2021_Aug_31_21-33-44",
+#             # processed_subfolder=None,
+#             scale=1.7,
+#             ignore_invalid=True,
+#             # image_size=512,
+#             image_size=224,
+#             bb_center_shift_x=0,
+#             bb_center_shift_y=-0.3,
+#            augmentation=augmenter,
+#            )
+# The augmentations are a bit heavier, include face that is a bit further away, and also zoomed in, contains samples
+# that cause parts of the face to be out of frame, etc.
+
+augmentation:
+  - Affine:
+      - scale:
+#          - 0.9
+#          - 1.0
+#          - 1.0
+          - 1.0
+          - 1.4
+#          - 1.4
+      - rotate:
+          - -20.0
+          - 20.0
+      - translate_percent:
+            x:
+                - -0.10
+                - 0.10
+            y:
+#                - -0.3
+                - -0.2
+                - 0.0
+#  - Crop:
+#     - percent:
+#        - 0
+#        - 0.1
+  - OneOf:
+      - JpegCompression:
+          - compression:
+              - 50
+              - 90
+      - AdditiveGaussianNoise:
+          - scale:
+            - 0
+            - 10
+      - GaussianBlur:
+          - sigma:
+              - 0.0
+              - 1.5
+      - Sharpen:
+          - lightness: 1.0
+          - alpha:
+              - 0.0
+              - 0.5
+      - Identity:
+          - name: identity

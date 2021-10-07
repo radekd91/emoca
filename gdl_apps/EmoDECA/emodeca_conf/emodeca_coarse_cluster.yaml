@@ -2,8 +2,10 @@ defaults:
   - data/datasets: affectnet_cluster
   - data/augmentations: none
 #  - model/paths : desktop
-  - model/settings : coarse_emodeca
+  - model/backbone : coarse_emodeca
+  - model/settings : vae_affectnet
 #  - model/sizes : default
+#  - model/neural_rendering : none
 #  - model/flame_tex: bfm_desktop
   - learning/optimizer: adam
   - learning/batching: single_gpu_coarse

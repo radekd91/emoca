@@ -1,0 +1,23 @@
+# @package data
+
+## The first processed version of EmotioNet, which was processed with old settings (aligned faces and lots of missing foreheads)
+
+data_class: EmotioNetDataModule
+input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/
+output_dir: /is/cluster/work/rdanecek/data/emotionet/
+processed_subfolder: processed_2021_Aug_27_18-39-32
+num_workers: 8
+
+ignore_invalid: true
+# default parameters:
+image_size: 224
+#image_size: 512
+#scale: 1.25
+scale: 1.7
+bb_center_shift_x: 0
+bb_center_shift_y: -0.3
+face_detector: 'fan'
+face_detector_threshold: 0.9
+
+sampler: uniform
+processed_ext: .jpg

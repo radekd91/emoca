@@ -2,5 +2,5 @@ results/
 */wandb/*
 .idea/
 *.pyc
-data/
+#data/
 *.wandb_auth

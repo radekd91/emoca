@@ -3,7 +3,8 @@ from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetExpressions
 from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
-from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+from gdl_apps.DECA.train_deca_modular import get_checkpoint
+from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoNetModule import EmoNetModule
@@ -14,7 +15,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from gdl_apps.DECA.interactive_deca_decoder import hack_paths
 import torch
 import wandb
-from train_emodeca import get_checkpoint_with_kwargs
 from tqdm import auto
 
 project_name = 'EmoDECA'

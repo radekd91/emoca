@@ -4,6 +4,7 @@ defaults:
   - model/paths : desktop
   - model/settings : coarse_train
   - model/sizes : default
+  - model/neural_rendering : none
   - model/flame_tex: bfm_desktop
   - learning/optimizer: finetune_adam_coarse
   - learning/batching: single_gpu_coarse

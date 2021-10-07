@@ -1,7 +1,7 @@
 from gdl.models.DECA import DecaModule
+from gdl.models.IO import locate_checkpoint
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
-from gdl_apps.DECA.train_deca_modular import locate_checkpoint
 from gdl_apps.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
@@ -125,13 +125,13 @@ def load_deca_and_data(path_to_models=None,
     return deca, dm
 
 
-def test(deca, dm, image_index = None, values = None, batch=None):
+def test(deca, dm=None, image_index = None, values = None, batch=None):
     if image_index is None and values is None and batch is None:
         raise ValueError("Specify either an image to encode-decode or values to decode.")
-    test_set = dm.test_set
-    # image_index = 0
 
     if image_index is not None:
+        test_set = dm.test_set
+        # image_index = 0
         image_index = image_index
         batch = test_set[image_index]
         for key, val in batch.items():
@@ -144,7 +144,7 @@ def test(deca, dm, image_index = None, values = None, batch=None):
 
     with torch.no_grad():
         values = deca.decode(values, training=False)
-        losses_and_metrics = deca.compute_loss(values, training=False)
+        losses_and_metrics = deca.compute_loss(values, batch, training=False)
 
     uv_detail_normals = None
     if 'uv_detail_normals' in values.keys():

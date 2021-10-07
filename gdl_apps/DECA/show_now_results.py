@@ -2,7 +2,8 @@ import os, sys
 from pathlib import Path
 
 # import NoW related stuff
-sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+# sys.path += [str(Path(__file__).absolute().parents[3] / "now_evaluation")]
+sys.path.insert(0, str(Path(__file__).absolute().parents[3] / "now_evaluation"))
 from main import generating_cumulative_error_plots
 
 
@@ -47,7 +48,17 @@ def main():
     run_names_new = {}
     # run_names_news += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] = "SWIN S"# DECA EmoNet
     run_names_new['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] = "SWIN T"
-    run_names_new['2021_06_24_10-44-02_DECA__DeSegFalse_early'] = "DECA ResNet" # DECA EmoNet
+    run_names_new['2021_06_24_10-44-02_DECA__DeSegFalse_early'] = "DECA v1" # DECA EmoNets
+    run_names_new['2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early'] = "DECA v2" # DECA EmoNet
+    run_names_new['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA with VGG loss"
+    run_names_new['2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA SWIN with VGG loss"
+    run_names_new['2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early'] = "DECAStar"
+    run_names_new["2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECA SWINT T"
+    run_names_new["2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECAStar SWINT T"
+    run_names_new["2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECA SWIN-S + VGG loss"
+    run_names_new["2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECAStar SWIN-S + VGG loss"
+
+
 
     use_dense_topology = False
     # use_dense_topology = True

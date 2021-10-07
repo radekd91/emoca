@@ -1,5 +1,5 @@
-from .test_and_finetune_deca import single_stage_deca_pass
-from .interactive_deca_decoder import load_deca
+from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass
+from gdl_apps.DECA.interactive_deca_decoder import load_deca
 from omegaconf import DictConfig, OmegaConf
 import os, sys
 from pathlib import Path
@@ -54,16 +54,15 @@ def main():
         mode = 'detail'
     deca, conf = load_model(path_to_models, run_name, mode)
 
-    # deca.deca.config.resume_training = True
-    # deca.deca._load_old_checkpoint()
-    # run_name = "Original_DECA"
+
 
     deca.eval()
 
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
     # conf[mode].inout.name = "affectnet_test"
-    conf[mode].inout.name = "affectnet_test_" + conf[mode].inout.name
+    # conf[mode].inout.name = "affectnet_test_" + conf[mode].inout.name
+    conf[mode].inout.name = "afft_" + conf[mode].inout.name
     import datetime
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     conf[mode].inout.random_id = str(hash(time))

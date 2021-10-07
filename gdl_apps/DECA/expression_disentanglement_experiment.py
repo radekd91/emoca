@@ -3,9 +3,10 @@ from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetExpressions
 from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
-from gdl_apps.DECA.train_deca_modular import get_checkpoint, locate_checkpoint
+from gdl_apps.DECA.train_deca_modular import get_checkpoint
 
 from gdl.models.DECA import DECA, ExpDECA, DecaModule
+from gdl.models.IO import locate_checkpoint
 from gdl.models.EmoNetModule import EmoNetModule
 from gdl.utils.other import class_from_str
 import datetime
@@ -133,8 +134,8 @@ def validation_set_pass(cfg,
     for ie in range(num_epochs):
 
         pl.utilities.seed.seed_everything(ie)
-        dl = DataLoader(dm.validation_set, shuffle=True, num_workers=dm.num_workers,
-                              batch_size=dm.val_batch_size, drop_last=True)
+        dl = DataLoader(dm.training_set, shuffle=True, num_workers=dm.num_workers,
+                        batch_size=dm.val_batch_size, drop_last=True)
 
         for bi, batch in enumerate(auto.tqdm(dl)):
             # if bi == 50:

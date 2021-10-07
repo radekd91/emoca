@@ -1,0 +1,13 @@
+defaults:
+  - data/datasets: detail_data_cluster
+  - data/augmentations: none
+  - model/paths : cluster
+  - model/settings : detail_train
+  - model/sizes : default
+  - model/neural_rendering : stargan_cluster
+  - model/flame_tex: bfm
+  - learning/optimizer: finetune_adam_coarse
+  - learning/batching: single_gpu_detail_32gb
+  - learning/callbacks: early_stopping
+  - learning/logging: wandb
+  - inout: desktop

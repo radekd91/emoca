@@ -1,0 +1,17 @@
+defaults:
+  - data/datasets: affectnet_desktop
+  - data/augmentations: default_with_resize
+#  - model/paths : desktop
+  - model/backbone : vgg19_bn
+  - model/settings : AU_emotionet
+#  - model/sizes : default
+#  - model/neural_rendering : none
+#  - model/flame_tex: bfm_desktop
+  - learning/optimizer: adam
+  - learning/batching: single_gpu_coarse
+  - learning/callbacks: early_stopping
+  - learning/logging: wandb
+#  - learning/logging: none
+  - learning/training: emotionet
+  - inout: cluster
+

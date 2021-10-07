@@ -5,12 +5,12 @@ from gdl.utils.other import class_from_str
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
-from gdl.layers.losses.EmoNetLoss import get_emonet
+from gdl.layers.losses.EmonetLoader import get_emonet
 from gdl.utils.emotion_metrics import *
 from torch.nn.functional import mse_loss, cross_entropy, nll_loss, l1_loss, log_softmax
 import sys
 import adabound
-
+from gdl.datasets.EmotioNetDataModule import ActionUnitTypes
 
 def loss_from_cfg(config, loss_name):
     if loss_name in config.keys():
@@ -50,13 +50,37 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         else:
             self.exp_activation = F.log_softmax
 
+        if 'AU_activation' in config.model.keys():
+            self.AU_activation = class_from_str(self.config.model.AU_activation, sys.modules[__name__])
+        else:
+            self.AU_activation = None
+
         self.va_loss = loss_from_cfg(config.model, 'va_loss')
         self.v_loss = loss_from_cfg(config.model, 'v_loss')
         self.a_loss = loss_from_cfg(config.model, 'a_loss')
         self.exp_loss = loss_from_cfg(config.model, 'exp_loss')
+        self.AU_loss = loss_from_cfg(config.model, 'AU_loss')
 
         # self.val_conf_mat = pl.metrics.ConfusionMatrix(self.num_classes, 'true')
         # self.val_conf_mat = pl.metrics.ConfusionMatrix(self.num_classes, 'true')
+
+    # @property
+    def predicts_valence(self):
+        return self.config.model.predict_valence
+
+    # @property
+    def predicts_arousal(self):
+        return self.config.model.predict_arousal
+
+    # @property
+    def predicts_expression(self):
+        return self.config.model.predict_expression
+
+    # @property
+    def predicts_AUs(self):
+        if 'predict_AUs' in self.config.model.keys() and self.config.model.predict_AUs:
+            return self.config.model.predict_AUs
+        return 0
 
 
     def forward(self, image):
@@ -167,15 +191,17 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                       valence_sample_weight=None,
                       arousal_sample_weight=None,
                       va_sample_weight=None,
-                      expression_sample_weight=None
+                      expression_sample_weight=None,
+                      au_positive_weights=None
                       ):
         losses = {}
         metrics = {}
 
         scheme = None if 'va_loss_scheme' not in self.config.model.keys() else self.config.model.va_loss_scheme
-        loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
+        if self.v_loss is not None and self.a_loss is not None and self.va_loss is not None:
+            loss_term_weights = _get_step_loss_weights(self.v_loss, self.a_loss, self.va_loss, scheme, training)
 
-        if 'continuous_va_balancing' in self.config.model.keys():
+        if 'continuous_va_balancing' in self.config.model.keys() and self.config.model.continuous_va_balancing != "none":
             if self.config.model.continuous_va_balancing == '1d':
                 v_weight = valence_sample_weight
                 a_weight = arousal_sample_weight
@@ -192,18 +218,30 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             v_weight = None
             a_weight = None
 
-        losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
-                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
-                                      sample_weights=v_weight)
-        losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
-                                      pred_prefix=pred_prefix, permit_dropping_corr=not training,
-                                      sample_weights=a_weight)
-        losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
-                                  permit_dropping_corr=not training, sample_weights=v_weight)
+        if self.predicts_valence():
+            losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
+                                          pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                          sample_weights=v_weight)
+        if self.predicts_arousal():
+            losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
+                                          pred_prefix=pred_prefix, permit_dropping_corr=not training,
+                                          sample_weights=a_weight)
+        if self.predicts_arousal() and self.predicts_valence():
+            losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
+                                      permit_dropping_corr=not training, sample_weights=v_weight)
+
+        if self.predicts_expression():
+            losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
+                                       self.config.model.expression_balancing, self.num_classes, pred_prefix=pred_prefix)
 
 
-        losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
-                                   self.config.model.expression_balancing, self.num_classes, pred_prefix=pred_prefix)
+        if self.predicts_AUs():
+            if self.predicts_AUs() == 12:
+                au_type = ActionUnitTypes.EMOTIONET12
+            else:
+                raise ValueError(f"Predicting {self.predicts_AUs()} is not supported.")
+            losses, metrics = AU_loss(self.AU_loss, pred, gt, metrics, losses, au_type,
+                                      class_weights=au_positive_weights, pred_prefix=pred_prefix)
 
         # if not training:
         #     self.val_conf_mat(pred[pred_prefix + "expr_classification"], gt["expr_classification"][:, 0])
@@ -299,12 +337,14 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                      arousal_sample_weight=None,
                      va_sample_weight=None,
                      expression_sample_weight=None,
+                     au_positive_weights=None,
                      training=True):
         losses, metrics = self._compute_loss(pred, gt, class_weight, training,
                                              valence_sample_weight=valence_sample_weight,
                                              arousal_sample_weight=arousal_sample_weight,
                                              va_sample_weight=va_sample_weight,
                                              expression_sample_weight=expression_sample_weight,
+                                             au_positive_weights=au_positive_weights
                                              )
         loss = 0.
         for key, value in losses.items():
@@ -323,23 +363,36 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         # arousal_pred = values["arousal"]
         # expr_classification_pred = values["expr_classification"]
 
-        valence_gt = batch["va"][:, 0:1]
-        arousal_gt = batch["va"][:, 1:2]
-        expr_classification_gt = batch["affectnetexp"]
-        if "expression_weight" in batch.keys():
-            class_weight = batch["expression_weight"][0]
-        else:
-            class_weight = None
-
         valence_sample_weight = batch["valence_sample_weight"] if "valence_sample_weight" in batch.keys() else None
         arousal_sample_weight = batch["arousal_sample_weight"] if "arousal_sample_weight" in batch.keys() else None
         va_sample_weight = batch["va_sample_weight"] if "va_sample_weight" in batch.keys() else None
         expression_sample_weight = batch["expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
 
         gt = {}
-        gt["valence"] = valence_gt
-        gt["arousal"] = arousal_gt
-        gt["expr_classification"] = expr_classification_gt
+        if self.predicts_valence():
+            valence_gt = batch["va"][:, 0:1]
+            gt["valence"] = valence_gt
+        if self.predicts_arousal():
+            arousal_gt = batch["va"][:, 1:2]
+            gt["arousal"] = arousal_gt
+        if self.predicts_expression():
+            expr_classification_gt = batch["affectnetexp"]
+            gt["expr_classification"] = expr_classification_gt
+            if "expression_weight" in batch.keys():
+                class_weight = batch["expression_weight"][0]
+            else:
+                class_weight = None
+        else:
+            class_weight = None
+
+        if self.predicts_AUs():
+            gt["AUs"] = batch["au"]
+            if "au_pos_weights" in batch.keys():
+                au_positive_weights = batch["au_pos_weights"][0]
+            else:
+                au_positive_weights = None
+        else:
+            au_positive_weights = None
 
         pred = values
         losses, metrics = self.compute_loss(pred, gt, class_weight, training=True,
@@ -347,6 +400,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                                             arousal_sample_weight=arousal_sample_weight,
                                             va_sample_weight=va_sample_weight,
                                             expression_sample_weight=expression_sample_weight,
+                                            au_positive_weights=au_positive_weights,
                                             )
 
         self._log_losses_and_metrics(losses, metrics, "train")
@@ -359,18 +413,32 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         # arousal_pred = values["arousal"]
         # expr_classification_pred = values["expr_classification"]
 
-        valence_gt = batch["va"][:, 0:1]
-        arousal_gt = batch["va"][:, 1:2]
-        expr_classification_gt = batch["affectnetexp"]
-        if "expression_weight" in batch.keys():
-            class_weight = batch["expression_weight"][0]
+        gt = {}
+        if self.predicts_valence():
+            valence_gt = batch["va"][:, 0:1]
+            gt["valence"] = valence_gt
+        if self.predicts_arousal():
+            arousal_gt = batch["va"][:, 1:2]
+            gt["arousal"] = arousal_gt
+        if self.predicts_expression():
+            expr_classification_gt = batch["affectnetexp"]
+            if "expression_weight" in batch.keys():
+                class_weight = batch["expression_weight"][0]
+            else:
+                class_weight = None
+            gt["expr_classification"] = expr_classification_gt
         else:
             class_weight = None
 
-        gt = {}
-        gt["valence"] = valence_gt
-        gt["arousal"] = arousal_gt
-        gt["expr_classification"] = expr_classification_gt
+        if self.predicts_AUs():
+            gt["AUs"] = batch["au"]
+
+            if "au_pos_weights" in batch.keys():
+                au_positive_weights = batch["au_pos_weights"][0]
+            else:
+                au_positive_weights = None
+        else:
+            au_positive_weights = None
 
         pred = values
         # pred = {}
@@ -389,6 +457,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
                                             arousal_sample_weight=arousal_sample_weight,
                                             va_sample_weight=va_sample_weight,
                                             expression_sample_weight=expression_sample_weight,
+                                            au_positive_weights=au_positive_weights,
                                             )
 
         self._log_losses_and_metrics(losses, metrics, "val")
@@ -409,18 +478,30 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         else:
             class_weight = None
 
+        gt = {}
         if "va" in batch.keys():
             valence_gt = batch["va"][:, 0:1]
             arousal_gt = batch["va"][:, 1:2]
+            if self.predicts_valence():
+                gt["valence"] = valence_gt
+            if self.predicts_arousal():
+                gt["arousal"] = arousal_gt
+        if "affectnetexp" in batch.keys():
             expr_classification_gt = batch["affectnetexp"]
-            gt = {}
-            gt["valence"] = valence_gt
-            gt["arousal"] = arousal_gt
-            gt["expr_classification"] = expr_classification_gt
+            if self.predicts_expression():
+                gt["expr_classification"] = expr_classification_gt
 
-            pred = values
-            losses, metrics = self.compute_loss(pred, gt, class_weight,
-                                                training=False)
+        au_positive_weights = None
+        if "AUs" in batch.keys():
+            if self.predicts_AUs():
+                gt["AUs"] = batch["AUs"]
+                if 'au_pos_weights' in batch.keys():
+                    au_positive_weights = batch['au_pos_weights'][0]
+
+        pred = values
+        losses, metrics = self.compute_loss(pred, gt, class_weight,
+                                            au_positive_weights=au_positive_weights,
+                                            training=False)
 
         if self.config.learning.test_vis_frequency > 0:
             if batch_idx % self.config.learning.test_vis_frequency == 0:
@@ -578,6 +659,76 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
             if callable(loss):
                 losses[pred_prefix + "expr"] = loss(pred[pred_prefix + "expr_classification"],
                                                              gt["expr_classification"][:, 0], weight)
+            elif isinstance(loss, dict):
+                for name, weight in loss.items():
+                    losses[pred_prefix + name] = metrics[pred_prefix + name] * weight
+            else:
+                raise RuntimeError(f"Uknown expression loss '{loss}'")
+
+    return losses, metrics
+
+
+def AU_loss(loss, pred, gt, metrics, losses, AU_type, class_weights=None, pred_prefix=""):
+    if pred[pred_prefix + "AUs"] is not None:
+        # if class_weight.shape[0] != num_classes:
+        #     weight = None
+        # elif expression_balancing:
+        #     weight = class_weight
+        # else:
+        #     weight = torch.ones_like(class_weight)
+
+        # AU coded as 999. or some other value where either not coded (at all) or possibly occluded, we skip thise
+        validity_mask = torch.logical_or(gt["AUs"] == 0., gt["AUs"] == 1.).float().detach()
+
+        metrics[pred_prefix + "AU_l1"] = F.l1_loss(pred[pred_prefix + "AUs"],
+                                                   gt["AUs"],
+                                                   None,
+                                                   reduction = "none") * validity_mask
+        num_AUs = metrics[pred_prefix + "AU_l1"].shape[1]
+
+        AU_idxs = ActionUnitTypes.AUtype2AUlist(AU_type)
+        for i in range(num_AUs):
+            au_num = AU_idxs[i]
+            metrics[pred_prefix + f"AU_{au_num:02d}_l1"] = metrics[pred_prefix + "AU_l1"][:, i, ...].mean()
+
+        metrics[pred_prefix + "AU_l1"] = metrics[pred_prefix + "AU_l1"].mean()
+
+
+        metrics[pred_prefix + "AU_bce"] = F.binary_cross_entropy_with_logits(pred[pred_prefix + "AUs"],
+                                                                             gt["AUs"],
+                                                                             None,
+                                                                             reduction="none") * validity_mask
+
+        for i in range(num_AUs):
+            au_num = AU_idxs[i]
+            metrics[pred_prefix + f"AU_{au_num:02d}_bce"] = metrics[pred_prefix + "AU_bce"][:, i, ...].mean()
+
+        metrics[pred_prefix + "AU_bce"] = metrics[pred_prefix + "AU_bce"].mean()
+
+
+        if class_weights is not None:
+            metrics[pred_prefix + "AU_bce_weighted"] = F.binary_cross_entropy_with_logits(pred[pred_prefix + "AUs"],
+                                                                    gt["AUs"],
+                                                                    class_weights,
+                                                                     reduction="none") * validity_mask
+
+            for i in range(num_AUs):
+                au_num = AU_idxs[i]
+                metrics[pred_prefix + f"AU_{au_num:02d}_bce_weighted"] = metrics[pred_prefix + "AU_bce_weighted"][:, i, ...].mean()
+
+            metrics[pred_prefix + "AU_bce_weighted"] = metrics[pred_prefix + "AU_bce_weighted"].mean()
+
+
+        metrics[pred_prefix + "AU_acc"] = (torch.round(pred[pred_prefix + "AUs"]).clamp(0,1) == gt["AUs"]).float()
+
+        for i in range(num_AUs):
+            au_num = AU_idxs[i]
+            metrics[pred_prefix + f"AU_{au_num:02d}_acc"] = metrics[pred_prefix + "AU_acc"][:, i, ...].mean() * validity_mask
+        metrics[pred_prefix + "AU_acc"] = metrics[pred_prefix + "AU_acc"].mean()
+
+        if loss is not None:
+            if callable(loss):
+                losses[pred_prefix + "AUs"] = loss(pred[pred_prefix + "AUs"], gt["AUs"])
             elif isinstance(loss, dict):
                 for name, weight in loss.items():
                     losses[pred_prefix + name] = metrics[pred_prefix + name] * weight

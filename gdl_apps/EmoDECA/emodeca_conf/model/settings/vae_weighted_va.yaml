@@ -1,0 +1,48 @@
+# @package model
+
+predict_expression: true
+predict_valence: true
+predict_arousal: true
+predict_AUs: false
+
+continuous_va_balancing: 1d
+#continuous_va_balancing: 2d
+#continuous_va_balancing: expr
+
+#a_loss: mse_loss
+a_loss:
+#  - a_ccc: 0.5
+#  - a_pcc: 0.5
+  a_mse_weighted: 1.
+
+#v_loss: mse_loss
+v_loss:
+#  - v_ccc: 0.5
+#  - v_pcc: 0.5
+  v_mse_weighted: 1.
+
+va_loss:
+  va_lpcc_weighted: 1.
+  va_lccc_weighted: 1.
+
+exp_loss: nll_loss
+
+va_loss_scheme: shake
+#va_loss_scheme: norm
+#va_loss_scheme: none
+
+#exp_loss: cross_entropy
+#a_loss: mse_loss
+#v_loss: mse_loss
+#exp_loss: nll_loss
+##exp_loss: cross_entropy
+
+a_activation: none
+#a_activation: tanh
+v_activation: none
+#v_activation: tanh
+exp_activation: log_softmax
+#exp_activation: none
+
+expression_balancing: false
+
