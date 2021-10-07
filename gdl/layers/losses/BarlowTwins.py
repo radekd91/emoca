@@ -33,7 +33,8 @@ class BarlowTwinsLoss(nn.Module):
 
         # # projector
         # if args.use_projector:
-        sizes = [feature_size] + list(map(int, args.projector.split('-')))
+        # sizes = [feature_size] + list(map(int, args.projector.split('-')))
+        sizes = [feature_size] + layer_sizes
         layers = []
         for i in range(len(sizes) - 2):
             layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=False))

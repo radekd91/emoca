@@ -878,15 +878,31 @@ class VGGFace2Loss(nn.Module):
             self.bt_loss = BarlowTwinsLossHeadless(feature_size)
         elif metric == "barlow_twins":
             feature_size = self.reg_model.fc.in_features
-
-            self.bt_loss = BarlowTwinsLoss(feature_size, args)
+            self.bt_loss = BarlowTwinsLoss(feature_size)
         else:
             self.bt_loss = None
 
         self.metric = metric
 
+    def _get_trainable_params(self):
+        params = []
+        if self.bt_loss is not None:
+            params += list(self.bt_loss.parameters())
+        return params
+
+    # def train(self, b):
+    #     ret = super().eval()
+    #     self.bt_loss.train(b)
+    #     self.requires_grad_(b)
+    #     return ret
+
+    def requires_grad_(self, b):
+        super().requires_grad_(False) # face recognition net always frozen
+        if self.bt_loss is not None:
+            self.bt_loss.requires_grad_(b)
+
     def freeze_layers(self):
-        self.requires_grad_(False)
+        super().requires_grad_(False)
         if self.bt_loss is not None:
             self.bt_loss.requires_grad_(True)
 

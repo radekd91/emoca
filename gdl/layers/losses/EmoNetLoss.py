@@ -181,7 +181,7 @@ class EmoLossBase(torch.nn.Module):
                 input_emofeat = input_emofeat / input_emofeat.view(input_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
                 output_emofeat = output_emofeat / output_emofeat.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
 
-            if isinstance(self.emo_feat_loss, BarlowTwinsLossHeadless):
+            if isinstance(self.emo_feat_loss, (BarlowTwinsLossHeadless, BarlowTwinsLoss)):
                 emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat, batch_size=batch_size, ring_size=ring_size).mean()
             else:
                 emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat).mean()
@@ -196,7 +196,7 @@ class EmoLossBase(torch.nn.Module):
             output_emofeat_2 = output_emofeat_2 / output_emofeat_2.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
 
 
-        if isinstance(self.emo_feat_loss, BarlowTwinsLossHeadless):
+        if isinstance(self.emo_feat_loss, (BarlowTwinsLossHeadless, BarlowTwinsLoss)):
             emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2, batch_size=batch_size, ring_size=ring_size).mean()
         else:
             emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2).mean()
@@ -228,9 +228,12 @@ class EmoLossBase(torch.nn.Module):
 
 
     def _get_trainable_params(self):
-        if self.trainable:
-            return list(self.parameters())
-        return []
+        params = []
+        # if self.trainable:
+        #     params += list(self.parameters())
+        if isinstance(self.emo_feat_loss, (BarlowTwinsLossHeadless, BarlowTwinsLoss)):
+            params += list(self.emo_feat_loss.parameters())
+        return params
 
     def is_trainable(self):
         return len(self._get_trainable_params()) != 0
@@ -356,9 +359,10 @@ class EmoBackboneLoss(EmoLossBase):
         self.backbone.to(device)
 
     def _get_trainable_params(self):
+        params = super()._get_trainable_params()
         if self.trainable:
-            return list(self.backbone.parameters())
-        return []
+            params += list(self.backbone.parameters())
+        return params
 
     def forward(self, images):
         return self.backbone._forward(images)
@@ -387,7 +391,7 @@ class EmoBackboneDualLoss(EmoBackboneLoss):
     def _get_trainable_params(self):
         trainable_params = super()._get_trainable_params()
         if self.clone_is_trainable:
-            return list(self.trainable_backbone.parameters())
+            trainable_params += list(self.trainable_backbone.parameters())
         return trainable_params
 
     def _forward_output(self, images):

@@ -440,7 +440,7 @@ def train_on_selected_sequences():
         # '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         '+model.emo_feat_loss=barlow_twins_headless',  # emonet feature loss
-        'model.use_emonet_loss=False',
+        'model.use_emonet_loss=True',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
         'model.use_emonet_valence=False',
@@ -482,7 +482,7 @@ def train_on_selected_sequences():
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
         # '+model.emo_feat_loss=l1_loss', # emonet feature loss
         '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
-        'model.use_emonet_loss=False',
+        'model.use_emonet_loss=True',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
         'model.use_emonet_valence=False',

@@ -1642,6 +1642,9 @@ class DecaModule(LightningModule):
         if self.emonet_loss is not None:
             trainable_params += self.emonet_loss._get_trainable_params()
 
+        if self.deca.id_loss is not None:
+            trainable_params += self.deca.id_loss._get_trainable_params()
+
         return trainable_params
 
 

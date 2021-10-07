@@ -33,7 +33,8 @@ def metric_from_cfg(metric):
     elif metric.type == "barlow_twins_headless":
         return BarlowTwinsLossHeadless(metric.feature_size)
     elif metric.type == "barlow_twins":
-        return BarlowTwinsLoss(metric.feature_size, metric.feature_size.layer_sizes)
+        layer_sizes = metric.layer_sizes if 'layer_sizes' in metric.keys() else None
+        return BarlowTwinsLoss(metric.feature_size, layer_sizes)
     else:
         raise ValueError(f"Invalid metric for deep feature loss: {metric}")
 

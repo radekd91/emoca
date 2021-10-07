@@ -212,7 +212,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
                 experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
         if 'id_metric' in cfg_coarse.model.keys():
-            experiment_name += "idBTH_"
+            experiment_name += "_idBTH"
 
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
             experiment_name += "NoLmk"
@@ -602,8 +602,10 @@ def main():
             f'+model.e_detail_type={detail_encoder}',
             # '+model.normalize_features=true', # normalize emonet features before applying loss
             # '+model.emo_feat_loss=l1_loss', # emonet feature loss
-            '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
-            '+model.id_metric=barlow_twins_headless',
+            # '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
+            # '+model.id_metric=barlow_twins_headless',
+            '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
+            '+model.id_metric=barlow_twins',
             # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
             # '+model/additional=au_loss_dual', # emonet feature loss
             # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
