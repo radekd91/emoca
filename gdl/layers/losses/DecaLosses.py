@@ -854,66 +854,53 @@ class IdentityLoss(nn.Module):
 # from ..from gdl.models.frnet import resnet50, load_state_dict
 from .FRNet import resnet50, load_state_dict
 
-
-# class VGGFace2Loss(nn.Module):
-#     def __init__(self, pretrained_data='vggface2'):
-#         super(VGGFace2Loss, self).__init__()
-#         self.reg_model = resnet50(num_classes=8631, include_top=False).eval().cuda()
-#         checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
-#         load_state_dict(self.reg_model, checkpoint)
-#     #     self._freeze_layer(self.reg_model)
-#     # def _freeze_layer(self, layer):
-#     #     for param in layer.parameters():
-#     #         param.requires_grad = False
-#     def reg_features(self, x):
-#         # out = []
-#         margin=10
-#         x = x[:,:,margin:224-margin,margin:224-margin]
-#         x = F.interpolate(x*2. - 1., [224,224])
-#         # import ipdb; ipdb.set_trace()
-#         feature = self.reg_model(x)
-#         # import ipdb; ipdb.set_trace()
-#         feature = feature.view(x.size(0), -1)
-#         return feature
-#     def _cos_metric(self, x1, x2):
-#         return 1.0 - F.cosine_similarity(x1, x2, dim=1)
-
-#     def forward(self, gen, tar, is_crop=True):
-#         gen_out = self.reg_features(gen)
-#         tar_out = self.reg_features(tar)
-#         # loss = ((gen_out - tar_out)**2).mean()
-#         loss = self._cos_metric(gen_out, tar_out).mean()
-#         return loss
+from .BarlowTwins import BarlowTwinsLossHeadless, BarlowTwinsLoss
 
 
 class VGGFace2Loss(nn.Module):
-    def __init__(self, pretrained_checkpoint_path=None):
+    def __init__(self, pretrained_checkpoint_path=None, metric='cosine_similarity'):
         super(VGGFace2Loss, self).__init__()
-        self.reg_model = resnet50(num_classes=8631, include_top=False).eval()#.cuda()
+        self.reg_model = resnet50(num_classes=8631, include_top=False).eval()
         checkpoint = pretrained_checkpoint_path or \
                      '/ps/scratch/rdanecek/FaceRecognition/resnet50_ft_weight.pkl'
                      # '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
         load_state_dict(self.reg_model, checkpoint)
-        # self.mean_bgr = torch.tensor([91.4953, 103.8827, 131.0912])#.cuda()
         self.register_buffer('mean_bgr', torch.tensor([91.4953, 103.8827, 131.0912]))
 
-    #     self._freeze_layer(self.reg_model)
-    # def _freeze_layer(self, layer):
-    #     for param in layer.parameters():
-    #         param.requires_grad = False
+        if metric is None:
+            metric = 'cosine_similarity'
+
+        if metric not in ["l1", "l2", "mse", "cosine_similarity", "barlow_twins", "barlow_twins_headless"]:
+            raise ValueError(f"Invalid metric for face recognition feature loss: {metric}")
+
+        if metric == "barlow_twins_headless":
+            feature_size = self.reg_model.fc.in_features
+            self.bt_loss = BarlowTwinsLossHeadless(feature_size)
+        elif metric == "barlow_twins":
+            feature_size = self.reg_model.fc.in_features
+
+            self.bt_loss = BarlowTwinsLoss(feature_size, args)
+        else:
+            self.bt_loss = None
+
+        self.metric = metric
+
+    def freeze_layers(self):
+        self.requires_grad_(False)
+        if self.bt_loss is not None:
+            self.bt_loss.requires_grad_(True)
+
     def reg_features(self, x):
         # out = []
         margin = 10
         x = x[:, :, margin:224 - margin, margin:224 - margin]
         # x = F.interpolate(x*2. - 1., [224,224], mode='nearest')
         x = F.interpolate(x * 2. - 1., [224, 224], mode='bilinear')
-        # import ipdb; ipdb.set_trace()
         feature = self.reg_model(x)
         feature = feature.view(x.size(0), -1)
         return feature
 
     def transform(self, img):
-        # import ipdb;ipdb.set_trace()
         img = img[:, [2, 1, 0], :, :].permute(0, 2, 3, 1) * 255 - self.mean_bgr
         img = img.permute(0, 3, 1, 2)
         return img
@@ -921,14 +908,24 @@ class VGGFace2Loss(nn.Module):
     def _cos_metric(self, x1, x2):
         return 1.0 - F.cosine_similarity(x1, x2, dim=1)
 
-    def forward(self, gen, tar, is_crop=True):
+    def forward(self, gen, tar, is_crop=True, batch_size=None, ring_size=None):
         gen = self.transform(gen)
         tar = self.transform(tar)
 
         gen_out = self.reg_features(gen)
         tar_out = self.reg_features(tar)
-        # loss = ((gen_out - tar_out)**2).mean()
-        loss = self._cos_metric(gen_out, tar_out).mean()
+
+        if self.metric == "cosine_similarity":
+            loss = self._cos_metric(gen_out, tar_out).mean()
+        elif self.metric in ["l1", "l1_loss", "mae"]:
+            loss = torch.nn.functional.l1_loss(gen_out, tar_out)
+        elif self.metric in ["mse", "mse_loss", "l2", "l2_loss"]:
+            loss = torch.nn.functional.mse_loss(gen_out, tar_out)
+        elif self.metric in ["barlow_twins_headless", "barlow_twins"]:
+            loss = self.bt_loss(gen_out, tar_out, batch_size=batch_size, ring_size=ring_size)
+        else:
+            raise ValueError(f"Invalid metric for face recognition feature loss: {self.metric}")
+
         return loss
 
 #

@@ -8,4 +8,5 @@ face_mask_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/mask/uv_
 face_eye_mask_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/mask/uv_face_eye_mask.png
 #tex_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/flame_tex/FLAME_albedo_from_BFM.npz
 pretrained_modelpath: /home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar
-pretrained_vgg_face_path: /home/rdanecek/Workspace/mount/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl
+#pretrained_vgg_face_path: /home/rdanecek/Workspace/mount/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl
+pretrained_vgg_face_path: /ps/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl

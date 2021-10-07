@@ -108,18 +108,30 @@ def create_au_loss(device, au_loss):
             raise ValueError("Please specify the config to instantiate AU loss")
 
 
+from .Metrics import get_metric
+from .BarlowTwins import BarlowTwinsLossHeadless, BarlowTwinsLoss
+
 class EmoLossBase(torch.nn.Module):
 
-    def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
+    def __init__(self, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None, last_feature_size=None):
         super().__init__()
-        if isinstance(emo_feat_loss, str):
-            if emo_feat_loss == "cosine_similarity":
-                def metric(*args, **kwargs):
-                    return 1.-F.cosine_similarity(*args, **kwargs)
+        self.last_feature_size = last_feature_size
+        if emo_feat_loss is not None:
+            if isinstance(emo_feat_loss, str) and 'barlow_twins' in emo_feat_loss:
+                emo_feat_loss_type = emo_feat_loss
+                emo_feat_loss = {}
+                emo_feat_loss["type"] = emo_feat_loss_type
 
-                emo_feat_loss = metric
-            else:
-                emo_feat_loss = class_from_str(emo_feat_loss, F)
+            if isinstance(emo_feat_loss, dict) and 'barlow_twins' in emo_feat_loss["type"]:
+                emo_feat_loss["feature_size"] = last_feature_size
+            emo_feat_loss = get_metric(emo_feat_loss)
+        # if isinstance(emo_feat_loss, str):
+        #     kwargs = {}
+        #     if "barlow_twins_headless" in emo_feat_loss:
+        #         kwargs["feature_size"] = 0
+        #     if "barlow_twins" == emo_feat_loss:
+        #         kwargs["layer_sizes"] = None
+        #     emo_feat_loss = metric_from_str(emo_feat_loss, **kwargs)
 
         if isinstance(au_loss, str):
             au_loss = class_from_str(au_loss, F)
@@ -134,7 +146,6 @@ class EmoLossBase(torch.nn.Module):
         self.input_emotion = None
         self.output_emotion = None
         self.trainable = trainable
-
 
     @property
     def input_emo(self):
@@ -153,7 +164,7 @@ class EmoLossBase(torch.nn.Module):
     def _forward_output(self, images):
         return self(images)
 
-    def compute_loss(self, input_images, output_images):
+    def compute_loss(self, input_images, output_images, batch_size=None, ring_size=None):
         # input_emotion = None
         # self.output_emotion = None
 
@@ -170,7 +181,10 @@ class EmoLossBase(torch.nn.Module):
                 input_emofeat = input_emofeat / input_emofeat.view(input_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
                 output_emofeat = output_emofeat / output_emofeat.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat.shape)-1)*[1]) )
 
-            emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat).mean()
+            if isinstance(self.emo_feat_loss, BarlowTwinsLossHeadless):
+                emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat, batch_size=batch_size, ring_size=ring_size).mean()
+            else:
+                emo_feat_loss_1 = self.emo_feat_loss(input_emofeat, output_emofeat).mean()
         else:
             emo_feat_loss_1 = None
 
@@ -181,7 +195,12 @@ class EmoLossBase(torch.nn.Module):
             input_emofeat_2 = input_emofeat_2 / input_emofeat_2.view(input_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
             output_emofeat_2 = output_emofeat_2 / output_emofeat_2.view(output_images.shape[0], -1).norm(dim=1).view(-1, *((len(input_emofeat_2.shape)-1)*[1]) )
 
-        emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2).mean()
+
+        if isinstance(self.emo_feat_loss, BarlowTwinsLossHeadless):
+            emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2, batch_size=batch_size, ring_size=ring_size).mean()
+        else:
+            emo_feat_loss_2 = self.emo_feat_loss(input_emofeat_2, output_emofeat_2).mean()
+
         if 'valence' in input_emotion.keys() and input_emotion['valence'] is not None:
             valence_loss = self.valence_loss(input_emotion['valence'], output_emotion['valence'])
         else:
@@ -221,9 +240,18 @@ class EmoNetLoss(EmoLossBase):
 # class EmoNetLoss(object):
 
     def __init__(self, device, emonet=None, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
-        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss)
         if emonet is None:
-            self.emonet = get_emonet(device).eval()
+            emonet = get_emonet(device).eval()
+
+        last_feature_size = 256 # TODO: fix this hardcoded number, get it from EmoNet class instead
+        if isinstance(emo_feat_loss, dict ) and "barlow_twins" in emo_feat_loss["type"]:
+            # if barlow twins, we need to know the feature size
+            emo_feat_loss["feature_size"] = last_feature_size
+
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss,
+                         last_feature_size=last_feature_size)
+        self.emonet = emonet
+
         # elif isinstance(emonet, str):
         #     path = Path(emonet)
         #     if path.is_dir():
@@ -249,8 +277,9 @@ class EmoNetLoss(EmoLossBase):
         #     else:
         #         raise ValueError("Please specify the directory which contains the config of the trained Emonet.")
 
-        else:
-            self.emonet = emonet
+        # else:
+        #     self.emonet = emonet
+
         if not trainable:
             self.emonet.eval()
             self.emonet.requires_grad_(False)
@@ -312,7 +341,12 @@ class EmoNetLoss(EmoLossBase):
 class EmoBackboneLoss(EmoLossBase):
 
     def __init__(self, device, backbone, trainable=False, normalize_features=False, emo_feat_loss=None, au_loss=None):
-        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss)
+        if isinstance(emo_feat_loss, dict ) and "barlow_twins" in emo_feat_loss["type"]:
+            # if barlow twins, we need to know the feature size
+            emo_feat_loss["feature_size"] = backbone.get_last_feature_size()
+
+        super().__init__(trainable, normalize_features=normalize_features, emo_feat_loss=emo_feat_loss, au_loss=au_loss,
+                         last_feature_size=backbone.get_last_feature_size())
         self.backbone = backbone
         if not trainable:
             self.backbone.requires_grad_(False)

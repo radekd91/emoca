@@ -124,10 +124,11 @@ class DecaModule(LightningModule):
         else:
             self.au_loss = None
 
-    def reconfigure(self, model_params, inout_params, stage_name="", downgrade_ok=False, train=True):
+    def reconfigure(self, model_params, inout_params, learning_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
         self.inout_params = inout_params
+        self.learning_params = learning_params
 
         if self.deca.__class__.__name__ != model_params.deca_class:
             old_deca_class = self.deca.__class__.__name__
@@ -696,7 +697,8 @@ class DecaModule(LightningModule):
 
         return codedict
 
-    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None, with_grad=True):
+    def _compute_emotion_loss(self, images, predicted_images, loss_dict, metric_dict, prefix, va=None, expr7=None, with_grad=True,
+                              batch_size=None, ring_size=None):
         def loss_or_metric(name, loss, is_loss):
             if not is_loss:
                 metric_dict[name] = loss
@@ -707,12 +709,12 @@ class DecaModule(LightningModule):
         if with_grad:
             d = loss_dict
             emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
-                self.emonet_loss.compute_loss(images, predicted_images)
+                self.emonet_loss.compute_loss(images, predicted_images, batch_size=batch_size, ring_size=ring_size)
         else:
             d = metric_dict
             with torch.no_grad():
                 emo_feat_loss_1, emo_feat_loss_2, valence_loss, arousal_loss, expression_loss, au_loss = \
-                    self.emonet_loss.compute_loss(images, predicted_images)
+                    self.emonet_loss.compute_loss(images, predicted_images, batch_size=batch_size, ring_size=ring_size)
 
 
 
@@ -892,6 +894,21 @@ class DecaModule(LightningModule):
             uv_texture_gt = codedict["uv_texture_gt"]
 
 
+        # this determines the configured batch size that is currently used (training, validation or testing)
+        # the reason why this is important is because of potential multi-gpu training and loss functions (such as Barlow Twins)
+        # that might need the full size of the batch (not just the chunk of the current GPU).
+        if training:
+            bs = self.learning_params.batch_size_train
+            rs = self.learning_params.train_K
+        else:
+            if not testing:
+                bs = self.learning_params.batch_size_val
+                rs = self.learning_params.val_K
+            else:
+                bs = self.learning_params.batch_size_test
+                rs = self.learning_params.test_K
+
+
         ## COARSE loss only
         if self.mode == DecaMode.COARSE or (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
 
@@ -955,13 +972,15 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError("Is this line ever reached?")
 
-
             # if self.deca.config.idw > 1e-3:
             if self.deca.id_loss is not None:
                 shading_images = self.deca.render.add_SHlight(ops['normal_images'], lightcode.detach())
                 albedo_images = F.grid_sample(albedo.detach(), ops['grid'], align_corners=False)
                 overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
-                losses['identity'] = self.deca.id_loss(overlay, images) * self.deca.config.idw
+
+
+
+                losses['identity'] = self.deca.id_loss(overlay, images, batch_size=bs, ring_size=rs) * self.deca.config.idw
 
             losses['shape_reg'] = (torch.sum(shapecode ** 2) / 2) * self.deca.config.shape_reg
             losses['expression_reg'] = (torch.sum(expcode ** 2) / 2) * self.deca.config.exp_reg
@@ -973,7 +992,8 @@ class DecaModule(LightningModule):
                 # with torch.no_grad():
 
                 self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse",
-                                           va, expr7, with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
+                                           va, expr7, with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                           batch_size=bs, ring_size=rs)
 
                 codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -992,7 +1012,8 @@ class DecaModule(LightningModule):
                     #TODO possible to make this more GPU efficient by not recomputing emotion for input image
                     self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, "coarse_translated",
                                                va, expr7,
-                                               with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
+                                               with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                                               batch_size=bs, ring_size=rs)
 
                     # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                     # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -1057,7 +1078,8 @@ class DecaModule(LightningModule):
 
             if self.emonet_loss is not None:
                 self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
-                                           with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering())
+                                           with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                           batch_size=bs, ring_size=rs)
                 codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
                 codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
                 codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
@@ -1077,7 +1099,8 @@ class DecaModule(LightningModule):
                     self._compute_emotion_loss(images, predicted_detailed_translated_image,
                                                losses, metrics, "detail_translated",
                                                va, expr7,
-                                               with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering())
+                                               with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                                               batch_size=bs, ring_size=rs)
 
                     # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
                     # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -1694,8 +1717,12 @@ class DECA(torch.nn.Module):
             self.id_loss = None
         else:
             if self.id_loss is None:
-                self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path).eval()
-                self.id_loss.requires_grad_(False) # TODO, move this to the constructor
+                if 'id_metric' in self.config.keys():
+                    id_metric = self.config.id_metric
+                else:
+                    id_metric = None
+                self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path, id_metric)
+                self.id_loss.freeze_layers()
 
         if 'vggw' not in self.config.keys() or self.config.vggw == 0:
             self.vgg_loss = None
@@ -2089,5 +2116,5 @@ def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None
             mode = True
         else:
             mode = False
-        deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
+        deca.reconfigure(cfg.model, cfg.inout, cfg.learning, prefix, downgrade_ok=True, train=mode)
     return deca

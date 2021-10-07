@@ -84,7 +84,7 @@ def finetune_deca(cfg_coarse, cfg_detail):
     # configs = [cfg_detail]
     for i, cfg in enumerate(configs):
         if i > 0:
-            deca.reconfigure(cfg.model, cfg.inout)
+            deca.reconfigure(cfg.model, cfg.inout, cfg.learning)
 
         # from tqdm import tqdm
         # for i, b in enumerate(tqdm(training_set_dl)):

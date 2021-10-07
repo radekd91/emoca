@@ -45,6 +45,9 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
 
         self.num_classes = self.n_expression
 
+    def get_last_feature_size(self):
+        return self.swin.num_features
+
     def _forward(self, images):
         output, emo_feat_2 = self.swin(images, include_features=True)
         out_idx = 0

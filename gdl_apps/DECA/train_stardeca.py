@@ -542,11 +542,11 @@ def main():
     configured = False
 
     if len(sys.argv) <= 2:
-        coarse_conf = "deca_train_coarse_stargan"
-        # coarse_conf = "deca_train_coarse"
+        # coarse_conf = "deca_train_coarse_stargan"
+        coarse_conf = "deca_train_coarse"
         # coarse_conf = "deca_train_detail_stargan"
-        detail_conf = "deca_train_detail_stargan"
-        # detail_conf = "deca_train_detail"
+        # detail_conf = "deca_train_detail_stargan"
+        detail_conf = "deca_train_detail"
 
         # path_to_resume_from = None
         path_to_resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"  # My DECA, ResNet backbones
@@ -560,10 +560,10 @@ def main():
 
 
         coarse_override = [
-            # 'model/settings=coarse_train',
+            'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
             # 'model/settings=coarse_train_expdeca',
-            'model/settings=coarse_train_expdeca_emonet',
+            # 'model/settings=coarse_train_expdeca_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
@@ -588,26 +588,29 @@ def main():
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
             # 'learning.batch_size_train=4',
+            'learning.train_K=1',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
-            '+model.emoloss_dual=true',
+            # '+model.emoloss_dual=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}',
-            '+model.normalize_features=true', # normalize emonet features before applying loss
-            '+model.emo_feat_loss=l1_loss', # emonet feature loss
+            # '+model.normalize_features=true', # normalize emonet features before applying loss
+            # '+model.emo_feat_loss=l1_loss', # emonet feature loss
+            '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
+            '+model.id_metric=barlow_twins_headless',
             # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
-            '+model/additional=au_loss_dual', # emonet feature loss
-            'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
+            # '+model/additional=au_loss_dual', # emonet feature loss
+            # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
             # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
                               ]
         detail_override = [
-            # 'model/settings=detail_train',
+            'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
             # 'model/settings=detail_train_expdeca',
-            'model/settings=detail_train_expdeca_emonet',
+            # 'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
             # 'model.expression_constrain_use_jaw_pose=True',
@@ -628,19 +631,21 @@ def main():
             'model.useSeg=False',
             'model.background_from_input=input',
             # 'learning.batch_size_train=4',
+            'learning.train_K=1',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
             # '+model.emoloss_trainable=true',
-            '+model.emoloss_dual=true',
+            # '+model.emoloss_dual=true',
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}',
-            '+model.normalize_features=true',  # normalize emonet features before applying loss
-            '+model.emo_feat_loss=l1_loss',  # emonet feature loss
+            # '+model.normalize_features=true',  # normalize emonet features before applying loss
+            # '+model.emo_feat_loss=l1_loss',  # emonet feature loss
+            '+model.emo_feat_loss=barlow_twins_headless',  # emonet feature loss
             # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
-            '+model/additional=au_loss_dual',  # emonet feature loss
-            'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
+            # '+model/additional=au_loss_dual',  # emonet feature loss
+            # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
             # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
         ]
 

@@ -240,7 +240,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             mode = False
         # if checkpoint is not None:
         #     deca.load_from_checkpoint(checkpoint_path=checkpoint)
-        deca.reconfigure(cfg.model, cfg.inout, prefix, downgrade_ok=True, train=mode)
+        deca.reconfigure(cfg.model, cfg.inout, cfg.learning, prefix, downgrade_ok=True, train=mode)
 
 
 
