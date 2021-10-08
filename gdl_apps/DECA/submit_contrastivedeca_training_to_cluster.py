@@ -409,12 +409,12 @@ def train_on_selected_sequences():
     # sampler="data.sampler=uniform"
     sampler="data.sampler=balanced_expr"
 
-    # use_emo_loss = 'False'
-    use_emo_loss = 'True'
-    # emo_feature_loss_type = 'cosine_similarity'
+    use_emo_loss = 'False'
+    # use_emo_loss = 'True'
+    emo_feature_loss_type = 'cosine_similarity'
     # emo_feature_loss_type = 'l1_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
-    emo_feature_loss_type = 'barlow_twins'
+    # emo_feature_loss_type = 'barlow_twins'
 
     # id_feature_loss_type = 'cosine_similarity'
     # id_feature_loss_type = 'l1_loss'

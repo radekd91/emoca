@@ -874,7 +874,8 @@ class VGGFace2Loss(nn.Module):
         if metric is None:
             metric = 'cosine_similarity'
 
-        if metric not in ["l1", "l2", "mse", "cosine_similarity", "barlow_twins", "barlow_twins_headless"]:
+        if metric not in ["l1", "l1_loss", "l2", "mse", "mse_loss", "cosine_similarity",
+                          "barlow_twins", "barlow_twins_headless"]:
             raise ValueError(f"Invalid metric for face recognition feature loss: {metric}")
 
         if metric == "barlow_twins_headless":

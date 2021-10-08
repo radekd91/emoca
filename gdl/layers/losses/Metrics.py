@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from munch import Munch
 from omegaconf import DictConfig
 from .BarlowTwins import BarlowTwinsLossHeadless, BarlowTwinsLoss
