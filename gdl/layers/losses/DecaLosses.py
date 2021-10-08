@@ -896,7 +896,7 @@ class VGGFace2Loss(nn.Module):
 
     def train(self, b = True):
         ret = super().train(False)
-        if self.bt_loss is not None
+        if self.bt_loss is not None:
             self.bt_loss.train(b)
         return ret
 
