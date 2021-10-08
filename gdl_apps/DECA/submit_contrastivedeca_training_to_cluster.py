@@ -419,8 +419,8 @@ def train_on_selected_sequences():
 
     # id_feature_loss_type = 'cosine_similarity'
     # id_feature_loss_type = 'l1_loss'
-    # id_feature_loss_type = 'barlow_twins_headless'
-    id_feature_loss_type = 'barlow_twins'
+    id_feature_loss_type = 'barlow_twins_headless'
+    # id_feature_loss_type = 'barlow_twins'
 
     # id_trainable = 'False'
     id_trainable = 'True'

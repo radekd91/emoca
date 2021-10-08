@@ -998,9 +998,8 @@ class DecaModule(LightningModule):
                 albedo_images = F.grid_sample(albedo.detach(), ops['grid'], align_corners=False)
                 overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
 
-
-
-                losses['identity'] = self.deca.id_loss(overlay, images, batch_size=bs, ring_size=rs) * self.deca.config.idw
+                if self.global_step >= self.deca.id_loss_start_step:
+                    losses['identity'] = self.deca.id_loss(overlay, images, batch_size=bs, ring_size=rs) * self.deca.config.idw
 
             losses['shape_reg'] = (torch.sum(shapecode ** 2) / 2) * self.deca.config.shape_reg
             losses['expression_reg'] = (torch.sum(expcode ** 2) / 2) * self.deca.config.exp_reg
@@ -1742,6 +1741,7 @@ class DECA(torch.nn.Module):
             if self.id_loss is None:
                 id_metric = self.config.id_metric if 'id_metric' in self.config.keys() else None
                 id_trainable = self.config.id_trainable if 'id_trainable' in self.config.keys() else False
+                self.id_loss_start_step = self.config.id_loss_start_step if 'id_loss_start_step' in self.config.keys() else 0
                 self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path, id_metric, id_trainable)
                 self.id_loss.freeze_nontrainable_layers()
 
