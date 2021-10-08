@@ -526,7 +526,7 @@ class IDMRFLoss(nn.Module):
 
     def train(self, b = True):
         # there is nothing trainable about this loss
-        super().train(False)
+        return super().train(False)
 
 
 ######################################################## vgg16 face
@@ -849,27 +849,24 @@ class IdentityLoss(nn.Module):
 
 ####################################### face recognition
 
-
-##############################################
 # # VGGFace
-# # /ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl
-# from Resnet import ResNet
-# import sys; sys.path.append('nets')
-# from ..from gdl.models.frnet import resnet50, load_state_dict
 from .FRNet import resnet50, load_state_dict
 
 from .BarlowTwins import BarlowTwinsLossHeadless, BarlowTwinsLoss
 
 
 class VGGFace2Loss(nn.Module):
-    def __init__(self, pretrained_checkpoint_path=None, metric='cosine_similarity'):
+    def __init__(self, pretrained_checkpoint_path=None, metric='cosine_similarity', trainable=False):
         super(VGGFace2Loss, self).__init__()
         self.reg_model = resnet50(num_classes=8631, include_top=False).eval()
         checkpoint = pretrained_checkpoint_path or \
                      '/ps/scratch/rdanecek/FaceRecognition/resnet50_ft_weight.pkl'
                      # '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
         load_state_dict(self.reg_model, checkpoint)
+        # this mean needs to be subtracted from the input images if using the model above
         self.register_buffer('mean_bgr', torch.tensor([91.4953, 103.8827, 131.0912]))
+
+        self.trainable = trainable
 
         if metric is None:
             metric = 'cosine_similarity'
@@ -891,12 +888,17 @@ class VGGFace2Loss(nn.Module):
 
     def _get_trainable_params(self):
         params = []
+        if self.trainable:
+            params += list(self.reg_model.parameters())
         if self.bt_loss is not None:
             params += list(self.bt_loss.parameters())
         return params
 
     def train(self, b = True):
-        ret = super().train(False)
+        if not self.trainable:
+            ret = super().train(False)
+        else:
+            ret = super().train(b)
         if self.bt_loss is not None:
             self.bt_loss.train(b)
         return ret
@@ -906,22 +908,25 @@ class VGGFace2Loss(nn.Module):
         if self.bt_loss is not None:
             self.bt_loss.requires_grad_(b)
 
-    def freeze_layers(self):
-        super().requires_grad_(False)
+    def freeze_nontrainable_layers(self):
+        if not self.trainable:
+            super().requires_grad_(False)
+        else:
+            super().requires_grad_(True)
         if self.bt_loss is not None:
             self.bt_loss.requires_grad_(True)
 
     def reg_features(self, x):
-        # out = []
+        # TODO: is this hard-coded margin necessary?
         margin = 10
         x = x[:, :, margin:224 - margin, margin:224 - margin]
-        # x = F.interpolate(x*2. - 1., [224,224], mode='nearest')
         x = F.interpolate(x * 2. - 1., [224, 224], mode='bilinear')
         feature = self.reg_model(x)
         feature = feature.view(x.size(0), -1)
         return feature
 
     def transform(self, img):
+        # input images in RGB in range [0-1] but the network expects them in BGR  [0-255] with subtracted mean_bgr
         img = img[:, [2, 1, 0], :, :].permute(0, 2, 3, 1) * 255 - self.mean_bgr
         img = img.permute(0, 3, 1, 2)
         return img

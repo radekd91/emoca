@@ -45,7 +45,7 @@ class BarlowTwinsLoss(nn.Module):
         # else:
         #     self.projector = None
 
-        self.bt_loss_headless = BarlowTwinsLossHeadless(sizes[-1])
+        self.bt_loss_headless = BarlowTwinsLossHeadless(sizes[-1], final_reduction=final_reduction)
 
 
     def forward(self, y1, y2, batch_size=None, ring_size=None):

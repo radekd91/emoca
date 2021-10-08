@@ -219,6 +219,10 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             elif isinstance(cfg_coarse.model.id_metric, str):
                 experiment_name += "_" +  cfg_coarse.model.id_metric
 
+            if 'id_trainable' in cfg_coarse.model.keys():
+                experiment_name += "-ft"
+
+
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
             experiment_name += "NoLmk"
 
@@ -611,6 +615,7 @@ def main():
             # '+model.id_metric=barlow_twins_headless',
             '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
             '+model.id_metric=barlow_twins',
+            '+model.id_trainable=True',
             # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
             # '+model/additional=au_loss_dual', # emonet feature loss
             # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss

@@ -48,6 +48,10 @@ class DecaModule(LightningModule):
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
 
         self.deca = deca_class(config=model_params)
+
+        self.detail_conditioning = ['jawpose', 'expression', 'detail'] if 'detail_conditioning' not in model_params.keys() \
+            else model_params.detail_conditioning
+
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.stage_name = stage_name
         if self.stage_name is None:
@@ -584,7 +588,23 @@ class DecaModule(LightningModule):
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
-            uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
+            #TODO: what are you conditioning on?
+
+            detail_conditioning_list = []
+            if 'globalpose' in self.detail_conditioning:
+                detail_conditioning_list += [posecode[:, :3]]
+            if 'jawpose' in self.detail_conditioning:
+                detail_conditioning_list += [posecode[:, 3:]]
+            if 'identity' in self.detail_conditioning:
+                detail_conditioning_list += [shapecode]
+            if 'expression' in self.detail_conditioning:
+                detail_conditioning_list += [expcode]
+            if 'detail' in self.detail_conditioning:
+                detail_conditioning_list += [detailcode]
+
+            uv_z = self.deca.D_detail(torch.cat(detail_conditioning_list, dim=1))
+
+            # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
             uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'])
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
@@ -1720,12 +1740,10 @@ class DECA(torch.nn.Module):
             self.id_loss = None
         else:
             if self.id_loss is None:
-                if 'id_metric' in self.config.keys():
-                    id_metric = self.config.id_metric
-                else:
-                    id_metric = None
-                self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path, id_metric)
-                self.id_loss.freeze_layers()
+                id_metric = self.config.id_metric if 'id_metric' in self.config.keys() else None
+                id_trainable = self.config.id_trainable if 'id_trainable' in self.config.keys() else False
+                self.id_loss = lossfunc.VGGFace2Loss(self.config.pretrained_vgg_face_path, id_metric, id_trainable)
+                self.id_loss.freeze_nontrainable_layers()
 
         if 'vggw' not in self.config.keys() or self.config.vggw == 0:
             self.vgg_loss = None

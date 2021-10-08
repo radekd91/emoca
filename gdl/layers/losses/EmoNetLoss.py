@@ -242,7 +242,7 @@ class EmoLossBase(torch.nn.Module):
         super().train(False)
         if isinstance(self.emo_feat_loss, (BarlowTwinsLossHeadless, BarlowTwinsLoss)):
             self.emo_feat_loss.train(b)
-
+        return self
 
 class EmoNetLoss(EmoLossBase):
 # class EmoNetLoss(object):
@@ -378,7 +378,7 @@ class EmoBackboneLoss(EmoLossBase):
             self.backbone.eval()
         else:
             self.backbone.train(b)
-
+        return self
 
 class EmoBackboneDualLoss(EmoBackboneLoss):
 
@@ -414,3 +414,4 @@ class EmoBackboneDualLoss(EmoBackboneLoss):
             self.trainable_backbone.eval()
         else:
             self.trainable_backbone.train(b)
+        return self
