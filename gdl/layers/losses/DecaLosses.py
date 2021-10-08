@@ -524,6 +524,10 @@ class IDMRFLoss(nn.Module):
         #     loss += torch.mean((gen_vgg_feats[key] - tar_vgg_feats[key])**2)
         # return loss
 
+    def train(self, b = True):
+        # there is nothing trainable about this loss
+        super().train(False)
+
 
 ######################################################## vgg16 face
 
@@ -890,11 +894,10 @@ class VGGFace2Loss(nn.Module):
             params += list(self.bt_loss.parameters())
         return params
 
-    # def train(self, b):
-    #     ret = super().eval()
-    #     self.bt_loss.train(b)
-    #     self.requires_grad_(b)
-    #     return ret
+    def train(self, b = True):
+        ret = super().train(False)
+        self.bt_loss.train(b)
+        return ret
 
     def requires_grad_(self, b):
         super().requires_grad_(False) # face recognition net always frozen

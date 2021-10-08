@@ -212,7 +212,12 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
                 experiment_name += f'_IDW-{cfg_coarse.model.idw}'
 
         if 'id_metric' in cfg_coarse.model.keys():
-            experiment_name += "_idBTH"
+            if cfg_coarse.model.id_metric == 'barlow_twins_headless':
+                experiment_name += "_idBTH"
+            elif cfg_coarse.model.id_metric == 'barlow_twins':
+                experiment_name += "_idBT"
+            elif isinstance(cfg_coarse.model.id_metric, str):
+                experiment_name += "_" +  cfg_coarse.model.id_metric
 
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
             experiment_name += "NoLmk"
@@ -253,7 +258,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             experiment_name += "_DwC"
 
         if hasattr(cfg_coarse.learning, 'early_stopping') and cfg_coarse.learning.early_stopping \
-            and hasattr(cfg_detail.learning, 'early_stopping') and cfg_detail.learning.early_stopping:
+                and hasattr(cfg_detail.learning, 'early_stopping') and cfg_detail.learning.early_stopping:
             experiment_name += "_early"
 
     return experiment_name

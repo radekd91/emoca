@@ -1834,6 +1834,7 @@ class DECA(torch.nn.Module):
         return trainable_params
 
     def train(self, mode: bool = True):
+        super().train(mode)
         if mode:
             if self.mode == DecaMode.COARSE:
                 self.E_flame.train()

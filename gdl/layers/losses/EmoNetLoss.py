@@ -238,6 +238,11 @@ class EmoLossBase(torch.nn.Module):
     def is_trainable(self):
         return len(self._get_trainable_params()) != 0
 
+    def train(self, b = True):
+        super().train(False)
+        if isinstance(self.emo_feat_loss, (BarlowTwinsLossHeadless, BarlowTwinsLoss)):
+            self.emo_feat_loss.train(b)
+
 
 class EmoNetLoss(EmoLossBase):
 # class EmoNetLoss(object):
@@ -319,7 +324,7 @@ class EmoNetLoss(EmoLossBase):
         #     p.requires_grad = False
 
     def train(self, mode: bool = True):
-        # super().train(mode)
+        super().train(mode)
         if hasattr(self, 'emonet'):
             self.emonet = self.emonet.eval() # evaluation mode no matter what, it's just a loss function
             # self.emonet = self.emonet.requires_grad_(False)
@@ -367,6 +372,12 @@ class EmoBackboneLoss(EmoLossBase):
     def forward(self, images):
         return self.backbone._forward(images)
 
+    def train(self, b = True):
+        super().train(b)
+        if not self.trainable:
+            self.backbone.eval()
+        else:
+            self.backbone.train(b)
 
 
 class EmoBackboneDualLoss(EmoBackboneLoss):
@@ -397,3 +408,9 @@ class EmoBackboneDualLoss(EmoBackboneLoss):
     def _forward_output(self, images):
         return self.trainable_backbone._forward(images)
 
+    def train(self, b = True):
+        super().train(b)
+        if not self.clone_is_trainable:
+            self.trainable_backbone.eval()
+        else:
+            self.trainable_backbone.train(b)
