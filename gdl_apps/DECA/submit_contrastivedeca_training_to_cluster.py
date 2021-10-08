@@ -409,6 +409,17 @@ def train_on_selected_sequences():
     # sampler="data.sampler=uniform"
     sampler="data.sampler=balanced_expr"
 
+    # use_emo_loss = 'False'
+    use_emo_loss = 'True'
+    # emo_feature_loss_type = 'cosine_similarity'
+    # emo_feature_loss_type = 'l1_loss'
+    # emo_feature_loss_type = 'barlow_twins_headless'
+    emo_feature_loss_type = 'barlow_twins'
+
+    # id_feature_loss_type = 'cosine_similarity'
+    # id_feature_loss_type = 'l1_loss'
+    # id_feature_loss_type = 'barlow_twins_headless'
+    id_feature_loss_type = 'barlow_twins'
 
     fixed_overrides_coarse = [
         'model/settings=coarse_train',
@@ -439,17 +450,17 @@ def train_on_selected_sequences():
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
         # '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
-        '+model.emo_feat_loss=barlow_twins_headless',  # emonet feature loss
+        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
         # '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
-        'model.use_emonet_loss=False',
+        f'model.use_emonet_loss={use_emo_loss}',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
         'model.use_emonet_valence=False',
         'model.use_emonet_arousal=False',
         'model.use_emonet_expression=False',
         'model.use_emonet_combined=False',
-        # '+model.id_metric=barlow_twins_headless',
-        '+model.id_metric=barlow_twins',
+        f'+model.id_metric={id_feature_loss_type}',
+        # '+model.id_metric=barlow_twins',
         # '+model/additional=au_loss_dual', # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss
         # 'model.au_loss.feat_loss=cosine_similarity',
@@ -483,16 +494,16 @@ def train_on_selected_sequences():
         # sampler,
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
         # '+model.emo_feat_loss=l1_loss', # emonet feature loss
-        '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
+        f'+model.emo_feat_loss={emo_feature_loss_type}', # emonet feature loss
         # '+model.emo_feat_loss=barlow_twins', # emonet feature loss
-        'model.use_emonet_loss=False',
+        f'model.use_emonet_loss={use_emo_loss}',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
         'model.use_emonet_valence=False',
         'model.use_emonet_arousal=False',
         'model.use_emonet_expression=False',
         'model.use_emonet_combined=False',
-        # '+model.id_metric=barlow_twins_headless',
+        # '+model.id_metric={id_feature_loss_type}',
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
         # '+model/additional=au_loss_dual',  # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity',  # emonet feature loss
