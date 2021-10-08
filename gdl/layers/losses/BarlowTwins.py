@@ -25,7 +25,7 @@ class BarlowTwins(nn.Module):
 
 
 class BarlowTwinsLoss(nn.Module):
-    def __init__(self, feature_size=2048, layer_sizes=None):
+    def __init__(self, feature_size=2048, layer_sizes=None, final_reduction='mean'):
         super().__init__()
         if layer_sizes is None:
             # layer_sizes = 3*[2048]
@@ -61,13 +61,16 @@ class BarlowTwinsLoss(nn.Module):
 
 class BarlowTwinsLossHeadless(nn.Module):
 
-    def __init__(self, feature_size, batch_size=None, lambd=0.005):
+    def __init__(self, feature_size, batch_size=None, lambd=0.005, final_reduction='mean'):
         super().__init__()
         # normalization layer for the representations z1 and z2
         # the affine=False means there are no learnable weights in the BN layer
         self.bn = nn.BatchNorm1d(feature_size, affine=False)
         self.lambd = lambd
         self.batch_size = batch_size
+        if final_reduction not in ["sum", "mean"]:
+            raise ValueError(f"Invalid reduction operation for Barlow Twins: '{self.final_reduction}'")
+        self.final_reduction = final_reduction
 
     def forward(self, z1, z2, batch_size=None, ring_size=None):
         assert not (batch_size is not None and self.batch_size is not None)
@@ -88,9 +91,22 @@ class BarlowTwinsLossHeadless(nn.Module):
         # sum the cross-correlation matrix between all gpus (if multi-gpu training)
         if torch.distributed.is_initialized():
             torch.distributed.nn.all_reduce(c)
+        on_diag = torch.diagonal(c).add_(-1).pow_(2)
+        off_diag = off_diagonal(c).pow_(2)
 
-        on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()
-        off_diag = off_diagonal(c).pow_(2).sum()
+        # implementation note:
+        # The original implementation uses 'sum' for final reduction (in fact they never did mean). However,
+        # if you're using additional losses apart from this one, the 'sum' reduction can significantly change
+        # the influence of your loss depending on how many elements does the diagonal matrix have. In those cases,
+        # 'mean' should be more appropriate.
+        if self.final_reduction == 'sum':
+            on_diag = on_diag.sum()
+            off_diag = off_diag.sum()
+        elif self.final_reduction == 'mean':
+            on_diag = on_diag.mean()
+            off_diag = off_diag.mean()
+        else:
+            raise ValueError(f"Invalid reduction operation for Barlow Twins: '{self.final_reduction}'")
         loss = on_diag + self.lambd * off_diag
         return loss
 
