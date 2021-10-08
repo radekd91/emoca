@@ -219,7 +219,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             elif isinstance(cfg_coarse.model.id_metric, str):
                 experiment_name += "_" +  cfg_coarse.model.id_metric
 
-            if 'id_trainable' in cfg_coarse.model.keys():
+            if 'id_trainable' in cfg_coarse.model.keys() and cfg_coarse.model.is_trainable:
                 experiment_name += "-ft"
 
 

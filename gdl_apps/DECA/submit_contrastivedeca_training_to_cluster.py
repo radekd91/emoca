@@ -409,17 +409,21 @@ def train_on_selected_sequences():
     # sampler="data.sampler=uniform"
     sampler="data.sampler=balanced_expr"
 
-    # use_emo_loss = 'False'
-    use_emo_loss = 'True'
+    use_emo_loss = 'False'
+    # use_emo_loss = 'True'
+
     # emo_feature_loss_type = 'cosine_similarity'
-    # emo_feature_loss_type = 'l1_loss'
+    emo_feature_loss_type = 'l1_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
-    emo_feature_loss_type = 'barlow_twins'
+    # emo_feature_loss_type = 'barlow_twins'
 
     # id_feature_loss_type = 'cosine_similarity'
     # id_feature_loss_type = 'l1_loss'
     # id_feature_loss_type = 'barlow_twins_headless'
     id_feature_loss_type = 'barlow_twins'
+
+    # id_trainable = 'False'
+    id_trainable = 'True'
 
     fixed_overrides_coarse = [
         'model/settings=coarse_train',
@@ -460,6 +464,7 @@ def train_on_selected_sequences():
         'model.use_emonet_expression=False',
         'model.use_emonet_combined=False',
         f'+model.id_metric={id_feature_loss_type}',
+        f'+model.id_trainable={id_trainable}',
         # '+model.id_metric=barlow_twins',
         # '+model/additional=au_loss_dual', # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss
