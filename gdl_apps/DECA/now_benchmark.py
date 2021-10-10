@@ -206,6 +206,7 @@ def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_na
 
         with torch.no_grad():
             values = deca.encode(sample, training=False)
+            # values = deca.decode(values, training=False)
             values['expcode'] = torch.zeros_like(values['expcode'])
             values['posecode'] = torch.zeros_like(values['posecode'])
             result_dict = deca.decode(values)

@@ -1968,18 +1968,27 @@ class DECA(torch.nn.Module):
         i = 0
         vertices = opdict['verts'][i].cpu().numpy()
         faces = self.render.faces[0].cpu().numpy()
-        texture = util.tensor2image(opdict['uv_texture_gt'][i])
+        if 'uv_texture_gt' in opdict.keys():
+            texture = util.tensor2image(opdict['uv_texture_gt'][i])
+        else:
+            texture = None
         uvcoords = self.render.raw_uvcoords[0].cpu().numpy()
         uvfaces = self.render.uvfaces[0].cpu().numpy()
         # save coarse mesh, with texture and normal map
-        normal_map = util.tensor2image(opdict['uv_detail_normals'][i]*0.5 + 0.5)
+        if 'uv_detail_normals' in opdict.keys():
+            normal_map = util.tensor2image(opdict['uv_detail_normals'][i]*0.5 + 0.5)
+            # upsample mesh, save detailed mesh
+            texture = texture[:, :, [2, 1, 0]]
+            normals = opdict['normals'][i].cpu().numpy()
+            displacement_map = opdict['displacement_map'][i].detach().cpu().numpy().squeeze()
+            dense_vertices, dense_colors, dense_faces = util.upsample_mesh(vertices, normals, faces,
+                                                                           displacement_map, texture, dense_template)
+        else:
+            normal_map = None
+            dense_vertices = None
+            dense_colors  = None
+            dense_faces  = None
 
-        # upsample mesh, save detailed mesh
-        texture = texture[:,:,[2,1,0]]
-        normals = opdict['normals'][i].cpu().numpy()
-        displacement_map = opdict['displacement_map'][i].detach().cpu().numpy().squeeze()
-        dense_vertices, dense_colors, dense_faces = util.upsample_mesh(vertices, normals, faces,
-                                                                       displacement_map, texture, dense_template)
         return vertices, faces, texture, uvcoords, uvfaces, normal_map, dense_vertices, dense_faces, dense_colors
 
 

@@ -203,11 +203,26 @@ def main():
     # run_names += ['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] # DECA SWIN T
     # run_names += ['2021_06_24_10-44-02_DECA__DeSegFalse_early'] # DECA ResNet 19
 
-    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
+    # run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early']
+
+    # barlow twin experiment round
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_18-59-03_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-s10000_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_18-25-12_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-ft_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-54_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2bar_DeSegrend_idBTH_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-51_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2_DeSegrend_l1_loss_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-45_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2bar_DeSegrend_idBT_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-23_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2cos_DeSegrend_cosine_similarity_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-39-18_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-39-06_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-39-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-38-50_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"]
 
     for run_name in run_names:
 
-        stage = 'detail'
+        # stage = 'detail'
+        stage = 'coarse'
         relative_to_path = '/ps/scratch/'
         replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
         deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path)

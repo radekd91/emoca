@@ -77,7 +77,7 @@ def main():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
     
     # barlow twin experiment round
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_18-59-03_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-s10000_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_18-59-03_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-s10000_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_18-25-12_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-ft_Aug_early"]
@@ -92,8 +92,8 @@ def main():
     
     
     mode = 'latest'
-    stage = 'coarse'
-    # stage = 'detail'
+    # stage = 'coarse'
+    stage = 'detail'
 
 
     for run_name in run_names:
