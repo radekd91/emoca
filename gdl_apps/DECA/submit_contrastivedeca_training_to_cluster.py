@@ -465,6 +465,7 @@ def train_on_selected_sequences():
         'model.use_emonet_combined=False',
         f'+model.id_metric={id_feature_loss_type}',
         f'+model.id_trainable={id_trainable}',
+        # '+model.id_loss_start_step=10000',
         # '+model.id_metric=barlow_twins',
         # '+model/additional=au_loss_dual', # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss

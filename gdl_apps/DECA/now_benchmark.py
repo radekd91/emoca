@@ -165,8 +165,7 @@ def get_now_point_indices(mode='handpicked', verts=None, landmark3d=None, dense_
         raise ValueError(f"Invalid mode '{mode}'")
 
 
-def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode='best'):
-    stage = 'detail'
+def now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode='best', stage='detail'):
     # relative_to_path = '/ps/scratch/'
     # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
     relative_to_path = None
@@ -250,8 +249,9 @@ def main():
 
     run_name = sys.argv[1]
     mode = sys.argv[2]
+    stage = if len(sys.argv) > 3 sys.argv[3] else 'detail'
 
-    now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode)
+    now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode, stage)
 
 
 
