@@ -249,7 +249,7 @@ def main():
 
     run_name = sys.argv[1]
     mode = sys.argv[2]
-    stage = if len(sys.argv) > 3 sys.argv[3] else 'detail'
+    stage = sys.argv[3] if len(sys.argv) > 3 else 'detail'
 
     now_benchmark(path_to_models,  path_to_now_data, dense_template_path, run_name, mode, stage)
 
