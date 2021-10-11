@@ -558,6 +558,7 @@ def main():
     if len(sys.argv) <= 2:
         # coarse_conf = "deca_train_coarse_stargan"
         coarse_conf = "deca_train_coarse"
+        # coarse_conf = "deca_train_detail"
         # coarse_conf = "deca_train_detail_stargan"
         # detail_conf = "deca_train_detail_stargan"
         detail_conf = "deca_train_detail"
@@ -599,6 +600,7 @@ def main():
             f'model.resume_training={path_to_resume_from is None}', # load the original DECA model
             'model.useSeg=False', # do not segment out the background from the coarse image
             'model.background_from_input=input',
+            '+model.detail_conditioning_type=adain',
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
             # 'learning.batch_size_train=4',
@@ -648,6 +650,7 @@ def main():
             'data.num_workers=0',
             'model.useSeg=False',
             'model.background_from_input=input',
+            '+model.detail_conditioning_type=adain',
             # 'learning.batch_size_train=4',
             'learning.train_K=1',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
@@ -660,8 +663,8 @@ def main():
             f'+model.e_detail_type={detail_encoder}',
             # '+model.normalize_features=true',  # normalize emonet features before applying loss
             # '+model.emo_feat_loss=l1_loss',  # emonet feature loss
-            '+model.emo_feat_loss=barlow_twins_headless',  # emonet feature loss
-            # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
+            # '+model.emo_feat_loss=barlow_twins_headless',  # emonet feature loss
+            '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
             # '+model/additional=au_loss_dual',  # emonet feature loss
             # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
             # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss

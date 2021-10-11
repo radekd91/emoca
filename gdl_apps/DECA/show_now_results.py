@@ -8,10 +8,12 @@ from main import generating_cumulative_error_plots
 
 
 def main():
-    stage = 'detail'
+    # stage = 'detail'
+    stage = 'coarse'
+
 
     run_names = {}
-    run_names['Original_DECA'] = "Paper DECA" # Original DECA from Yao
+    run_names['Original_DECA'] = ["Paper DECA", "detail"] # Original DECA from Yao
     # run_names['2021_03_18_21-10-25_DECA_training'] = "Basic DECA (trained by me)" # Basic DECA
     # run_names['2021_03_25_19-42-13_DECA_training'] = "My retrained with EmoNet loss" # DECA EmoNet
     # run_names['2021_03_29_23-14-42_DECA__EmoLossB_F2VAEw-0.00150_DeSegFalse_early'] = "Deca with EmoNetLoss" # DECA EmoNet
@@ -46,19 +48,35 @@ def main():
     #     'DECA_Affec_NoRing_EmoLossB'
 
     run_names_new = {}
-    # run_names_news += ['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] = "SWIN S"# DECA EmoNet
-    run_names_new['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] = "SWIN T"
-    run_names_new['2021_06_24_10-44-02_DECA__DeSegFalse_early'] = "DECA v1" # DECA EmoNets
-    run_names_new['2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early'] = "DECA v2" # DECA EmoNet
-    run_names_new['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA with VGG loss"
-    run_names_new['2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA SWIN with VGG loss"
-    run_names_new['2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early'] = "DECAStar"
-    run_names_new["2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECA SWINT T"
-    run_names_new["2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECAStar SWINT T"
-    run_names_new["2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECA SWIN-S + VGG loss"
-    run_names_new["2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECAStar SWIN-S + VGG loss"
+    # run_names_news['2021_06_23_21-03-02_DECA__EFswin_s_EFswin_s_DeSegFalse_early'] =[ "SWIN S", "detail"]# DECA EmoNet
+    # run_names_new['2021_06_23_21-03-46_DECA__EFswin_t_EFswin_t_DeSegFalse_early'] = ["SWIN T", "detail"]
+    run_names_new['2021_06_24_10-44-02_DECA__DeSegFalse_early'] = ["DECA v1" , "detail"]# DECA EmoNets
+    # run_names_new['2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early'] = "DECA v2" # DECA EmoNet
+    # run_names_new['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA with VGG loss"
+    # run_names_new['2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA SWIN with VGG loss"
+    # run_names_new['2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early'] = "DECAStar"
+    # run_names_new["2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECA SWINT T"
+    # run_names_new["2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECAStar SWINT T"
+    # run_names_new["2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECA SWIN-S + VGG loss"
+    # run_names_new["2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = ["DECAStar SWIN-S + VGG loss", "detail"]
 
-
+    # run_names_new["2021_10_08_18-59-03_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-s10000_Aug_early"] = ["BTH late", "coarse"]
+    run_names_new["2021_10_08_18-25-12_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"]  = ["BTH", "coarse"]
+    run_names_new["2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_Aug_early"]  = ["BT finetune id", "coarse"]
+    run_names_new["2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-ft_Aug_early"]  = ["BTH finetune id", "coarse"]
+    # run_names_new[
+        # "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-54_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2bar_DeSegrend_idBTH_Aug_early"]
+    # run_names_new[
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-51_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2_DeSegrend_l1_loss_Aug_early"]
+    # run_names_new[
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-45_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2bar_DeSegrend_idBT_Aug_early"]
+    # run_names_new[
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-23_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2cos_DeSegrend_cosine_similarity_Aug_early"]
+    run_names_new["2021_10_08_12-39-18_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] = ["cos id", "coarse"]
+    # run_names_new[
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-39-06_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]
+    run_names_new["2021_10_08_12-39-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"] =  ["BTH", "coarse"]
+    # run_names_new["2021_10_08_12-38-50_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"]
 
     use_dense_topology = False
     # use_dense_topology = True
@@ -71,6 +89,7 @@ def main():
     nicks = []
     path_to_models = path_to_old_models
     for run_name, nick in run_names.items():
+        nick, stage = nick
         if use_dense_topology:
             savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
         else:
@@ -81,11 +100,17 @@ def main():
 
     path_to_models = path_to_new_models
     for run_name, nick in run_names_new.items():
-        if use_dense_topology:
-            savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
-        else:
-            savefolder = Path(path_to_models) / run_name / stage / "NoW_flame"
-
+        nick, stage = nick
+        try:
+            if use_dense_topology:
+                savefolder = Path(path_to_models) / run_name / stage / "NoW_dense"
+            else:
+                savefolder = Path(path_to_models) / run_name / stage / "NoW_flame"
+        except:
+            if use_dense_topology:
+                savefolder = Path(path_to_models) / run_name / 'coarse' / "NoW_dense"
+            else:
+                savefolder = Path(path_to_models) / run_name / 'coarse' / "NoW_flame"
         run_files += [str(savefolder / "results" / "_computed_distances.npy")]
         nicks += [nick]
 

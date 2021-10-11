@@ -70,7 +70,7 @@ def submit(cfg_coarse, cfg_detail, pretrained_run_location=None, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-    t.sleep(1)
+    t.sleep(5)
 
 
 def train_on_selected_sequences():
@@ -412,18 +412,18 @@ def train_on_selected_sequences():
     use_emo_loss = 'False'
     # use_emo_loss = 'True'
 
-    # emo_feature_loss_type = 'cosine_similarity'
-    emo_feature_loss_type = 'l1_loss'
+    emo_feature_loss_type = 'cosine_similarity'
+    # emo_feature_loss_type = 'l1_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
     # emo_feature_loss_type = 'barlow_twins'
 
-    # id_feature_loss_type = 'cosine_similarity'
+    id_feature_loss_type = 'cosine_similarity'
     # id_feature_loss_type = 'l1_loss'
-    id_feature_loss_type = 'barlow_twins_headless'
+    # id_feature_loss_type = 'barlow_twins_headless'
     # id_feature_loss_type = 'barlow_twins'
 
-    # id_trainable = 'False'
-    id_trainable = 'True'
+    id_trainable = 'False'
+    # id_trainable = 'True'
 
     fixed_overrides_coarse = [
         'model/settings=coarse_train',
@@ -518,14 +518,17 @@ def train_on_selected_sequences():
     ]
 
     # emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
-    emonet_weights = [0.0015]
+    # emonet_weights = [0.0015]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
+    id_weights = [0.0, 0.05, 0.1, 0.3, 0.5, 1.0]
+    # id_weights = [0.1, 0.3]
+
     config_pairs = []
-    for emonet_weight in emonet_weights:
+    for id_weight in id_weights:
         for fmode in finetune_modes:
             coarse_overrides = fixed_overrides_coarse.copy()
             detail_overrides = fixed_overrides_detail.copy()
@@ -538,9 +541,9 @@ def train_on_selected_sequences():
             # coarse_overrides += [data_override]
             # detail_overrides += [data_override]
 
-            # au_weight_override = f'model.emonet_weight={emonet_weight}'
-            # coarse_overrides += [au_weight_override]
-            # detail_overrides += [au_weight_override]
+            idw = f'model.idw={id_weight}'
+            coarse_overrides += [idw]
+            # detail_overrides += [idw]
 
             # au_weight_override = f'model.au_loss.au_weight={emonet_weight}'
             # coarse_overrides += [au_weight_override]

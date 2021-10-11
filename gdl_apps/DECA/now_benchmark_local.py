@@ -221,8 +221,8 @@ def main():
 
     for run_name in run_names:
 
-        # stage = 'detail'
-        stage = 'coarse'
+        stage = 'detail'
+        # stage = 'coarse'
         relative_to_path = '/ps/scratch/'
         replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
         deca = load_model(path_to_models, run_name, stage, relative_to_path, replace_root_path)

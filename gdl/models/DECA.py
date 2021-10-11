@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .Renderer import SRenderY
 from .DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
-from .DecaDecoder import Generator
+from .DecaDecoder import Generator, GeneratorAdaIn
 from .DecaFLAME import FLAME, FLAMETex
 # from .MLP import MLP
 from .EmotionMLP import EmotionMLP
@@ -41,6 +41,13 @@ class DecaModule(LightningModule):
         super().__init__()
         self.learning_params = learning_params
         self.inout_params = inout_params
+
+        if 'detail_conditioning' not in model_params.keys():
+            self.detail_conditioning = ['jawpose', 'expression', 'detail']
+            model_params.detail_conditioning = self.detail_conditioning
+        else:
+            self.detail_conditioning = model_params.detail_conditioning
+
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
             print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
             deca_class = DECA
@@ -48,9 +55,6 @@ class DecaModule(LightningModule):
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
 
         self.deca = deca_class(config=model_params)
-
-        self.detail_conditioning = ['jawpose', 'expression', 'detail'] if 'detail_conditioning' not in model_params.keys() \
-            else model_params.detail_conditioning
 
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.stage_name = stage_name
@@ -589,7 +593,6 @@ class DecaModule(LightningModule):
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
             #TODO: what are you conditioning on?
-
             detail_conditioning_list = []
             if 'globalpose' in self.detail_conditioning:
                 detail_conditioning_list += [posecode[:, :3]]
@@ -599,10 +602,15 @@ class DecaModule(LightningModule):
                 detail_conditioning_list += [shapecode]
             if 'expression' in self.detail_conditioning:
                 detail_conditioning_list += [expcode]
-            if 'detail' in self.detail_conditioning:
-                detail_conditioning_list += [detailcode]
 
-            uv_z = self.deca.D_detail(torch.cat(detail_conditioning_list, dim=1))
+            if isinstance(self.deca.D_detail, Generator):
+                if 'detail' in self.detail_conditioning:
+                    detail_conditioning_list += [detailcode]
+                uv_z = self.deca.D_detail(torch.cat(detail_conditioning_list, dim=1))
+            elif isinstance(self.deca.D_detail, GeneratorAdaIn):
+                uv_z = self.deca.D_detail(z=detailcode, cond=torch.cat(detail_conditioning_list, dim=1))
+            else:
+                raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
             # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
@@ -1716,8 +1724,22 @@ class DECA(torch.nn.Module):
         self.config = config
         self.n_param = config.n_shape + config.n_tex + config.n_exp + config.n_pose + config.n_cam + config.n_light
         self.n_detail = config.n_detail
-        self.n_cond = 3 + config.n_exp
+
+        if 'detail_conditioning' in self.config.keys():
+            self.n_cond = 0
+            if 'globalpose' in self.config.detail_conditioning:
+                self.n_cond += 3
+            if 'jawpose' in self.config.detail_conditioning:
+                self.n_cond += 3
+            if 'identity' in self.config.detail_conditioning:
+                self.n_cond += config.n_shape
+            if 'expression' in self.config.detail_conditioning:
+                self.n_cond += config.n_exp
+        else:
+            self.n_cond = 3 + config.n_exp
+
         self.mode = DecaMode[str(config.mode).upper()]
+        self._create_detail_generator()
         self._init_deep_losses()
         self._setup_neural_rendering()
 
@@ -1804,6 +1826,29 @@ class DECA(torch.nn.Module):
                 raise NotImplementedError(f"Unsupported mode of the neural renderer backroungd: "
                                           f"'{self.image_translator.background_mode}'")
 
+    def _create_detail_generator(self):
+        #backwards compatibility hack:
+        if hasattr(self, 'D_detail'):
+            if (not "detail_conditioning_type" in self.config.keys() or  self.config.detail_conditioning_type == "concat") \
+                and isinstance(self.D_detail, Generator):
+                return
+            if self.config.detail_conditioning_type == "adain" and isinstance(self.D_detail, GeneratorAdaIn):
+                return
+            print("[WARNING]: We are reinitializing the detail generator!")
+            del self.D_detail # just to make sure we free the CUDA memory, probably not necessary
+
+        if not "detail_conditioning_type" in self.config.keys() or str(self.config.detail_conditioning_type).lower() == "concat":
+            # concatenates detail latent and conditioning
+            print("Creating classic detail generator.")
+            self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
+                                      sample_mode='bilinear')
+        elif str(self.config.detail_conditioning_type).lower() == "adain":
+            # conditioning passed in through adain layers
+            print("Creating AdaIn detail generator.")
+            self.D_detail = GeneratorAdaIn(self.n_detail,  self.n_cond, out_channels=1, out_scale=0.01,
+                                      sample_mode='bilinear')
+        else:
+            raise NotImplementedError(f"Detail conditioning invalid: '{self.config.detail_conditioning_type}'")
 
     def _create_model(self):
         # coarse shape
@@ -1831,9 +1876,8 @@ class DECA(torch.nn.Module):
             self.E_detail = SwinEncoder(outsize=self.n_detail, img_size=self.config.image_size, swin_type=e_detail_type)
         else:
             raise ValueError(f"Invalid 'e_detail_type'={e_detail_type}")
+        self._create_detail_generator()
 
-        self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
-                                  sample_mode='bilinear')
         # self._load_old_checkpoint()
 
     def _get_coarse_trainable_parameters(self):
