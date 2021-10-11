@@ -91,6 +91,12 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if e_detail_type != 'ResnetEncoder':
             experiment_name += "_ED" + e_detail_type[:6]
 
+        d_detail_conditioning = 'concat'
+        if 'detail_conditioning_type' in cfg_detail.model.keys():
+            d_detail_conditioning = cfg_detail.model.detail_conditioning_type
+        if d_detail_conditioning != 'concat':
+            experiment_name += "_DD" + d_detail_conditioning
+
         if cfg_coarse.model.deca_class == "ExpDECA":
             if cfg_coarse.model.expression_backbone == 'deca_parallel':
                 experiment_name += '_para'
