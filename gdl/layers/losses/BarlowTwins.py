@@ -100,10 +100,26 @@ class BarlowTwinsLossHeadless(nn.Module):
         # the influence of your loss depending on how many elements does the diagonal matrix have. In those cases,
         # 'mean' should be more appropriate.
         if self.final_reduction == 'sum':
+            # the original paper
             on_diag = on_diag.sum()
             off_diag = off_diag.sum()
         elif self.final_reduction == 'mean':
+            # mean of the on diag and off diag elements
+            # there is much more of off diag elemetns and therefore the mean can add up to disproportionally less
+            # than what the original implementation intended
             on_diag = on_diag.mean()
+            off_diag = off_diag.mean()
+        elif self.final_reduction == 'mean_on_diag':
+            # normalized by number of elements on diagonal
+            # off diag elements are normalized by number of on diag elements so the proportionality is preserved
+            n = on_diag.numel()
+            on_diag = on_diag.mean()
+            off_diag = off_diag.sum() / n
+        elif self.final_reduction == 'mean_off_diag':
+            # normalized by number of elements off diagonal
+            # on diag elements are normalized by number of off diag elements so the proportionality is preserved
+            n = off_diag.numel()
+            on_diag = on_diag.sum() / n
             off_diag = off_diag.mean()
         else:
             raise ValueError(f"Invalid reduction operation for Barlow Twins: '{self.final_reduction}'")

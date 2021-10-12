@@ -403,6 +403,75 @@ class DecaModule(LightningModule):
                         va = torch.cat([va, va], dim=0)
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
+                elif self.deca.config.shape_constrain_type == 'shuffle_expression':
+                    new_order = np.random.permutation(K*original_batch_size)
+                    old_order = np.arange(K*original_batch_size)
+                    while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
+                        new_order = np.random.permutation(K * original_batch_size)
+                    codedict['new_order'] = new_order
+                    # exchange expression
+                    expcode_new = expcode[new_order]
+                    expcode = torch.cat([expcode, expcode_new], dim=0)
+
+                    # exchange jaw pose (but not global pose)
+                    global_pose = posecode[:, :3]
+                    jaw_pose = posecode[:, 3:]
+                    jaw_pose_new = jaw_pose[new_order]
+                    jaw_pose = torch.cat([jaw_pose, jaw_pose_new], dim=0)
+                    global_pose = torch.cat([global_pose, global_pose], dim=0)
+                    posecode = torch.cat([global_pose, jaw_pose], dim=1)
+
+                    ## duplicate the rest
+                    shapecode = torch.cat([shapecode, shapecode], dim=0)
+                    texcode = torch.cat([texcode, texcode], dim=0)
+                    cam = torch.cat([cam, cam], dim=0)
+                    lightcode = torch.cat([lightcode, lightcode], dim=0)
+                    ## duplicate gt if any
+                    images = torch.cat([images, images],
+                                       dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+                    lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    masks = torch.cat([masks, masks], dim=0)
+
+                    ref_images_identity_idxs = np.concatenate([old_order, old_order])
+                    ref_images_expression_idxs = np.concatenate([old_order, new_order])
+                    codedict["ref_images_identity_idxs"] = ref_images_identity_idxs
+                    codedict["ref_images_expression_idxs"] = ref_images_expression_idxs
+
+                    if va is not None:
+                        va = torch.cat([va, va[new_order]], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
+
+                elif self.deca.config.shape_constrain_type == 'shuffle_shape':
+                    new_order = np.random.permutation(K*original_batch_size)
+                    old_order = np.arange(K*original_batch_size)
+                    while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
+                        new_order = np.random.permutation(K * original_batch_size)
+                    codedict['new_order'] = new_order
+                    shapecode_new = shapecode[new_order]
+                    ## append new shape code data
+                    shapecode = torch.cat([shapecode, shapecode_new], dim=0)
+                    texcode = torch.cat([texcode, texcode], dim=0)
+                    expcode = torch.cat([expcode, expcode], dim=0)
+                    posecode = torch.cat([posecode, posecode], dim=0)
+                    cam = torch.cat([cam, cam], dim=0)
+                    lightcode = torch.cat([lightcode, lightcode], dim=0)
+                    ## append gt
+                    images = torch.cat([images, images],
+                                       dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+                    lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    masks = torch.cat([masks, masks], dim=0)
+
+                    ref_images_identity_idxs = np.concatenate([old_order, new_order])
+                    ref_images_expression_idxs = np.concatenate([old_order, old_order])
+                    codedict["ref_images_identity_idxs"] = ref_images_identity_idxs
+                    codedict["ref_images_expression_idxs"] = ref_images_expression_idxs
+
+                    if va is not None:
+                        va = torch.cat([va, va], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7], dim=0)
+
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'same':
@@ -860,6 +929,220 @@ class DecaModule(LightningModule):
         return d
 
 
+    def _compute_id_loss(self, codedict, batch, training, testing, losses, batch_size,
+                                                       ring_size):
+        # if self.deca.config.idw > 1e-3:
+        if self.deca.id_loss is not None:
+
+            images = codedict["images"]
+
+            ops = codedict["ops"]
+            mask_face_eye = codedict["mask_face_eye"]
+
+            shading_images = self.deca.render.add_SHlight(ops['normal_images'], codedict["lightcode"].detach())
+            albedo_images = F.grid_sample(codedict["albedo"].detach(), ops['grid'], align_corners=False)
+
+            # TODO: get to the bottom of this weird overlay thing - why is it there?
+            # answer: This renders the face and takes background from the image
+            overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
+
+            if self.global_step >= self.deca.id_loss_start_step:
+                if 'id_metric' in self.deca.config.keys() and 'barlow_twins' in self.deca.config.id_metric:
+                    assert ring_size == 1 or ring_size == 2
+
+                effective_bs = images.shape[0]
+                # losses['identity'] = self.deca.id_loss(overlay, images, batch_size=batch_size,
+                #                                        ring_size=ring_size) * self.deca.config.idw
+
+                if "ref_images_identity_idxs" in codedict.keys():
+                    images_ = images[codedict["ref_images_identity_idxs"]]
+                else:
+                    images_ = images
+                losses['identity'] = self.deca.id_loss(overlay, images_, batch_size=effective_bs,
+                                                       ring_size=1) * self.deca.config.idw
+                if 'id_contrastive' in self.deca.config.keys() and bool(self.deca.config.id_contrastive):
+                    assert ring_size == 2
+                    assert batch_size % 2 == 0
+                    assert self.deca.id_loss.trainable
+
+                    idxs_a = torch.arange(0, images.shape[0], 2)  # indices of first images within the ring
+                    idxs_b = torch.arange(1, images.shape[0], 2)  # indices of second images within the ring
+
+                    # WARNING - this assumes the ring is identity-based
+                    if self.deca.config.id_contrastive in [True, "real", "both"]:
+                        losses['identity_contrastive_real'] = self.deca.id_loss(
+                            images[idxs_a],  # first images within the ring
+                            images[idxs_b],  # second images within the ring
+                            batch_size=idxs_a.numel(),
+                            ring_size=1) * self.deca.config.idw * 2
+                    if self.deca.config.id_contrastive in [True, "synth", "both"]:
+                        losses['identity_contrastive_synthetic'] = self.deca.id_loss(
+                            overlay[idxs_a],  # first images within the ring
+                            overlay[idxs_b],  # second images within the ring
+                            batch_size=idxs_a.numel(),
+                            ring_size=1) * self.deca.config.idw
+
+                    has_been_shuffled = 'new_order' in codedict.keys()
+                    if has_been_shuffled:
+                        new_order = codedict['new_order']
+                        if self.deca.config.shape_constrain_type == 'shuffle_expression':
+                            idxs_a_synth = np.arange(new_order.shape[0])  # first half of the batch
+                            idxs_b_synth = np.arange(new_order.shape[0],
+                                                     2 * new_order.shape[0])  # second half of the batch
+                        elif self.deca.config.shape_constrain_type == 'shuffle_shape':
+                            idxs_a_synth = new_order  # shuffled first half of the batch
+                            idxs_b_synth = np.arange(new_order.shape[0],
+                                                     2 * new_order.shape[0])  # second half of the batch
+                        else:
+                            raise NotImplementedError("Unexpected shape consistency value ")
+                        losses['identity_contrastive_synthetic_shuffled'] = self.deca.id_loss(
+                            overlay[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
+                            overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
+                            batch_size=idxs_a.numel(),
+                            ring_size=1) * self.deca.config.idw
+
+                elif ring_size > 2:
+                    raise NotImplementedError("Contrastive loss does not support ring sizes > 2.")
+        return losses
+
+
+    def _compute_emonet_loss_wrapper(self, codedict, batch, training, testing, losses, metrics, prefix, image_key,
+                                     with_grad, batch_size, ring_size):
+
+        if self.emonet_loss is not None:
+
+            if 'va' in codedict:
+                va = codedict['va']
+                va = va.view(-1, va.shape[-1])
+            else:
+                va = None
+
+            if 'expr7' in codedict:
+                expr7 = codedict['expr7']
+                expr7 = expr7.view(-1, expr7.shape[-1])
+            else:
+                expr7 = None
+
+            # with torch.no_grad():
+            # TODO: if expression shuffled, this needs to be changed, the input images no longer correspond
+
+            images = codedict["images"]
+            predicted_images = codedict[image_key]
+
+            if "ref_images_expression_idxs" in codedict.keys():
+                images_ = images[codedict["ref_images_expression_idxs"]]
+            else:
+                images_ = images
+            self._compute_emotion_loss(images_, predicted_images, losses, metrics, f"{prefix}",
+                                       va, expr7,
+                                       with_grad=with_grad,
+                                       batch_size=batch_size, ring_size=ring_size)
+
+            codedict[f"{prefix}_valence_input"] = self.emonet_loss.input_emotion['valence']
+            codedict[f"{prefix}_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+            codedict[f"{prefix}_expression_input"] = self.emonet_loss.input_emotion[
+                'expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+            codedict[f"{prefix}_valence_output"] = self.emonet_loss.output_emotion['valence']
+            codedict[f"{prefix}_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+            codedict[f"{prefix}_expression_output"] = self.emonet_loss.output_emotion[
+                'expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+
+            if 'emo_contrastive' in self.deca.config.keys() and self.deca.config.emo_contrastive:
+                assert ring_size == 2 or ring_size == 1
+
+                assert self.emonet_loss.trainable or (
+                            hasattr(self.emonet_loss, 'clone_is_trainable') and self.emonet_lossclone_is_trainable)
+
+                idxs_a = torch.arange(0, images.shape[0], 2)
+                idxs_b = torch.arange(1, images.shape[0], 2)
+
+                has_been_shuffled = 'new_order' in new_order.keys()
+
+                # if self.deca.config.shape_constrain_type == 'shuffle_expression' and has_been_shuffled:
+                #     new_order = codedict['new_order']
+                #
+
+                if self.deca.config.emo_contrastive in [True, "real", "both"]:
+                    if ring_size == 2:
+                        assert batch_size % 2 == 0
+
+                        if not isinstance(self.deca, ExpDECA):
+                            raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
+                                                      "expression based, not identity based. This is not guaranteed "
+                                                      "for vanilla DECA.")
+                        self._compute_emotion_loss(images[idxs_a_real],  # real images of first expressions in the ring
+                                                   images[idxs_b_real],  # real images of second expressions in the ring
+                                                   losses, metrics, f"{prefix}_contrastive_real",
+                                                   va, expr7, with_grad=self.deca.config.use_emonet_loss,
+                                                   batch_size=bs, ring_size=rs)
+                    else:
+                        print("[WARNING] Cannot compute real contrastive emotion loss because there is no ring!")
+
+                if self.deca.config.emo_contrastive in [True, "synth", "both"]:
+
+                    if rs == 2:
+                        assert bs % 2 == 0
+
+                        if not isinstance(self.deca, ExpDECA):
+                            raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
+                                                      "expression based, not identity based. This is not guaranteed "
+                                                      "for vanilla DECA.")
+                        self._compute_emotion_loss(predicted_images[idxs_a_real],
+                                                   # rec images of first expressions in the ring
+                                                   predicted_images[idxs_b_real],
+                                                   # rec images of second expressions in the ring
+                                                   losses, metrics, f"{prefix}_contrastive_synth",
+                                                   va, expr7, with_grad=self.deca.config.use_emonet_loss,
+                                                   batch_size=bs, ring_size=rs)
+                    else:
+                        print("[WARNING] Cannot compute real contrastive emotion loss because there is no ring!")
+
+                    if has_been_shuffled:
+                        new_order = codedict['new_order']
+                        if self.deca.config.shape_constrain_type == 'shuffle_expression':
+                            # this gets tricky, in this case the images are not duplicates -> we need all, but the second
+                            # half's order is shuffled, so we need to be careful here
+                            idxs_a_synth = new_order  # shuffled first half of the batch
+                            idxs_b_synth = np.arange(new_order.shape[0],
+                                                     2 * new_order.shape[0])  # second half of the batch
+                        elif self.deca.config.shape_constrain_type == 'shuffle_shape':
+                            idxs_a_synth = np.arange(new_order.shape[0])  # first half of the batch
+                            idxs_b_synth = np.arange(new_order.shape[0],
+                                                     2 * new_order.shape[0])  # second half of the batch
+                        # the expressions at corresponding index positions of idxs_a_synth and idxs_b_synth should match now
+                        self._compute_emotion_loss(predicted_images[idxs_a_synth],
+                                                   # synthetic images of reconstructed expressions and corresponding identities
+                                                   predicted_images[idxs_b_synth],
+                                                   # synthetic images of reconstructed expressions and shuffled identities
+                                                   losses, metrics, f"{prefix}_contrastive_synth_shuffled",
+                                                   va, expr7,
+                                                   with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                                   batch_size=bs, ring_size=rs)
+
+            if va is not None:
+                codedict[f"{prefix}_valence_gt"] = va[:, 0]
+                codedict[f"{prefix}_arousal_gt"] = va[:, 1]
+            if expr7 is not None:
+                codedict[f"{prefix}_expression_gt"] = expr7
+
+            if self.deca._has_neural_rendering():
+                assert 'emo_contrastive' not in self.deca.config.keys() or self.deca.config.emo_contrastive is False
+                # TODO possible to make this more GPU efficient by not recomputing emotion for input image
+                self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, f"{prefix}_translated",
+                                           va, expr7,
+                                           with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                                           batch_size=bs, ring_size=rs)
+
+                # codedict[f"{prefix}_valence_input"] = self.emonet_loss.input_emotion['valence']
+                # codedict[f"{prefix}_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                # codedict[f"{prefix}_expression_input"] = self.emonet_loss.input_emotion['expression']
+                codedict[f"{prefix}_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
+                codedict[f"{prefix}_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                codedict[f"{prefix}_translated_expression_output"] = self.emonet_loss.output_emotion[
+                    'expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+        return losses, metrics, codedict
+
+
     def _compute_loss(self, codedict, batch, training=True, testing=False) -> (dict, dict):
         #### ----------------------- Losses
         losses = {}
@@ -881,8 +1164,9 @@ class DecaModule(LightningModule):
         use_geom_losses = 'use_geometric_losses_expression_exchange' in self.deca.config.keys() and \
             self.deca.config.use_geometric_losses_expression_exchange
 
-        if training and 'expression_constrain_type' in self.deca.config.keys() \
-            and self.deca.config.expression_constrain_type == 'exchange' \
+        if training and ('expression_constrain_type' in self.deca.config.keys() \
+            and self.deca.config.expression_constrain_type == 'exchange' or
+                         self.deca.config.shape_constrain_type in ['shuffle_expression', 'shuffle_shape']) \
             and (self.deca.mode == DecaMode.COARSE or self.deca.config.train_coarse) \
             and (not use_geom_losses):
             if batch_size % 2 != 0:
@@ -903,18 +1187,6 @@ class DecaModule(LightningModule):
         expcode = codedict["expcode"]
         texcode = codedict["texcode"]
         ops = codedict["ops"]
-
-        if 'va' in codedict:
-            va = codedict['va']
-            va = va.view(-1, va.shape[-1])
-        else:
-            va = None
-
-        if 'expr7' in codedict:
-            expr7 = codedict['expr7']
-            expr7 = expr7.view(-1, expr7.shape[-1])
-        else:
-            expr7 = None
 
 
         if self.mode == DecaMode.DETAIL:
@@ -1000,14 +1272,8 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError("Is this line ever reached?")
 
-            # if self.deca.config.idw > 1e-3:
-            if self.deca.id_loss is not None:
-                shading_images = self.deca.render.add_SHlight(ops['normal_images'], lightcode.detach())
-                albedo_images = F.grid_sample(albedo.detach(), ops['grid'], align_corners=False)
-                overlay = albedo_images * shading_images * mask_face_eye + images * (1 - mask_face_eye)
 
-                if self.global_step >= self.deca.id_loss_start_step:
-                    losses['identity'] = self.deca.id_loss(overlay, images, batch_size=bs, ring_size=rs) * self.deca.config.idw
+            losses = self._compute_id_loss(codedict, batch, training, testing, losses, batch_size=bs, ring_size=rs)
 
             losses['shape_reg'] = (torch.sum(shapecode ** 2) / 2) * self.deca.config.shape_reg
             losses['expression_reg'] = (torch.sum(expcode ** 2) / 2) * self.deca.config.exp_reg
@@ -1015,39 +1281,16 @@ class DecaModule(LightningModule):
             losses['light_reg'] = ((torch.mean(lightcode, dim=2)[:, :,
                                     None] - lightcode) ** 2).mean() * self.deca.config.light_reg
 
-            if self.emonet_loss is not None:
-                # with torch.no_grad():
-
-                self._compute_emotion_loss(images, predicted_images, losses, metrics, "coarse",
-                                           va, expr7, with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
-                                           batch_size=bs, ring_size=rs)
-
-                codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
-                codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
-                codedict["coarse_valence_output"] = self.emonet_loss.output_emotion['valence']
-                codedict["coarse_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["coarse_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
-
-                if va is not None:
-                    codedict["coarse_valence_gt"] = va[:, 0]
-                    codedict["coarse_arousal_gt"] = va[:, 1]
-                if expr7 is not None:
-                    codedict["coarse_expression_gt"] = expr7
-
-                if self.deca._has_neural_rendering():
-                    #TODO possible to make this more GPU efficient by not recomputing emotion for input image
-                    self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, "coarse_translated",
-                                               va, expr7,
-                                               with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
-                                               batch_size=bs, ring_size=rs)
-
-                    # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
-                    # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                    # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
-                    codedict["coarse_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
-                    codedict["coarse_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                    codedict["coarse_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+            losses, metrics, codedict = self._compute_emonet_loss_wrapper(codedict, batch, training, testing, losses, metrics,
+                                                                 prefix="coarse", image_key="predicted_images",
+                                                                with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                                                batch_size=bs, ring_size=rs)
+            if self.deca._has_neural_rendering():
+                losses, metrics, codedict = self._compute_emonet_loss_wrapper(codedict, batch, training, testing, losses, metrics,
+                                                                     prefix="coarse_translated", image_key="predicted_translated_image",
+                                                                     with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                                                                     batch_size=bs, ring_size=rs
+                                                                     )
 
             if self.au_loss is not None:
                 # with torch.no_grad():
@@ -1103,38 +1346,52 @@ class DecaModule(LightningModule):
                     self._metric_or_loss(losses, metrics, self.deca.config.use_vgg)[
                         'vgg_detailed_translated'] =  vggl * self.deca.config.vggw
 
-            if self.emonet_loss is not None:
-                self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
-                                           with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
-                                           batch_size=bs, ring_size=rs)
-                codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
-                codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
-                codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
-                codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
-                if va is not None:
-                    codedict["detail_valence_gt"] = va[:,0]
-                    codedict["detail_arousal_gt"] = va[:,1]
-                if expr7 is not None:
-                    codedict["detail_expression_gt"] = expr7
+            losses, metrics, codedict = self._compute_emonet_loss_wrapper(codedict, batch, training, testing, losses, metrics,
+                                                                 prefix="detail", image_key = "predicted_detailed_image",
+                                                                 with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                                                 batch_size=bs, ring_size=rs)
+            if self.deca._has_neural_rendering():
+                losses, metrics, codedict = self._compute_emonet_loss_wrapper(codedict, batch, training, testing, losses, metrics,
+                                                                     prefix="detail_translated",
+                                                                     image_key="predicted_detailed_translated_image",
+                                                                     with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                                                                     batch_size=bs, ring_size=rs)
+
+            # if self.emonet_loss is not None:
+            #     self._compute_emotion_loss(images, predicted_detailed_image, losses, metrics, "detail",
+            #                                with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+            #                                batch_size=bs, ring_size=rs)
+                # codedict["detail_valence_input"] = self.emonet_loss.input_emotion['valence']
+                # codedict["detail_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                # codedict["detail_expression_input"] = self.emonet_loss.input_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+                # codedict["detail_valence_output"] = self.emonet_loss.output_emotion['valence']
+                # codedict["detail_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                # codedict["detail_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+                #
+                # if va is not None:
+                #     codedict["detail_valence_gt"] = va[:,0]
+                #     codedict["detail_arousal_gt"] = va[:,1]
+                # if expr7 is not None:
+                #     codedict["detail_expression_gt"] = expr7
 
 
-                if self.deca._has_neural_rendering():
-                    #TODO possible to make this more GPU efficient by not recomputing emotion for input image
-                    self._compute_emotion_loss(images, predicted_detailed_translated_image,
-                                               losses, metrics, "detail_translated",
-                                               va, expr7,
-                                               with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
-                                               batch_size=bs, ring_size=rs)
+                # if self.deca._has_neural_rendering():
 
-                    # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
-                    # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
-                    # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
-                    codedict["detail_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
-                    codedict["detail_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
-                    codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
+
+                    # #TODO possible to make this more GPU efficient by not recomputing emotion for input image
+                    # self._compute_emotion_loss(images, predicted_detailed_translated_image,
+                    #                            losses, metrics, "detail_translated",
+                    #                            va, expr7,
+                    #                            with_grad= self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
+                    #                            batch_size=bs, ring_size=rs)
+                    #
+                    # # codedict["coarse_valence_input"] = self.emonet_loss.input_emotion['valence']
+                    # # codedict["coarse_arousal_input"] = self.emonet_loss.input_emotion['arousal']
+                    # # codedict["coarse_expression_input"] = self.emonet_loss.input_emotion['expression']
+                    # codedict["detail_translated_valence_output"] = self.emonet_loss.output_emotion['valence']
+                    # codedict["detail_translated_arousal_output"] = self.emonet_loss.output_emotion['arousal']
+                    # codedict["detail_translated_expression_output"] = self.emonet_loss.output_emotion['expression' if 'expression' in self.emonet_loss.input_emotion.keys() else 'expr_classification']
 
             if self.au_loss is not None:
                 self._compute_au_loss(images, predicted_images, losses, metrics, "detail",

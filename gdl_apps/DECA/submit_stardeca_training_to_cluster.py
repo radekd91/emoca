@@ -96,11 +96,11 @@ def train_on_selected_sequences():
         #     ['model.useSeg=rend']
         # ],
 
-        # # DEFAULT, with VGG perceptual loss
-        # [
-        #     ['model.useSeg=gt', '+model/additional=vgg_loss',],
-        #     ['model.useSeg=rend', '+model/additional=vgg_loss',]
-        # ],
+        # DEFAULT, with VGG perceptual loss
+        [
+            ['model.useSeg=gt', '+model/additional=vgg_loss',],
+            ['model.useSeg=rend', '+model/additional=vgg_loss',]
+        ],
         #
         # # DEFAULT, with VGG perceptual loss, without photometric
         # [
@@ -156,23 +156,23 @@ def train_on_selected_sequences():
         #      'model.expression_backbone=deca_clone']
         # ],
 
-        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
-             'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
-             # 'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'learning.batch_size_test=1']
-        ],
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+        #      'model.shape_constrain_type=None', 'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+        #      # 'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
+        # ],
 
-        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
-             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        ],
+        # # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse_32gb',
+        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail_32gb',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        # ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK
         # [
@@ -379,8 +379,8 @@ def train_on_selected_sequences():
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
 
-    resume_from = None # resume from Original DECA
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
+    # resume_from = None # resume from Original DECA
+    resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
@@ -391,10 +391,10 @@ def train_on_selected_sequences():
     # flame_encoder = 'swin_tiny_patch4_window7_224'
     # detail_encoder = 'swin_tiny_patch4_window7_224'
 
-    # dataset_coarse =  "data/datasets=coarse_data_cluster"
-    # dataset_detail =  "data/datasets=detail_data_cluster"
-    dataset_coarse = "data/datasets=affectnet_cluster"
-    dataset_detail = "data/datasets=affectnet_cluster"
+    dataset_coarse =  "data/datasets=coarse_data_cluster"
+    dataset_detail =  "data/datasets=detail_data_cluster"
+    # dataset_coarse = "data/datasets=affectnet_cluster"
+    # dataset_detail = "data/datasets=affectnet_cluster"
 
     augmentation = "data/augmentations=default"
     # augmentation = "data/augmentations=none"
@@ -411,9 +411,9 @@ def train_on_selected_sequences():
 
 
     fixed_overrides_coarse = [
-        # 'model/settings=coarse_train',
+        'model/settings=coarse_train',
         # 'model/settings=coarse_train_emonet',
-        'model/settings=coarse_train_expdeca',
+        # 'model/settings=coarse_train_expdeca',
         # 'model/settings=coarse_train_expdeca_emonet',
         # 'model/settings=coarse_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
@@ -428,25 +428,26 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         # '+model.emoloss_trainable=true',
-        '+model.emoloss_dual=true',
+        # '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
+        '+model.detail_conditioning_type=adain',
         dataset_coarse,
-        augmentation,
-        sampler,
+        # augmentation,
+        # sampler,
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
-        '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
-        '+model/additional=au_loss_dual', # emonet feature loss
+        # '+model/additional=au_loss_dual', # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity', # emonet feature loss
-        'model.au_loss.feat_loss=cosine_similarity',
-        'model.au_loss.normalize_features=True', # emonet feature loss
+        # 'model.au_loss.feat_loss=cosine_similarity',
+        # 'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
     fixed_overrides_detail = [
-        # 'model/settings=detail_train',
+        'model/settings=detail_train',
         # 'model/settings=detail_train_emonet',
-        'model/settings=detail_train_expdeca',
+        # 'model/settings=detail_train_expdeca',
         # 'model/settings=detail_train_expdeca_emonet',
         # 'model/settings=detail_train_expdeca_emomlp',
         # '+model.mlp_emotion_predictor.detach_shape=True',
@@ -460,19 +461,20 @@ def train_on_selected_sequences():
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         # '+model.emoloss_trainable=true',
-        '+model.emoloss_dual=true',
+        # '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
+        '+model.detail_conditioning_type=adain',
         dataset_detail,
-        augmentation,
-        sampler,
+        # augmentation,
+        # sampler,
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
-        '+model.emo_feat_loss=l1_loss', # emonet feature loss
+        # '+model.emo_feat_loss=l1_loss', # emonet feature loss
         # '+model.emo_feat_loss=cosine_similarity',  # emonet feature loss
-        '+model/additional=au_loss_dual',  # emonet feature loss
+        # '+model/additional=au_loss_dual',  # emonet feature loss
         # 'model.au_loss.au_loss=cosine_similarity',  # emonet feature loss
-        'model.au_loss.feat_loss=cosine_similarity',
-        'model.au_loss.normalize_features=True', # emonet feature loss
+        # 'model.au_loss.feat_loss=cosine_similarity',
+        # 'model.au_loss.normalize_features=True', # emonet feature loss
     ]
 
     # emonet_weights = [5.0, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
@@ -499,10 +501,10 @@ def train_on_selected_sequences():
             # au_weight_override = f'model.emonet_weight={emonet_weight}'
             # coarse_overrides += [au_weight_override]
             # detail_overrides += [au_weight_override]
-
-            au_weight_override = f'model.au_loss.au_weight={emonet_weight}'
-            coarse_overrides += [au_weight_override]
-            detail_overrides += [au_weight_override]
+            #
+            # au_weight_override = f'model.au_loss.au_weight={emonet_weight}'
+            # coarse_overrides += [au_weight_override]
+            # detail_overrides += [au_weight_override]
 
             cfgs = train_stardeca.configure(
                 coarse_conf, coarse_overrides,

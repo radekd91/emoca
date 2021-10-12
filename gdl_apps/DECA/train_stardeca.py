@@ -230,6 +230,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
             if 'id_loss_start_step' in cfg_coarse.model.keys() and cfg_coarse.model.id_loss_start_step > 0:
                 experiment_name += f"-s{cfg_coarse.model.id_loss_start_step}"
 
+            if 'id_contrastive' in cfg_coarse.model.keys() and cfg_coarse.model.id_contrastive:
+                experiment_name += f"-cont"
+                if isinstance(cfg_coarse.model.id_contrastive, str):
+                    experiment_name += f"{cfg_coarse.model.id_contrastive}"
+
 
         if not cfg_detail.model.use_landmarks and cfg_detail.model.train_coarse:
             experiment_name += "NoLmk"
@@ -605,12 +610,16 @@ def main():
             'data.num_workers=0',
             f'model.resume_training={path_to_resume_from is None}', # load the original DECA model
             'model.useSeg=False', # do not segment out the background from the coarse image
+            # 'model.shape_constrain_type=shuffle_expression',
             'model.background_from_input=input',
             '+model.detail_conditioning_type=adain',
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
-            # 'learning.batch_size_train=4',
-            'learning.train_K=1',
+            'learning.batch_size_train=4',
+            'learning.batch_size_val=4',
+            'learning.train_K=2',
+            'learning.val_K=2',
+            'learning.test_K=2',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
@@ -623,11 +632,12 @@ def main():
             # '+model.emo_feat_loss=l1_loss', # emonet feature loss
             # '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
             # '+model.id_metric=barlow_twins_headless',
-            '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
+            # '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
             '+model.id_metric=barlow_twins',
             '+model.id_trainable=True',
+            '+model.id_contrastive=True',
             # '+model.id_loss_start_step=3',
-            # '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
+            '+model.emo_feat_loss=cosine_similarity', # emonet feature loss
             # '+model/additional=au_loss_dual', # emonet feature loss
             # 'model.au_loss.feat_loss=cosine_similarity',  # emonet feature loss
             # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
@@ -658,7 +668,7 @@ def main():
             'model.background_from_input=input',
             '+model.detail_conditioning_type=adain',
             # 'learning.batch_size_train=4',
-            'learning.train_K=1',
+            # 'learning.train_K=1',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000',
             # '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early',
             '+model.emonet_model_path=/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early',
