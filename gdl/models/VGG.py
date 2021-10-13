@@ -27,10 +27,10 @@ class VGG19(nn.Module):
         self.net.eval()
         self.net.requires_grad_(False)
 
-    def requires_grad_(self: T, requires_grad: bool = True):
+    def requires_grad_(self, requires_grad: bool = True):
         return super().requires_grad_(False)
 
-    def train(self: T, mode: bool = True):
+    def train(self, mode: bool = True):
         return super().train(False)
 
     def forward(self, x):
