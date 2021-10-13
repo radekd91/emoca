@@ -68,7 +68,7 @@ class BarlowTwinsLossHeadless(nn.Module):
         self.bn = nn.BatchNorm1d(feature_size, affine=False)
         self.lambd = lambd
         self.batch_size = batch_size
-        if final_reduction not in ["sum", "mean"]:
+        if final_reduction not in ["sum", "mean", "mean_on_diag", "mean_off_diag"]:
             raise ValueError(f"Invalid reduction operation for Barlow Twins: '{self.final_reduction}'")
         self.final_reduction = final_reduction
 

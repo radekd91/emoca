@@ -439,7 +439,7 @@ def train_on_selected_sequences():
         # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         f'model.resume_training={resume_from == None}', # load the original DECA model
         'learning.early_stopping.patience=5',
-        # 'learning.train_K=1',
+        'learning.train_K=1',
         '+model.id_contrastive=true',
         'learning.train_K=2',
         'learning.val_K=2',
