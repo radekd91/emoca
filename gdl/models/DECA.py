@@ -323,6 +323,10 @@ class DecaModule(LightningModule):
         if 'landmark' in batch.keys():
             lmk = batch['landmark']
             lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+        else:
+            print("No landmarks here!!")
+            lmk = None
+
         if 'mask' in batch.keys():
             masks = batch['mask']
             masks = masks.view(-1, images.shape[-2], images.shape[-1])
@@ -430,7 +434,8 @@ class DecaModule(LightningModule):
                     images = torch.cat([images, images],
                                        dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
                     print(f"TRAINING: {training}")
-                    lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    if lmk is not None:
+                        lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
                     masks = torch.cat([masks, masks], dim=0)
 
                     ref_images_identity_idxs = np.concatenate([old_order, old_order])
@@ -460,8 +465,8 @@ class DecaModule(LightningModule):
                     ## append gt
                     images = torch.cat([images, images],
                                        dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
-
-                    lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    if lmk is not None:
+                        lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
                     masks = torch.cat([masks, masks], dim=0)
 
                     ref_images_identity_idxs = np.concatenate([old_order, new_order])
@@ -1605,9 +1610,10 @@ class DecaModule(LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         with torch.no_grad():
-            values = self.encode(batch, training=False)
-            values = self.decode(values, training=False)
-            losses_and_metrics = self.compute_loss(values, batch, training=False)
+            training = False
+            values = self.encode(batch, training=training)
+            values = self.decode(values, training=training)
+            losses_and_metrics = self.compute_loss(values, batch, training=training)
         #### self.log_dict(losses_and_metrics, on_step=False, on_epoch=True)
         # prefix = str(self.mode.name).lower()
         prefix = self._get_logging_prefix()
@@ -1671,10 +1677,12 @@ class DecaModule(LightningModule):
         stage_str = dataloader_str + 'test_'
 
         with torch.no_grad():
-            values = self.encode(batch, training=False)
-            values = self.decode(values, training=False)
+            training = False
+            testing = True
+            values = self.encode(batch, training=training)
+            values = self.decode(values, training=training)
             if 'mask' in batch.keys():
-                losses_and_metrics = self.compute_loss(values, batch, training=False, testing=True)
+                losses_and_metrics = self.compute_loss(values, batch, training=False, testing=testing)
                 # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
                 losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu().item() for key, value in losses_and_metrics.items()}
             else:
