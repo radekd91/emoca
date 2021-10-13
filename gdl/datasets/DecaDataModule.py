@@ -188,8 +188,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'papers-val' in dataset_list:
         papers = PaperVal(
             # data_path='/ps/scratch/face2d3d/ringnetpp/eccv(haven)/test_data/papers/papers_ring_6_elements_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path
         )
@@ -199,8 +199,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'celeb-val' in dataset_list:
         celeb = CelebVal(
             # data_path='/ps/scratch/face2d3d/texture_in_the_wild_code/celeb_ring_6_elements_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path
         )

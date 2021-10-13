@@ -963,8 +963,9 @@ class DecaModule(LightningModule):
                                                        ring_size=1) * self.deca.config.idw
                 if 'id_contrastive' in self.deca.config.keys() and bool(self.deca.config.id_contrastive):
                     if ring_size == 2:
-                        assert batch_size % 2 == 0
+                        assert effective_bs % 2 == 0
                         assert self.deca.id_loss.trainable
+                        has_been_shuffled = 'new_order' in codedict.keys()
 
                         idxs_a = torch.arange(0, images.shape[0], 2)  # indices of first images within the ring
                         idxs_b = torch.arange(1, images.shape[0], 2)  # indices of second images within the ring
@@ -978,16 +979,27 @@ class DecaModule(LightningModule):
                             losses['identity_contrastive_real'] = self.deca.id_loss(
                                 images_0,  # first images within the ring
                                 images_1,  # second images within the ring
-                                batch_size=idxs_a.numel(),
+                                batch_size=images_0.shape[0],
                                 ring_size=1) * self.deca.config.idw * 2
                         if self.deca.config.id_contrastive in [True, "synth", "both"]:
+
+                            if self.deca.config.shape_constrain_type in ['exchange', 'same']:
+                                # we can take all when identity has been exchange within rings
+                                overlay_0 = overlay[idxs_a]
+                                overlay_1 = overlay[idxs_b]
+                            else:
+                                #if the batch was double otherwise (global shuffling) we only take the first half
+                                # if batch_size * ring_size < effective_bs:
+                                overlay_0 = overlay[0:batch_size * ring_size:2]
+                                overlay_1 = overlay[1:batch_size * ring_size:2]
+
                             losses['identity_contrastive_synthetic'] = self.deca.id_loss(
-                                overlay[idxs_a],  # first images within the ring
-                                overlay[idxs_b],  # second images within the ring
-                                batch_size=idxs_a.numel(),
+                                overlay_0,  # first images within the ring
+                                overlay_1,  # second images within the ring
+                                batch_size=overlay_0.shape[0],
                                 ring_size=1) * self.deca.config.idw
 
-                        has_been_shuffled = 'new_order' in codedict.keys()
+
                         if has_been_shuffled:
                             new_order = codedict['new_order']
 
@@ -1004,16 +1016,20 @@ class DecaModule(LightningModule):
                                                          2 * new_order.shape[0])  # second half of the batch
                             else:
                                 raise NotImplementedError("Unexpected shape consistency value ")
+
+                            # if this doesn't go through, something went wrong with the shuffling indexations
+                            assert codedict["shapecode"][idxs_a_synth].allclose(codedict["shapecode"][idxs_b_synth])
+
                             losses['identity_contrastive_synthetic_shuffled'] = self.deca.id_loss(
                                 overlay[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
                                 overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
-                                batch_size=idxs_a.numel(),
+                                batch_size=idxs_a_synth.size,
                                 ring_size=1) * self.deca.config.idw
 
                             losses['identity_contrastive_synthetic2real_shuffled'] = self.deca.id_loss(
                                 images[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
                                 overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
-                                batch_size=idxs_a.numel(),
+                                batch_size=idxs_a_synth.size,
                                 ring_size=1) * self.deca.config.idw
                     elif ring_size > 2:
                         raise NotImplementedError("Contrastive loss does not support ring sizes > 2.")
@@ -1042,6 +1058,7 @@ class DecaModule(LightningModule):
 
             images = codedict["images"]
             predicted_images = codedict[image_key]
+            effective_bs = images.shape[0]
 
             if "ref_images_expression_idxs" in codedict.keys():
                 # in case there was shuffling, this ensures that the proper images are used for emotion loss
@@ -1077,7 +1094,8 @@ class DecaModule(LightningModule):
 
                 if self.deca.config.emo_contrastive in [True, "real", "both"]:
                     if ring_size == 2:
-                        assert batch_size % 2 == 0
+
+                        assert effective_bs % 2 == 0
 
                         if not isinstance(self.deca, ExpDECA):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
@@ -1091,29 +1109,42 @@ class DecaModule(LightningModule):
                                                    images_1,  # real images of second expressions in the ring
                                                    losses, metrics, f"{prefix}_contrastive_real",
                                                    va, expr7, with_grad=self.deca.config.use_emonet_loss,
-                                                   batch_size=bs, ring_size=rs)
+                                                   batch_size=images_0.shape[0], ring_size=1)
                     else:
                         print("[WARNING] Cannot compute real contrastive emotion loss because there is no ring!")
 
                 if self.deca.config.emo_contrastive in [True, "synth", "both"]:
 
-                    if rs == 2:
-                        assert bs % 2 == 0
+                    if ring_size == 2:
+                        assert effective_bs % 2 == 0
+
+                        idxs_a = torch.arange(0, images.shape[0], 2) # indices of first expressions within a ring
+                        idxs_b = torch.arange(1, images.shape[0], 2) # indices of second expressions within a ring
+
+                        if 'expression_constrain_type' in self.deca.config.keys() and \
+                                self.deca.config.expression_constrain_type in ['exchange', 'same']:
+                            # we can take all when identity has been exchange within rings
+                            predicted_images_0 = predicted_images[idxs_a]
+                            predicted_images_1 = predicted_images[idxs_b]
+                            raise RuntimeError("This should work but it was never tested or intended. Make sure this works.")
+                        else:
+                            # if the batch was double otherwise (global shuffling) we only take the first half
+                            # if batch_size * ring_size < effective_bs:
+                            predicted_images_0 = predicted_images[0:batch_size * ring_size:2]
+                            predicted_images_1 = predicted_images[1:batch_size * ring_size:2]
 
                         if not isinstance(self.deca, ExpDECA):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
                                                       "expression based, not identity based. This is not guaranteed "
                                                       "for vanilla DECA.")
 
-                        idxs_a = torch.arange(0, images.shape[0], 2) # indices of first expressions within a ring
-                        idxs_b = torch.arange(1, images.shape[0], 2) # indices of second expressions within a ring
-                        self._compute_emotion_loss(predicted_images[idxs_a],
+                        self._compute_emotion_loss(predicted_images_0,
                                                    # rec images of first expressions in the ring
-                                                   predicted_images[idxs_b],
+                                                   predicted_images_1,
                                                    # rec images of second expressions in the ring
                                                    losses, metrics, f"{prefix}_contrastive_synth",
                                                    va, expr7, with_grad=self.deca.config.use_emonet_loss,
-                                                   batch_size=bs, ring_size=rs)
+                                                   batch_size=predicted_images_1.shape[0], ring_size=1)
                     else:
                         print("[WARNING] Cannot compute synthetic contrastive emotion loss because there is no ring!")
 
@@ -1129,6 +1160,10 @@ class DecaModule(LightningModule):
                             idxs_a_synth = np.arange(new_order.shape[0])  # first half of the batch
                             idxs_b_synth = np.arange(new_order.shape[0],
                                                      2 * new_order.shape[0])  # second half of the batch
+
+                        # if this doesn't go through, something went wrong with the shuffling indexations
+                        assert codedict["expcode"][idxs_a_synth].allclose(codedict["expcode"][idxs_b_synth])
+
                         # the expressions at corresponding index positions of idxs_a_synth and idxs_b_synth should match now
                         self._compute_emotion_loss(predicted_images[idxs_a_synth],
                                                    # synthetic images of reconstructed expressions and corresponding identities
@@ -1137,7 +1172,7 @@ class DecaModule(LightningModule):
                                                    losses, metrics, f"{prefix}_contrastive_synth_shuffled",
                                                    va, expr7,
                                                    with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
-                                                   batch_size=bs, ring_size=rs)
+                                                   batch_size=idxs_a_synth.size, ring_size=1)
                         
                         self._compute_emotion_loss(images[idxs_a_synth],
                                                    # synthetic images of reconstructed expressions and corresponding identities
@@ -1146,7 +1181,8 @@ class DecaModule(LightningModule):
                                                    losses, metrics, f"{prefix}_contrastive_synth2real_shuffled",
                                                    va, expr7,
                                                    with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
-                                                   batch_size=bs, ring_size=rs)
+                                                   batch_size=idxs_a_synth.size,
+                                                   ring_size=1)
                         
 
             if va is not None:
@@ -1161,7 +1197,8 @@ class DecaModule(LightningModule):
                 self._compute_emotion_loss(images, predicted_translated_image, losses, metrics, f"{prefix}_translated",
                                            va, expr7,
                                            with_grad=self.deca.config.use_emonet_loss and self.deca._has_neural_rendering(),
-                                           batch_size=bs, ring_size=rs)
+                                           batch_size=bs,
+                                           ring_size=1)
 
                 # codedict[f"{prefix}_valence_input"] = self.emonet_loss.input_emotion['valence']
                 # codedict[f"{prefix}_arousal_input"] = self.emonet_loss.input_emotion['arousal']

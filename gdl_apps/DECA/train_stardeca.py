@@ -586,9 +586,9 @@ def main():
 
 
         coarse_override = [
-            'model/settings=coarse_train',
+            # 'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
-            # 'model/settings=coarse_train_expdeca',
+            'model/settings=coarse_train_expdeca',
             # 'model/settings=coarse_train_expdeca_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model/settings=coarse_train_expdeca_emomlp',
@@ -610,13 +610,13 @@ def main():
             'data.num_workers=0',
             f'model.resume_training={path_to_resume_from is None}', # load the original DECA model
             'model.useSeg=False', # do not segment out the background from the coarse image
-            # 'model.shape_constrain_type=shuffle_expression',
+            'model.shape_constrain_type=shuffle_expression',
             'model.background_from_input=input',
             # '+model.detail_conditioning_type=adain',
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
-            'learning.batch_size_train=4',
-            'learning.batch_size_val=4',
+            'learning.batch_size_train=2',
+            'learning.batch_size_val=2',
             'learning.train_K=2',
             'learning.val_K=2',
             'learning.test_K=2',
@@ -633,7 +633,7 @@ def main():
             # '+model.emo_feat_loss=barlow_twins_headless', # emonet feature loss
             # '+model.id_metric=barlow_twins_headless',
             '+model.emo_feat_loss=barlow_twins',  # emonet feature loss
-            '+model.emo_contrastive=false',  # emonet feature contrastive
+            '+model.emo_contrastive=True',  # emonet feature contrastive
             '+model.id_metric=barlow_twins',
             '+model.id_trainable=True',
             '+model.id_contrastive=True',
@@ -644,9 +644,9 @@ def main():
             # 'model.au_loss.feat_loss=kl_div',  # emonet feature loss
                               ]
         detail_override = [
-            'model/settings=detail_train',
+            # 'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
-            # 'model/settings=detail_train_expdeca',
+            'model/settings=detail_train_expdeca',
             # 'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
