@@ -55,7 +55,7 @@ def main():
     # run_names_new['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA with VGG loss"
     # run_names_new['2021_08_29_10-31-15_DECAStar_DecaD_VGGl_DeSegrend_Deex_early'] = "DECA SWIN with VGG loss"
     # run_names_new['2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early'] = "DECAStar"
-    # run_names_new["2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECA SWINT T"
+    run_names_new["2021_08_29_00-49-03_DECA_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = ["DECA SWINT T", "detail"]
     # run_names_new["2021_08_29_00-48-58_DECAStar_DecaD_EFswin_t_EDswin_t_DeSegrend_Deex_early"] = "DECAStar SWINT T"
     # run_names_new["2021_08_29_19-47-21_DECA_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = "DECA SWIN-S + VGG loss"
     # run_names_new["2021_08_29_19-47-28_DECAStar_DecaD_EFswin_s_EDswin_s_VGGl_DeSegrend_Deex_early"] = ["DECAStar SWIN-S + VGG loss", "detail"]
@@ -63,7 +63,7 @@ def main():
     # run_names_new["2021_10_08_18-59-03_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-s10000_Aug_early"] = ["BTH late", "coarse"]
     run_names_new["2021_10_08_18-25-12_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"]  = ["BTH", "coarse"]
     run_names_new["2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_Aug_early"]  = ["BT finetune id", "coarse"]
-    run_names_new["2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-ft_Aug_early"]  = ["BTH finetune id", "coarse"]
+    # run_names_new["2021_10_08_16-40-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH-ft_Aug_early"]  = ["BTH finetune id", "coarse"]
     # run_names_new[
         # "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-41-54_DECA_DecaD_NoRing_VGGl_EmoB_EmoCnn_vgg_du_F2bar_DeSegrend_idBTH_Aug_early"]
     # run_names_new[
@@ -75,8 +75,26 @@ def main():
     run_names_new["2021_10_08_12-39-18_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] = ["cos id", "coarse"]
     # run_names_new[
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_08_12-39-06_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]
-    run_names_new["2021_10_08_12-39-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"] =  ["BTH", "coarse"]
-    # run_names_new["2021_10_08_12-38-50_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"]
+    # run_names_new["2021_10_08_12-39-04_DECA_DecaD_NoRing_VGGl_DeSegrend_idBTH_Aug_early"] =  ["BTH", "coarse"]
+    run_names_new["2021_10_08_12-38-50_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"]  =  ["BT", "coarse"]
+
+    run_names_new["2021_10_11_10-48-59_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 0.5", "coarse"]
+    run_names_new["2021_10_11_10-48-48_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 1", "coarse"]
+    run_names_new["2021_10_11_10-48-46_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 0.3", "coarse"]
+    run_names_new["2021_10_11_10-48-37_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 0.1", "coarse"]
+    run_names_new["2021_10_11_10-48-33_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 0.05", "coarse"]
+    run_names_new["2021_10_11_10-48-32_DECA_DecaD_NoRing_VGGl_DeSegrend_cosine_similarity_Aug_early"] =  ["cos 0", "coarse"]
+    run_names_new["2021_10_10_21-01-48_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"] =  ["BT 0.3", "coarse"]
+    run_names_new["2021_10_10_21-01-38_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"] =  ["BT 0.1", "coarse"]
+    # run_names_new["2021_10_10_21-01-32_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]=  ["l1 0.3", "coarse"]
+    # run_names_new["2021_10_10_21-01-19_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]=  ["l1 0.1", "coarse"]
+    # run_names_new["2021_10_10_20-58-06_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]=  ["l1 1", "coarse"]
+    # run_names_new["2021_10_10_20-57-57_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]=  ["l1 0.5", "coarse"]
+    # run_names_new["2021_10_10_20-57-36_DECA_DecaD_NoRing_VGGl_DeSegrend_l1_loss_Aug_early"]=  ["l1 0.05", "coarse"]
+    run_names_new["2021_10_10_20-57-27_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"] =  ["BT 1", "coarse"]
+    run_names_new["2021_10_10_20-57-18_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"] =  ["BT 0.5", "coarse"]
+    run_names_new["2021_10_10_20-57-17_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT_Aug_early"] =  ["BT 0.05", "coarse"]
+
 
     use_dense_topology = False
     # use_dense_topology = True

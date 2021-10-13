@@ -417,13 +417,13 @@ def train_on_selected_sequences():
     # emo_feature_loss_type = 'barlow_twins_headless'
     # emo_feature_loss_type = 'barlow_twins'
 
-    id_feature_loss_type = 'cosine_similarity'
+    # id_feature_loss_type = 'cosine_similarity'
     # id_feature_loss_type = 'l1_loss'
     # id_feature_loss_type = 'barlow_twins_headless'
-    # id_feature_loss_type = 'barlow_twins'
+    id_feature_loss_type = 'barlow_twins'
 
-    id_trainable = 'False'
-    # id_trainable = 'True'
+    # id_trainable = 'False'
+    id_trainable = 'True'
 
     fixed_overrides_coarse = [
         'model/settings=coarse_train',
@@ -439,17 +439,21 @@ def train_on_selected_sequences():
         # 'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         f'model.resume_training={resume_from == None}', # load the original DECA model
         'learning.early_stopping.patience=5',
-        'learning.train_K=1',
-        'learning.batch_size_train=16',
+        # 'learning.train_K=1',
+        '+model.id_contrastive=true',
+        'learning.train_K=2',
+        'learning.val_K=2',
+        # 'learning.batch_size_train=16',
+        'learning.batch_size_train=8',
         # 'model.useSeg=False',
         'model.background_from_input=input',
         f'+model.emonet_model_path={emonet}',
         # '+model.emoloss_trainable=true',
-        '+model.emoloss_dual=true',
+        # '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
         dataset_coarse,
-        augmentation,
+        # augmentation,
         # sampler,
         # '+model.normalize_features=true',  # normalize emonet features before applying loss
         # '+model.emo_feat_loss=l1_loss', # emonet feature loss
@@ -524,8 +528,10 @@ def train_on_selected_sequences():
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
     # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
 
-    id_weights = [0.0, 0.05, 0.1, 0.3, 0.5, 1.0]
+    # id_weights = [0.0, 0.05, 0.1, 0.3, 0.5, 1.0]
     # id_weights = [0.1, 0.3]
+    id_weights = [0.3]
+    # id_weights = [0.2]
 
     config_pairs = []
     for id_weight in id_weights:

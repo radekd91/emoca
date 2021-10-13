@@ -25,7 +25,7 @@ class BarlowTwins(nn.Module):
 
 
 class BarlowTwinsLoss(nn.Module):
-    def __init__(self, feature_size=2048, layer_sizes=None, final_reduction='mean'):
+    def __init__(self, feature_size=2048, layer_sizes=None, final_reduction='mean_on_diag'):
         super().__init__()
         if layer_sizes is None:
             # layer_sizes = 3*[2048]
@@ -61,7 +61,7 @@ class BarlowTwinsLoss(nn.Module):
 
 class BarlowTwinsLossHeadless(nn.Module):
 
-    def __init__(self, feature_size, batch_size=None, lambd=0.005, final_reduction='mean'):
+    def __init__(self, feature_size, batch_size=None, lambd=0.005, final_reduction='mean_on_diag'):
         super().__init__()
         # normalization layer for the representations z1 and z2
         # the affine=False means there are no learnable weights in the BN layer
