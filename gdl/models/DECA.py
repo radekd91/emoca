@@ -1720,7 +1720,7 @@ class DecaModule(LightningModule):
         return self.process_
 
 
-    def training_step(self, batch, batch_idx): #, debug=True):
+    def training_step(self, batch, batch_idx, *args, **kwargs): #, debug=True):
         values = self.encode(batch, training=True)
         values = self.decode(values, training=True)
         losses_and_metrics = self.compute_loss(values, batch, training=True)

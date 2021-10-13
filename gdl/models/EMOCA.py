@@ -119,7 +119,7 @@ class Emoca(pl.LightningModule):
 
 
 
-    def training_step(self, batch, batch_idx):  # , debug=True):
+    def training_step(self, batch, batch_idx, *args, **kwargs):  # , debug=True):
         values = self.encode(batch)
         values = self.decode(values)
         losses_and_metrics = self.compute_loss(values)

@@ -357,7 +357,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         losses["total"] = loss
         return losses, metrics
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, *args, **kwargs):
         values = self.forward(batch)
         # valence_pred = values["valence"]
         # arousal_pred = values["arousal"]
