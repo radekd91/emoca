@@ -96,11 +96,14 @@ def main():
     # ## resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-49-02_DECAStar_DecaD_EFswin_t_EDswin_t_VGGl_DeSegrend_Deex_early"] # have not yet crashed
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-49-01_DECA_DecaD_EFswin_t_EDswin_t_VGGl_noPho_DeSegrend_Deex_early"]
     #
-
-
     ## resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/"]
 
-
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_13_10-49-29_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_13_10-49-17_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-52-16_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-05-00_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_11_15-19-12_DECA_DecaD_DDadain_VGGl_DeSegrend_Deex_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_13_15-05-59_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
 
@@ -129,44 +132,44 @@ def main():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-53-04_DECA_DecaD_EFswin_s_EDswin_s_DeSegrend_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
 
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-31_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-15_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-10_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-24-47_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-45_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-39_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-38_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-37_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-25_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-24_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-59_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-32_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-31_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-15_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-10_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-29_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-25-08_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-24-47_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-45_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-41_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-39_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-38_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-37_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-35_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-25_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-23-24_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-59_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-20-32_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_early"]
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)

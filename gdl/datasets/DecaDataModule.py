@@ -146,8 +146,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'now-val' in dataset_list:
         now = NoWVal(
             # data_path='/ps/scratch/face2d3d/texture_in_the_wild_code/NoW_validation/image_paths_ring_6_elements.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -156,8 +156,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     # if data_set_name == 'ffhq-val':
     if 'ffhq-val' in dataset_list:
         ffhq = FFHQ_val(
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -167,8 +167,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'gif-val' in dataset_list:
         gif = GIF_val(
             # data_path='/is/cluster/scratch/partha/gif_eval_data_toheiven/gif_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -178,8 +178,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'now-test' in dataset_list:
         now = NoWTest(
             # data_path='/ps/scratch/face2d3d/ringnetpp/eccv/test_data/evaluation/NoW_Dataset/final_release_version/test_image_paths_ring_6_elements.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.test_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path,
         )

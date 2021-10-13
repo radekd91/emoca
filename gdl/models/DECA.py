@@ -955,54 +955,68 @@ class DecaModule(LightningModule):
                 #                                        ring_size=ring_size) * self.deca.config.idw
 
                 if "ref_images_identity_idxs" in codedict.keys():
+                    # in case there was shuffling, this ensures that the proper images are used for identity loss
                     images_ = images[codedict["ref_images_identity_idxs"]]
                 else:
                     images_ = images
                 losses['identity'] = self.deca.id_loss(overlay, images_, batch_size=effective_bs,
                                                        ring_size=1) * self.deca.config.idw
                 if 'id_contrastive' in self.deca.config.keys() and bool(self.deca.config.id_contrastive):
-                    assert ring_size == 2
-                    assert batch_size % 2 == 0
-                    assert self.deca.id_loss.trainable
+                    if ring_size == 2:
+                        assert batch_size % 2 == 0
+                        assert self.deca.id_loss.trainable
 
-                    idxs_a = torch.arange(0, images.shape[0], 2)  # indices of first images within the ring
-                    idxs_b = torch.arange(1, images.shape[0], 2)  # indices of second images within the ring
+                        idxs_a = torch.arange(0, images.shape[0], 2)  # indices of first images within the ring
+                        idxs_b = torch.arange(1, images.shape[0], 2)  # indices of second images within the ring
 
-                    # WARNING - this assumes the ring is identity-based
-                    if self.deca.config.id_contrastive in [True, "real", "both"]:
-                        losses['identity_contrastive_real'] = self.deca.id_loss(
-                            images[idxs_a],  # first images within the ring
-                            images[idxs_b],  # second images within the ring
-                            batch_size=idxs_a.numel(),
-                            ring_size=1) * self.deca.config.idw * 2
-                    if self.deca.config.id_contrastive in [True, "synth", "both"]:
-                        losses['identity_contrastive_synthetic'] = self.deca.id_loss(
-                            overlay[idxs_a],  # first images within the ring
-                            overlay[idxs_b],  # second images within the ring
-                            batch_size=idxs_a.numel(),
-                            ring_size=1) * self.deca.config.idw
+                        # WARNING - this assumes the ring is identity-based
+                        if self.deca.config.id_contrastive in [True, "real", "both"]:
+                            # we are taking this from the original batch dict because we do not care about the
+                            # shuffled, duplicated samples (they don't have to be doubled)
+                            images_0 = batch["image"][:, 0, ...]
+                            images_1 = batch["image"][:, 1, ...]
+                            losses['identity_contrastive_real'] = self.deca.id_loss(
+                                images_0,  # first images within the ring
+                                images_1,  # second images within the ring
+                                batch_size=idxs_a.numel(),
+                                ring_size=1) * self.deca.config.idw * 2
+                        if self.deca.config.id_contrastive in [True, "synth", "both"]:
+                            losses['identity_contrastive_synthetic'] = self.deca.id_loss(
+                                overlay[idxs_a],  # first images within the ring
+                                overlay[idxs_b],  # second images within the ring
+                                batch_size=idxs_a.numel(),
+                                ring_size=1) * self.deca.config.idw
 
-                    has_been_shuffled = 'new_order' in codedict.keys()
-                    if has_been_shuffled:
-                        new_order = codedict['new_order']
-                        if self.deca.config.shape_constrain_type == 'shuffle_expression':
-                            idxs_a_synth = np.arange(new_order.shape[0])  # first half of the batch
-                            idxs_b_synth = np.arange(new_order.shape[0],
-                                                     2 * new_order.shape[0])  # second half of the batch
-                        elif self.deca.config.shape_constrain_type == 'shuffle_shape':
-                            idxs_a_synth = new_order  # shuffled first half of the batch
-                            idxs_b_synth = np.arange(new_order.shape[0],
-                                                     2 * new_order.shape[0])  # second half of the batch
-                        else:
-                            raise NotImplementedError("Unexpected shape consistency value ")
-                        losses['identity_contrastive_synthetic_shuffled'] = self.deca.id_loss(
-                            overlay[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
-                            overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
-                            batch_size=idxs_a.numel(),
-                            ring_size=1) * self.deca.config.idw
+                        has_been_shuffled = 'new_order' in codedict.keys()
+                        if has_been_shuffled:
+                            new_order = codedict['new_order']
 
-                elif ring_size > 2:
-                    raise NotImplementedError("Contrastive loss does not support ring sizes > 2.")
+                            # TODO: compare the idxs to these:
+                            # codedict["ref_images_identity_idxs"]
+
+                            if self.deca.config.shape_constrain_type == 'shuffle_expression':
+                                idxs_a_synth = np.arange(new_order.shape[0])  # first half of the batch
+                                idxs_b_synth = np.arange(new_order.shape[0],
+                                                         2 * new_order.shape[0])  # second half of the batch
+                            elif self.deca.config.shape_constrain_type == 'shuffle_shape':
+                                idxs_a_synth = new_order  # shuffled first half of the batch
+                                idxs_b_synth = np.arange(new_order.shape[0],
+                                                         2 * new_order.shape[0])  # second half of the batch
+                            else:
+                                raise NotImplementedError("Unexpected shape consistency value ")
+                            losses['identity_contrastive_synthetic_shuffled'] = self.deca.id_loss(
+                                overlay[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
+                                overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
+                                batch_size=idxs_a.numel(),
+                                ring_size=1) * self.deca.config.idw
+
+                            losses['identity_contrastive_synthetic2real_shuffled'] = self.deca.id_loss(
+                                images[idxs_a_synth],  # synthetic images of identities with reconstructed expressions
+                                overlay[idxs_b_synth],  # synthetic images of identities with shuffled expressions
+                                batch_size=idxs_a.numel(),
+                                ring_size=1) * self.deca.config.idw
+                    elif ring_size > 2:
+                        raise NotImplementedError("Contrastive loss does not support ring sizes > 2.")
         return losses
 
 
@@ -1030,13 +1044,15 @@ class DecaModule(LightningModule):
             predicted_images = codedict[image_key]
 
             if "ref_images_expression_idxs" in codedict.keys():
+                # in case there was shuffling, this ensures that the proper images are used for emotion loss
                 images_ = images[codedict["ref_images_expression_idxs"]]
             else:
                 images_ = images
+            effective_bs = images.shape[0]
             self._compute_emotion_loss(images_, predicted_images, losses, metrics, f"{prefix}",
                                        va, expr7,
                                        with_grad=with_grad,
-                                       batch_size=batch_size, ring_size=ring_size)
+                                       batch_size=effective_bs, ring_size=1)
 
             codedict[f"{prefix}_valence_input"] = self.emonet_loss.input_emotion['valence']
             codedict[f"{prefix}_arousal_input"] = self.emonet_loss.input_emotion['arousal']
@@ -1053,10 +1069,7 @@ class DecaModule(LightningModule):
                 assert self.emonet_loss.trainable or (
                             hasattr(self.emonet_loss, 'clone_is_trainable') and self.emonet_lossclone_is_trainable)
 
-                idxs_a = torch.arange(0, images.shape[0], 2)
-                idxs_b = torch.arange(1, images.shape[0], 2)
-
-                has_been_shuffled = 'new_order' in new_order.keys()
+                has_been_shuffled = 'new_order' in codedict.keys()
 
                 # if self.deca.config.shape_constrain_type == 'shuffle_expression' and has_been_shuffled:
                 #     new_order = codedict['new_order']
@@ -1069,9 +1082,13 @@ class DecaModule(LightningModule):
                         if not isinstance(self.deca, ExpDECA):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
                                                       "expression based, not identity based. This is not guaranteed "
-                                                      "for vanilla DECA.")
-                        self._compute_emotion_loss(images[idxs_a_real],  # real images of first expressions in the ring
-                                                   images[idxs_b_real],  # real images of second expressions in the ring
+                                                      "for vanilla DECA (or its datasets).")
+                        # we are taking this from the original batch dict because we do not care about the
+                        # shuffled, duplicated samples (they don't have to be doubled)
+                        images_0 = batch["image"][:, 0, ...]
+                        images_1 = batch["image"][:, 1, ...]
+                        self._compute_emotion_loss(images_0,  # real images of first expressions in the ring
+                                                   images_1,  # real images of second expressions in the ring
                                                    losses, metrics, f"{prefix}_contrastive_real",
                                                    va, expr7, with_grad=self.deca.config.use_emonet_loss,
                                                    batch_size=bs, ring_size=rs)
@@ -1087,15 +1104,18 @@ class DecaModule(LightningModule):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
                                                       "expression based, not identity based. This is not guaranteed "
                                                       "for vanilla DECA.")
-                        self._compute_emotion_loss(predicted_images[idxs_a_real],
+
+                        idxs_a = torch.arange(0, images.shape[0], 2) # indices of first expressions within a ring
+                        idxs_b = torch.arange(1, images.shape[0], 2) # indices of second expressions within a ring
+                        self._compute_emotion_loss(predicted_images[idxs_a],
                                                    # rec images of first expressions in the ring
-                                                   predicted_images[idxs_b_real],
+                                                   predicted_images[idxs_b],
                                                    # rec images of second expressions in the ring
                                                    losses, metrics, f"{prefix}_contrastive_synth",
                                                    va, expr7, with_grad=self.deca.config.use_emonet_loss,
                                                    batch_size=bs, ring_size=rs)
                     else:
-                        print("[WARNING] Cannot compute real contrastive emotion loss because there is no ring!")
+                        print("[WARNING] Cannot compute synthetic contrastive emotion loss because there is no ring!")
 
                     if has_been_shuffled:
                         new_order = codedict['new_order']
@@ -1118,6 +1138,16 @@ class DecaModule(LightningModule):
                                                    va, expr7,
                                                    with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
                                                    batch_size=bs, ring_size=rs)
+                        
+                        self._compute_emotion_loss(images[idxs_a_synth],
+                                                   # synthetic images of reconstructed expressions and corresponding identities
+                                                   predicted_images[idxs_b_synth],
+                                                   # synthetic images of reconstructed expressions and shuffled identities
+                                                   losses, metrics, f"{prefix}_contrastive_synth2real_shuffled",
+                                                   va, expr7,
+                                                   with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
+                                                   batch_size=bs, ring_size=rs)
+                        
 
             if va is not None:
                 codedict[f"{prefix}_valence_gt"] = va[:, 0]
