@@ -244,10 +244,10 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
 
 
-    accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
+    # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp2'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp'
     # accelerator = None if cfg.learning.num_gpus == 1 else 'ddp_spawn' # ddp only seems to work for single .fit/test calls unfortunately,
-    # accelerator = None if cfg.learning.num_gpus == 1 else 'dp'  # ddp only seems to work for single .fit/test calls unfortunately,
+    accelerator = None if cfg.learning.num_gpus == 1 else 'dp'  # ddp only seems to work for single .fit/test calls unfortunately,
 
     # if accelerator is not None and 'LOCAL_RANK' not in os.environ.keys():
     #     print("SETTING LOCAL_RANK to 0 MANUALLY!!!!")
