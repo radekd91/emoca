@@ -348,8 +348,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
                 visdict[f"{mode_}_test_geometry_detail"]._caption += caption
 
         if isinstance(self.logger, WandbLogger):
-            if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                self.logger.log_metrics(visdict)
+            # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            #     self.logger.log_metrics(visdict)
+            self.log_dict(visdict)
         return visdict
 
     # def test_step(self, batch, batch_idx, dataloader_idx=None):

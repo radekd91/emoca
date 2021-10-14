@@ -1750,9 +1750,10 @@ class DecaModule(LightningModule):
                 vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
                 # image = Image(grid_image, caption="full visualization")
                 # vis_dict[prefix + '_val_' + "visualization"] = image
-                if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                        self.logger.log_metrics(vis_dict)
+                # if isinstance(self.logger, WandbLogger):
+                #     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                #         self.logger.log_metrics(vis_dict)
+                self.log_dict(vis_dict)
                 # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
@@ -1818,8 +1819,9 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[ prefix + '_' + stage_str + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                        self.logger.log_metrics(visdict)#, step=self.global_step)
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    #     self.logger.log_metrics(visdict)#, step=self.global_step)
+                    self.log_dict(visdict)
         return None
 
     @property
@@ -1871,8 +1873,9 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[prefix + '_test_' + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                        self.logger.log_metrics(visdict)#, step=self.global_step)
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    #     self.logger.log_metrics(visdict)#, step=self.global_step)
+                    self.log_dict(visdict)
 
  
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step

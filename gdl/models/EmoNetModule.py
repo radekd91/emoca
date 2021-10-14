@@ -146,6 +146,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
             vis_dict[name] = im2log
 
         if isinstance(self.logger, WandbLogger):
-            if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                self.logger.log_metrics(vis_dict)
+            # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            #     self.logger.log_metrics(vis_dict)
+            self.log_dict(visdict)
         return vis_dict
