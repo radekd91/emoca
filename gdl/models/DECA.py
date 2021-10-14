@@ -1757,7 +1757,7 @@ class DecaModule(LightningModule):
                     # if not torch.distributed.is_initialized() or pytorch_lightning.plugins.environments.cluster_environment.global_rank() == 0:
                     env = le.LightningEnvironment()
                     if env.global_rank() == 0:
-                        # print(f"RANK: {torch.distributed.get_rank()}")
+                        print(f"RANK: {env.global_rank()}")
                         self.logger.log_metrics(vis_dict)
                         self.logger.experiment.log(vis_dict)
 
