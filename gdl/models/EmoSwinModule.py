@@ -214,10 +214,10 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
                 name += "/dataloader_idx_" + str(dataloader_idx)
             vis_dict[name] = im2log
 
-        if isinstance(self.logger, WandbLogger):
-            # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-            env = le.LightningEnvironment()
-            if env.global_rank() == 0:
-                self.logger.log_metrics(vis_dict)
-            # self.log_dict(vis_dict, sync_dist=True)
+        # if isinstance(self.logger, WandbLogger):
+        #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+        #     env = le.LightningEnvironment()
+        #     if env.global_rank() == 0:
+        #         self.logger.log_metrics(vis_dict)
+        #     # self.log_dict(vis_dict, sync_dist=True)
         return vis_dict

@@ -348,11 +348,11 @@ class EmoDECA(EmotionRecognitionBaseModule):
             if f"{mode_}_test_geometry_detail" in visdict.keys():
                 visdict[f"{mode_}_test_geometry_detail"]._caption += caption
 
-        if isinstance(self.logger, WandbLogger):
-            # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-            env = le.LightningEnvironment()
-            if env.global_rank() == 0:
-                self.logger.log_metrics(visdict)
+        # if isinstance(self.logger, WandbLogger):
+        #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+        #     env = le.LightningEnvironment()
+        #     if env.global_rank() == 0:
+        #         self.logger.log_metrics(visdict)
             # self.log_dict(visdict, sync_dist=True)
         return visdict
 
