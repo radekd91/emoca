@@ -323,9 +323,6 @@ class DecaModule(LightningModule):
         if 'landmark' in batch.keys():
             lmk = batch['landmark']
             lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
-        else:
-            print("No landmarks here!!")
-            lmk = None
 
         if 'mask' in batch.keys():
             masks = batch['mask']
@@ -1611,7 +1608,6 @@ class DecaModule(LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         with torch.no_grad():
             training = False
-            print(f"Validation: {training}")
             values = self.encode(batch, training=training)
             values = self.decode(values, training=training)
             losses_and_metrics = self.compute_loss(values, batch, training=training)

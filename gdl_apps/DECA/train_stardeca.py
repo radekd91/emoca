@@ -615,7 +615,7 @@ def main():
             # '+model.detail_conditioning_type=adain',
             # 'learning.early_stopping.patience=5',
             'learning/logging=none',
-            'learning.num_gpus=2',
+            # 'learning.num_gpus=2',
             'learning.batch_size_train=4',
             'learning.batch_size_val=4',
             'learning.train_K=2',

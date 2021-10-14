@@ -515,9 +515,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             on_epoch = True
             on_step = False
             self.log_dict({f"{stage}_loss_" + key: value for key, value in losses.items()}, on_epoch=on_epoch,
-                          on_step=on_step)
+                          on_step=on_step, sync_dist=True)
             self.log_dict({f"{stage}_metric_" + key: value for key, value in metrics.items()}, on_epoch=on_epoch,
-                          on_step=on_step)
+                          on_step=on_step, sync_dist=True)
         else:
             on_epoch = False
             on_step = True
