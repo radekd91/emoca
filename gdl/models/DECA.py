@@ -231,7 +231,9 @@ class DecaModule(LightningModule):
 
     def _expression_ring_exchange(self, original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, affectnetexp, detailcode=None, exprw=None):
+                                  images, cam, lmk, masks, va, expr7, affectnetexp,
+                                  detailcode=None, detailemocode=None, exprw=None):
+        # THIS RING EXCHANGE IS DESIGNED FOR
         new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
         new_order = new_order.flatten()
         expcode_new = expcode[new_order]
@@ -293,11 +295,15 @@ class DecaModule(LightningModule):
             exprw = torch.cat([exprw, exprw[new_order]], dim=0)
 
         if detailcode is not None:
-            #TODO: to exchange or not to exchange, that is the question, the answer is probably yes
+            #TODO: to exchange or not to exchange, that is the question, the answer is probably NO
+            detailcode = torch.cat([detailcode, detailcode], dim=0)
+            # detailcode = torch.cat([detailcode, detailcode[new_order]], dim=0)
+        if detailemocode is not None:
+            # TODO: to exchange or not to exchange, that is the question, the answer is probably YES
+            detailemocode = torch.cat([detailemocode, detailemocode[new_order]], dim=0)
 
-            # detailcode = torch.cat([detailcode, detailcode], dim=0)
-            detailcode = torch.cat([detailcode, detailcode[new_order]], dim=0)
-        return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw
+        return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, \
+               detailcode, detailemocode, exprw
 
         # return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7
 
@@ -498,7 +504,9 @@ class DecaModule(LightningModule):
 
         # -- detail
         if self.mode == DecaMode.DETAIL:
-            detailcode = self.deca.E_detail(images)
+            all_detailcode = self.deca.E_detail(images)
+            detailcode = all_detailcode[:, :self.deca.n_detail]
+            detailemocode = all_detailcode[:, self.deca.n_detail:(self.deca.n_detail + self.deca.n_detail_emo)]
 
             if training:
                 if self.deca.config.detail_constrain_type == 'exchange':
@@ -514,8 +522,8 @@ class DecaModule(LightningModule):
                         [np.random.permutation(K) + i * K for i in range(original_batch_size)])
                     new_order = new_order.flatten()
                     detailcode_new = detailcode[new_order]
-                    # import ipdb; ipdb.set_trace()
                     detailcode = torch.cat([detailcode, detailcode_new], dim=0)
+                    detailemocode = torch.cat([detailemocode, detailemocode], dim=0)
                     ## append new shape code data
                     shapecode = torch.cat([shapecode, shapecode], dim=0)
                     texcode = torch.cat([texcode, texcode], dim=0)
@@ -534,12 +542,96 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
+                elif self.deca.config.detail_constrain_type == 'shuffle_expression':
+                    new_order = np.random.permutation(K*original_batch_size)
+                    old_order = np.arange(K*original_batch_size)
+                    while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
+                        new_order = np.random.permutation(K * original_batch_size)
+                    codedict['new_order'] = new_order
+                    # exchange expression
+                    expcode_new = expcode[new_order]
+                    expcode = torch.cat([expcode, expcode_new], dim=0)
+
+                    # exchange emotion code, but not (identity-based) detailcode
+                    detailemocode_new = detailemocode[new_order]
+                    detailemocode = torch.cat([detailemocode, detailemocode_new], dim=0)
+                    detailcode = torch.cat([detailcode, detailcode], dim=0)
+
+                    # exchange jaw pose (but not global pose)
+                    global_pose = posecode[:, :3]
+                    jaw_pose = posecode[:, 3:]
+                    jaw_pose_new = jaw_pose[new_order]
+                    jaw_pose = torch.cat([jaw_pose, jaw_pose_new], dim=0)
+                    global_pose = torch.cat([global_pose, global_pose], dim=0)
+                    posecode = torch.cat([global_pose, jaw_pose], dim=1)
+
+
+                    ## duplicate the rest
+                    shapecode = torch.cat([shapecode, shapecode], dim=0)
+                    texcode = torch.cat([texcode, texcode], dim=0)
+                    cam = torch.cat([cam, cam], dim=0)
+                    lightcode = torch.cat([lightcode, lightcode], dim=0)
+                    ## duplicate gt if any
+                    images = torch.cat([images, images],
+                                       dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+                    print(f"TRAINING: {training}")
+                    if lmk is not None:
+                        lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    masks = torch.cat([masks, masks], dim=0)
+
+                    ref_images_identity_idxs = np.concatenate([old_order, old_order])
+                    ref_images_expression_idxs = np.concatenate([old_order, new_order])
+                    codedict["ref_images_identity_idxs"] = ref_images_identity_idxs
+                    codedict["ref_images_expression_idxs"] = ref_images_expression_idxs
+
+                    if va is not None:
+                        va = torch.cat([va, va[new_order]], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
+
+                elif self.deca.config.detail_constrain_type == 'shuffle_shape':
+                    new_order = np.random.permutation(K*original_batch_size)
+                    old_order = np.arange(K*original_batch_size)
+                    while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
+                        new_order = np.random.permutation(K * original_batch_size)
+                    codedict['new_order'] = new_order
+                    shapecode_new = shapecode[new_order]
+                    ## append new shape code data
+                    shapecode = torch.cat([shapecode, shapecode_new], dim=0)
+
+                    # exchange (identity-based) detailcode, but not emotion code
+                    detailcode_new = detailcode[new_order]
+                    detailcode = torch.cat([detailcode, detailcode_new], dim=0)
+                    detailemocode = torch.cat([detailemocode, detailemocode], dim=0)
+
+                    texcode = torch.cat([texcode, texcode], dim=0)
+                    expcode = torch.cat([expcode, expcode], dim=0)
+                    posecode = torch.cat([posecode, posecode], dim=0)
+                    cam = torch.cat([cam, cam], dim=0)
+                    lightcode = torch.cat([lightcode, lightcode], dim=0)
+                    ## append gt
+                    images = torch.cat([images, images],
+                                       dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+                    if lmk is not None:
+                        lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    masks = torch.cat([masks, masks], dim=0)
+
+                    ref_images_identity_idxs = np.concatenate([old_order, new_order])
+                    ref_images_expression_idxs = np.concatenate([old_order, old_order])
+                    codedict["ref_images_identity_idxs"] = ref_images_identity_idxs
+                    codedict["ref_images_expression_idxs"] = ref_images_expression_idxs
+
+                    if va is not None:
+                        va = torch.cat([va, va], dim=0)
+                    if expr7 is not None:
+                        expr7 = torch.cat([expr7, expr7], dim=0)
+
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
-                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw = \
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, detailemocode, exprw = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, exprw)
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, detailcode, detailemocode, exprw)
 
 
         codedict['shapecode'] = shapecode
@@ -550,6 +642,7 @@ class DecaModule(LightningModule):
         codedict['lightcode'] = lightcode
         if self.mode == DecaMode.DETAIL:
             codedict['detailcode'] = detailcode
+            codedict['detailemocode'] = detailemocode
         codedict['images'] = images
         if 'mask' in batch.keys():
             codedict['masks'] = masks
@@ -665,6 +758,7 @@ class DecaModule(LightningModule):
 
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
+            detailemocode = codedict['detailemocode']
             #TODO: what are you conditioning on?
             detail_conditioning_list = []
             if 'globalpose' in self.detail_conditioning:
@@ -679,9 +773,12 @@ class DecaModule(LightningModule):
             if isinstance(self.deca.D_detail, Generator):
                 if 'detail' in self.detail_conditioning:
                     detail_conditioning_list += [detailcode]
+                if 'detailemo' in self.detailemo_conditioning:
+                    detail_conditioning_list += [detailemocode]
                 uv_z = self.deca.D_detail(torch.cat(detail_conditioning_list, dim=1))
             elif isinstance(self.deca.D_detail, GeneratorAdaIn):
-                uv_z = self.deca.D_detail(z=detailcode, cond=torch.cat(detail_conditioning_list, dim=1))
+                uv_z = self.deca.D_detail(z=torch.cat([detailcode, detailemocode], dim=1),
+                                          cond=torch.cat(detail_conditioning_list, dim=1))
             else:
                 raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
@@ -1654,7 +1751,8 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # vis_dict[prefix + '_val_' + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    self.logger.log_metrics(vis_dict)
+                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                        self.logger.log_metrics(vis_dict)
                 # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
@@ -1720,7 +1818,8 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[ prefix + '_' + stage_str + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    self.logger.log_metrics(visdict)#, step=self.global_step)
+                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                        self.logger.log_metrics(visdict)#, step=self.global_step)
         return None
 
     @property
@@ -1772,7 +1871,8 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[prefix + '_test_' + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    self.logger.log_metrics(visdict)#, step=self.global_step)
+                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                        self.logger.log_metrics(visdict)#, step=self.global_step)
 
  
         # self.log_dict(losses_and_metrics_to_log, on_step=True, on_epoch=False) # log per step
@@ -2061,6 +2161,7 @@ class DECA(torch.nn.Module):
         self.config = config
         self.n_param = config.n_shape + config.n_tex + config.n_exp + config.n_pose + config.n_cam + config.n_light
         self.n_detail = config.n_detail
+        self.n_detail_emo = config.n_detail_emo if 'n_detail_emo' in config.keys() else 0
 
         if 'detail_conditioning' in self.config.keys():
             self.n_cond = 0
@@ -2177,12 +2278,12 @@ class DECA(torch.nn.Module):
         if not "detail_conditioning_type" in self.config.keys() or str(self.config.detail_conditioning_type).lower() == "concat":
             # concatenates detail latent and conditioning
             print("Creating classic detail generator.")
-            self.D_detail = Generator(latent_dim=self.n_detail + self.n_cond, out_channels=1, out_scale=0.01,
+            self.D_detail = Generator(latent_dim=self.n_detail + self.n_detail_emo + self.n_cond, out_channels=1, out_scale=0.01,
                                       sample_mode='bilinear')
         elif str(self.config.detail_conditioning_type).lower() == "adain":
             # conditioning passed in through adain layers
             print("Creating AdaIn detail generator.")
-            self.D_detail = GeneratorAdaIn(self.n_detail,  self.n_cond, out_channels=1, out_scale=0.01,
+            self.D_detail = GeneratorAdaIn(self.n_detail + self.n_detail_emo,  self.n_cond, out_channels=1, out_scale=0.01,
                                       sample_mode='bilinear')
         else:
             raise NotImplementedError(f"Detail conditioning invalid: '{self.config.detail_conditioning_type}'")
@@ -2208,9 +2309,9 @@ class DECA(torch.nn.Module):
             e_detail_type = self.config.e_detail_type
 
         if e_detail_type == 'ResnetEncoder':
-            self.E_detail = ResnetEncoder(outsize=self.n_detail)
+            self.E_detail = ResnetEncoder(outsize=self.n_detail + self.n_detail_emo)
         elif e_flame_type[:4] == 'swin':
-            self.E_detail = SwinEncoder(outsize=self.n_detail, img_size=self.config.image_size, swin_type=e_detail_type)
+            self.E_detail = SwinEncoder(outsize=self.n_detail + self.n_detail_emo, img_size=self.config.image_size, swin_type=e_detail_type)
         else:
             raise ValueError(f"Invalid 'e_detail_type'={e_detail_type}")
         self._create_detail_generator()

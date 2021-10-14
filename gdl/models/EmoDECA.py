@@ -44,6 +44,8 @@ class EmoDECA(EmotionRecognitionBaseModule):
             in_size += 3
         if self.config.model.use_detail_code:
             in_size += config.model.deca_cfg.model.n_detail
+        if 'use_detail_emo_code' in self.config.model.keys() and self.config.model.use_detail_emo_code:
+            in_size += config.model.deca_cfg.model.n_detail_emo
 
         if 'mlp_dimension_factor' in self.config.model.keys():
             dim_factor = self.config.model.mlp_dimension_factor
@@ -346,7 +348,8 @@ class EmoDECA(EmotionRecognitionBaseModule):
                 visdict[f"{mode_}_test_geometry_detail"]._caption += caption
 
         if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(visdict)
+            if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                self.logger.log_metrics(visdict)
         return visdict
 
     # def test_step(self, batch, batch_idx, dataloader_idx=None):
