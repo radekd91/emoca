@@ -30,6 +30,8 @@ from enum import Enum
 from gdl.utils.other import class_from_str
 from gdl.layers.losses.VGGLoss import VGG19Loss
 
+import pytorch_lightning.plugins.environments.lightning_environment as le
+
 class DecaMode(Enum):
     COARSE = 1
     DETAIL = 2
@@ -1751,9 +1753,14 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # vis_dict[prefix + '_val_' + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                        print(f"RANK: {torch.distributed.get_rank()}")
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    # if not torch.distributed.is_initialized() or pytorch_lightning.plugins.environments.cluster_environment.global_rank() == 0:
+                    env = le.LightningEnvironment()
+                    if env.global_rank() == 0:
+                        # print(f"RANK: {torch.distributed.get_rank()}")
                         self.logger.log_metrics(vis_dict)
+                        self.logger.experiment.log(vis_dict)
+
                 # self.log_dict(vis_dict, sync_dist=True)
                 # self.logger.experiment.log(vis_dict) #, step=self.global_step)
 
@@ -1820,7 +1827,9 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[ prefix + '_' + stage_str + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    env = le.LightningEnvironment()
+                    if env.global_rank() == 0:
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
                         self.logger.log_metrics(visdict)#, step=self.global_step)
                     # self.log_dict(visdict, sync_dist=True)
         return None
@@ -1874,7 +1883,9 @@ class DecaModule(LightningModule):
                 # image = Image(grid_image, caption="full visualization")
                 # visdict[prefix + '_test_' + "visualization"] = image
                 if isinstance(self.logger, WandbLogger):
-                    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    env = le.LightningEnvironment()
+                    if env.global_rank() == 0:
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
                         self.logger.log_metrics(visdict)#, step=self.global_step)
                     # self.log_dict(visdict, sync_dist=True)
 

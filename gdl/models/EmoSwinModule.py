@@ -14,6 +14,7 @@ from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _tor
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
 from omegaconf import open_dict
 from .Swin import create_swin_backbone
+import pytorch_lightning.plugins.environments.lightning_environment as le
 
 class EmoSwinModule(EmotionRecognitionBaseModule):
 
@@ -214,7 +215,9 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
             vis_dict[name] = im2log
 
         if isinstance(self.logger, WandbLogger):
-            if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            env = le.LightningEnvironment()
+            if env.global_rank() == 0:
                 self.logger.log_metrics(vis_dict)
             # self.log_dict(vis_dict, sync_dist=True)
         return vis_dict
