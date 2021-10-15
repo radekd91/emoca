@@ -1743,6 +1743,8 @@ class DecaModule(LightningModule):
             self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
 
         print(f"RANK: {self.trainer.global_rank}")
+        print(batch["landmark"][0])
+
         if self.trainer.is_global_zero:
             print(f"RANK ZERO?: {self.trainer.global_rank}")
         # if self.deca.config.val_vis_frequency > 0:
