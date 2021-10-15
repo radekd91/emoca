@@ -1765,7 +1765,7 @@ class DecaModule(LightningModule):
                         #     # print(f"RANK LOCAL: {env.local_rank()}")
                         #     self.logger.log_metrics(vis_dict)
                         for key,value in vis_dict.items():
-                            self.log(key, value, rank_zero_only=True)
+                            self.log(key, [value,], rank_zero_only=True)
                         #     self.logger.experiment.log(vis_dict)
 
                 # self.log_dict(vis_dict, sync_dist=True)
