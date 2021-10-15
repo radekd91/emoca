@@ -188,45 +188,44 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
 
         # visdict = self.deca._create_visualizations_to_log("test", visdict, output_values, batch_idx,
         #                                                   indices=0, dataloader_idx=dataloader_idx)
-
-        if isinstance(self.logger, WandbLogger):
-            caption = self._vae_2_str(
-                valence=valence_pred.detach().cpu().numpy(),
-                arousal=arousal_pred.detach().cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
-                expr7=None, prefix="pred")
-            caption += self._vae_2_str(
-                valence=valence_gt.cpu().numpy(),
-                arousal=arousal_gt.cpu().numpy(),
-                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
-                expr7=None, prefix="gt")
-
-
         stage = "test"
         vis_dict = {}
 
-        i = 0 # index of sample in batch to log
-        for key in visdict.keys():
-            images = _torch_image2np(visdict[key])
-            savepath = Path(
-                f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
-            image = images[i]
-            # im2log = Image(image, caption=caption)
+        if self.trainer.is_global_zero:
             if isinstance(self.logger, WandbLogger):
-                im2log = _log_wandb_image(savepath, image, caption)
-            elif self.logger is not None:
-                im2log = _log_array_image(savepath, image, caption)
-            else:
-                im2log = _log_array_image(None, image, caption)
-            name = stage + "_" + key
-            if dataloader_idx is not None:
-                name += "/dataloader_idx_" + str(dataloader_idx)
-            vis_dict[name] = im2log
+                caption = self._vae_2_str(
+                    valence=valence_pred.detach().cpu().numpy(),
+                    arousal=arousal_pred.detach().cpu().numpy(),
+                    affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
+                    expr7=None, prefix="pred")
+                caption += self._vae_2_str(
+                    valence=valence_gt.cpu().numpy(),
+                    arousal=arousal_gt.cpu().numpy(),
+                    affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
+                    expr7=None, prefix="gt")
 
-        # if isinstance(self.logger, WandbLogger):
-        #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-        #     env = le.LightningEnvironment()
-        #     if env.global_rank() == 0:
-        #         self.logger.log_metrics(vis_dict)
-            # self.log_dict(vis_dict, sync_dist=True)
+            i = 0 # index of sample in batch to log
+            for key in visdict.keys():
+                images = _torch_image2np(visdict[key])
+                savepath = Path(
+                    f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
+                image = images[i]
+                # im2log = Image(image, caption=caption)
+                if isinstance(self.logger, WandbLogger):
+                    im2log = _log_wandb_image(savepath, image, caption)
+                elif self.logger is not None:
+                    im2log = _log_array_image(savepath, image, caption)
+                else:
+                    im2log = _log_array_image(None, image, caption)
+                name = stage + "_" + key
+                if dataloader_idx is not None:
+                    name += "/dataloader_idx_" + str(dataloader_idx)
+                vis_dict[name] = im2log
+
+            if isinstance(self.logger, WandbLogger):
+            #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            #     env = le.LightningEnvironment()
+            #     if env.global_rank() == 0:
+                self.logger.log_metrics(vis_dict)
+                # self.log_dict(vis_dict, sync_dist=True)
         return vis_dict

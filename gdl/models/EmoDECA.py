@@ -319,41 +319,44 @@ class EmoDECA(EmotionRecognitionBaseModule):
                                                                          values['ops'],
                                                                          uv_detail_normals, values, self.global_step,
                                                                          "test", "")
-        indices = 0
-        visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
-                                                          indices=indices, dataloader_idx=dataloader_idx)
-        if f"{mode_}_test_landmarks_gt" in visdict.keys():
-            del visdict[f"{mode_}_test_landmarks_gt"]
-        if f"{mode_}_test_landmarks_predicted" in visdict.keys():
-            del visdict[f"{mode_}_test_landmarks_predicted"]
-        if f"{mode_}_test_mask" in visdict.keys():
-            del visdict[f"{mode_}_test_mask"]
-        if f"{mode_}_test_albedo" in visdict.keys():
-            del visdict[f"{mode_}_test_albedo"]
-        if f"{mode_}_test_mask" in visdict.keys():
-            del visdict[f"{mode_}_test_mask"]
-        if f"{mode_}_test_uv_detail_normals" in visdict.keys():
-            del visdict[f"{mode_}_test_uv_detail_normals"]
-        if f"{mode_}_test_uv_texture_gt" in visdict.keys():
-            del visdict[f"{mode_}_test_uv_texture_gt"]
 
-        if isinstance(self.logger, WandbLogger):
-            caption = self.deca.vae_2_str(
-                valence=valence_pred.detach().cpu().numpy()[indices, ...],
-                arousal=arousal_pred.detach().cpu().numpy()[indices, ...],
-                affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[indices, ...],
-                expr7=None, prefix="pred")
-            if f"{mode_}_test_geometry_coarse" in visdict.keys():
-                visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
-            if f"{mode_}_test_geometry_detail" in visdict.keys():
-                visdict[f"{mode_}_test_geometry_detail"]._caption += caption
+        visdict = {}
+        if self.trainer.is_global_zero:
+            indices = 0
+            visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
+                                                              indices=indices, dataloader_idx=dataloader_idx)
+            if f"{mode_}_test_landmarks_gt" in visdict.keys():
+                del visdict[f"{mode_}_test_landmarks_gt"]
+            if f"{mode_}_test_landmarks_predicted" in visdict.keys():
+                del visdict[f"{mode_}_test_landmarks_predicted"]
+            if f"{mode_}_test_mask" in visdict.keys():
+                del visdict[f"{mode_}_test_mask"]
+            if f"{mode_}_test_albedo" in visdict.keys():
+                del visdict[f"{mode_}_test_albedo"]
+            if f"{mode_}_test_mask" in visdict.keys():
+                del visdict[f"{mode_}_test_mask"]
+            if f"{mode_}_test_uv_detail_normals" in visdict.keys():
+                del visdict[f"{mode_}_test_uv_detail_normals"]
+            if f"{mode_}_test_uv_texture_gt" in visdict.keys():
+                del visdict[f"{mode_}_test_uv_texture_gt"]
 
-        # if isinstance(self.logger, WandbLogger):
-        #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-        #     env = le.LightningEnvironment()
-        #     if env.global_rank() == 0:
-        #         self.logger.log_metrics(visdict)
-            # self.log_dict(visdict, sync_dist=True)
+            if isinstance(self.logger, WandbLogger):
+                caption = self.deca.vae_2_str(
+                    valence=valence_pred.detach().cpu().numpy()[indices, ...],
+                    arousal=arousal_pred.detach().cpu().numpy()[indices, ...],
+                    affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[indices, ...],
+                    expr7=None, prefix="pred")
+                if f"{mode_}_test_geometry_coarse" in visdict.keys():
+                    visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
+                if f"{mode_}_test_geometry_detail" in visdict.keys():
+                    visdict[f"{mode_}_test_geometry_detail"]._caption += caption
+
+            if isinstance(self.logger, WandbLogger):
+            #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            #     env = le.LightningEnvironment()
+            #     if env.global_rank() == 0:
+                self.logger.log_metrics(visdict)
+                # self.log_dict(visdict, sync_dist=True)
         return visdict
 
     # def test_step(self, batch, batch_idx, dataloader_idx=None):
