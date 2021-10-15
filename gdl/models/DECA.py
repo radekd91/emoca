@@ -1742,35 +1742,34 @@ class DecaModule(LightningModule):
         if self.logger is not None:
             self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
 
-        if self.trainer.is_global_zero:
-            print(f"RANK ZERO?: {self.trainer.global_rank}")
-            if self.deca.config.val_vis_frequency > 0:
-                if batch_idx % self.deca.config.val_vis_frequency == 0:
-                    if self.trainer.is_global_zero:
-                        # print(f"RANK ZERO?: {self.trainer.global_rank}")
-                        # print("in node 0, accelerator 0")
-                        uv_detail_normals = None
-                        if 'uv_detail_normals' in values.keys():
-                            uv_detail_normals = values['uv_detail_normals']
-                        visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                                       uv_detail_normals, values, batch_idx, stage_str[:-1], prefix)
-                        vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
-                        # image = Image(grid_image, caption="full visualization")
-                        # vis_dict[prefix + '_val_' + "visualization"] = image
-                        if isinstance(self.logger, WandbLogger):
-            #                 # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-            #                 # if not torch.distributed.is_initialized() or pytorch_lightning.plugins.environments.cluster_environment.global_rank() == 0:
-            #                 # env = le.LightningEnvironment()
-            #                 # # self.trainer.
-            #                 # if env.global_rank() == 0:
-            #                 #     # print(f"RANK: {env.global_rank()}")
-            #                 #     print(f"RANK OS GLOBAL: {os.environ['LOCAL_RANK']}")
-            #                 #     print(f"RANK OS GLOBAL: {os.environ['GLOBAL_RANK']}")
-            #                 #     # print(f"RANK LOCAL: {env.local_rank()}")
-                            self.logger.log_metrics(vis_dict)
-        #                 # for key,value in vis_dict.items():
-        #                 #     self.log(key, [value,], rank_zero_only=True)
-        #                 #     self.logger.experiment.log(vis_dict)
+        # if self.trainer.is_global_zero:
+        print(f"RANK ZERO?: {self.trainer.global_rank}")
+        if self.deca.config.val_vis_frequency > 0:
+            if batch_idx % self.deca.config.val_vis_frequency == 0:
+                # print(f"RANK ZERO?: {self.trainer.global_rank}")
+                # print("in node 0, accelerator 0")
+                uv_detail_normals = None
+                if 'uv_detail_normals' in values.keys():
+                    uv_detail_normals = values['uv_detail_normals']
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, batch_idx, stage_str[:-1], prefix)
+                vis_dict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+                # image = Image(grid_image, caption="full visualization")
+                # vis_dict[prefix + '_val_' + "visualization"] = image
+                if isinstance(self.logger, WandbLogger):
+    #                 # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+    #                 # if not torch.distributed.is_initialized() or pytorch_lightning.plugins.environments.cluster_environment.global_rank() == 0:
+    #                 # env = le.LightningEnvironment()
+    #                 # # self.trainer.
+    #                 # if env.global_rank() == 0:
+    #                 #     # print(f"RANK: {env.global_rank()}")
+    #                 #     print(f"RANK OS GLOBAL: {os.environ['LOCAL_RANK']}")
+    #                 #     print(f"RANK OS GLOBAL: {os.environ['GLOBAL_RANK']}")
+    #                 #     # print(f"RANK LOCAL: {env.local_rank()}")
+                    self.logger.log_metrics(vis_dict)
+    #                 # for key,value in vis_dict.items():
+    #                 #     self.log(key, [value,], rank_zero_only=True)
+    #                 #     self.logger.experiment.log(vis_dict)
 
                 # self.log_dict(vis_dict, sync_dist=True)
                 # self.logger.experiment.log(vis_dict) #, step=self.global_step)
@@ -1833,17 +1832,17 @@ class DecaModule(LightningModule):
 
         if self.deca.config.test_vis_frequency > 0:
             if batch_idx % self.deca.config.test_vis_frequency == 0:
-                if self.trainer.is_global_zero:
-                    visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                                   uv_detail_normals, values, self.global_step, stage_str[:-1], prefix)
-                    visdict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
-                    # image = Image(grid_image, caption="full visualization")
-                    # visdict[ prefix + '_' + stage_str + "visualization"] = image
-                    # if isinstance(self.logger, WandbLogger):
-                    #     env = le.LightningEnvironment()
-                    #     if env.global_rank() == 0:
-                    #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                    self.logger.log_metrics(visdict)#, step=self.global_step)
+                # if self.trainer.is_global_zero:
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, self.global_step, stage_str[:-1], prefix)
+                visdict = self._create_visualizations_to_log(stage_str[:-1], visualizations, values, batch_idx, indices=0, dataloader_idx=dataloader_idx)
+                # image = Image(grid_image, caption="full visualization")
+                # visdict[ prefix + '_' + stage_str + "visualization"] = image
+                # if isinstance(self.logger, WandbLogger):
+                #     env = le.LightningEnvironment()
+                #     if env.global_rank() == 0:
+                #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                self.logger.log_metrics(visdict)#, step=self.global_step)
                     # self.log_dict(visdict, sync_dist=True)
         return None
 
@@ -1890,17 +1889,17 @@ class DecaModule(LightningModule):
 
         if self.deca.config.train_vis_frequency > 0:
             if self.global_step % self.deca.config.train_vis_frequency == 0:
-                if self.trainer.is_global_zero:
-                    visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
-                                                   uv_detail_normals, values, batch_idx, "train", prefix)
-                    visdict = self._create_visualizations_to_log('train', visualizations, values, batch_idx, indices=0)
-                    # image = Image(grid_image, caption="full visualization")
-                    # visdict[prefix + '_test_' + "visualization"] = image
-                    if isinstance(self.logger, WandbLogger):
-                        # env = le.LightningEnvironment()
-                        # if env.global_rank() == 0:
-                        # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
-                        self.logger.log_metrics(visdict)#, step=self.global_step)
+                # if self.trainer.is_global_zero:
+                visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
+                                               uv_detail_normals, values, batch_idx, "train", prefix)
+                visdict = self._create_visualizations_to_log('train', visualizations, values, batch_idx, indices=0)
+                # image = Image(grid_image, caption="full visualization")
+                # visdict[prefix + '_test_' + "visualization"] = image
+                if isinstance(self.logger, WandbLogger):
+                    # env = le.LightningEnvironment()
+                    # if env.global_rank() == 0:
+                    # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+                    self.logger.log_metrics(visdict)#, step=self.global_step)
                         # self.log_dict(visdict, sync_dist=True)
 
  
