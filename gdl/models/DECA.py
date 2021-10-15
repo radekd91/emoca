@@ -1742,9 +1742,13 @@ class DecaModule(LightningModule):
         if self.logger is not None:
             self.log_dict(losses_and_metrics_to_log, on_step=False, on_epoch=True, sync_dist=True) # log per epoch # recommended
 
+        print(f"RANK: {self.trainer.global_rank}")
+
         if self.deca.config.val_vis_frequency > 0:
             if batch_idx % self.deca.config.val_vis_frequency == 0:
                 if self.trainer.is_global_zero:
+                    print(f"RANK ZERO?: {self.trainer.global_rank}")
+                    # print("in node 0, accelerator 0")
                     uv_detail_normals = None
                     if 'uv_detail_normals' in values.keys():
                         uv_detail_normals = values['uv_detail_normals']
@@ -1763,9 +1767,9 @@ class DecaModule(LightningModule):
                         #     print(f"RANK OS GLOBAL: {os.environ['LOCAL_RANK']}")
                         #     print(f"RANK OS GLOBAL: {os.environ['GLOBAL_RANK']}")
                         #     # print(f"RANK LOCAL: {env.local_rank()}")
-                        #     self.logger.log_metrics(vis_dict)
-                        for key,value in vis_dict.items():
-                            self.log(key, [value,], rank_zero_only=True)
+                            self.logger.log_metrics(vis_dict)
+                        # for key,value in vis_dict.items():
+                        #     self.log(key, [value,], rank_zero_only=True)
                         #     self.logger.experiment.log(vis_dict)
 
                 # self.log_dict(vis_dict, sync_dist=True)
