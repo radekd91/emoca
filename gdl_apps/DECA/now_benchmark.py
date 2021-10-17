@@ -12,6 +12,7 @@ from skimage.transform import estimate_transform, warp, resize, rescale
 import matplotlib.pyplot as plt
 from tqdm import auto
 from gdl.utils.DecaUtils import write_obj
+from gdl.models.DECA import instantiate_deca
 
 # import NoW related stuff
 path_to_now = str(Path(__file__).absolute().parents[3] / "now_evaluation")
@@ -126,12 +127,15 @@ def load_model(path_to_models,
     run_path = Path(path_to_models) / run_name
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
-    deca = load_deca(conf,
-              stage,
-              mode,
-              relative_to_path,
-              replace_root_path,
-              )
+
+    deca = instantiate_deca(conf[stage], "", "")
+
+    # deca = load_deca(conf,
+    #           stage,
+    #           mode,
+    #           relative_to_path,
+    #           replace_root_path,
+    #           )
     return deca
 
 
