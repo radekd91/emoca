@@ -443,7 +443,7 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_from_previous = True, force_new_location = False):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=-1, resume_from_previous = True, force_new_location = False):
     # configs = [cfg_coarse, cfg_detail]
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
@@ -458,7 +458,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     dm, sequence_name = prepare_data(configs[0])
     dm.setup()
 
-    if start_i > 0 or force_new_location:
+    if start_i >= 0 or force_new_location:
         if resume_from_previous:
             resume_i = start_i - 1
             print(f"Resuming checkpoint from stage {resume_i} (and will start from the next stage {start_i})")
@@ -563,7 +563,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=0, resume_fro
     #         tries += 1
 
     deca = None
-    if start_i > 0 or force_new_location:
+    if start_i >= 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
     for i in range(start_i, len(configs)):

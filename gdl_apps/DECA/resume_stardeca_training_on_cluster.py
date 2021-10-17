@@ -102,7 +102,7 @@ def main():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_13_10-49-17_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-52-16_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-05-00_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_11_15-19-12_DECA_DecaD_DDadain_VGGl_DeSegrend_Deex_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_11_15-19-12_DECA_DecaD_DDadain_VGGl_DeSegrend_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_13_15-05-59_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
@@ -131,7 +131,8 @@ def main():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-38-20_DECA_DecaD_DeSegrend_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-53-04_DECA_DecaD_EFswin_s_EDswin_s_DeSegrend_Deex_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_29_00-42-34_DECAStar_DecaD_DeSegrend_Deex_early"]
-
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_11_15-19-12_DECA_DecaD_DDadain_VGGl_DeSegrend_Deex_early"]
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_09_09_15-33-31_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_AU_DeSegrend_Aug_DwC_early"]
     # resume_folders += [

@@ -239,7 +239,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
     return deca
 
 
-def train_emodeca(cfg, start_i=0, resume_from_previous = True,
+def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
                   force_new_location=False):
     configs = [cfg, cfg]
     # configs = [cfg,]
@@ -247,7 +247,7 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
     # stages = ["test",]
     stages_prefixes = ["", ""]
 
-    if start_i > 0 or force_new_location:
+    if start_i >= 0 or force_new_location:
         if resume_from_previous:
             resume_i = start_i - 1
             checkpoint_mode = None # loads latest or best based on cfg
@@ -313,7 +313,7 @@ def train_emodeca(cfg, start_i=0, resume_from_previous = True,
                          save_dir=full_run_dir)
 
     deca = None
-    if start_i > 0 or force_new_location:
+    if start_i >= 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
 
     for i in range(start_i, len(configs)):
