@@ -329,7 +329,8 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=-1, resume_from_previous = Tru
     deca = None
     if start_i >= 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
-
+    if start_i == -1:
+        start_i = 0
     for i in range(start_i, len(configs)):
         cfg = configs[i]
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=wandb_logger,

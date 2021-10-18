@@ -222,6 +222,8 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=-1, resum
     deca = None
     if start_i >= 0 or force_new_location:
         print(f"Loading a checkpoint: {checkpoint} and starting from stage {start_i}")
+    if start_i == -1:
+        start_i = 0
 
     for i in range(start_i, len(configs)):
         cfg = configs[i]

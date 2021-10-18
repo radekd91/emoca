@@ -94,12 +94,12 @@ def train_on_selected_sequences():
         #     ['learning/batching=two_gpu_detail_32gb', 'learning.learning_rate=0.0015']
         # ], # two gpu, ResNet encoders, without emonet loss
 
-        [['+model.e_flame_type=swin_tiny_patch4_window7_224',
-          '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_coarse_pretrain_80gb', 'learning.learning_rate=0.0015'],
-         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
-          '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_coarse_80gb', 'learning.learning_rate=0.0015'],
-         ['+model.e_flame_type=swin_tiny_patch4_window7_224',
-          '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_detail_80gb', 'learning.learning_rate=0.0015']],# Swin tiny encoders on two GPUs
+        # [['+model.e_flame_type=swin_tiny_patch4_window7_224',
+        #   '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_coarse_pretrain_80gb', 'learning.learning_rate=0.0015'],
+        #  ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+        #   '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_coarse_80gb', 'learning.learning_rate=0.0015'],
+        #  ['+model.e_flame_type=swin_tiny_patch4_window7_224',
+        #   '+model.e_detail_type=swin_tiny_patch4_window7_224', 'learning/batching=four_gpu_detail_80gb', 'learning.learning_rate=0.0015']],# Swin tiny encoders on two GPUs
 
         [['learning/batching=four_gpu_coarse_pretrain_80gb',
           'learning.learning_rate=0.002'],

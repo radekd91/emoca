@@ -84,7 +84,6 @@ def main():
     force_new_location = False
     #
     resume_folders = []
-    resume_folders += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_15_13-32-33_DECA__DeSegFalse_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
@@ -104,6 +103,7 @@ def main():
     force_new_location = False
 
     resume_folders = []
+    resume_folders += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_15_13-32-33_DECA__DeSegFalse_early']
 
     for resume_folder in resume_folders:
         submit(resume_folder, stage, resume_from_previous, force_new_location)
