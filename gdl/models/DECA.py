@@ -50,6 +50,13 @@ class DecaModule(LightningModule):
         else:
             self.detail_conditioning = model_params.detail_conditioning
 
+        if 'detailemo_conditioning' not in model_params.keys():
+            self.detailemo_conditioning = ['detailemo']
+            model_params.detailemo_conditioning = self.detailemo_conditioning
+        else:
+            self.detailemo_conditioning = model_params.detailemo_conditioning
+
+
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
             print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
             deca_class = DECA
