@@ -156,7 +156,8 @@ def train_deca(cfg_coarse_pretraining, cfg_coarse, cfg_detail, start_i=-1, resum
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         experiment_name = create_experiment_name(cfg_coarse_pretraining, cfg_coarse, cfg_detail)
         full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
-        exist_ok = False # a path for a new experiment should not yet exist
+        # exist_ok = False # a path for a new experiment should not yet exist
+        exist_ok = True # actually, for multi-gpu training it might be initialized by one of the processes earlier.
     else:
         experiment_name = cfg_coarse.inout.name
         len_time_str = len(datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S"))
