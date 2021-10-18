@@ -3,7 +3,7 @@
 #batch_size_train: 4
 #batch_size_test: 1
 #batch_size_val: 16
-batch_size_train: 56
+batch_size_train: 32
 batch_size_test: 1
 batch_size_val: 24
 
@@ -15,5 +15,5 @@ val_K_policy: sequential
 test_K_policy: sequential
 
 #K_policy: sequential
-num_gpus: 2
-gpu_memory_min_gb: 40
+num_gpus: 4
+gpu_memory_min_gb: 30
