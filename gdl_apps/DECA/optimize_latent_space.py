@@ -866,7 +866,7 @@ def create_emotion_loss(emonet_loss, deca=None):
     return emonet
 
 
-def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None):
+def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None, output_image_key="predicted_detailed_image"):
     #
     # if emonet is not None and isinstance(emonet, str):
     #     emonet = emo_network_from_path(emonet)
@@ -877,6 +877,8 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None):
     #         emonet.cuda()
     emonet = create_emotion_loss(emonet, deca=deca)
 
+    # output_image_key = "predicted_detailed_image"
+
     losses = []
     loss_weights = []
     for keyword, weight in loss_dict.items():
@@ -885,35 +887,35 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None):
         else:
             loss_weights += [weight]
         if keyword == "emotion_f2":
-            losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), "predicted_detailed_image")]
+            losses += [CriterionWrapper(TargetEmotionCriterion(target_image, emonet_loss_instance=emonet), output_image_key)]
         elif keyword == "emotion_f1":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_feat_1=True, use_feat_2=False, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
 
         elif keyword == "emotion_f12":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_feat_1=True, use_feat_2=True, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
 
         elif keyword == "emotion_va":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_valence=True, use_arousal=True, use_feat_2=False, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
 
         elif keyword == "emotion_e":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_expression=True, use_feat_2=False, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
 
         elif keyword == "emotion_vae":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_valence=True, use_arousal=True, use_expression=True, use_feat_2=False, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
         elif keyword == "emotion_f12vae":
             losses += [CriterionWrapper(TargetEmotionCriterion(
                 target_image, use_feat_1=True, use_feat_2=True, use_valence=True, use_arousal=True, use_expression=True, emonet_loss_instance=emonet),
-                "predicted_detailed_image")]
+                output_image_key)]
         elif keyword == "jaw_reg":
             losses += [CriterionWrapper(TargetJawCriterion(
                 weight["reference_pose"],
@@ -1111,7 +1113,7 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
 
 
 def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                           model_folder, stage, start_image, target_image,
+                           model_folder, stage, start_image, target_image, output_image_key="predicted_detailed_image",
                            num_repeats=1,
                            losses_to_use: dict = None,
                            **kwargs):
@@ -1137,7 +1139,8 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
     if emonet_path == "None":
         emonet_path = None
-    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca)
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca,
+                                                          output_image_key=output_image_key)
 
 
     start_batch = {}
@@ -1170,6 +1173,16 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target_but_pose"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=False,
+                                  replace_exp=True,
+                                  replace_jaw=True,
+                                  replace_pose=True,
+                                  replace_cam = True,
+                                  **kwargs)
+    values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target_but_detail"] = [values_target, copy.deepcopy(visdict_target_)]
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
                                   replace_detail=False,
