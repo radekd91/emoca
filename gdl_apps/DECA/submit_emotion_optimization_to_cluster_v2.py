@@ -173,8 +173,8 @@ def main():
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
-    # submit = False
+    # submit = True
+    submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -220,8 +220,8 @@ def main():
     num_repeats = 1
 
     optim_kwargs = {
-        # "output_image_key": "predicted_detailed_image",
-        "output_image_key": "predicted_images",
+        "output_image_key": "predicted_detailed_image",
+        # "output_image_key": "predicted_images",
         "optimize_detail": False,
         "optimize_identity": False,
         "optimize_expression": False,
@@ -283,7 +283,7 @@ def main():
     kw = copy.deepcopy(optim_kwargs)
     kw["optimize_detail"] = False
     kw["optimize_expression"] = True
-    # kw["optimize_neck_pose"] = True
+    kw["optimize_neck_pose"] = False
     kw["optimize_jaw_pose"] = True
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,

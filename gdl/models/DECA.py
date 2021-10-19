@@ -51,10 +51,20 @@ class DecaModule(LightningModule):
             self.detail_conditioning = model_params.detail_conditioning
 
         if 'detailemo_conditioning' not in model_params.keys():
-            self.detailemo_conditioning = ['detailemo']
+            self.detailemo_conditioning = []
             model_params.detailemo_conditioning = self.detailemo_conditioning
         else:
             self.detailemo_conditioning = model_params.detailemo_conditioning
+
+        supported_conditioning_keys = ['identity', 'jawpose', 'expression', 'detail', 'detailemo']
+        
+        for c in self.detail_conditioning:
+            if c not in supported_conditioning_keys:
+                raise ValueError(f"Conditioning on '{c}' is not supported. Supported conditionings: {supported_conditioning_keys}")
+        for c in self.detailemo_conditioning:
+            if c not in supported_conditioning_keys:
+                raise ValueError(f"Conditioning on '{c}' is not supported. Supported conditionings: {supported_conditioning_keys}")
+
 
 
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
@@ -670,6 +680,29 @@ class DecaModule(LightningModule):
 
         return codedict
 
+
+    def _create_conditioning_lists(self, codedict, condition_list):
+        detail_conditioning_list = []
+        if 'globalpose' in condition_list:
+            detail_conditioning_list += [codedict["posecode"][:, :3]]
+        if 'jawpose' in condition_list:
+            detail_conditioning_list += [codedict["posecode"][:, 3:]]
+        if 'identity' in condition_list:
+            detail_conditioning_list += [codedict["shapecode"]]
+        if 'expression' in condition_list:
+            detail_conditioning_list += [codedict["expcode"]]
+
+        if isinstance(self.deca.D_detail, Generator):
+            # the detail codes might be excluded from conditioning based on the Generator architecture (for instance
+            # for AdaIn Generator)
+            if 'detail' in condition_list:
+                detail_conditioning_list += [codedict["detailcode"]]
+            if 'detailemo' in condition_list:
+                detail_conditioning_list += [codedict["detailemocode"]]
+
+        return detail_conditioning_list
+
+
     def decode(self, codedict, training=True) -> dict:
         shapecode = codedict['shapecode']
         expcode = codedict['expcode']
@@ -769,31 +802,23 @@ class DecaModule(LightningModule):
             detailcode = codedict['detailcode']
             detailemocode = codedict['detailemocode']
             #TODO: what are you conditioning on?
-            detail_conditioning_list = []
-            if 'globalpose' in self.detail_conditioning:
-                detail_conditioning_list += [posecode[:, :3]]
-            if 'jawpose' in self.detail_conditioning:
-                detail_conditioning_list += [posecode[:, 3:]]
-            if 'identity' in self.detail_conditioning:
-                detail_conditioning_list += [shapecode]
-            if 'expression' in self.detail_conditioning:
-                detail_conditioning_list += [expcode]
+
+            detail_conditioning_list = self._create_conditioning_lists(codedict, self.detail_conditioning)
+            detailemo_conditioning_list = self._create_conditioning_lists(codedict, self.detailemo_conditioning)
+            final_detail_conditioning_list = detail_conditioning_list + detailemo_conditioning_list
 
             if isinstance(self.deca.D_detail, Generator):
-                if 'detail' in self.detail_conditioning:
-                    detail_conditioning_list += [detailcode]
-                if 'detailemo' in self.detailemo_conditioning:
-                    detail_conditioning_list += [detailemocode]
-                uv_z = self.deca.D_detail(torch.cat(detail_conditioning_list, dim=1))
+                uv_z = self.deca.D_detail(torch.cat(final_detail_conditioning_list, dim=1))
             elif isinstance(self.deca.D_detail, GeneratorAdaIn):
                 uv_z = self.deca.D_detail(z=torch.cat([detailcode, detailemocode], dim=1),
-                                          cond=torch.cat(detail_conditioning_list, dim=1))
+                                          cond=torch.cat(final_detail_conditioning_list, dim=1))
             else:
                 raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
             # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
-            uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'])
+            uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'],
+                                                                                  detach=not self.deca.config.train_coarse)
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
             uv_texture = albedo.detach() * uv_shading
             predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
@@ -2225,14 +2250,12 @@ class DECA(torch.nn.Module):
         self.uv_face_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         mask = imread(self.config.face_eye_mask_path).astype(np.float32) / 255.
         mask = torch.from_numpy(mask[:, :, 0])[None, None, :, :].contiguous()
-        # self.uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         self.register_buffer('uv_face_eye_mask', uv_face_eye_mask)
 
         ## displacement correct
         if os.path.isfile(self.config.fixed_displacement_path):
             fixed_dis = np.load(self.config.fixed_displacement_path)
-            # self.fixed_uv_dis = torch.tensor(fixed_dis).float()
             fixed_uv_dis = torch.tensor(fixed_dis).float()
         else:
             fixed_uv_dis = torch.zeros([512, 512]).float()
@@ -2411,17 +2434,21 @@ class DECA(torch.nn.Module):
         code_list[-1] = code_list[-1].reshape(code.shape[0], 9, 3)
         return code_list
 
-    def displacement2normal(self, uv_z, coarse_verts, coarse_normals):
+    def displacement2normal(self, uv_z, coarse_verts, coarse_normals, detach=True):
         batch_size = uv_z.shape[0]
-        uv_coarse_vertices = self.render.world2uv(coarse_verts).detach()
-        uv_coarse_normals = self.render.world2uv(coarse_normals).detach()
+        uv_coarse_vertices = self.render.world2uv(coarse_verts)#.detach()
+        if detach:
+            uv_coarse_vertices = uv_coarse_vertices.detach()
+        uv_coarse_normals = self.render.world2uv(coarse_normals)#.detach()
+        if detach:
+            uv_coarse_normals = uv_coarse_normals.detach()
 
         uv_z = uv_z * self.uv_face_eye_mask
 
         # detail vertices = coarse vertice + predicted displacement*normals + fixed displacement*normals
         uv_detail_vertices = uv_coarse_vertices + \
                              uv_z * uv_coarse_normals + \
-                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals.detach()
+                             self.fixed_uv_dis[None, None, :,:] * uv_coarse_normals #.detach()
 
         dense_vertices = uv_detail_vertices.permute(0, 2, 3, 1).reshape([batch_size, -1, 3])
         uv_detail_normals = util.vertex_normals(dense_vertices, self.render.dense_faces.expand(batch_size, -1, -1))
