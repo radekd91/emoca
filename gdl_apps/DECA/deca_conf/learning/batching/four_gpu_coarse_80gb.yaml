@@ -3,7 +3,7 @@
 #batch_size_train: 4
 #batch_size_test: 1
 #batch_size_val: 16
-batch_size_train: 56
+batch_size_train: 48
 batch_size_test: 1
 batch_size_val: 24
 
