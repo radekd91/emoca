@@ -1113,9 +1113,10 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
 
 
 def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, out_folder, model_name,
-                           model_folder, stage, start_image, target_image, output_image_key="predicted_detailed_image",
+                           model_folder, stage, start_image, target_image,
                            num_repeats=1,
                            losses_to_use: dict = None,
+                           output_image_key="predicted_detailed_image",
                            **kwargs):
 
     if losses_to_use is None:
