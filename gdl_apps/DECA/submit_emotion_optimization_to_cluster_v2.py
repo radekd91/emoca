@@ -220,8 +220,8 @@ def main():
     num_repeats = 1
 
     optim_kwargs = {
-        "output_image_key": "predicted_detailed_image",
-        # "output_image_key": "predicted_images",
+        # "output_image_key": "predicted_detailed_image",
+        "output_image_key": "predicted_images",
         "optimize_detail": False,
         "optimize_identity": False,
         "optimize_expression": False,
@@ -230,8 +230,8 @@ def main():
         "optimize_texture": False,
         "optimize_cam": False,
         "optimize_light": False,
-        # "lr": 0.1,
         "lr": 1.0,
+        # "lr": 0.1,
         # "lr": 0.01,
         # "lr": 0.001,
         # "optimizer_type" : "LBFGS",
@@ -281,10 +281,12 @@ def main():
 
     # expression, detail, jaw pose regularized
     kw = copy.deepcopy(optim_kwargs)
-    kw["optimize_detail"] = False
+    kw["optimize_detail"] = True
+    # kw["optimize_detail"] = False
     kw["optimize_expression"] = True
     kw["optimize_neck_pose"] = False
-    kw["optimize_jaw_pose"] = True
+    # kw["optimize_jaw_pose"] = True
+    kw["optimize_jaw_pose"] = False
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
         "emotion_f2": 1.,

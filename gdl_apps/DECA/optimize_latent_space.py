@@ -525,22 +525,6 @@ def optimize(deca,
         values['expcode'] = torch.autograd.Variable(values['expcode'].detach().clone(), requires_grad=True)
         parameters += [values['expcode']]
 
-    # if optimize_neck_pose and optimize_jaw_pose:
-    #     # values['posecode'] = torch.autograd.Variable(values['posecode'].detach().clone(), requires_grad=True)
-    #     # parameters['posecode'] = values['posecode']
-    #     parameters += [torch.autograd.Variable(values['posecode'][:,:3].detach().clone(), requires_grad=True)]
-    #     parameters += [torch.autograd.Variable(values['posecode'][:,3:].detach().clone(), requires_grad=True)]
-    #     values['posecode'] = torch.cat([parameters['neckpose'], parameters['jawpose']], dim=1)
-    # elif optimize_neck_pose:
-    #     posecode = values['posecode'].detach().clone()
-    #     neck_pose = torch.autograd.Variable(posecode[:,:3], requires_grad=True)
-    #     values['posecode'] = torch.cat([neck_pose, posecode[:,3:]], dim=1)
-    #     parameters += [neck_pose]
-    # elif optimize_jaw_pose:
-    #     posecode = values['posecode'].detach().clone()
-    #     jaw_pose = torch.autograd.Variable(posecode[:, 3:], requires_grad=True)
-    #     values['posecode'] = torch.cat([posecode[:, :3], jaw_pose], dim=1)
-    #     parameters += [jaw_pose]
     if optimize_neck_pose or optimize_jaw_pose:
         values['posecode'] = torch.autograd.Variable(values['posecode'].detach().clone(), requires_grad=True)
         parameters += [ values['posecode']]

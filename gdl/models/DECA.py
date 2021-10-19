@@ -817,11 +817,19 @@ class DecaModule(LightningModule):
 
             # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
+            detach_from_coarse_geometry = not self.deca.config.train_coarse
             uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'],
-                                                                                  detach=not self.deca.config.train_coarse)
+                                                                                  detach=detach_from_coarse_geometry)
             uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
             uv_texture = albedo.detach() * uv_shading
-            predicted_detailed_image = F.grid_sample(uv_texture, ops['grid'].detach(), align_corners=False)
+
+            # batch size X image_rows X image_cols X 2
+            # you can query the grid for UV values of the face mesh at pixel locations
+            grid = ops['grid']
+            if detach_from_coarse_geometry:
+                # if the grid is detached, the gradient of the positions of UV-values in image space won't flow back to the geometry
+                grid = grid.detach()
+            predicted_detailed_image = F.grid_sample(uv_texture, grid, align_corners=False)
             if self.deca.config.background_from_input in [True, "input"]:
                 if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                     ## special case only for inference time if the rendering image sizes have been changed

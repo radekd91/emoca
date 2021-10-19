@@ -156,7 +156,7 @@ class Pytorch3dRasterizer(nn.Module):
         # pixel_vals = interpolate_face_attributes(fragment, attributes.view(attributes.shape[0]*attributes.shape[1], 3, attributes.shape[-1]))
         vismask = (pix_to_face > -1).float()
         D = attributes.shape[-1]
-        attributes = attributes.clone();
+        attributes = attributes.clone()
         attributes = attributes.view(attributes.shape[0] * attributes.shape[1], 3, attributes.shape[-1])
         N, H, W, K, _ = bary_coords.shape
         mask = pix_to_face == -1
@@ -232,9 +232,9 @@ class SRenderY(nn.Module):
 
         # attributes
         face_vertices = util.face_vertices(vertices, self.faces.expand(batch_size, -1, -1))
-        normals = util.vertex_normals(vertices, self.faces.expand(batch_size, -1, -1));
+        normals = util.vertex_normals(vertices, self.faces.expand(batch_size, -1, -1))
         face_normals = util.face_vertices(normals, self.faces.expand(batch_size, -1, -1))
-        transformed_normals = util.vertex_normals(transformed_vertices, self.faces.expand(batch_size, -1, -1));
+        transformed_normals = util.vertex_normals(transformed_vertices, self.faces.expand(batch_size, -1, -1))
         transformed_face_normals = util.face_vertices(transformed_normals, self.faces.expand(batch_size, -1, -1))
 
         attributes = torch.cat([self.face_uvcoords.expand(batch_size, -1, -1, -1),
@@ -251,7 +251,7 @@ class SRenderY(nn.Module):
         alpha_images = rendering[:, -1, :, :][:, None, :, :].detach()
 
         # albedo
-        uvcoords_images = rendering[:, :3, :, :];
+        uvcoords_images = rendering[:, :3, :, :]
         grid = (uvcoords_images).permute(0, 2, 3, 1)[:, :, :, :2]
         albedo_images = F.grid_sample(albedos, grid, align_corners=False)
 
