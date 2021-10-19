@@ -1285,6 +1285,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     cfg["source_image"] = str(start_image)
     cfg["target_image"] = str(target_image)
     cfg["deca_stage"] = str(stage)
+    cfg["output_image_key"] = str(output_image_key)
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     logger = WandbLogger(name=Path(out_folder).name,
                      project="EmotionOptimization",
