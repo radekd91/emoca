@@ -135,7 +135,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         if self.sampler not in ["uniform", "balanced_expr", "balanced_va", "balanced_v", "balanced_a"]:
             raise ValueError(f"Invalid sampler type: '{self.sampler}'")
 
-        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
+        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression", "augment"]:
             raise ValueError(f"Invalid ring type: '{ring_type}'")
         self.ring_type = ring_type
         self.ring_size = ring_size
@@ -653,7 +653,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.exp_weight_tensor /= torch.norm(self.exp_weight_tensor)
 
 
-        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
+        if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression", "augment"]:
             raise ValueError(f"Invalid ring type '{ring_type}'")
         if ring_type == "emonet_expression" and ( nn_indices_array is None or nn_distances_array is None ):
             raise ValueError(f"If ring type set to '{ring_type}', nn files must be specified")
@@ -868,6 +868,8 @@ class AffectNet(EmotionalImageDatasetBase):
             if len(ring_indices) > 1:
                 ring_indices.remove(index)
             # label = index
+        elif self.ring_type == "augment":
+            ring_indices = (self.ring_size-1) * [index]
         else:
             raise NotImplementedError()
 
@@ -897,7 +899,7 @@ class AffectNet(EmotionalImageDatasetBase):
                 idx += 1
                 idx = idx % len(ring_indices)
         else:
-            raise ValueError(f"Invalid K policy {self.ring_policy}")
+            raise ValueError(f"Invalid ring policy {self.ring_policy}")
 
         batches = []
         batches += [sample]
