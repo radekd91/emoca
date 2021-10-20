@@ -102,6 +102,7 @@ def main():
     run_names_new["2021_10_13_10-49-29_DECA_DecaD_NoRing_VGGl_DeSegrend_idBT-ft_early"] =  ["BT finetune id v2 - on diag norm", "coarse"]
     run_names_new["2021_10_12_22-52-16_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"] =  ["BT contrastive, ring 2, 0.2", "coarse"]
     run_names_new["2021_10_12_22-05-00_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"] =  ["BT contrastive, ring 2, 0.3", "coarse"]
+    run_names_new["2021_10_15_13-32-33_DECA__DeSegFalse_early"] =  ["DECA, large batch", "coarse"]
 
 
     use_dense_topology = False

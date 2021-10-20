@@ -585,6 +585,9 @@ def main():
         flame_encoder = 'ResnetEncoder'
         detail_encoder = 'ResnetEncoder'
 
+        detail_conditioning_list = ['identity', 'detail']  # default
+        emo_detail_conditioning_list = ['jawpose', 'expression', 'detailemo']
+        n_detail_emo = 50
 
         coarse_override = [
             # 'model/settings=coarse_train',
@@ -629,6 +632,8 @@ def main():
             '+model/additional=vgg_loss',
             f'+model.e_flame_type={flame_encoder}',
             f'+model.e_detail_type={detail_encoder}',
+            f'+model.detail_conditioning={detail_conditioning_list}',
+            f'+model.detailemo_conditioning={emo_detail_conditioning_list}',
             '+model.emoloss_trainable=true',
             # '+model.normalize_features=true', # normalize emonet features before applying loss
             # '+model.emo_feat_loss=l1_loss', # emonet feature loss

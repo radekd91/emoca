@@ -409,6 +409,12 @@ def train_on_selected_sequences():
     # sampler="data.sampler=uniform"
     sampler="data.sampler=balanced_expr"
 
+    # detail_conditioning_type = 'adain'
+    detail_conditioning_type = 'concat'
+
+    # detail_conditioning_list = ['jawpose', 'expression', 'detail']  # default
+    detail_conditioning_list = ['identity', 'detail']  # default
+    emo_detail_conditioning_list = ['jawpose', 'expression', 'detailemo']
 
     fixed_overrides_coarse = [
         'model/settings=coarse_train',
@@ -431,7 +437,8 @@ def train_on_selected_sequences():
         # '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
-        '+model.detail_conditioning_type=adain',
+        f'+model.detail_conditioning={detail_conditioning_list}',
+        f'+model.detailemo_conditioning={emo_detail_conditioning_list}',
         dataset_coarse,
         # augmentation,
         # sampler,
@@ -464,7 +471,9 @@ def train_on_selected_sequences():
         # '+model.emoloss_dual=true',
         f'+model.e_flame_type={flame_encoder}',
         f'+model.e_detail_type={detail_encoder}',
-        '+model.detail_conditioning_type=adain',
+        # f'+model.detail_conditioning_type={detail_conditioning_type}',
+        # f'+model.detail_conditioning={detail_conditioning_list}',
+        # f'+model.detailemo_conditioning={emo_detail_conditioning_list}',
         dataset_detail,
         # augmentation,
         # sampler,

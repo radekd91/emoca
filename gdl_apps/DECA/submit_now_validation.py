@@ -113,6 +113,9 @@ def main():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-52-16_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_12_22-05-00_DECA_DecaD_VGGl_DeSegrend_idBT-ft-cont_Deex_early"]
 
+    # large batch deca
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_15_13-32-33_DECA__DeSegFalse_early"]
+
     mode = 'latest'
     stage = 'coarse'
     # stage = 'detail'
