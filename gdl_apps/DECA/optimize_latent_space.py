@@ -46,6 +46,8 @@ class TargetEmotionCriterion(torch.nn.Module):
                  emonet_loss_instance = None,
                  ):
         super().__init__()
+        if emonet_loss_instance is None:
+            print("No emotion network passed into TargetEmotionCriterion. Defaulting to original EmoNet")
         self.emonet_loss = emonet_loss_instance or EmoNetLoss('cuda')
         self.emonet_loss.eval()
 
@@ -863,6 +865,8 @@ def create_emotion_loss(emonet_loss, deca=None):
     elif isinstance(emonet_loss, dict):
         if emonet_loss["path"] == "Synth":
             emonet = deca.emonet_loss.trainable_backbone
+        elif emonet_loss["path"] is None or emonet_loss["path"] == "None":
+            return None
         else:
             emonet = emo_network_from_path(emonet_loss["path"])
         if "feature_metric" in emonet_loss.keys():
