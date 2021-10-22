@@ -1451,8 +1451,22 @@ class DecaModule(LightningModule):
                 # else:
                 #     d = metrics
                 # d['photometric_texture'] = (masks * (predicted_images - images).abs()).mean() * self.deca.config.photow
+
+                photometric = masks[:geom_losses_idxs, ...] * ((predicted_images[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs())
+
+                if 'photometric_normalization' not in self.deca.config.keys() or self.deca.config.photometric_normalization == 'mean':
+                    photometric = photometric.mean()
+                elif self.deca.config.photometric_normalization == 'rel_mask_value':
+                    photometric = photometric * masks[:geom_losses_idxs, ...].mean(dim=tuple(range(1,masks.ndim)))
+                    photometric = photometric.mean()
+                elif self.deca.config.photometric_normalization == 'abs_mask_value':
+                    photometric = photometric * masks[:geom_losses_idxs, ...].sum(dim=tuple(range(1,masks.ndim)))
+                    photometric = photometric.mean()
+                else:
+                    raise ValueError(f"Invalid photometric loss normalization: '{self.deca.config.photometric_normalization}'")
+
                 self._metric_or_loss(losses, metrics, self.deca.config.use_photometric)['photometric_texture'] = \
-                    (masks[:geom_losses_idxs, ...] * (predicted_images[:geom_losses_idxs, ...] - images[:geom_losses_idxs, ...]).abs()).mean() * self.deca.config.photow
+                    photometric * self.deca.config.photow
 
                 if self.deca.vgg_loss is not None:
                     vggl, _ = self.deca.vgg_loss(

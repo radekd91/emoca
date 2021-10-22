@@ -150,14 +150,14 @@ def train_on_selected_sequences():
         #      'model.detail_constrain_type=None', 'learning.batch_size_test=1']
         # ],
 
-        # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
-        [
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
-             'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
-            ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
-                #'model.shape_constrain_type=None',
-             'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
-        ],
+        # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, DETAIL WITH COARSE
+        # [
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_coarse',
+        #      'model.shape_constrain_type=None',  'learning.batch_size_test=1'],
+        #     ['model.useSeg=rend', 'model.idw=0', 'learning/batching=single_gpu_expdeca_detail',
+        #         #'model.shape_constrain_type=None',
+        #      'model.detail_constrain_type=None', 'model.train_coarse=true',  'learning.batch_size_test=1']
+        # ],
 
         # # DEFAULT, DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING, RENDERED MASK, EXPRESSION RING EXCHANGE
         # [
@@ -250,18 +250,25 @@ def train_on_selected_sequences():
 
         # # cloned expression encoder AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
         [
-            ['model.useSeg=gt', 'model.idw=0',
+            [
+             # 'model.useSeg=gt',
+             'model.useSeg=rend',
+             'model.idw=0',
              'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_coarse_32gb',
-             'model.shape_constrain_type=None', 'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1', 'data/augmentations=default'],
+             'model.shape_constrain_type=None',
+             'data/datasets=affectnet_cluster',
+             'learning.batch_size_test=1',
+             'data/augmentations=default'],
+
             ['model.useSeg=rend', 'model.idw=0',
              'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_detail_32gb',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
              'data/datasets=affectnet_cluster',
-             'learning.batch_size_test=1', 'data/augmentations=default']
+             'learning.batch_size_test=1',
+             'data/augmentations=default']
         ],
 
         # # DEFAULT but train coarse with detail
@@ -362,11 +369,24 @@ def train_on_selected_sequences():
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
+    # emo_feature_loss_type = 'cosine_similarity'
+    emo_feature_loss_type = 'l1_loss'
+    # emo_feature_loss_type = 'barlow_twins_headless'
+    # emo_feature_loss_type = 'barlow_twins'
+
     resume_from = None # resume from Original DECA
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
+    use_emo_loss = True
+    # use_emo_loss = False
+
+    use_photometric = True
+    # use_photometric = False
+
+    # use_landmarks = True
+    use_landmarks = False
 
     fixed_overrides_coarse = [
         # 'model/settings=coarse_train',
@@ -382,7 +402,9 @@ def train_on_selected_sequences():
         f'+model.emonet_model_path={emonet}',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         f'model.resume_training={resume_from == None}', # load the original DECA model
-        'learning.early_stopping.patience=5',
+        'learning.early_stopping.patience=15',
+        'model.max_epochs=8',
+        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
         f'model.use_emonet_loss={use_emo_loss}',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
@@ -390,6 +412,10 @@ def train_on_selected_sequences():
         'model.use_emonet_arousal=False',
         'model.use_emonet_expression=False',
         'model.use_emonet_combined=False',
+        'model.exp_deca_jaw_pose=True',
+        f'model.use_landmarks={use_landmarks}',
+        f'model.use_photometric={use_photometric}',
+        'model.background_from_input=False',
         sampler,
     ]
 
@@ -406,6 +432,7 @@ def train_on_selected_sequences():
         f'+model.emonet_model_path={emonet}',
         'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
+        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
         f'model.use_emonet_loss={use_emo_loss}',
         'model.use_emonet_feat_1=False',
         'model.use_emonet_feat_2=True',
@@ -413,10 +440,14 @@ def train_on_selected_sequences():
         'model.use_emonet_arousal=False',
         'model.use_emonet_expression=False',
         'model.use_emonet_combined=False',
+        'model.exp_deca_jaw_pose=True',
+        f'model.use_landmarks={use_landmarks}',
+        f'model.use_photometric={use_photometric}',
+        'model.background_from_input=False',
         sampler,
     ]
 
-    # emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emonet_weights = [1.0]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
