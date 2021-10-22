@@ -384,6 +384,9 @@ def train_on_selected_sequences():
 
     use_photometric = True
     # use_photometric = False
+    # photometric_normalization='mean'
+    photometric_normalization='rel_mask_value'
+    # photometric_normalization='abs_mask_value'
 
     # use_landmarks = True
     use_landmarks = False
@@ -415,6 +418,7 @@ def train_on_selected_sequences():
         'model.exp_deca_jaw_pose=True',
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
+        f'+model.photometric_normalization={photometric_normalization}',
         'model.background_from_input=False',
         sampler,
     ]
@@ -443,6 +447,7 @@ def train_on_selected_sequences():
         'model.exp_deca_jaw_pose=True',
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
+        f'+model.photometric_normalization={photometric_normalization}',
         'model.background_from_input=False',
         sampler,
     ]

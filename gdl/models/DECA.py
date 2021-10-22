@@ -1457,10 +1457,10 @@ class DecaModule(LightningModule):
                 if 'photometric_normalization' not in self.deca.config.keys() or self.deca.config.photometric_normalization == 'mean':
                     photometric = photometric.mean()
                 elif self.deca.config.photometric_normalization == 'rel_mask_value':
-                    photometric = photometric * masks[:geom_losses_idxs, ...].mean(dim=tuple(range(1,masks.ndim)))
+                    photometric = photometric * masks[:geom_losses_idxs, ...].mean(dim=tuple(range(1,masks.ndim)), keepdim=True)
                     photometric = photometric.mean()
                 elif self.deca.config.photometric_normalization == 'abs_mask_value':
-                    photometric = photometric * masks[:geom_losses_idxs, ...].sum(dim=tuple(range(1,masks.ndim)))
+                    photometric = photometric * masks[:geom_losses_idxs, ...].sum(dim=tuple(range(1,masks.ndim)), keepdim=True)
                     photometric = photometric.mean()
                 else:
                     raise ValueError(f"Invalid photometric loss normalization: '{self.deca.config.photometric_normalization}'")
