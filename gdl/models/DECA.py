@@ -1459,6 +1459,10 @@ class DecaModule(LightningModule):
                 elif self.deca.config.photometric_normalization == 'rel_mask_value':
                     photometric = photometric * masks[:geom_losses_idxs, ...].mean(dim=tuple(range(1,masks.ndim)), keepdim=True)
                     photometric = photometric.mean()
+                elif self.deca.config.photometric_normalization == 'inv_rel_mask_value':
+                    mu = 1./ masks[:geom_losses_idxs, ...].mean(dim=tuple(range(1,masks.ndim)), keepdim=True)
+                    photometric = photometric * mu
+                    photometric = photometric.mean()
                 elif self.deca.config.photometric_normalization == 'abs_mask_value':
                     photometric = photometric * masks[:geom_losses_idxs, ...].sum(dim=tuple(range(1,masks.ndim)), keepdim=True)
                     photometric = photometric.mean()
