@@ -148,7 +148,7 @@ class TargetJawCriterion(torch.nn.Module):
 
     @property
     def name(self):
-        return f"JawReg_{self.reference_type}_{self.loss_type}_"
+        return f"JawReg_{self.reference_type}_{self.loss_type}"
 
     def compute(self, posecode):
         jaw_pose = posecode[:, 3:]
@@ -159,6 +159,8 @@ class TargetJawCriterion(torch.nn.Module):
             jaw_pose = trans.axis_angle_to_quaternion(jaw_pose)
         elif self.reference_type == "euler":
             jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(jaw_pose), "XYZ")
+        else:
+            raise ValueError(f"Invalid rotaion reference type: '{self.reference_type}'")
 
         if self.loss_type == "l1":
             reg = torch.abs(jaw_pose - self.reference_pose).sum()
@@ -527,9 +529,22 @@ def optimize(deca,
         values['expcode'] = torch.autograd.Variable(values['expcode'].detach().clone(), requires_grad=True)
         parameters += [values['expcode']]
 
-    if optimize_neck_pose or optimize_jaw_pose:
-        values['posecode'] = torch.autograd.Variable(values['posecode'].detach().clone(), requires_grad=True)
-        parameters += [ values['posecode']]
+    if optimize_neck_pose:
+        neck_pose = torch.autograd.Variable(values['posecode'][:, :3].detach().clone(), requires_grad=True)
+        parameters += [neck_pose]
+    else:
+        neck_pose = values['posecode'][:, :3].detach().clone()
+
+    if optimize_jaw_pose:
+        jaw_pose = torch.autograd.Variable(values['posecode'][:, 3:].detach().clone(), requires_grad=True)
+        parameters += [jaw_pose]
+    else:
+        jaw_pose = values['posecode'][:, 3:].detach().clone()
+
+    # if optimize_neck_pose or optimize_jaw_pose:
+        # values['posecode'] = torch.autograd.Variable(values['posecode'].detach().clone(), requires_grad=True)
+        # parameters += [ values['posecode']]
+    values['posecode'] = torch.cat([neck_pose, jaw_pose], dim=1)
 
     if optimize_texture:
         values['texcode'] = torch.autograd.Variable(values['texcode'].detach().clone(), requires_grad=True)
@@ -622,6 +637,9 @@ def optimize(deca,
 
         optimizer.zero_grad()
 
+        if optimize_neck_pose or optimize_jaw_pose:
+            values['posecode'] = torch.cat([neck_pose, jaw_pose], dim=1)
+
         values_ = deca.decode(values, training=False)
         # losses_and_metrics = deca.compute_loss(values, training=False)
         losses_and_metrics = deca.compute_loss(values_, {}, training=True)
@@ -634,14 +652,6 @@ def optimize(deca,
         optimizer.step(closure=closure)
         # make sure pose vector is updated
 
-
-        if optimize_neck_pose and not optimize_jaw_pose:
-            values['posecode'] = torch.cat([values['posecode'].detach().clone()[:, :3],
-                                            value_history[0]['posecode'].detach().clone()[:, 3:].to(device=deca.device)], dim=1)
-        elif optimize_jaw_pose and not optimize_neck_pose:
-            values['posecode'] = torch.cat([value_history[0]['posecode'].detach().clone()[:, :3].to(device=deca.device),
-                                            values['posecode'].detach().clone()[:, 3:]],
-                dim=1)
 
         if visualize_progress or save_path is not None:
             save_visualization(deca, values,

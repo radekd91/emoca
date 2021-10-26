@@ -387,11 +387,11 @@ def train_on_selected_sequences():
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
-    # use_emo_loss = True
-    use_emo_loss = False
+    use_emo_loss = True
+    # use_emo_loss = False
 
-    # use_au_loss = None
-    use_au_loss = '+model/additional=au_feature_loss', # au feature loss
+    use_au_loss = None
+    # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
 
     use_photometric = True
     # use_photometric = False
@@ -476,6 +476,7 @@ def train_on_selected_sequences():
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1, 0.05]
     emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
     # emonet_weights = [1.0]
+    # emonet_weights = [0.1]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
     # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
@@ -502,10 +503,10 @@ def train_on_selected_sequences():
             coarse_overrides += [emonet_weight_override]
             detail_overrides += [emonet_weight_override]
 
-            if use_au_loss:
-                emonet_weight_override = f'model.au_loss.au_weight={emonet_weight}'
-                coarse_overrides += [emonet_weight_override]
-                detail_overrides += [emonet_weight_override]
+            if use_au_loss is not None:
+                auloss_weight_override = f'model.au_loss.au_weight={emonet_weight}'
+                coarse_overrides += [auloss_weight_override]
+                detail_overrides += [auloss_weight_override]
 
             cfgs = train_expdeca.configure(
                 coarse_conf, coarse_overrides,
