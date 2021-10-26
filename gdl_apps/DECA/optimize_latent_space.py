@@ -128,6 +128,30 @@ class TargetEmotionCriterion(torch.nn.Module):
         imsave(path, im)
 
 
+class DecaTermCriterion(torch.nn.Module):
+
+    def __init__(self,
+                 keyword
+                 ):
+        super().__init__()
+        self.keyword = keyword
+
+    def forward(self, loss_dict):
+        return loss_dict[self.keyword]
+
+
+def convert_rotation(input, rot_type):
+    if rot_type == "aa":
+        pass  # already in axis angle
+    elif rot_type == "quat":
+        jaw_pose = trans.axis_angle_to_quaternion(input)
+    elif rot_type == "euler":
+        jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(input), "XYZ")
+    else:
+        raise ValueError(f"Invalid rotaion reference type: '{rot_type}'")
+    return jaw_pose
+
+
 class TargetJawCriterion(torch.nn.Module):
 
     def __init__(self,
@@ -152,15 +176,17 @@ class TargetJawCriterion(torch.nn.Module):
 
     def compute(self, posecode):
         jaw_pose = posecode[:, 3:]
+        #
+        # if self.reference_type == "aa":
+        #     pass # already in axis angle
+        # elif self.reference_type == "quat":
+        #     jaw_pose = trans.axis_angle_to_quaternion(jaw_pose)
+        # elif self.reference_type == "euler":
+        #     jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(jaw_pose), "XYZ")
+        # else:
+        #     raise ValueError(f"Invalid rotaion reference type: '{self.reference_type}'")
 
-        if self.reference_type == "aa":
-            pass # already in axis angle
-        elif self.reference_type == "quat":
-            jaw_pose = trans.axis_angle_to_quaternion(jaw_pose)
-        elif self.reference_type == "euler":
-            jaw_pose = trans.matrix_to_euler_angles(trans.axis_angle_to_matrix(jaw_pose), "XYZ")
-        else:
-            raise ValueError(f"Invalid rotaion reference type: '{self.reference_type}'")
+        jaw_pose = convert_rotation(jaw_pose, self.reference_type)
 
         if self.loss_type == "l1":
             reg = torch.abs(jaw_pose - self.reference_pose).sum()
@@ -799,6 +825,9 @@ def parameter_configurations():
     return kwarg_dict
 
 
+
+
+
 def loss_function_config(target_image, keyword, emonet=None):
 
     losses = []
@@ -892,7 +921,11 @@ def create_emotion_loss(emonet_loss, deca=None):
     return emonet
 
 
-def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None, output_image_key="predicted_detailed_image"):
+def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None,
+                            output_image_key="predicted_detailed_image",
+                            values_input=None,
+                            values_target=None,
+                            ):
     #
     # if emonet is not None and isinstance(emonet, str):
     #     emonet = emo_network_from_path(emonet)
@@ -943,11 +976,26 @@ def loss_function_config_v2(target_image, loss_dict, emonet=None, deca=None, out
                 target_image, use_feat_1=True, use_feat_2=True, use_valence=True, use_arousal=True, use_expression=True, emonet_loss_instance=emonet),
                 output_image_key)]
         elif keyword == "jaw_reg":
+            if weight["reference_pose"] == "from_target":
+                ref_pose = values_target["posecode"][:, 3:]
+                ref_pose = convert_rotation(ref_pose, weight["reference_type"])
+            elif weight["reference_type"] == "from_input":
+                ref_pose = values_input["posecode"][:, 3:]
+                ref_pose = convert_rotation(ref_pose, weight["reference_type"])
+            else:
+                ref_pose = weight["reference_pose"] # already in the right representation
+
             losses += [CriterionWrapper(TargetJawCriterion(
-                weight["reference_pose"],
+                ref_pose,
                 weight["reference_type"],
                 weight["loss_type"],
             ), "posecode")]
+        #
+        # elif keyword == "loss_photometric_texture":
+        #     losses += [CriterionWrapper(DecaTermCriterion(
+        #         "loss_photometric_texture"
+        #     ), "posecode")]
+
         else:
             losses += [keyword]
 
@@ -1166,9 +1214,6 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     emonet_path = kwargs.pop("emonet") if "emonet" in kwargs.keys() else None
     if emonet_path == "None":
         emonet_path = None
-    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca,
-                                                          output_image_key=output_image_key)
-
 
     start_batch = {}
     start_batch["image"] = load_image_to_batch(start_image)
@@ -1190,6 +1235,13 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
                                   **kwargs)
     values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca,
+                                                          output_image_key=output_image_key,
+                                                          values_input=values_input,
+                                                          values_target=values_target_,
+                                                          )
+
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
                                   replace_detail=True,
