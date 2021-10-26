@@ -257,7 +257,7 @@ def train_on_selected_sequences():
              'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_coarse_32gb',
              'model.shape_constrain_type=None',
-             'data/datasets=affectnet_cluster',
+             # 'data/datasets=affectnet_cluster',
              'learning.batch_size_test=1',
              'data/augmentations=default'],
 
@@ -266,7 +266,7 @@ def train_on_selected_sequences():
              'learning/batching=single_gpu_expdeca_detail_32gb',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
-             'data/datasets=affectnet_cluster',
+             # 'data/datasets=affectnet_cluster',
              'learning.batch_size_test=1',
              'data/augmentations=default']
         ],
@@ -361,6 +361,14 @@ def train_on_selected_sequences():
     ]
 
     sampler = "data.sampler=balanced_expr"
+    dataset_coarse =  "data/datasets=affectnet_cluster"
+    dataset_detail = 'data/datasets=affectnet_cluster'
+    #
+    # sampler = "+data.sampler=False"
+    # dataset_coarse =  "data/datasets=coarse_data_cluster"
+    # dataset_detail = 'data/datasets=detail_data_cluster'
+
+
 
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early'
@@ -369,8 +377,8 @@ def train_on_selected_sequences():
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
-    # emo_feature_loss_type = 'cosine_similarity'
-    emo_feature_loss_type = 'l1_loss'
+    emo_feature_loss_type = 'cosine_similarity'
+    # emo_feature_loss_type = 'l1_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
     # emo_feature_loss_type = 'barlow_twins'
 
@@ -379,22 +387,25 @@ def train_on_selected_sequences():
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
-    use_emo_loss = True
-    # use_emo_loss = False
+    # use_emo_loss = True
+    use_emo_loss = False
+
+    # use_au_loss = None
+    use_au_loss = '+model/additional=au_feature_loss', # au feature loss
 
     use_photometric = True
     # use_photometric = False
-    # photometric_normalization='mean'
+    photometric_normalization='mean'
     # photometric_normalization='rel_mask_value'
-    photometric_normalization='inv_rel_mask_value'
+    # photometric_normalization='inv_rel_mask_value'
     # photometric_normalization='neg_rel_mask_value'
     # photometric_normalization='abs_mask_value'
 
     # use_landmarks = True
     use_landmarks = False
 
-    exp_deca_jaw_pose = True
-    # exp_deca_jaw_pose = False
+    # exp_deca_jaw_pose = True
+    exp_deca_jaw_pose = False
 
     fixed_overrides_coarse = [
         # 'model/settings=coarse_train',
@@ -408,10 +419,9 @@ def train_on_selected_sequences():
         # '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
         f'+model.emonet_model_path={emonet}',
-        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         f'model.resume_training={resume_from == None}', # load the original DECA model
         'learning.early_stopping.patience=15',
-        'model.max_epochs=8',
+        'model.max_epochs=20',
         f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
         f'model.use_emonet_loss={use_emo_loss}',
         'model.use_emonet_feat_1=False',
@@ -425,8 +435,11 @@ def train_on_selected_sequences():
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
         'model.background_from_input=False',
+        dataset_coarse, # affectnet vs deca dataset
         sampler,
     ]
+    if use_au_loss is not None:
+        fixed_overrides_coarse += [use_au_loss]
 
     fixed_overrides_detail = [
         # 'model/settings=detail_train',
@@ -439,7 +452,6 @@ def train_on_selected_sequences():
         # '+model.mlp_emotion_predictor.detach_jaw=True',
         # '+model.mlp_emotion_predictor.detach_global_pose=False',
         f'+model.emonet_model_path={emonet}',
-        'data/datasets=affectnet_cluster', # affectnet vs deca dataset
         'learning.early_stopping.patience=5',
         f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
         f'model.use_emonet_loss={use_emo_loss}',
@@ -454,10 +466,15 @@ def train_on_selected_sequences():
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
         'model.background_from_input=False',
+        dataset_detail,
         sampler,
     ]
+    if use_au_loss is not None:
+        fixed_overrides_detail += [use_au_loss]
 
-    emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    # emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
+    # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1, 0.05]
+    emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
     # emonet_weights = [1.0]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose
@@ -484,6 +501,11 @@ def train_on_selected_sequences():
             emonet_weight_override = f'model.emonet_weight={emonet_weight}'
             coarse_overrides += [emonet_weight_override]
             detail_overrides += [emonet_weight_override]
+
+            if use_au_loss:
+                emonet_weight_override = f'model.au_loss.au_weight={emonet_weight}'
+                coarse_overrides += [emonet_weight_override]
+                detail_overrides += [emonet_weight_override]
 
             cfgs = train_expdeca.configure(
                 coarse_conf, coarse_overrides,

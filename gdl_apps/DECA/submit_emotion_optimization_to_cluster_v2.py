@@ -175,8 +175,8 @@ def main():
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    submit = True
-    # submit = False
+    # submit = True
+    submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -368,7 +368,7 @@ def main():
     kw["optimize_expression"] = True
     kw["optimize_neck_pose"] = False
     # kw["optimize_jaw_pose"] = True
-    kw["optimize_jaw_pose"] = False
+    kw["optimize_jaw_pose"] = True
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
         "emotion_f2": 1.,
@@ -380,15 +380,15 @@ def main():
         # "loss_expression_reg" : 100.,
         "loss_expression_reg": 10.,
         # "loss_z_reg" : 10.,
-        # "jaw_reg": {
-        #     "loss_type": "l1",
-        #     # "loss_type": "l2",
-        #     "reference_type": "euler",
-        #     "reference_pose": torch.deg2rad(torch.tensor([15., 0., 0.])).numpy().tolist(),
-        #     # "reference_type": "quat",
-        #     # "reference_pose": trans.euler_angles_to_quaternion(torch.deg2rad([0., 0., 0.])).numpy().tolist(),
-        #     "weight" : 0.1,
-        # }
+        "jaw_reg": {
+            "loss_type": "l1",
+            # "loss_type": "l2",
+            "reference_type": "euler",
+            "reference_pose": torch.deg2rad(torch.tensor([15., 0., 0.])).numpy().tolist(),
+            # "reference_type": "quat",
+            # "reference_pose": trans.euler_angles_to_quaternion(torch.deg2rad([0., 0., 0.])).numpy().tolist(),
+            "weight" : 0.1,
+        }
     }
 
 
