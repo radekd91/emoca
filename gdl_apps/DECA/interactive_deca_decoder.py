@@ -145,6 +145,7 @@ def test(deca, dm=None, image_index = None, values = None, batch=None):
     with torch.no_grad():
         values = deca.decode(values, training=False)
         losses_and_metrics = deca.compute_loss(values, batch, training=False)
+        values = {**values, **losses_and_metrics}
 
     uv_detail_normals = None
     if 'uv_detail_normals' in values.keys():

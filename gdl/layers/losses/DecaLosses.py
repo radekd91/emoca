@@ -218,6 +218,14 @@ def lip_dis(landmarks):
     dis = torch.sqrt(((lip_up - lip_down) ** 2).sum(2))  # [bz, 4]
     return dis
 
+def mouth_corner_dis(landmarks):
+    # up inner lip:  [62, 63, 64] - 1
+    # down innder lip: [68, 67, 66] -1
+    lip_right = landmarks[:, [48, 60], :]
+    lip_left = landmarks[:, [54, 64], :]
+    dis = torch.sqrt(((lip_right - lip_left) ** 2).sum(2))  # [bz, 4]
+    return dis
+
 
 def lipd_loss(predicted_landmarks, landmarks_gt, weight=1.):
     if torch.is_tensor(landmarks_gt) is not True:
@@ -227,6 +235,18 @@ def lipd_loss(predicted_landmarks, landmarks_gt, weight=1.):
                              ], dim=-1)
     pred_lipd = lip_dis(predicted_landmarks[:, :, :2])
     gt_lipd = lip_dis(real_2d[:, :, :2])
+
+    loss = (pred_lipd - gt_lipd).abs().mean()
+    return loss
+
+def mouth_corner_loss(predicted_landmarks, landmarks_gt, weight=1.):
+    if torch.is_tensor(landmarks_gt) is not True:
+        real_2d = torch.cat(landmarks_gt)#.cuda()
+    else:
+        real_2d = torch.cat([landmarks_gt, torch.ones((landmarks_gt.shape[0], 68, 1)).to(device=predicted_landmarks.device) #.cuda()
+                             ], dim=-1)
+    pred_lipd = mouth_corner_dis(predicted_landmarks[:, :, :2])
+    gt_lipd = mouth_corner_dis(real_2d[:, :, :2])
 
     loss = (pred_lipd - gt_lipd).abs().mean()
     return loss

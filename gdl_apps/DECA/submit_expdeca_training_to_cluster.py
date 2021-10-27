@@ -68,7 +68,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-    t.sleep(1)
+    t.sleep(2)
 
 
 def train_on_selected_sequences():
@@ -393,16 +393,16 @@ def train_on_selected_sequences():
     use_au_loss = None
     # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
 
-    use_photometric = True
-    # use_photometric = False
+    # use_photometric = True
+    use_photometric = False
     photometric_normalization='mean'
     # photometric_normalization='rel_mask_value'
     # photometric_normalization='inv_rel_mask_value'
     # photometric_normalization='neg_rel_mask_value'
     # photometric_normalization='abs_mask_value'
 
-    # use_landmarks = True
-    use_landmarks = False
+    use_landmarks = True
+    # use_landmarks = False
 
     # exp_deca_jaw_pose = True
     exp_deca_jaw_pose = False
@@ -475,6 +475,8 @@ def train_on_selected_sequences():
     # emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1, 0.05]
     emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
+    # emonet_weights = [10, 1.0, 0.5, 0.1]
+    # emonet_weights = [10,  0.1]
     # emonet_weights = [1.0]
     # emonet_weights = [0.1]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]

@@ -91,3 +91,15 @@ def process_segmentation(segmentation, seg_type, discarded_labels=None):
         return segmentation_proc
     else:
         raise ValueError(f"Invalid segmentation type '{seg_type}'")
+
+
+def load_and_process_segmentation(path):
+    seg_image, seg_type = load_segmentation(path)
+    seg_image = seg_image[np.newaxis, :, :, np.newaxis]
+    # end = timer()
+    # print(f"Segmentation reading took {end - start} s.")
+
+    # start = timer()
+    seg_image = process_segmentation(
+        seg_image, seg_type).astype(np.uint8)
+    return seg_image

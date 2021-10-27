@@ -187,6 +187,7 @@ def main():
     # submit = False
 
     start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png" # Rachel 1
+    # start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png" # Rachel 2
 
     deca_models = {}
     deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
@@ -249,8 +250,8 @@ def main():
         "optimize_light": False,
         # "lr": 1.0,
         # "lr": 0.1,
-        # "lr": 0.01,
-        "lr": 0.001,
+        "lr": 0.01,
+        # "lr": 0.001,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
         "max_iters": 1000,
@@ -259,7 +260,10 @@ def main():
         "visualize_progress" : False,
         "visualize_result" : False,
     }
-
+    optim_kwargs["jaw_lr"] = optim_kwargs["lr"]
+    # optim_kwargs["jaw_lr"] = optim_kwargs["lr"] / 10.
+    # optim_kwargs["jaw_lr"] = optim_kwargs["lr"] / 100.
+    # optim_kwargs["jaw_lr"] = optim_kwargs["lr"] / 100.
     # # detail
     # kw = copy.deepcopy(optim_kwargs)
     # kw["optimize_detail"] = True
@@ -365,14 +369,17 @@ def main():
     kw["emonet"] = emonet
     kw["optimize_detail"] = False
     # kw["optimize_detail"] = False
-    # kw["optimize_expression"] = True
     kw["optimize_expression"] = True
+    # kw["optimize_expression"] = False
     kw["optimize_neck_pose"] = False
-    # kw["optimize_jaw_pose"] = False
-    kw["optimize_jaw_pose"] = True
+    # kw["optimize_neck_pose"] = True
+    kw["optimize_jaw_pose"] = False
+    # kw["optimize_jaw_pose"] = True
+    # kw["optimize_cam"] = True
+    kw["optimize_cam"] = False
     kw["losses_to_use"] = {
         # "emotion_f1": 1.,
-        "emotion_f2": 1.,
+        "emotion_f2": 10.,
         # "emotion_va": 1.,
         # "emotion_vae": 1.,
         # "emotion_e": 1.,
@@ -380,29 +387,38 @@ def main():
         # "loss_shape_reg": 100.,
         # "loss_expression_reg" : 100.,
         "loss_expression_reg": 10.,
+        # "loss_photometric_texture": 1.,
+        "loss_landmark": 1.,
+        "loss_lip_distance": 1.,
+        "metric_mouth_corner_distance": 1.,
+
         # "loss_z_reg" : 10.,
-        "jaw_reg": {
-            # "loss_type": "l1",
-            "loss_type": "l2",
-            "reference_type": "euler",
-            # "reference_pose": torch.deg2rad(torch.tensor([0., 0., 0.])).numpy().tolist(),
-            "reference_pose": torch.deg2rad(torch.tensor([5., 0., 0.])).numpy().tolist(),
-            # "weight" : 0.1,
-            # "weight" : 1.0,
-            "weight" : 10.0,
-            # "weight" : 100., # mouth opens, loss does minimize, but the mouth stays open a little too much
-            # "weight" : 50.,
-        },
         # "jaw_reg": {
         #     # "loss_type": "l1",
         #     "loss_type": "l2",
-        #     "reference_type": "quat",
-        #     "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
-        #         torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
+        #     "reference_type": "euler",
+        #     # "reference_pose": torch.deg2rad(torch.tensor([0., 0., 0.])).numpy().tolist(),
+        #     "reference_pose": torch.deg2rad(torch.tensor([5., 0., 0.])).numpy().tolist(),
         #     # "weight" : 0.1,
-        #     "weight" : 100.,
-        #     # "weight": 50.,
-        # }
+        #     # "weight" : 1.0,
+        #     # "weight" : 10.0,
+        #     "weight" : 100., # mouth opens, loss does minimize, but the mouth stays open a little too much
+        #     # "weight" : 50.,
+        # },
+        "jaw_reg": {
+            # "loss_type": "l1",
+            "loss_type": "l2",
+            "reference_type": "quat",
+            "reference_pose": "from_target",
+            # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
+            #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
+            # "weight" : 0.1,
+            # "weight" : 0.5,
+            # "weight" : 1.,
+            # "weight" : 5.,
+            "weight" : 10.,
+            # "weight": 50.,
+        }
     }
 
 

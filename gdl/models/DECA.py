@@ -1437,9 +1437,22 @@ class DecaModule(LightningModule):
                 else:
                     d['landmark'] = \
                         lossfunc.landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
+
+                d = self._metric_or_loss(losses, metrics, 'eye_distance' not in self.deca.config.keys() or
+                                         self.deca.config.use_eye_distance)
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
-                d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.eyed
-                d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
+                d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...],
+                                                       lmk[:geom_losses_idxs, ...]) * self.deca.config.eyed
+                d = self._metric_or_loss(losses, metrics, 'lip_distance' not in self.deca.config.keys() or
+                                         self.deca.config.use_lip_distance)
+                d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks[:geom_losses_idxs, ...],
+                                                       lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
+
+                d = self._metric_or_loss(losses, metrics, 'mouth_corner_distance' in self.deca.config.keys() and
+                                         self.deca.config.use_mouth_corner_distance)
+                d['mouth_corner_distance'] = lossfunc.mouth_corner_loss(predicted_landmarks[:geom_losses_idxs, ...],
+                                                       lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
+
                 #TODO: fix this on the next iteration lipd_loss
                 # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
 
