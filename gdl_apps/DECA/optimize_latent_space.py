@@ -1264,7 +1264,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     values_input, visdict_input = test(deca, batch=start_batch)
 
     initializations = {}
-    # initializations["all_from_input"] = [values_input, visdict_input]
+    initializations["all_from_input"] = [values_input, visdict_input]
 
     # if initialize_from_target:
     # batch = {}
