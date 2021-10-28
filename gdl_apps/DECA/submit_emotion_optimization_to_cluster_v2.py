@@ -436,11 +436,7 @@ def main():
     # experiment_name = "vae_exp_det"
     # experiment_name = "vae_exp_det"
 
-    time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
-    experiment_name = time + "_" + experiment_name
-    print("Running experiment: " + experiment_name)
-    out_folder = str(Path(out_folder) / experiment_name)
 
     # loss_keywords = ["emotion",
     #                   "emotion_f1_reg_exp",
@@ -456,6 +452,12 @@ def main():
     for jaw_lr in jaw_lrs:
         kw["jaw_lr"] = kw["lr"] * jaw_lr
         for name, cfg in deca_models.items():
+            time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+
+            experiment_name_ = time + "_" + experiment_name
+            print("Running experiment: " + experiment_name_)
+            out_folder = str(Path(out_folder) / experiment_name_)
+
             model_folder = cfg[0]
             stage = cfg[1]
             starting_image_index = cfg[2]
