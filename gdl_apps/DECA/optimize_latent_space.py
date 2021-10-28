@@ -1288,6 +1288,16 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
                                   replace_detail=True,
+                                  replace_exp=False,
+                                  replace_jaw=False,
+                                  replace_pose=True,
+                                  replace_cam =True,
+                                  **kwargs)
+    # values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target_but_jaw_and_exp"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=True,
                                   replace_jaw=True,
                                   replace_exp=True,
                                   replace_pose=True,

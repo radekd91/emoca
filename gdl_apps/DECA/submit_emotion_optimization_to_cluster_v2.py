@@ -257,7 +257,7 @@ def main():
         "optimizer_type" : "SGD",
         "max_iters": 1000,
         # "max_iters": 100,
-        "patience": 20,
+        "patience": 100,
         "visualize_progress" : False,
         "visualize_result" : False,
     }
@@ -389,9 +389,9 @@ def main():
         # "loss_expression_reg" : 100.,
         "loss_expression_reg": 10.,
         "loss_photometric_texture": 1.,
-        "loss_landmark": 1.,
-        "loss_lip_distance": 1.,
-        "metric_mouth_corner_distance": 1.,
+        # "loss_landmark": 1.,
+        # "loss_lip_distance": 1.,
+        # "metric_mouth_corner_distance": 1.,
 
         # "loss_z_reg" : 10.,
         # "jaw_reg": {
@@ -406,20 +406,20 @@ def main():
         #     "weight" : 100., # mouth opens, loss does minimize, but the mouth stays open a little too much
         #     # "weight" : 50.,
         # },
-        "jaw_reg": {
-            # "loss_type": "l1",
-            "loss_type": "l2",
-            "reference_type": "quat",
-            "reference_pose": "from_target",
-            # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
-            #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
-            # "weight" : 0.1,
-            # "weight" : 0.5,
-            # "weight" : 1.,
-            # "weight" : 5.,
-            "weight" : 10.,
-            # "weight": 50.,
-        }
+        # "jaw_reg": {
+        #     # "loss_type": "l1",
+        #     "loss_type": "l2",
+        #     "reference_type": "quat",
+        #     "reference_pose": "from_target",
+        #     # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
+        #     #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
+        #     # "weight" : 0.1,
+        #     # "weight" : 0.5,
+        #     # "weight" : 1.,
+        #     # "weight" : 5.,
+        #     "weight" : 10.,
+        #     # "weight": 50.,
+        # }
     }
 
 
