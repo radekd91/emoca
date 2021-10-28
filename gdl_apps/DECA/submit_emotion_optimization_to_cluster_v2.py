@@ -389,7 +389,7 @@ def main():
         # "loss_shape_reg": 100.,
         # "loss_expression_reg" : 100.,
         "loss_expression_reg": 10.,
-        # "loss_photometric_texture": 1.,
+        "loss_photometric_texture": 1.,
         "loss_landmark": 1.,
         "loss_lip_distance": 1.,
         "metric_mouth_corner_distance": 1.,

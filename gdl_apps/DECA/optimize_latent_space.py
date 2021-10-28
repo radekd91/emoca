@@ -1148,6 +1148,7 @@ def single_optimization(path_to_models, relative_to_path, replace_root_path, out
                         losses_to_use: dict = None , **kwargs):
     if losses_to_use is None:
         raise RuntimeError("No losses specified. ")
+    losses_to_use_dict = losses_to_use
     losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use)
 
     # if loss_weights is None:
@@ -1237,7 +1238,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
 
     if losses_to_use is None:
         raise RuntimeError("No losses specified. ")
-
+    losses_to_use_dict = losses_to_use
     deca, _ = load_model(path_to_models, model_folder, stage)
     deca.deca.config.train_coarse = True
     deca.deca.config.mode = DecaMode.DETAIL
@@ -1463,7 +1464,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     cfg["target_image"] = str(target_image)
     cfg["deca_stage"] = str(stage)
     cfg["output_image_key"] = str(output_image_key)
-    cfg["losses"] = losses_to_use
+    cfg["losses"] = losses_to_use_dict
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     logger = WandbLogger(name=Path(out_folder).name,
