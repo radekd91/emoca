@@ -47,7 +47,7 @@ def submit(cfg_coarse_pretrain, cfg_coarse, cfg_detail, bid=10):
     max_time_h = 36
     max_price = 10000
     job_name = "train_deca"
-    cuda_capability_requirement = 6
+    cuda_capability_requirement = 7
     mem_gb = 40
     args = f"{pretrain_coarse_file.name} {coarse_file.name} {detail_file.name}"
 

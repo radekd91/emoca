@@ -34,7 +34,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
     max_time_h = 10
     max_price = 8000
     job_name = "finetune_deca"
-    cuda_capability_requirement = 6
+    cuda_capability_requirement = 7
     mem_gb = 12
     args = f"{model_folder_name} {mode}"
 

@@ -52,7 +52,7 @@ def submit(
     max_time_h = 36
     max_price = 10000
     job_name = "train_deca"
-    cuda_capability_requirement = 6
+    cuda_capability_requirement = 7
     mem_gb = 40
     args = f"{str(Path(result_dir_cluster_side) / resume_folder)} {stage} {int(resume_from_previous)} {int(force_new_location)}"
 

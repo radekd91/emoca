@@ -39,7 +39,8 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     bid = 10
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = 14 * 1024
+    # gpu_mem_requirement_mb = 14 * 1024
+    gpu_mem_requirement_mb = 17 * 1024
     # gpu_mem_requirement_mb = None
     cpus = 1
     gpus = 1
@@ -47,8 +48,9 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     max_time_h = 24
     max_price = 8000
     job_name = "optimize_emotion"
-    cuda_capability_requirement = 6
-    mem_gb = 20
+    cuda_capability_requirement = 7
+    # mem_gb = 20
+    mem_gb = 31
     args = f"{path_to_models} {relative_to_path} {replace_root_path} {out_folder} {model_name} " \
                     f"{model_folder} {stage} {image_index} {target_image} {num_repeats} {cgf_name}"
 
@@ -175,8 +177,8 @@ def main():
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = True
-    submit = False
+    submit = True
+    # submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -227,11 +229,11 @@ def main():
     emonet["path"] = "None"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
     ## kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
-    # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
+    emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_24_00-17-40_EmoCnn_vgg19_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
-    emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # kw["emonet"]["path"] = "Synth"
     # emonet["feature_metric"] = "l1_loss"
     # emonet["feature_metric"] = "mse_loss"
@@ -373,8 +375,8 @@ def main():
     # kw["optimize_expression"] = False
     kw["optimize_neck_pose"] = False
     # kw["optimize_neck_pose"] = True
-    kw["optimize_jaw_pose"] = False
-    # kw["optimize_jaw_pose"] = True
+    # kw["optimize_jaw_pose"] = False
+    kw["optimize_jaw_pose"] = True
     # kw["optimize_cam"] = True
     kw["optimize_cam"] = False
     kw["losses_to_use"] = {
@@ -449,16 +451,20 @@ def main():
     #                  "emotion_vae_reg_exp",
     #                  "emotion_f12vae_reg_exp"]
 
-    for name, cfg in deca_models.items():
-        model_folder = cfg[0]
-        stage = cfg[1]
-        starting_image_index = cfg[2]
-        optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
-                                              out_folder, name,
-                                           model_folder, stage, starting_image_index,
-                                           target_images,
-                                           # loss_keywords,
-                                           num_repeats, kw, submit)
+    jaw_lrs = [1., 0.1, 0.01, 0.001, 0.0001, 0.]
+    # jaw_lrs = [0.01]
+    for jaw_lr in jaw_lrs:
+        kw["jaw_lr"] = kw["lr"] * jaw_lr
+        for name, cfg in deca_models.items():
+            model_folder = cfg[0]
+            stage = cfg[1]
+            starting_image_index = cfg[2]
+            optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
+                                                  out_folder, name,
+                                               model_folder, stage, starting_image_index,
+                                               target_images,
+                                               # loss_keywords,
+                                               num_repeats, kw, submit)
 
 if __name__ == "__main__":
     main()

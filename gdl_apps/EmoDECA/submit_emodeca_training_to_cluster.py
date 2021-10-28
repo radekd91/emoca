@@ -42,7 +42,7 @@ def submit(cfg, bid=10):
     max_time_h = 36
     max_price = 10000
     job_name = "train_deca"
-    cuda_capability_requirement = 6
+    cuda_capability_requirement = 7
     mem_gb = 16
     args = f"{config_file.name}"
 
