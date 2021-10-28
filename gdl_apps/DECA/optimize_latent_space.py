@@ -1265,29 +1265,17 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     values_input, visdict_input = test(deca, batch=start_batch)
 
     initializations = {}
-    initializations["all_from_input"] = [values_input, visdict_input]
+    # initializations["all_from_input"] = [values_input, visdict_input]
 
     # if initialize_from_target:
     # batch = {}
     # batch["image"] = load_image_to_batch(target_image)
     batch = load_image_to_batch(target_image)
 
-    values_target_, visdict_target_ = test(deca, batch=batch)
-    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
-                                  replace_detail=True,
-                                  replace_jaw=True,
-                                  replace_exp=True,
-                                  replace_pose=True,
-                                  replace_cam = True,
-                                  **kwargs)
-    ## values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
-    initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
 
-    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca,
-                                                          output_image_key=output_image_key,
-                                                          values_input=values_input,
-                                                          values_target=values_target_,
-                                                          )
+
+    values_target_, visdict_target_ = test(deca, batch=batch)
+
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),
                                   replace_detail=True,
                                   replace_exp=True,
@@ -1297,6 +1285,25 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
                                   **kwargs)
     # values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
     initializations["all_from_target_but_jaw"] = [values_target, copy.deepcopy(visdict_target_)]
+
+    values_target = replace_codes(values_input, copy.deepcopy(values_target_),
+                                  replace_detail=True,
+                                  replace_jaw=True,
+                                  replace_exp=True,
+                                  replace_pose=True,
+                                  replace_cam = True,
+                                  **kwargs)
+
+    ## values_target["images"] = values_input["images"] # we don't want the target image but the input image (for inpainting by mask)
+    initializations["all_from_target"] = [values_target, copy.deepcopy(visdict_target_)]
+    initializations["all_from_input"] = [values_input, visdict_input]
+
+    losses_to_use, loss_weights = loss_function_config_v2(target_image, losses_to_use, emonet=emonet_path, deca=deca,
+                                                          output_image_key=output_image_key,
+                                                          values_input=values_input,
+                                                          values_target=values_target_,
+                                                          )
+
 
 
     values_target = replace_codes(values_input, copy.deepcopy(values_target_),

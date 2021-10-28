@@ -40,7 +40,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
     # gpu_mem_requirement_mb = 14 * 1024
-    gpu_mem_requirement_mb = 17 * 1024
+    gpu_mem_requirement_mb = 19 * 1024
     # gpu_mem_requirement_mb = None
     cpus = 1
     gpus = 1
@@ -186,7 +186,6 @@ def main():
     # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
     # out_folder = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/optimize_emotion'
     # target_image_path = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = False
 
     start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png" # Rachel 1
     # start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png" # Rachel 2
@@ -447,8 +446,8 @@ def main():
     #                  "emotion_vae_reg_exp",
     #                  "emotion_f12vae_reg_exp"]
 
-    jaw_lrs = [1., 0.1, 0.01, 0.001, 0.0001, 0.]
-    # jaw_lrs = [0.01]
+    # jaw_lrs = [1., 0.1, 0.01, 0.001, 0.0001, 0.]
+    jaw_lrs = [0.01]
     for jaw_lr in jaw_lrs:
         kw["jaw_lr"] = kw["lr"] * jaw_lr
         for name, cfg in deca_models.items():
