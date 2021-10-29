@@ -205,7 +205,8 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
-                           checkpoint=None, checkpoint_kwargs=None):
+                           checkpoint=None, checkpoint_kwargs=None, project_name_=None):
+    project_name_ = project_name_ or project_name
     if dm is None:
         dm, sequence_name = data_preparation_function(cfg)
 
@@ -222,7 +223,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         logger = create_logger(
                     cfg.learning.logger_type,
                     name=cfg.inout.name,
-                    project_name=project_name,
+                    project_name=project_name_,
                     version=version,
                     save_dir=cfg.inout.full_run_dir,
                     config=OmegaConf.to_container(cfg)
@@ -443,8 +444,11 @@ def create_experiment_name(cfg_coarse, cfg_detail, sequence_name, version=1):
     return experiment_name
 
 
-def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=-1, resume_from_previous = True, force_new_location = False):
+def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=-1, resume_from_previous = True, force_new_location = False,
+                  project_name_=None):
     # configs = [cfg_coarse, cfg_detail]
+    project_name_ = project_name_ or project_name
+
     configs = [cfg_coarse, cfg_detail, cfg_coarse, cfg_coarse, cfg_detail, cfg_detail]
     stages = ["test", "test", "train", "test", "train", "test"]
     stages_prefixes = ["start", "start", "", "", "", ""]
@@ -587,7 +591,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=-1, resume_fr
 
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm, wandb_logger,
                                       data_preparation_function=prepare_data,
-                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
+                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs, project_name=project_name_)
         checkpoint = None
 
 

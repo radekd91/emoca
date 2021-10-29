@@ -254,7 +254,7 @@ def train_on_selected_sequences():
              # 'model.useSeg=gt',
              'model.useSeg=rend',
              'model.idw=0',
-             'model.expression_backbone=deca_clone',
+             # 'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_coarse_32gb',
              'model.shape_constrain_type=None',
              # 'data/datasets=affectnet_cluster',
@@ -262,7 +262,7 @@ def train_on_selected_sequences():
              'data/augmentations=default'],
 
             ['model.useSeg=rend', 'model.idw=0',
-             'model.expression_backbone=deca_clone',
+             # 'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_detail_32gb',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
@@ -377,11 +377,11 @@ def train_on_selected_sequences():
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
-    # emo_feature_loss_type = 'cosine_similarity'
+    emo_feature_loss_type = 'cosine_similarity'
     # emo_feature_loss_type = 'l1_loss'
     # emo_feature_loss_type = 'mse_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
-    emo_feature_loss_type = 'barlow_twins'
+    # emo_feature_loss_type = 'barlow_twins'
 
     resume_from = None # resume from Original DECA
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
@@ -476,10 +476,10 @@ def train_on_selected_sequences():
     # emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1, 0.05]
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
-    emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
+    # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
     # emonet_weights = [5.0, 0.5, 0.1]
     # emonet_weights = [10,  0.1]
-    # emonet_weights = [1.0]
+    emonet_weights = [1.0]
     # emonet_weights = [0.1]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose

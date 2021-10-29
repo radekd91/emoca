@@ -203,16 +203,16 @@ def main():
 
 
     target_images = [
-        # target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
+        target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
         ## target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
-        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
-        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
-        # target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
-        # target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
-        # target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
+        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
+        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
+        target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
+        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
+        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
     ]
 
     for t in target_images:
@@ -234,9 +234,9 @@ def main():
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
     # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # kw["emonet"]["path"] = "Synth"
-    # emonet["feature_metric"] = "l1_loss"
+    emonet["feature_metric"] = "l1_loss"
     # emonet["feature_metric"] = "mse_loss"
-    emonet["feature_metric"] = "cosine_similarity"
+    # emonet["feature_metric"] = "cosine_similarity"
 
     optim_kwargs = {
         "output_image_key": "predicted_detailed_image",
@@ -388,7 +388,10 @@ def main():
         # "loss_shape_reg": 100.,
         # "loss_expression_reg" : 100.,
         "loss_expression_reg": 10.,
-        "loss_photometric_texture": 1.,
+        # "loss_photometric_texture": 1.,
+        # "loss_landmark": 100.,
+        # "loss_lip_distance": 100.,
+        # "metric_mouth_corner_distance": 100.,
         # "loss_landmark": 1.,
         # "loss_lip_distance": 1.,
         # "metric_mouth_corner_distance": 1.,
@@ -448,6 +451,8 @@ def main():
 
     # jaw_lrs = [1., 0.1, 0.01, 0.001, 0.0001, 0.]
     jaw_lrs = [0.01]
+    # jaw_lrs = [0.05]
+    # jaw_lrs = [0.1]
     for jaw_lr in jaw_lrs:
         kw["jaw_lr"] = kw["lr"] * jaw_lr
         for name, cfg in deca_models.items():
