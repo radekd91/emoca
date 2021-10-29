@@ -160,7 +160,10 @@ class DecaModule(LightningModule):
         if self.deca.__class__.__name__ != model_params.deca_class:
             old_deca_class = self.deca.__class__.__name__
             state_dict = self.deca.state_dict()
-            deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+            if 'deca_class' in model_params.keys():
+                deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+            else:
+                deca_class = DECA
             self.deca = deca_class(config=model_params)
 
             diff = set(state_dict.keys()).difference(set(self.deca.state_dict().keys()))
@@ -1438,17 +1441,17 @@ class DecaModule(LightningModule):
                     d['landmark'] = \
                         lossfunc.landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
 
-                d = self._metric_or_loss(losses, metrics, 'eye_distance' not in self.deca.config.keys() or
+                d = self._metric_or_loss(losses, metrics, 'use_eye_distance' not in self.deca.config.keys() or
                                          self.deca.config.use_eye_distance)
                 # losses['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks, lmk) * self.deca.config.lmk_weight * 2
                 d['eye_distance'] = lossfunc.eyed_loss(predicted_landmarks[:geom_losses_idxs, ...],
                                                        lmk[:geom_losses_idxs, ...]) * self.deca.config.eyed
-                d = self._metric_or_loss(losses, metrics, 'lip_distance' not in self.deca.config.keys() or
+                d = self._metric_or_loss(losses, metrics, 'use_lip_distance' not in self.deca.config.keys() or
                                          self.deca.config.use_lip_distance)
                 d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks[:geom_losses_idxs, ...],
                                                        lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
 
-                d = self._metric_or_loss(losses, metrics, 'mouth_corner_distance' in self.deca.config.keys() and
+                d = self._metric_or_loss(losses, metrics, 'use_mouth_corner_distance' in self.deca.config.keys() and
                                          self.deca.config.use_mouth_corner_distance)
                 d['mouth_corner_distance'] = lossfunc.mouth_corner_loss(predicted_landmarks[:geom_losses_idxs, ...],
                                                        lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd

@@ -205,7 +205,7 @@ def main():
     target_images = [
         target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
         ## target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
-        # target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
+        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
         target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
         target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
         target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
@@ -234,8 +234,8 @@ def main():
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
     # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # kw["emonet"]["path"] = "Synth"
-    emonet["feature_metric"] = "l1_loss"
-    # emonet["feature_metric"] = "mse_loss"
+    # emonet["feature_metric"] = "l1_loss"
+    emonet["feature_metric"] = "mse_loss"
     # emonet["feature_metric"] = "cosine_similarity"
 
     optim_kwargs = {
@@ -390,8 +390,8 @@ def main():
         "loss_expression_reg": 10.,
         # "loss_photometric_texture": 1.,
         # "loss_landmark": 100.,
-        # "loss_lip_distance": 100.,
-        # "metric_mouth_corner_distance": 100.,
+        "loss_lip_distance": 100.,
+        "metric_mouth_corner_distance": 100.,
         # "loss_landmark": 1.,
         # "loss_lip_distance": 1.,
         # "metric_mouth_corner_distance": 1.,
@@ -409,20 +409,20 @@ def main():
         #     "weight" : 100., # mouth opens, loss does minimize, but the mouth stays open a little too much
         #     # "weight" : 50.,
         # },
-        # "jaw_reg": {
-        #     # "loss_type": "l1",
-        #     "loss_type": "l2",
-        #     "reference_type": "quat",
-        #     "reference_pose": "from_target",
-        #     # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
-        #     #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
-        #     # "weight" : 0.1,
-        #     # "weight" : 0.5,
-        #     # "weight" : 1.,
-        #     # "weight" : 5.,
-        #     "weight" : 10.,
-        #     # "weight": 50.,
-        # }
+        "jaw_reg": {
+            # "loss_type": "l1",
+            "loss_type": "l2",
+            "reference_type": "quat",
+            "reference_pose": "from_target",
+            # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
+            #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
+            # "weight" : 0.1,
+            # "weight" : 0.5,
+            # "weight" : 1.,
+            # "weight" : 5.,
+            "weight" : 10.,
+            # "weight": 50.,
+        }
     }
 
 

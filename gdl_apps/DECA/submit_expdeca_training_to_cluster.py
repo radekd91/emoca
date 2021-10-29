@@ -394,16 +394,23 @@ def train_on_selected_sequences():
     use_au_loss = None
     # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
 
-    # use_photometric = True
-    use_photometric = False
+    use_photometric = True
+    # use_photometric = False
     photometric_normalization='mean'
     # photometric_normalization='rel_mask_value'
     # photometric_normalization='inv_rel_mask_value'
     # photometric_normalization='neg_rel_mask_value'
     # photometric_normalization='abs_mask_value'
 
-    use_landmarks = True
-    # use_landmarks = False
+    # use_landmarks = True
+    use_landmarks = False
+    use_eye_distance = True
+    # use_eye_distance = False
+    use_lip_distance = True
+    # use_mouth_closure = False
+    use_mouth_corner_distance = True
+    # use_mouth_corner_distance = False
+
 
     # exp_deca_jaw_pose = True
     exp_deca_jaw_pose = False
@@ -435,6 +442,9 @@ def train_on_selected_sequences():
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
+        f'+model.use_mouth_corner_distance{use_mouth_corner_distance}'
+        f'+model.use_eye_distance{use_eye_distance}'
+        f'+model.use_lip_distance{use_lip_distance}'
         'model.background_from_input=False',
         dataset_coarse, # affectnet vs deca dataset
         sampler,
@@ -466,6 +476,9 @@ def train_on_selected_sequences():
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
+        f'+model.use_mouth_corner_distance{use_mouth_corner_distance}'
+        f'+model.use_eye_distance{use_eye_distance}'
+        f'+model.use_lip_distance{use_lip_distance}'
         'model.background_from_input=False',
         dataset_detail,
         sampler,

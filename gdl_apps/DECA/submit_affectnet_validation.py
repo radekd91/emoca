@@ -275,6 +275,65 @@ def main():
     # mode = 'coarse'
     mode = 'detail'
 
+
+    # # ExpDECA with stronger emonet loss withouth jaw
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-59-10_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-58-28_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-58-11_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-55-47_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-55-25_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-55-14_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-55-12_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-54-31_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-53-48_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-53-44_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-50-22_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_15-02-19_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-59-51_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-59-38_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-59-25_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-57-14_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-57-09_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-52-01_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-52-00_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-09-55_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-09-45_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-09-16_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_27_14-09-02_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_11-58-32_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_11-57-47_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_11-56-07_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_18-54-54_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_18-54-45_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_18-53-53_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_18-30-31_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_18-30-14_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_10-18-37_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_10-18-18_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_25_10-18-05_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_22_12-23-05_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_22_12-23-04_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_22_12-23-03_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_22_10-38-21_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
+    # # AU loss
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-46-06_ExpDECA_Affec_clone_NoRing_AUf-cos_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-37-57_ExpDECA_Affec_clone_NoRing_AUf-cos_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-22-46_ExpDECA_Affec_clone_NoRing_AUf-cos_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-17-11_ExpDECA_Affec_clone_NoRing_AUf-cos_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-17-10_ExpDECA_Affec_clone_NoRing_AUf-cos_DeSegrend_BlackB_Aug_early"]
+
+    ## on DECA Dataset ( sth might wrong and be badly trained here, not sure )
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_15-08-44_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_13-15-16_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_12-35-21_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_26_12-29-38_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    mode = 'coarse'
+
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
