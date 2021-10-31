@@ -13,5 +13,5 @@ defaults:
   - learning/logging: wandb
 #  - learning/logging: none
   - learning/training: default
-  - inout: desktop
+  - inout: cluster
 
