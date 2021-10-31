@@ -54,7 +54,8 @@ def main():
         mode = 'detail'
     deca, conf = load_model(path_to_models, run_name, mode)
 
-
+    # mode = "detail"
+    # deca.reconfigure(conf[mode]["model"], conf[mode]["inout"] , conf[mode]["learning"])
 
     deca.eval()
 

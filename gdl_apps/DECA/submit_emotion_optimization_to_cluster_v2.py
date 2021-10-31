@@ -228,11 +228,11 @@ def main():
     emonet["path"] = "None"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early"
     ## kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_09_02_19-54-43_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
-    emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
+    # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_24_00-17-40_EmoCnn_vgg19_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
-    # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # kw["emonet"]["path"] = "Synth"
     # emonet["feature_metric"] = "l1_loss"
     emonet["feature_metric"] = "mse_loss"
@@ -390,8 +390,8 @@ def main():
         "loss_expression_reg": 10.,
         # "loss_photometric_texture": 1.,
         # "loss_landmark": 100.,
-        "loss_lip_distance": 100.,
-        "metric_mouth_corner_distance": 100.,
+        "loss_lip_distance": 10.,
+        "metric_mouth_corner_distance": 10.,
         # "loss_landmark": 1.,
         # "loss_lip_distance": 1.,
         # "metric_mouth_corner_distance": 1.,

@@ -107,7 +107,8 @@ def create_experiment_name(cfg, version=1):
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
-                           checkpoint=None, checkpoint_kwargs=None):
+                           checkpoint=None, checkpoint_kwargs=None, project_name_=None):
+    project_name_ = project_name_ or project_name
     if dm is None:
         dm, sequence_name = data_preparation_function(cfg)
 
@@ -124,8 +125,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         logger = create_logger(
                     cfg.learning.logger_type,
                     name=cfg.inout.name,
-                    project_name=project_name,
+                    project_name=project_name_,
                     version=version,
+                    config=OmegaConf.to_container(cfg),
                     save_dir=cfg.inout.full_run_dir)
 
     if deca is None:
@@ -240,7 +242,9 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
 
 
 def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
-                  force_new_location=False):
+                  force_new_location=False,
+                  project_name_=None):
+    project_name_ = project_name_ or project_name
     configs = [cfg, cfg]
     # configs = [cfg,]
     stages = ["train", "test"]
@@ -321,7 +325,8 @@ def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
         cfg = configs[i]
         deca = single_stage_deca_pass(deca, cfg, stages[i], stages_prefixes[i], dm=None, logger=logger,
                                       data_preparation_function=prepare_data,
-                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs)
+                                      checkpoint=checkpoint, checkpoint_kwargs=checkpoint_kwargs,
+                                      project_name_=project_name_)
         checkpoint = None
 
 
@@ -414,16 +419,17 @@ def main():
         emodeca_overrides = ['learning/logging=none',
                              'model/backbone=coarse_emodeca',
                              # 'model/backbone=coarse_emodeca_emonet',
-                             'model/settings=AU_emotionet',
-                             '+model.mlp_norm_layer=BatchNorm1d',
+                             # 'model/settings=AU_emotionet',
+                             # '+model.mlp_norm_layer=BatchNorm1d', # this one is now default
                              # 'model.unpose_global_emonet=false',
                              # 'model.use_coarse_image_emonet=false',
                              # 'model.use_detail_image_emonet=true',
                              # 'model.static_cam_emonet=false',
                              # 'model.static_light=false',
-
-                            'model.mlp_dimension_factor=4',
-                            'data/datasets=emotionet_desktop',
+                            # 'model.mlp_dimension_factor=4',
+                            'model.mlp_dim=2048',
+                            # 'data/datasets=emotionet_desktop',
+                            'data.data_class=AffectNetDataModuleValTest',
                             'data/augmentations=default_with_resize',
                             'data.num_workers=0'
                              ]
@@ -442,7 +448,7 @@ def main():
             #  'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
             # 'data/datasets=affectnet_cluster',
-            'data/datasets=emotionet_desktop',
+            # 'data/datasets=emotionet_desktop',
              'learning.batch_size_test=1'
         ]
         deca_conf_path = None
@@ -524,7 +530,9 @@ def main():
         with open(cfg_path, 'r') as f:
             cfg = OmegaConf.load(f)
 
-    train_emodeca(cfg, 0)
+    project_name_ = "EmoDECATest"
+
+    train_emodeca(cfg, -1, project_name_=project_name_)
 
 
 if __name__ == "__main__":

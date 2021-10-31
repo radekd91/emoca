@@ -86,14 +86,14 @@ def train_emodeca_on_cluster():
         #     ['model.num_mlp_layers=3'],
         #     []
         # ],
-        [
-            ['model.use_detail_code=true',],
-            []
-        ],
-        [
-            [],
-            []
-        ],
+        # [
+        #     ['model.use_detail_code=true',],
+        #     []
+        # ],
+        # [
+        #     [],
+        #     []
+        # ],
         [
             ['data.sampler=balanced_expr'],
             []
@@ -263,10 +263,11 @@ def train_emodeca_on_cluster():
         # 'model/settings=AU_emotionet_bce',
         # 'model/settings=AU_emotionet_bce_weighted',
         '+model.mlp_norm_layer=BatchNorm1d',
-        'model.use_identity=True', #
+        # 'model.use_identity=True', #
         # 'data/augmentations=default',
         # 'learning/optimizer=adabound',
         'data/datasets=affectnet_cluster',
+        'data.data_class=AffectNetDataModuleValTest',
         # 'data/datasets=affectnet_v1_cluster',
         # 'data/datasets=emotionet_0_cluster',
         # 'data/datasets=emotionet_cluster',
@@ -289,7 +290,7 @@ def train_emodeca_on_cluster():
         'data/datasets=emotionet_cluster',
         'learning.batch_size_test=1',
         # 'data/augmentations=default',
-        'data/datasets=emotionet_cluster',
+        # 'data/datasets=emotionet_cluster',
     ]
 
     # # # EMOEXPDECA

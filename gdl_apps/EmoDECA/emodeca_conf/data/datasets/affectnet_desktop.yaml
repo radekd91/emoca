@@ -11,7 +11,8 @@
 #         scale=1.25)
 
 data_class: AffectNetDataModule
-input_dir: /home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet
+#input_dir: /home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet
+input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/affectnet
 #output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/
 output_dir: /is/cluster/work/rdanecek/data/affectnet/
 processed_subfolder: processed_2021_Apr_05_15-22-18

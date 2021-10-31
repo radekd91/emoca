@@ -29,6 +29,7 @@ torch.backends.cudnn.benchmark = True
 from enum import Enum
 from gdl.utils.other import class_from_str
 from gdl.layers.losses.VGGLoss import VGG19Loss
+from omegaconf import OmegaConf, open_dict
 
 import pytorch_lightning.plugins.environments.lightning_environment as le
 
@@ -46,13 +47,17 @@ class DecaModule(LightningModule):
 
         if 'detail_conditioning' not in model_params.keys():
             self.detail_conditioning = ['jawpose', 'expression', 'detail']
-            model_params.detail_conditioning = self.detail_conditioning
+            OmegaConf.set_struct(model_params, True)
+            with open_dict(model_params):
+                model_params.detail_conditioning = self.detail_conditioning
         else:
             self.detail_conditioning = model_params.detail_conditioning
 
         if 'detailemo_conditioning' not in model_params.keys():
             self.detailemo_conditioning = []
-            model_params.detailemo_conditioning = self.detailemo_conditioning
+            OmegaConf.set_struct(model_params, True)
+            with open_dict(model_params):
+                model_params.detailemo_conditioning = self.detailemo_conditioning
         else:
             self.detailemo_conditioning = model_params.detailemo_conditioning
 

@@ -254,7 +254,7 @@ def train_on_selected_sequences():
              # 'model.useSeg=gt',
              'model.useSeg=rend',
              'model.idw=0',
-             # 'model.expression_backbone=deca_clone',
+             'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_coarse_32gb',
              'model.shape_constrain_type=None',
              # 'data/datasets=affectnet_cluster',
@@ -262,7 +262,7 @@ def train_on_selected_sequences():
              'data/augmentations=default'],
 
             ['model.useSeg=rend', 'model.idw=0',
-             # 'model.expression_backbone=deca_clone',
+             'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_detail_32gb',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
@@ -359,27 +359,27 @@ def train_on_selected_sequences():
         # ],
 
     ]
-
+    #
     sampler = "data.sampler=balanced_expr"
     dataset_coarse =  "data/datasets=affectnet_cluster"
     dataset_detail = 'data/datasets=affectnet_cluster'
-    #
+    # #
     # sampler = "+data.sampler=False"
-    # dataset_coarse =  "data/datasets=coarse_data_cluster"
+    # dataset_coarse = "data/datasets=coarse_data_cluster"
     # dataset_detail = 'data/datasets=detail_data_cluster'
 
 
 
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_23_22-52-24_EmoCnn_vgg13_shake_samp-balanced_expr_Aug_early'
-    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early'
+    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_30_11-12-32_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early'
-    # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
-    emo_feature_loss_type = 'cosine_similarity'
+    # emo_feature_loss_type = 'cosine_similarity'
     # emo_feature_loss_type = 'l1_loss'
-    # emo_feature_loss_type = 'mse_loss'
+    emo_feature_loss_type = 'mse_loss'
     # emo_feature_loss_type = 'barlow_twins_headless'
     # emo_feature_loss_type = 'barlow_twins'
 
@@ -404,12 +404,12 @@ def train_on_selected_sequences():
 
     # use_landmarks = True
     use_landmarks = False
-    use_eye_distance = True
-    # use_eye_distance = False
-    use_lip_distance = True
-    # use_mouth_closure = False
-    use_mouth_corner_distance = True
-    # use_mouth_corner_distance = False
+    # use_eye_distance = True
+    use_eye_distance = False
+    # use_lip_distance = True
+    use_lip_distance = False
+    # use_mouth_corner_distance = True
+    use_mouth_corner_distance = False
 
 
     # exp_deca_jaw_pose = True
@@ -442,9 +442,9 @@ def train_on_selected_sequences():
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
-        f'+model.use_mouth_corner_distance{use_mouth_corner_distance}'
-        f'+model.use_eye_distance{use_eye_distance}'
-        f'+model.use_lip_distance{use_lip_distance}'
+        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+        f'+model.use_eye_distance={use_eye_distance}',
+        f'+model.use_lip_distance={use_lip_distance}',
         'model.background_from_input=False',
         dataset_coarse, # affectnet vs deca dataset
         sampler,
@@ -476,9 +476,9 @@ def train_on_selected_sequences():
         f'model.use_landmarks={use_landmarks}',
         f'model.use_photometric={use_photometric}',
         f'+model.photometric_normalization={photometric_normalization}',
-        f'+model.use_mouth_corner_distance{use_mouth_corner_distance}'
-        f'+model.use_eye_distance{use_eye_distance}'
-        f'+model.use_lip_distance{use_lip_distance}'
+        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+        f'+model.use_eye_distance={use_eye_distance}',
+        f'+model.use_lip_distance={use_lip_distance}',
         'model.background_from_input=False',
         dataset_detail,
         sampler,
@@ -491,8 +491,9 @@ def train_on_selected_sequences():
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
     # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
     # emonet_weights = [5.0, 0.5, 0.1]
+    emonet_weights = [5.0, 0.5]
     # emonet_weights = [10,  0.1]
-    emonet_weights = [1.0]
+    # emonet_weights = [1.0]
     # emonet_weights = [0.1]
     # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
     # emomlp_weights = [1.0] # with detached jaw pose

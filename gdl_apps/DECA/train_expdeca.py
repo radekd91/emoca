@@ -1,6 +1,6 @@
 from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from gdl.datasets.DecaDataModule import DecaDataModule
-from gdl.datasets.AffectNetDataModule import AffectNetDataModule
+from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetDataModuleValTest
 from gdl.datasets.EmotioNetDataModule import EmotioNetDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -32,7 +32,7 @@ def prepare_data(cfg):
     else:
         augmentation = None
 
-    if data_class == 'AffectNetDataModule':
+    if 'AffectNetDataModule' in data_class:
         if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
             augmentation = OmegaConf.to_container(cfg.data.augmentation)
         else:
@@ -46,27 +46,52 @@ def prepare_data(cfg):
 
         drop_last = cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else False
 
-        dm = AffectNetDataModule(
-            input_dir=cfg.data.input_dir,
-            output_dir=cfg.data.output_dir,
-            processed_subfolder=cfg.data.processed_subfolder,
-            ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
-            mode=cfg.data.mode,
-            face_detector=cfg.data.face_detector,
-            face_detector_threshold=cfg.data.face_detector_threshold,
-            image_size=cfg.data.image_size,
-            scale=cfg.data.scale,
-            train_batch_size=cfg.learning.batch_size_train,
-            val_batch_size=cfg.learning.batch_size_val,
-            test_batch_size=cfg.learning.batch_size_test,
-            num_workers=cfg.data.num_workers,
-            augmentation=augmentation,
-            ring_type=ring_type,
-            ring_size=ring_size,
-            drop_last=drop_last,
-            sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
-            processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
-        )
+        if data_class == 'AffectNetDataModule':
+            dm = AffectNetDataModule(
+                input_dir=cfg.data.input_dir,
+                output_dir=cfg.data.output_dir,
+                processed_subfolder=cfg.data.processed_subfolder,
+                ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
+                mode=cfg.data.mode,
+                face_detector=cfg.data.face_detector,
+                face_detector_threshold=cfg.data.face_detector_threshold,
+                image_size=cfg.data.image_size,
+                scale=cfg.data.scale,
+                train_batch_size=cfg.learning.batch_size_train,
+                val_batch_size=cfg.learning.batch_size_val,
+                test_batch_size=cfg.learning.batch_size_test,
+                num_workers=cfg.data.num_workers,
+                augmentation=augmentation,
+                ring_type=ring_type,
+                ring_size=ring_size,
+                drop_last=drop_last,
+                sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
+                processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
+            )
+        elif data_class == 'AffectNetDataModuleValTest':
+            dm = AffectNetDataModuleValTest(
+                input_dir=cfg.data.input_dir,
+                output_dir=cfg.data.output_dir,
+                processed_subfolder=cfg.data.processed_subfolder,
+                ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
+                mode=cfg.data.mode,
+                face_detector=cfg.data.face_detector,
+                face_detector_threshold=cfg.data.face_detector_threshold,
+                image_size=cfg.data.image_size,
+                scale=cfg.data.scale,
+                train_batch_size=cfg.learning.batch_size_train,
+                val_batch_size=cfg.learning.batch_size_val,
+                test_batch_size=cfg.learning.batch_size_test,
+                num_workers=cfg.data.num_workers,
+                augmentation=augmentation,
+                ring_type=ring_type,
+                ring_size=ring_size,
+                drop_last=drop_last,
+                sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
+                processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
+            )
+        else:
+            raise ValueError(f"Uknown data module class '{data_class}'")
         sequence_name = "AffNet"
     elif data_class == 'EmotioNetDataModule':
 

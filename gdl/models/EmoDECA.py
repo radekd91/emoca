@@ -50,10 +50,14 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
         if 'mlp_dimension_factor' in self.config.model.keys():
             dim_factor = self.config.model.mlp_dimension_factor
+            dimension = in_size * dim_factor
+        elif 'mlp_dim' in self.config.model.keys():
+            dimension = self.config.model.mlp_dim
         else:
-            dim_factor = 1
+            dimension = in_size
+
             
-        hidden_layer_sizes = config.model.num_mlp_layers * [in_size * dim_factor]
+        hidden_layer_sizes = config.model.num_mlp_layers * [dimension]
 
         out_size = 0
         if self.predicts_expression():
@@ -143,8 +147,10 @@ class EmoDECA(EmotionRecognitionBaseModule):
         if self.config.model.use_detail_code:
             assert self.deca.mode == DecaMode.DETAIL
             detailcode = values['detailcode']
+            detailemocode = values['detailemocode']
         else:
             detailcode = None
+            detailemocode = None
 
         global_pose = posecode[:, :3]
         jaw_pose = posecode[:, 3:]
@@ -166,6 +172,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
             if self.config.model.use_detail_code:
                 input_list += [detailcode]
+
+            if 'use_detail_emo_code' in self.config.model.keys() and self.config.model.use_detail_emo_code:
+                input_list += [detailemocode]
 
             input = torch.cat(input_list, dim=1)
             output = self.mlp(input)

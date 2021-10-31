@@ -596,6 +596,27 @@ class AffectNetTestModule(AffectNetDataModule):
                           batch_size=self.test_batch_size)
 
 
+class AffectNetDataModuleValTest(AffectNetDataModule):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setup(self, stage=None):
+        self.training_set = self._new_training_set()
+        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                        None, ignore_invalid=self.ignore_invalid,
+                                        ring_type=None,
+                                        ring_size=None,
+                                        ext=self.processed_ext
+                                        )
+
+        self.test_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=None,
+                                  ring_size=None,
+                                  ext=self.processed_ext
+                                  )
+
 class AffectNet(EmotionalImageDatasetBase):
 
     def __init__(self,
