@@ -538,7 +538,7 @@ def main():
             cfg = OmegaConf.load(f)
         start_stage = -1
         start_from_previous = False
-        if len(sys.argv) >= 2:
+        if len(sys.argv) > 2:
             start_stage = int(sys.argv[2])
         if start_stage == 1:
             start_from_previous = True
