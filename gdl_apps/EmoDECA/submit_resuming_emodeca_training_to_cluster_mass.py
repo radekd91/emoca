@@ -52,7 +52,7 @@ def submit(resume_folder,
     cuda_capability_requirement = 7
     mem_gb = 16
     # mem_gb = 30
-    args = f"{str(Path(result_dir_cluster_side) / resume_folder)}"
+    args = f"{str(Path(result_dir_cluster_side) / resume_folder / 'cfg.yaml')}"
     if stage is not None:
         args += f" {stage}"
 
@@ -84,8 +84,8 @@ def train_emodeca_on_cluster():
     # # # EMOEXPDECA
     resume_folders = []
 
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_01_00-40-15_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_01_00-40-15_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_01_00-40-14_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
     # resume_folders += [

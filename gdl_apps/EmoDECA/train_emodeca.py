@@ -283,7 +283,7 @@ def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
             random_id = cfg.inout.random_id
         else:
             random_id = ""
-        full_run_dir = Path(cfg.inout.full_run_dir).parent
+        full_run_dir = Path(cfg.inout.full_run_dir)
         exist_ok = True # a path for an old experiment should exist
 
     full_run_dir.mkdir(parents=True, exist_ok=exist_ok)
