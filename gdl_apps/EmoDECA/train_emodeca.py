@@ -353,7 +353,9 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
             ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best',
                                      )
             if ckpt is None:
-                ckpt = locate_checkpoint(deca_cfg_["coarse"], replace_root=replace_root_path, relative_to=relative_to_path,
+                deca_stage = "coarse"
+                deca_cfg = deca_cfg_[deca_stage]
+                ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path,
                                          mode='best',
                                          )
 
