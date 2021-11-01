@@ -114,14 +114,14 @@ class EmoNetModule(EmotionRecognitionBaseModule):
 
         if isinstance(self.logger, WandbLogger):
             caption = self._vae_2_str(
-                valence=valence_pred.detach().cpu().numpy(),
-                arousal=arousal_pred.detach().cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
+                valence=valence_pred.detach().cpu().numpy()[0],
+                arousal=arousal_pred.detach().cpu().numpy()[0],
+                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32)[0],
                 expr7=None, prefix="pred")
             caption += self._vae_2_str(
-                valence=valence_gt.cpu().numpy(),
-                arousal=arousal_gt.cpu().numpy(),
-                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
+                valence=valence_gt.cpu().numpy()[0],
+                arousal=arousal_gt.cpu().numpy()[0],
+                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32)[0],
                 expr7=None, prefix="gt")
 
 
