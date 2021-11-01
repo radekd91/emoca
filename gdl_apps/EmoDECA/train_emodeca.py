@@ -7,6 +7,7 @@ from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoSwinModule import EmoSwinModule
 from gdl.models.EmoCnnModule import EmoCnnModule
+from gdl.models.EmoNetModule import EmoNetModule
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
