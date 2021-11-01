@@ -83,7 +83,7 @@ def train_emodeca_on_cluster():
 
     # # # EMOEXPDECA
     resume_folders = []
-
+    #
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_01_00-40-15_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
     # resume_folders += [

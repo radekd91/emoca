@@ -277,7 +277,7 @@ def main():
 
 
     # # ExpDECA with stronger emonet loss withouth jaw
-    # # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-59-10_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    ## run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-59-10_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-58-28_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-58-11_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_28_10-55-47_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]

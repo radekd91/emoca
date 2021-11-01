@@ -5,6 +5,7 @@ from pathlib import Path
 from gdl_apps.DECA.test_and_finetune_deca import prepare_data
 import torch
 import matplotlib.pyplot as plt
+import sys
 
 
 def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
@@ -34,6 +35,7 @@ def load_deca(conf,
               mode,
               relative_to_path=None,
               replace_root_path=None,
+              terminate_on_failure=True,
               ):
     print(f"Taking config of stage '{stage}'")
     print(conf.keys())
@@ -46,6 +48,11 @@ def load_deca(conf,
     cfg.model.resume_training = False
 
     checkpoint = locate_checkpoint(cfg, replace_root_path, relative_to_path, mode=mode)
+    if checkpoint is None:
+        if terminate_on_failure:
+            sys.exit(0)
+        else:
+            return None
     print(f"Loading checkpoint '{checkpoint}'")
     # if relative_to_path is not None and replace_root_path is not None:
     #     cfg = hack_paths(cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)

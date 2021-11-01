@@ -11,7 +11,8 @@ def load_model(path_to_models,
               stage,
               relative_to_path=None,
               replace_root_path=None,
-              mode='best'
+              mode='best',
+              allow_stage_revert=False, # allows to load coarse if detail checkpoint not found
               ):
     run_path = Path(path_to_models) / run_name
     with open(Path(run_path) / "cfg.yaml", "r") as f:
@@ -21,7 +22,16 @@ def load_model(path_to_models,
               mode,
               relative_to_path,
               replace_root_path,
+              terminate_on_failure= not allow_stage_revert
               )
+    if deca is None and allow_stage_revert:
+        deca = load_deca(conf,
+                         "coarse",
+                         mode,
+                         relative_to_path,
+                         replace_root_path,
+                         )
+
     return deca, conf
 
 
@@ -52,10 +62,7 @@ def main():
         mode = sys.argv[2]
     else:
         mode = 'detail'
-    deca, conf = load_model(path_to_models, run_name, mode)
-
-    # mode = "detail"
-    # deca.reconfigure(conf[mode]["model"], conf[mode]["inout"] , conf[mode]["learning"])
+    deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
 
     deca.eval()
 

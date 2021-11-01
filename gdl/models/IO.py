@@ -13,11 +13,12 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
     print(f"Looking for checkpoint in '{checkpoint_dir}'")
     checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
     if len(checkpoints) == 0:
-        print(f"Did not found checkpoints. Looking in subfolders")
+        print(f"Did not find checkpoints. Looking in subfolders")
         checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
         if len(checkpoints) == 0:
-            print(f"Did not find checkpoints to resume from. Terminating")
-            sys.exit()
+            print(f"Did not find checkpoints to resume from. Returning None")
+            # sys.exit()
+            return None
         print(f"Found {len(checkpoints)} checkpoints")
     else:
         print(f"Found {len(checkpoints)} checkpoints")
