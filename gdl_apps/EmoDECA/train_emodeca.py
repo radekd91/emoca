@@ -533,6 +533,7 @@ def main():
                         replace_root_path=replace_root_path)
         start_stage = -1
         start_from_previous = False
+        force_new_location = False
     else:
         cfg_path = sys.argv[1]
         print(f"Training from config '{cfg_path}'")
@@ -540,14 +541,18 @@ def main():
             cfg = OmegaConf.load(f)
         start_stage = -1
         start_from_previous = False
+        force_new_location = False
         if len(sys.argv) > 2:
             start_stage = int(sys.argv[2])
+        if len(sys.argv) > 3:
+            force_new_location = bool(int(sys.argv[3]))
         if start_stage == 1:
             start_from_previous = True
 
     project_name_ = "EmoDECATest"
 
-    train_emodeca(cfg, start_stage, project_name_=project_name_, resume_from_previous=start_from_previous)
+    train_emodeca(cfg, start_stage, project_name_=project_name_, resume_from_previous=start_from_previous,
+                  force_new_location=force_new_location)
 
 
 if __name__ == "__main__":
