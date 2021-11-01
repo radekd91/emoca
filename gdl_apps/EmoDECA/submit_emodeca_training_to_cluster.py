@@ -43,8 +43,8 @@ def submit(cfg, bid=10):
     max_price = 10000
     job_name = "train_deca"
     cuda_capability_requirement = 7
-    # mem_gb = 16
-    mem_gb = 30
+    mem_gb = 16
+    # mem_gb = 30
     args = f"{config_file.name}"
 
     execute_on_cluster(str(cluster_script_path),
@@ -96,10 +96,10 @@ def train_emodeca_on_cluster():
         #     [],
         #     []
         # ],
-        [
-            ['data.sampler=balanced_expr'],
-            []
-        ],
+        # [
+        #     ['data.sampler=balanced_expr'],
+        #     []
+        # ],
         [
             ['model.use_detail_code=true',
              'data.sampler=balanced_expr'],
@@ -265,7 +265,7 @@ def train_emodeca_on_cluster():
         # 'model/settings=AU_emotionet_bce',
         # 'model/settings=AU_emotionet_bce_weighted',
         # '+model.mlp_norm_layer=BatchNorm1d',
-        'model.use_identity=True', #
+        # 'model.use_identity=True', #
         # 'model.use_jaw_pose=False',
         # 'data/augmentations=default',
         # 'learning/optimizer=adabound',

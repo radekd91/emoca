@@ -416,7 +416,7 @@ def main():
         # #2 EMODECA
         # emodeca_default = "emodeca_emonet_coarse"
         emodeca_default = "emodeca_coarse"
-        emodeca_overrides = ['learning/logging=none',
+        emodeca_overrides = [#'learning/logging=none',
                              'model/backbone=coarse_emodeca',
                              # 'model/backbone=coarse_emodeca_emonet',
                              # 'model/settings=AU_emotionet',

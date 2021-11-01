@@ -311,7 +311,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
         with torch.no_grad():
             values = self.deca.decode(output_values)
 
-        self.deca.logger = self.logger
+        # self.deca.logger = self.logger # old version of PL, now logger is a property and retreived logger from the trainer
+        self.deca.trainer = self.trainer # new version of PL
+
         mode_ = str(self.deca.mode.name).lower()
 
         if "uv_detail_normals" in values.keys():
@@ -323,6 +325,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
         values[f"{mode_}_arousal_gt"] = arousal_gt
         values[f"{mode_}_expression_gt"] = expr_classification_gt
         values["affectnetexp"] = expr_classification_gt
+
 
         visualizations, grid_image = self.deca._visualization_checkpoint(values['verts'], values['trans_verts'],
                                                                          values['ops'],
