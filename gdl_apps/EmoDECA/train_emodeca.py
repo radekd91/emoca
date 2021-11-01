@@ -347,10 +347,16 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
             if deca_default is not None:
                 raise ValueError("Pass either a path to a deca config or a set of parameters to configure. Not both")
             with open(Path(deca_conf_path) / "cfg.yaml", "r") as f:
-                deca_cfg = OmegaConf.load(f)
-            deca_cfg = deca_cfg[deca_stage]
+                deca_cfg_ = OmegaConf.load(f)
+            deca_cfg = deca_cfg_[deca_stage]
 
-            ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best')
+            ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best',
+                                     )
+            if ckpt is None:
+                ckpt = locate_checkpoint(deca_cfg_["coarse"], replace_root=replace_root_path, relative_to=relative_to_path,
+                                         mode='best',
+                                         )
+
             cfg.model.deca_checkpoint = ckpt
             if replace_root_path is not None and relative_to_path is not None:
                 deca_cfg = hack_paths(deca_cfg, replace_root_path=replace_root_path, relative_to_path=relative_to_path)
