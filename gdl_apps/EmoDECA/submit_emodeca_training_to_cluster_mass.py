@@ -352,13 +352,27 @@ def train_emodeca_on_cluster():
 
     # # other emotion networks
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_22-23-28_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_22-23-25_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_22-23-25_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # #
     # # # para architecture
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_21-30-28_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_21-34-01_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_22-01-32_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_22-01-40_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-50-53_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-50-54_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-48-16_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-47-54_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-47-47_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_30_20-33-39_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
 
     for deca_conf_path in  run_names:
 

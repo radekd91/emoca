@@ -68,7 +68,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-    t.sleep(2)
+    t.sleep(5)
 
 
 def train_on_selected_sequences():
@@ -377,169 +377,177 @@ def train_on_selected_sequences():
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # emonet = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-04_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
 
-    # emo_feature_loss_type = 'cosine_similarity'
-    # emo_feature_loss_type = 'l1_loss'
-    emo_feature_loss_type = 'mse_loss'
-    # emo_feature_loss_type = 'barlow_twins_headless'
-    # emo_feature_loss_type = 'barlow_twins'
+    emo_feature_losses = ['mse_loss', 'l1_loss', 'cosine_similarity']
 
-    resume_from = None # resume from Original DECA
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
-    # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
+    for emo_loss in emo_feature_losses:
+        emo_feature_loss_type = emo_loss
 
-    use_emo_loss = True
-    # use_emo_loss = False
+        # emo_feature_loss_type = 'cosine_similarity'
+        # emo_feature_loss_type = 'l1_loss'
+        # emo_feature_loss_type = 'mse_loss'
+        # emo_feature_loss_type = 'barlow_twins_headless'
+        # emo_feature_loss_type = 'barlow_twins'
 
-    use_au_loss = None
-    # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
+        resume_from = None # resume from Original DECA
+        # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_21-50-45_DECA__DeSegFalse_early/" # My DECA, ResNet backbones
+        # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-03_DECA__EFswin_s_EDswin_s_DeSegFalse_early/" # My DECA, SWIN small
+        # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
-    use_photometric = True
-    # use_photometric = False
-    photometric_normalization='mean'
-    # photometric_normalization='rel_mask_value'
-    # photometric_normalization='inv_rel_mask_value'
-    # photometric_normalization='neg_rel_mask_value'
-    # photometric_normalization='abs_mask_value'
+        use_emo_loss = True
+        # use_emo_loss = False
 
-    # use_landmarks = True
-    use_landmarks = False
-    # use_eye_distance = True
-    use_eye_distance = False
-    # use_lip_distance = True
-    use_lip_distance = False
-    # use_mouth_corner_distance = True
-    use_mouth_corner_distance = False
+        use_au_loss = None
+        # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
+
+        photometric_uses = [True, False]
+
+        for photo_use  in photometric_uses:
+            use_photometric = photo_use
+            # use_photometric = True
+            # # use_photometric = False
+            photometric_normalization='mean'
+            # photometric_normalization='rel_mask_value'
+            # photometric_normalization='inv_rel_mask_value'
+            # photometric_normalization='neg_rel_mask_value'
+            # photometric_normalization='abs_mask_value'
+
+            landmark_uses = [True, False]
+            for lmk_use in landmark_uses:
+                use_landmarks = lmk_use
+                # # use_landmarks = True
+                # use_landmarks = False
+
+                relative_distance_uses = [True, False]
+
+                for rel_dist in relative_distance_uses:
+                    use_eye_distance = rel_dist
+                    use_lip_distance = rel_dist
+                    use_mouth_corner_distance = rel_dist
+
+                    # use_eye_distance = True
+                    # use_eye_distance = False
+                    # # use_lip_distance = True
+                    # use_lip_distance = False
+                    # # use_mouth_corner_distance = True
+                    # use_mouth_corner_distance = False
 
 
-    # exp_deca_jaw_pose = True
-    exp_deca_jaw_pose = False
+                    # exp_deca_jaw_pose = True
+                    exp_deca_jaw_pose = False
 
-    fixed_overrides_coarse = [
-        # 'model/settings=coarse_train',
-        # 'model/settings=coarse_train_emonet',
-        # 'model/settings=coarse_train_expdeca',
-        'model/settings=coarse_train_expdeca_emonet',
-        # 'model/settings=coarse_train_expdeca_emomlp',
-        # '+model.mlp_emotion_predictor.detach_shape=True',
-        # '+model.mlp_emotion_predictor.detach_expression=False',
-        # '+model.mlp_emotion_predictor.detach_detailcode=False',
-        # '+model.mlp_emotion_predictor.detach_jaw=True',
-        # '+model.mlp_emotion_predictor.detach_global_pose=False',
-        f'+model.emonet_model_path={emonet}',
-        f'model.resume_training={resume_from == None}', # load the original DECA model
-        'learning.early_stopping.patience=15',
-        'model.max_epochs=20',
-        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
-        f'model.use_emonet_loss={use_emo_loss}',
-        'model.use_emonet_feat_1=False',
-        'model.use_emonet_feat_2=True',
-        'model.use_emonet_valence=False',
-        'model.use_emonet_arousal=False',
-        'model.use_emonet_expression=False',
-        'model.use_emonet_combined=False',
-        f'model.exp_deca_jaw_pose={exp_deca_jaw_pose}',
-        f'model.use_landmarks={use_landmarks}',
-        f'model.use_photometric={use_photometric}',
-        f'+model.photometric_normalization={photometric_normalization}',
-        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
-        f'+model.use_eye_distance={use_eye_distance}',
-        f'+model.use_lip_distance={use_lip_distance}',
-        'model.background_from_input=False',
-        dataset_coarse, # affectnet vs deca dataset
-        sampler,
-    ]
-    if use_au_loss is not None:
-        fixed_overrides_coarse += [use_au_loss]
+                    fixed_overrides_coarse = [
+                        # 'model/settings=coarse_train',
+                        # 'model/settings=coarse_train_emonet',
+                        # 'model/settings=coarse_train_expdeca',
+                        'model/settings=coarse_train_expdeca_emonet',
+                        # 'model/settings=coarse_train_expdeca_emomlp',
+                        # '+model.mlp_emotion_predictor.detach_shape=True',
+                        # '+model.mlp_emotion_predictor.detach_expression=False',
+                        # '+model.mlp_emotion_predictor.detach_detailcode=False',
+                        # '+model.mlp_emotion_predictor.detach_jaw=True',
+                        # '+model.mlp_emotion_predictor.detach_global_pose=False',
+                        f'+model.emonet_model_path={emonet}',
+                        f'model.resume_training={resume_from == None}', # load the original DECA model
+                        'learning.early_stopping.patience=15',
+                        'model.max_epochs=20',
+                        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
+                        f'model.use_emonet_loss={use_emo_loss}',
+                        'model.use_emonet_feat_1=False',
+                        'model.use_emonet_feat_2=True',
+                        'model.use_emonet_valence=False',
+                        'model.use_emonet_arousal=False',
+                        'model.use_emonet_expression=False',
+                        'model.use_emonet_combined=False',
+                        f'model.exp_deca_jaw_pose={exp_deca_jaw_pose}',
+                        f'model.use_landmarks={use_landmarks}',
+                        f'model.use_photometric={use_photometric}',
+                        f'+model.photometric_normalization={photometric_normalization}',
+                        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+                        f'+model.use_eye_distance={use_eye_distance}',
+                        f'+model.use_lip_distance={use_lip_distance}',
+                        'model.background_from_input=False',
+                        dataset_coarse, # affectnet vs deca dataset
+                        sampler,
+                    ]
+                    if use_au_loss is not None:
+                        fixed_overrides_coarse += [use_au_loss]
 
-    fixed_overrides_detail = [
-        # 'model/settings=detail_train',
-        # 'model/settings=detail_train_emonet',
-        'model/settings=detail_train_expdeca_emonet',
-        # 'model/settings=detail_train_expdeca_emomlp',
-        # '+model.mlp_emotion_predictor.detach_shape=True',
-        # '+model.mlp_emotion_predictor.detach_expression=False',
-        # '+model.mlp_emotion_predictor.detach_detailcode=False',
-        # '+model.mlp_emotion_predictor.detach_jaw=True',
-        # '+model.mlp_emotion_predictor.detach_global_pose=False',
-        f'+model.emonet_model_path={emonet}',
-        'learning.early_stopping.patience=5',
-        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
-        f'model.use_emonet_loss={use_emo_loss}',
-        'model.use_emonet_feat_1=False',
-        'model.use_emonet_feat_2=True',
-        'model.use_emonet_valence=False',
-        'model.use_emonet_arousal=False',
-        'model.use_emonet_expression=False',
-        'model.use_emonet_combined=False',
-        f'model.exp_deca_jaw_pose={exp_deca_jaw_pose}',
-        f'model.use_landmarks={use_landmarks}',
-        f'model.use_photometric={use_photometric}',
-        f'+model.photometric_normalization={photometric_normalization}',
-        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
-        f'+model.use_eye_distance={use_eye_distance}',
-        f'+model.use_lip_distance={use_lip_distance}',
-        'model.background_from_input=False',
-        dataset_detail,
-        sampler,
-    ]
-    if use_au_loss is not None:
-        fixed_overrides_detail += [use_au_loss]
+                    fixed_overrides_detail = [
+                        # 'model/settings=detail_train',
+                        # 'model/settings=detail_train_emonet',
+                        'model/settings=detail_train_expdeca_emonet',
+                        # 'model/settings=detail_train_expdeca_emomlp',
+                        # '+model.mlp_emotion_predictor.detach_shape=True',
+                        # '+model.mlp_emotion_predictor.detach_expression=False',
+                        # '+model.mlp_emotion_predictor.detach_detailcode=False',
+                        # '+model.mlp_emotion_predictor.detach_jaw=True',
+                        # '+model.mlp_emotion_predictor.detach_global_pose=False',
+                        f'+model.emonet_model_path={emonet}',
+                        'learning.early_stopping.patience=5',
+                        f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
+                        f'model.use_emonet_loss={use_emo_loss}',
+                        'model.use_emonet_feat_1=False',
+                        'model.use_emonet_feat_2=True',
+                        'model.use_emonet_valence=False',
+                        'model.use_emonet_arousal=False',
+                        'model.use_emonet_expression=False',
+                        'model.use_emonet_combined=False',
+                        f'model.exp_deca_jaw_pose={exp_deca_jaw_pose}',
+                        f'model.use_landmarks={use_landmarks}',
+                        f'model.use_photometric={use_photometric}',
+                        f'+model.photometric_normalization={photometric_normalization}',
+                        f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+                        f'+model.use_eye_distance={use_eye_distance}',
+                        f'+model.use_lip_distance={use_lip_distance}',
+                        'model.background_from_input=False',
+                        dataset_detail,
+                        sampler,
+                    ]
+                    if use_au_loss is not None:
+                        fixed_overrides_detail += [use_au_loss]
 
-    # emonet_weights = [10, 1.0, 0.5, 0.5/5, 0.5/10, 0.5/50, 0.5/100]
-    # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1, 0.05]
-    # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
-    # emonet_weights = [10, 5.0, 1.0, 0.5, 0.1]
-    # emonet_weights = [5.0, 0.5, 0.1]
-    # emonet_weights = [5.0, 0.5]
-    # emonet_weights = [10,  0.1]
-    emonet_weights = [1.0]
-    # emonet_weights = [0.1]
-    # emomlp_weights = [0.5, 0.1, 0.05, 0.005]
-    # emomlp_weights = [1.0] # with detached jaw pose
-    # emomlp_weights = [10.0, 100.0, 1000.0] # stress test
-    # emomlp_weights = [0.05] # this one seems to be close to the sweet spot
+                    emonet_weights = [1.0]
 
-    config_pairs = []
-    for emonet_weight in emonet_weights:
-        for fmode in finetune_modes:
-            coarse_overrides = fixed_overrides_coarse.copy()
-            detail_overrides = fixed_overrides_detail.copy()
-            # if len(fmode[0]) != "":
-            coarse_overrides += fmode[0]
-            detail_overrides += fmode[1]
+                    config_pairs = []
+                    for emonet_weight in emonet_weights:
+                        for fmode in finetune_modes:
+                            coarse_overrides = fixed_overrides_coarse.copy()
+                            detail_overrides = fixed_overrides_detail.copy()
+                            # if len(fmode[0]) != "":
+                            coarse_overrides += fmode[0]
+                            detail_overrides += fmode[1]
 
-            # data_override = f'data.sequence_index={video_index}'
-            # pretrain_coarse_overrides += [data_override]
-            # coarse_overrides += [data_override]
-            # detail_overrides += [data_override]
-            # emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
-            # coarse_overrides += [emonet_weight_override]
-            # detail_overrides += [emonet_weight_override]
+                            # data_override = f'data.sequence_index={video_index}'
+                            # pretrain_coarse_overrides += [data_override]
+                            # coarse_overrides += [data_override]
+                            # detail_overrides += [data_override]
+                            # emonet_weight_override = f'model.mlp_emotion_predictor_weight={emomlp_weight}'
+                            # coarse_overrides += [emonet_weight_override]
+                            # detail_overrides += [emonet_weight_override]
 
-            emonet_weight_override = f'model.emonet_weight={emonet_weight}'
-            coarse_overrides += [emonet_weight_override]
-            detail_overrides += [emonet_weight_override]
+                            emonet_weight_override = f'model.emonet_weight={emonet_weight}'
+                            coarse_overrides += [emonet_weight_override]
+                            detail_overrides += [emonet_weight_override]
 
-            if use_au_loss is not None:
-                auloss_weight_override = f'model.au_loss.au_weight={emonet_weight}'
-                coarse_overrides += [auloss_weight_override]
-                detail_overrides += [auloss_weight_override]
+                            if use_au_loss is not None:
+                                auloss_weight_override = f'model.au_loss.au_weight={emonet_weight}'
+                                coarse_overrides += [auloss_weight_override]
+                                detail_overrides += [auloss_weight_override]
 
-            cfgs = train_expdeca.configure(
-                coarse_conf, coarse_overrides,
-                detail_conf, detail_overrides
-            )
+                            cfgs = train_expdeca.configure(
+                                coarse_conf, coarse_overrides,
+                                detail_conf, detail_overrides
+                            )
 
-            GlobalHydra.instance().clear()
-            config_pairs += [cfgs]
+                            GlobalHydra.instance().clear()
+                            config_pairs += [cfgs]
 
-            submit(cfgs[0], cfgs[1])
-            # break
-        # break
+                            submit(cfgs[0], cfgs[1])
+                            # break
+                        # break
 
-    # for cfg_pair in config_pairs:
-    #     submit(cfg_pair[0], cfg_pair[1])
+                    # for cfg_pair in config_pairs:
+                    #     submit(cfg_pair[0], cfg_pair[1])
 
 
 def default_main():

@@ -271,7 +271,7 @@ def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg)
-        full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + experiment_name)
+        full_run_dir = Path(configs[0].inout.output_dir) / (time + "_" + random_id + "_" + experiment_name)
         exist_ok = False # a path for a new experiment should not yet exist
     else:
         experiment_name = cfg.inout.name
