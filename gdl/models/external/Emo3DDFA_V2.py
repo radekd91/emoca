@@ -67,9 +67,9 @@ class Emo3DDFA_v2(EmotionRecognitionBaseModule):
         # param_lst = values['param_lst']
         # roi_box_lst = values['roi_box_lst']
 
-        global_pose = values["posecode"].view(values["posecode"].shape[0], -1)
-        shapecode = values["shapecode"].view(values["shapecode"].shape[0], -1)
-        expcode = values["expcode"].view(values["expcode"].shape[0], -1)
+        global_pose = values["posecode"].reshape(values["posecode"].shape[0], -1)
+        shapecode = values["shapecode"].reshape(values["shapecode"].shape[0], -1)
+        expcode = values["expcode"].reshape(values["expcode"].shape[0], -1)
 
         if self.mlp is not None:
             input_list = []
