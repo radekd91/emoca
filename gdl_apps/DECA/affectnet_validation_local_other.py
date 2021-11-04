@@ -30,7 +30,9 @@ def main():
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
     #
-    path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
+    # path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
+    path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
+    # path_to_affectnet = "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/"
     # path_to_processed_affectnet = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/"
 
     # path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
