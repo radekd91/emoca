@@ -83,7 +83,7 @@ def main():
     resume_from_previous = False
     force_new_location = False
 
-    # resume_folders = []
+    resume_folders = []
     # resume_folders += ['2021_04_13_19-02-10_ExpDECA__EmoTrain_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_19-02-11_ExpDECA__EmoStat_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
     # resume_folders += ['2021_04_13_19-02-31_ExpDECA__clone_Jaw_DeSegrend_early'] # has been resumed, will crash on detail, will have to be resumed again
@@ -104,6 +104,110 @@ def main():
     # resume_folders += ['2021_04_30_21-01-13_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_va_CoNone_DeNone_DwC_early']
     # # resume_folders += ['']
 
+    # EmoResNet ExpDECA sweep
+    # resume_folders += [
+    #     "2021_11_02_12-41-24_7057622275122671174_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-06_-6506673705064889607_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-06_-1007531484471246016_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-03_480128111237298530_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-03_-3847743713390055217_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-01_7226661150207254923_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-01_7193545667483921831_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-41-01_-7746686909198123775_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-59_-6970716391423648964_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-59_-4293993865315558856_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-54_-8956728687580574108_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-52_3535801695749609832_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-52_-776769225150723181_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-48_-3557093149321491446_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-48_-1130509047528431540_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-45_6758302146806216456_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-33_8529519700345615983_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-33_7640188424869169886_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-27_4344460465829536839_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-27_6877124675180108840_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-03_-8436446076366773310_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-03_-4636033309105620245_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-02_833576158064688874_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-40-02_8285199837830669798_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+    # # EmSwin ExpDECA sweep
+    # resume_folders += [
+    #     "2021_11_03_02-20-54_-1968661455773213379_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_03_02-42-36_2407313258403191383_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-12-49_-2741982989276466203_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-49_1731595146375171932_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-49_-7667543226652993592_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-40_6872394600987091012_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-40_-8572124953572605249_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-40_-7473769445402844399_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_13-10-40_-5241005287738579855_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-54-01_2637759665938415282_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_5168561227047398084_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_2319744141436125537_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_2073066276032009236_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_-6306367650010438382_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_-3218674826605317504_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_-1846739961689335557_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-47-35_-1022988189955888024_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-55_5806971874713117653_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-55_-5348873875193364241_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-54_-7598613731487617091_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-45_5490409369290264125_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-45_1092553962037855966_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-43_2271671740894586800_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-43_-5593491350755409121_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-41_4316282956709408142_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += [
+    #     "2021_11_02_12-42-41_-1213070571142271333_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
@@ -121,9 +225,9 @@ def main():
     # for resume_folder in resume_folders:
     #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
-    stage = 2
-    resume_from_previous = True
-    force_new_location = False
+    # stage = 2
+    # resume_from_previous = True
+    # force_new_location = False
 
     resume_folders = []
     # resume_folders += ['2021_04_19_19-04-35_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_DwC_early'] # resumed
@@ -133,19 +237,19 @@ def main():
     # em-MLP models
     # resume_folders += ['2021_05_17_01-24-26_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_DwC_early']
     # resume_folders += ['2021_05_17_01-22-52_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_Exnone_MLP_0.0015_early']
-    resume_folders += ["2021_10_26_15-08-44_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    resume_folders += ["2021_10_26_13-15-16_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    resume_folders += ["2021_10_26_12-35-21_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    resume_folders += ["2021_10_26_12-29-38_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += ["2021_10_26_15-08-44_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += ["2021_10_26_13-15-16_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += ["2021_10_26_12-35-21_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # resume_folders += ["2021_10_26_12-29-38_ExpDECA_DecaD_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
 
-    for resume_folder in resume_folders:
-        submit(resume_folder, stage, resume_from_previous, force_new_location)
-
-    stage = 2
-    resume_from_previous = False
-    force_new_location = False
-    resume_folders = []
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+    #
+    # stage = 2
+    # resume_from_previous = False
+    # force_new_location = False
+    # resume_folders = []
     # resume_folders += ['2021_05_02_12-43-06_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_early']
     # resume_folders += ['2021_05_02_12-42-01_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exemonet_feature_CoNone_DeNone_DwC_early']
     # resume_folders += ['2021_05_02_12-37-20_ExpDECA_Affec_para_Jaw_EmoLossB_F2VAEw-0.00150_DeSegrend_BlackB_Exgt_expression_CoNone_DeNone_DwC_early']
@@ -204,8 +308,8 @@ def main():
 
 
 
-    for resume_folder in resume_folders:
-        submit(resume_folder, stage, resume_from_previous, force_new_location)
+    # for resume_folder in resume_folders:
+    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
 
 
 

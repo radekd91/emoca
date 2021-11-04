@@ -8,11 +8,18 @@ from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoSwinModule import EmoSwinModule
 from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.models.EmoNetModule import EmoNetModule
+try:
+    from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
+
+except ImportError as e:
+    print("Could not import Emo3DDFA_v2")
+
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from gdl_apps.DECA.interactive_deca_decoder import hack_paths
+
 
 
 project_name = 'EmoDECA'
@@ -69,6 +76,8 @@ def create_experiment_name(cfg, version=1):
     elif cfg.model.emodeca_type == "EmoCnnModule":
         experiment_name = "EmoCnn"
         experiment_name += "_" + cfg.model.backbone
+    elif cfg.model.emodeca_type == "Emo3DDFA_v2":
+        experiment_name = "Emo3DDFA"
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 

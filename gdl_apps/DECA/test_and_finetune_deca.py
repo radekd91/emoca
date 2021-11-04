@@ -205,7 +205,9 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
 
 def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                            data_preparation_function=None,
-                           checkpoint=None, checkpoint_kwargs=None, project_name_=None):
+                           checkpoint=None, checkpoint_kwargs=None, project_name_=None,
+                           instantiation_function=None):
+    instantiation_function = instantiation_function or instantiate_deca
     project_name_ = project_name_ or project_name
     if dm is None:
         dm, sequence_name = data_preparation_function(cfg)
@@ -233,7 +235,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
         logger.finalize("")
 
     if deca is None:
-        deca = instantiate_deca(cfg, stage, prefix, checkpoint, checkpoint_kwargs)
+        deca = instantiation_function(cfg, stage, prefix, checkpoint, checkpoint_kwargs)
     else:
         if stage == 'train':
             mode = True

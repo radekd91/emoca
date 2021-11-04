@@ -270,7 +270,6 @@ class EmoDECA(EmotionRecognitionBaseModule):
                      class_weight,
                      training=True,
                      **kwargs):
-
         if self.mlp is not None:
             losses_mlp, metrics_mlp = super()._compute_loss(pred, gt, class_weight, training, **kwargs)
         else:

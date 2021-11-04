@@ -105,10 +105,10 @@ def train_emodeca_on_cluster():
              'data.sampler=balanced_expr'],
             []
         ],
-        # [
-        #     ['data.sampler=balanced_va'],
-        #     []
-        # ],
+        [
+            ['data.sampler=balanced_va'],
+            []
+        ],
         # [
         #     ['data.sampler=balanced_expr',
         #      'model.use_detail_code=true',
@@ -204,11 +204,12 @@ def train_emodeca_on_cluster():
     # #1 EMONET
     # conf = "emonet_cluster"
     # fixed_overrides_cfg = [
-    #     'model/settings=emonet_trainable',
+    #     'model/backbone=emonet_trainable',
+    #     'model/settings=vae_emonet_trainable',
     #     # 'model/settings=emonet_trainable_weighted_va',
     #     # 'model/settings=emonet_trainable_weighted_va_mse',
     #     # '+learning/lr_scheduler=reduce_on_plateau',
-    #     '+learning/lr_scheduler=exponential',
+    #     # '+learning/lr_scheduler=exponential',
     #     # 'learning.max_steps=0',
     #     # 'learning.max_epochs=0',
     #     # 'learning/optimizer=adabound',
@@ -257,7 +258,7 @@ def train_emodeca_on_cluster():
     # deca_conf_path = None
     # fixed_overrides_deca = None
     # stage = None
-
+    #
     # EMODECA
     conf = "emodeca_coarse_cluster"
     fixed_overrides_cfg = [

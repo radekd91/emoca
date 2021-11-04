@@ -1,5 +1,6 @@
 import os, sys
 import torch
+from omegaconf import DictConfig
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import torchvision.transforms as transforms
 import numpy as np
@@ -1597,3 +1598,73 @@ class CelebVal(Dataset):
         return {'image': image_th,
                 'imagenames': image_names
                 }
+
+if __name__ == "__main__":
+    cfg = {"data": {
+        "path": "/ps/scratch/face2d3d/",
+        "n_train": 10000000,
+        "sampler": False,
+        # "scale_max": 2.8,
+        # "scale_min": 2,
+        "scale_max": 1.6,
+        "scale_min": 1.2,
+        "data_class": "DecaDataModule",
+        "num_workers": 4,
+        "split_ratio": 0.9,
+        "split_style": "random",
+        # "trans_scale": 0.2,
+        "trans_scale": 0.1,
+        "testing_datasets": [
+            "now-test",
+            "now-val",
+            "celeb-val"
+        ],
+        "training_datasets": [
+            "vggface2",
+            "ethnicity"
+        ],
+        "validation_datasets": [
+            "now-val",
+            "celeb-val"
+        ]
+    },
+                "learning": {
+                "val_K": 1,
+                "test_K": 1,
+                "train_K": 1,
+                "num_gpus": 1,
+                "optimizer": "Adam",
+                "logger_type": "WandbLogger",
+                "val_K_policy": "sequential",
+                "learning_rate": 0.0001,
+                "test_K_policy": "sequential",
+                "batch_size_val": 32,
+                "early_stopping": {
+                    "patience": 15
+                },
+                "train_K_policy": "random",
+                "batch_size_test": 1,
+                "batch_size_train": 32,
+                "gpu_memory_min_gb": 30,
+                "checkpoint_after_training": "best"
+            },
+        "model": {
+            "image_size": 224
+        }
+    }
+    cfg = DictConfig(cfg)
+    dm = DecaDataModule(cfg)
+    dm.prepare_data()
+    dm.setup()
+    # dataset = dm.train_dataloader()
+    dataset = dm.train_dataset
+
+    import matplotlib.pyplot as plt
+
+    for i in range(len(dataset)):
+        batch = dataset[i]
+        im = batch["image"][0].cpu().numpy().transpose([1, 2, 0])
+        plt.figure()
+        plt.imshow(im)
+        plt.show()
+
