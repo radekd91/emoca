@@ -88,7 +88,7 @@ def train_emodeca_on_cluster():
             [
                 'model.use_identity=false',
                 'model.use_expression=true',
-                'data.sampler=balanced_va'],
+                'data.sampler=balanced_expr'],
             []
         ],
     ]
@@ -104,7 +104,7 @@ def train_emodeca_on_cluster():
         'data.data_class=AffectNetDataModuleValTest',
         # 'data/augmentations=default_with_resize',
         'data.num_workers=0',
-        'learning/logging=none',
+        # 'learning/logging=none',
     ]
     deca_conf = None
     deca_conf_path = None

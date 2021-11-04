@@ -51,7 +51,8 @@ def main():
         'model/settings=3ddfa',
         # 'model/settings=3ddfa_resnet',
         'learning/logging=none',
-        'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
+        # 'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
+        'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
         'data.num_workers=0',
         'learning.batch_size_train=4',
     ]
