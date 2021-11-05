@@ -30,8 +30,9 @@ def main():
             # 'data/datasets=emotionet_desktop',
             'data.data_class=AffectNetDataModuleValTest',
             'data/augmentations=default_with_resize',
-            'data.num_workers=0',
-            'learning/logging=none',
+            # 'data.num_workers=0',
+            'data.num_workers=16',
+            # 'learning/logging=none',
         ]
         deca_conf = None
         deca_conf_path = None
