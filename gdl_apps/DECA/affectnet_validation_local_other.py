@@ -1,6 +1,6 @@
 from gdl.models.external.Deep3DFace import Deep3DFaceModule
 from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
-
+import time
 from affectnet_validation import *
 
 def str2module(class_name):
@@ -102,7 +102,7 @@ def main():
 
     single_stage_deca_pass(face_model, conf, stage="test", prefix="affect_net", dm=dm, project_name_="AffectNetTests",
                            instantiation_function=instantiate_other_face_models)
-
+    time.sleep(3600)
     print("We're done y'all")
 
 

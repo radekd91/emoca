@@ -87,6 +87,10 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     st = st.replace('<<PYTHON_BIN>>', python_bin)
     st = st.replace('<<SCRIPT_NAME>>', cluster_script_path)
     st = st.replace('<<ENV>>', env)
+    modules = ""
+    if len(modules_to_load) > 0:
+        modules = f"module load {' '.join(modules_to_load)}"
+    st = st.replace('<<MODULES>>', modules)
     script_fname = os.path.join(submission_dir_local_mount, 'run.sh')
 
 
@@ -102,10 +106,6 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     cs = cs.replace('<<MAX_PRICE>>', str(int(max_price)))
     cs = cs.replace('<<NJOBS>>', str(num_jobs))
 
-    modules = ""
-    if len(modules_to_load) > 0:
-        modules = f"module load {' '.join(modules_to_load)}"
-    cs = cs.replace('<<MODULES>>', modules)
 
     if num_jobs>1:
         cs = cs.replace('<<PROCESS_ID>>', ".$(Process)")
