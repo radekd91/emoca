@@ -1,10 +1,13 @@
-from affectnet_validation import *
+from gdl.models.external.Deep3DFace import Deep3DFaceModule
 from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
 
+from affectnet_validation import *
 
 def str2module(class_name):
     if class_name in ["3ddfa", "Face3DDFAModule"]:
         return Face3DDFAModule
+    if class_name in ["deep3dface", "Deep3DFaceModule"]:
+        return Deep3DFaceModule
     raise NotImplementedError(f"Not supported for {class_name}")
 
 
@@ -31,8 +34,8 @@ def main():
     path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
     #
     # path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
-    path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
-    # path_to_affectnet = "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/"
+    # path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
+    path_to_affectnet = "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/"
     # path_to_processed_affectnet = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/"
 
     # path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
@@ -50,11 +53,12 @@ def main():
 
     default = "deca_train_detail"
     overrides = [
-        'model/settings=3ddfa',
+        # 'model/settings=3ddfa',
         # 'model/settings=3ddfa_resnet',
+        'model/settings=deep3dface',
         'learning/logging=none',
-        # 'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
-        'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
+        'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
+        # 'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
         'data.num_workers=0',
         'learning.batch_size_train=4',
     ]
