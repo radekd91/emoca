@@ -13,16 +13,19 @@ class EmoDeep3DFace(EmotionRecognitionBaseModule):
 
     def __init__(self, config):
         super().__init__(config)
-        self.model = Face3DDFAv2Wrapper(config.model.tddfa)
+        self.model = Deep3DFaceWrapper(config.model.deep3dface)
 
         in_size = 0
         if self.config.model.use_identity:
-            in_size += self.tddfa.tddfa.bfm.w_shp.shape[1]
+            # in_size += self.model.deep3dface.model
+            in_size += 80
         if self.config.model.use_expression:
-            in_size += self.tddfa.tddfa.bfm.w_exp.shape[1]
+            # in_size += self.model.deep3dface.model
+            in_size += 64
         if self.config.model.use_global_pose:
             # in_size += 3
-            in_size += 12 # 3x3 matrix + 3 translation
+            in_size += 6
+            # in_size += 12 # 3x3 matrix + 3 translation
 
         if 'mlp_dimension_factor' in self.config.model.keys():
             dim_factor = self.config.model.mlp_dimension_factor
@@ -62,8 +65,7 @@ class EmoDeep3DFace(EmotionRecognitionBaseModule):
 
 
     def forward(self, batch):
-        values = self.tddfa.encode(batch)
-        # values = self.tddfa.decode(batch, values)
+        values = self.model.encode(batch)
         # param_lst = values['param_lst']
         # roi_box_lst = values['roi_box_lst']
 

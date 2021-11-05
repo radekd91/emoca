@@ -1,3 +1,8 @@
+try:
+    from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
+except ImportError as e:
+    print("Could not import Emo3DDFA_v2")
+
 import os, sys
 from pathlib import Path
 from omegaconf import OmegaConf
@@ -78,6 +83,8 @@ def create_experiment_name(cfg, version=1):
         experiment_name += "_" + cfg.model.backbone
     elif cfg.model.emodeca_type == "Emo3DDFA_v2":
         experiment_name = "Emo3DDFA"
+    elif cfg.model.emodeca_type == "EmoDeep3DFace":
+        experiment_name = "EmoDeep3DFace"
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
