@@ -38,6 +38,8 @@ source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
 #source activate <<ENV>>
 conda activate <<ENV>>
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
+<<MODULES>>
+module load cuda/11.4
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 OUTFOLDER=$(cat out_folder.txt)
 ln -s $PWD $OUTFOLDER/submission 
@@ -74,7 +76,9 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        cuda_capability_requirement=None,
                        max_concurrent_jobs=None,
                        concurrency_tag = None,
+                       modules_to_load = None,
                        chmod=True):
+    modules_to_load = modules_to_load or []
     submission_dir_cluster_side = submission_dir_cluster_side or submission_dir_local_mount
     logdir = 'logs'
 
@@ -98,6 +102,11 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     cs = cs.replace('<<MAX_TIME>>', str(int(max_time_h * 3600))) #TODO: fix this, i'ts missing in the script
     cs = cs.replace('<<MAX_PRICE>>', str(int(max_price)))
     cs = cs.replace('<<NJOBS>>', str(num_jobs))
+
+    modules = ""
+    if len(modules_to_load) > 0:
+        modules = f"module load {' '.join(modules_to_load)}"
+    cs = cs.replace('<<MODULES>>', modules)
 
     if num_jobs>1:
         cs = cs.replace('<<PROCESS_ID>>', ".$(Process)")
