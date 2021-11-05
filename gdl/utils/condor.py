@@ -39,7 +39,6 @@ source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
 conda activate <<ENV>>
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
 <<MODULES>>
-module load cuda/11.4
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 OUTFOLDER=$(cat out_folder.txt)
 ln -s $PWD $OUTFOLDER/submission 
