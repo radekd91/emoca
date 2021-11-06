@@ -34,6 +34,7 @@ def main():
     model_names = []
     # model_names += ["2021_11_05_00-26-38_-7399861690108686758_afft_Face3DDFAModule"] #mobilenet
     model_names += ["2021_11_05_00-23-14_-1727155792220193876_afft_Face3DDFAModule"] # resnet
+    model_names += ["2021_11_06_01-01-38_8742010531224499117_afft_Deep3DFaceModule"]
     model_names += ["2021_03_26_15-05-56_DECA_original"]
     model_names += ["2021_10_29_22-01-32_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 

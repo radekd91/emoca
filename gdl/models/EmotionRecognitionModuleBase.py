@@ -519,13 +519,20 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             self.log_dict({f"{stage}_metric_" + key: value for key, value in metrics.items()}, on_epoch=on_epoch,
                           on_step=on_step, sync_dist=True)
         else:
-            on_epoch = False
+            # on_epoch = False
+            on_epoch = True
             on_step = True
-            self.logger.log_metrics({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
-                                     losses.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            # self.logger.log_metrics({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
+            #                          losses.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            # #
+            # self.logger.log_metrics({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
+            #                          metrics.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            self.log_dict({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
+                                     losses.items()}, on_epoch=on_epoch, on_step=on_step)
             #
-            self.logger.log_metrics({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
-                                     metrics.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            self.log_dict({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
+                                     metrics.items()}, on_epoch=on_epoch, on_step=on_step)
+
 
 
 

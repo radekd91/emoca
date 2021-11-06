@@ -1,6 +1,6 @@
 from gdl.models.external.Deep3DFace import Deep3DFaceModule
 from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
-import time
+import time as t
 from affectnet_validation import *
 
 def str2module(class_name):
@@ -35,8 +35,8 @@ def main():
     path_to_models = '"/is/cluster/work/rdanecek/emoca/finetune_deca'
     #
     # path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
-    path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
-    # path_to_affectnet = "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/"
+    # path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
+    path_to_affectnet = "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/"
     # path_to_processed_affectnet = "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/"
 
     # path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
@@ -58,8 +58,8 @@ def main():
         # 'model/settings=3ddfa_resnet',
         'model/settings=deep3dface',
         'learning/logging=none',
-        # 'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
-        'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
+        'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
+        # 'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
         'data.num_workers=0',
         'learning.batch_size_train=4',
     ]
@@ -102,7 +102,7 @@ def main():
 
     single_stage_deca_pass(face_model, conf, stage="test", prefix="affect_net", dm=dm, project_name_="AffectNetTests",
                            instantiation_function=instantiate_other_face_models)
-    time.sleep(3600)
+    # t.sleep(3600)
     print("We're done y'all")
 
 
