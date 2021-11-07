@@ -1,9 +1,7 @@
-if cfg.model.emodeca_type == 'EmoDeep3DFace':
-    ## ugly and yucky import but otherwise there's import collisions with 3DDFA
-    try:
-        from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
-    except ImportError as e:
-        print("Could not import EmoDeep3DFace")
+try:
+    from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
+except ImportError as e:
+    print("Could not import EmoDeep3DFace")
 
 
 import os, sys

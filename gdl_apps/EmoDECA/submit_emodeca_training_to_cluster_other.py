@@ -116,7 +116,8 @@ def train_emodeca_on_cluster():
         'data/datasets=affectnet_cluster',
         'data.data_class=AffectNetDataModuleValTest',
         # 'data/augmentations=default_with_resize',
-        'data.num_workers=0',
+        # 'data.num_workers=0',
+        'data.num_workers=16',
         # 'learning/logging=none',
     ]
     deca_conf = None

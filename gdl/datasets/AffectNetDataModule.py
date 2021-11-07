@@ -567,6 +567,23 @@ class AffectNetDataModule(FaceDataModuleBase):
                          )
 
 
+class AffectNetEmoNetSplitModule(AffectNetDataModule):
+
+    def __init__(self, *args, **kwargs):
+        kwargs["ignore_invalid"] = True
+        super().__init__(*args, **kwargs)
+
+    def setup(self, stage=None):
+        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        if self.use_processed:
+            self.image_path = Path(self.output_dir) / "detections"
+        else:
+            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None, self.ignore_invalid)
+
+
+
 
 
 class AffectNetTestModule(AffectNetDataModule):
@@ -1037,14 +1054,44 @@ if __name__ == "__main__":
     dm.setup()
     # dm._extract_emotion_features()
     # dl = dm.val_dataloader()
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/val_fullpath.pkl"), "rb") as f:
+        emonet_val_set = pkl.load(f)
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/test_fullpath.pkl"), "rb") as f:
+        emonet_test_set = pkl.load(f)
+
+    valset = set(dm.validation_set.df["subDirectory_filePath"].to_list())
+    valset_emo = set(emonet_val_set.keys())
+
+    trainset = set(dm.training_set.df["subDirectory_filePath"].to_list())
+    testset_emo = set(emonet_test_set.keys())
+
+    next(valset)
+
+    emonet_val_set_exp_counter = {}
+    for key, value in emonet_val_set.items():
+        expression_label = emonet_val_set[key]['expression']
+        if expression_label not in emonet_val_set_exp_counter.keys():
+            emonet_val_set_exp_counter[expression_label] = 1
+        else:
+            emonet_val_set_exp_counter[expression_label] += 1
+
+    emonet_test_set_exp_counter = {}
+    for key, value in emonet_test_set.items():
+        expression_label = emonet_test_set[key]['expression']
+        if expression_label not in emonet_test_set_exp_counter.keys():
+            emonet_test_set_exp_counter[expression_label] = 1
+        else:
+            emonet_test_set_exp_counter[expression_label] += 1
+
+
     print(f"len training set: {len(dm.training_set)}")
-    print(f"len validation set: {len(dm.validation_set)}")
-    # dl = dm.train_dataloader()
-    # for bi, batch in enumerate(dl):
-        # if bi == 10:
-        #     break
-    for si in range(len(dm.training_set)):
-        dm.training_set.visualize_sample(si)
+    # print(f"len validation set: {len(dm.validation_set)}")
+    # # dl = dm.train_dataloader()
+    # # for bi, batch in enumerate(dl):
+    #     # if bi == 10:
+    #     #     break
+    # for si in range(len(dm.training_set)):
+    #     dm.training_set.visualize_sample(si)
 
     # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
     # sample_representative_set(dm.validation_set, out_path)

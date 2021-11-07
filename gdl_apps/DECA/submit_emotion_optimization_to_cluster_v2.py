@@ -73,6 +73,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
                        cuda_capability_requirement=cuda_capability_requirement,
                        concurrency_tag="emo_optim",
                        max_concurrent_jobs=50,
+                       modules_to_load=['cuda/11.4'],
                        )
 
 

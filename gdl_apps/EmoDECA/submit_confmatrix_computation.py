@@ -67,7 +67,8 @@ def submit(resume_folder, bid=10):
                        max_price=max_price,
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement,
-                       chmod=False
+                       chmod=False,
+                       modules_to_load=['cuda/11.4'],
                        )
     t.sleep(1)
 

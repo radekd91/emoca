@@ -57,6 +57,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
                        cuda_capability_requirement=cuda_capability_requirement,
                        max_concurrent_jobs = 15,
                        concurrency_tag = "af_test",
+                       modules_to_load=['cuda/11.4'],
                        )
     t.sleep(1)
 

@@ -67,6 +67,7 @@ def submit(cfg, bid=10):
                        chmod=False,
                        max_concurrent_jobs=30,
                        concurrency_tag="emodeca_train",
+                       modules_to_load=['cuda/11.4'],
                        )
     t.sleep(2)
 
@@ -271,6 +272,7 @@ def train_emodeca_on_cluster():
         # 'learning/optimizer=adabound',
         'data/datasets=affectnet_cluster',
         'data.data_class=AffectNetDataModuleValTest',
+        'data.num_workers=16',
         # 'data/datasets=affectnet_v1_cluster',
         # 'data/datasets=emotionet_0_cluster',
         # 'data/datasets=emotionet_cluster',
@@ -477,6 +479,10 @@ def train_emodeca_on_cluster():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_02_12-42-41_4316282956709408142_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_02_12-42-41_-1213070571142271333_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+
+    ## ONE Sanity check - reproducing ResNet clode best candidate, run the rest if necessary
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_06_22-18-51_-8514519696387528299_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
     for deca_conf_path in  run_names:
 
