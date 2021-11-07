@@ -1,8 +1,3 @@
-# try:
-#     from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
-# except ImportError as e:
-#     print("Could not import Emo3DDFA_v2")
-
 import os, sys
 from pathlib import Path
 from omegaconf import OmegaConf
@@ -13,11 +8,6 @@ from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoSwinModule import EmoSwinModule
 from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.models.EmoNetModule import EmoNetModule
-try:
-    from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
-
-except ImportError as e:
-    print("Could not import Emo3DDFA_v2")
 
 from gdl.utils.other import class_from_str
 import datetime
@@ -82,8 +72,20 @@ def create_experiment_name(cfg, version=1):
         experiment_name = "EmoCnn"
         experiment_name += "_" + cfg.model.backbone
     elif cfg.model.emodeca_type == "Emo3DDFA_v2":
+        ## ugly and yucky import but otherwise there's import collisions with Deep3Dface
+        try:
+            from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
+
+        except ImportError as e:
+            print("Could not import Emo3DDFA_v2")
         experiment_name = "Emo3DDFA"
     elif cfg.model.emodeca_type == "EmoDeep3DFace":
+        ## ugly and yucky import but otherwise there's import collisions with 3DDFA
+        try:
+            from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
+        except ImportError as e:
+            print("Could not import Emo3DDFA_v2")
+
         experiment_name = "EmoDeep3DFace"
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
