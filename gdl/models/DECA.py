@@ -2643,6 +2643,7 @@ class ExpDECA(DECA):
         exp_idx = 2
         pose_idx = 3
 
+        #TODO: clean this if-else block up
         if self.config.exp_deca_global_pose and self.config.exp_deca_jaw_pose:
             exp_code = expdeca_code[:, :self.config.n_exp]
             pose_code = expdeca_code[:, self.config.n_exp:]
@@ -2653,11 +2654,15 @@ class ExpDECA(DECA):
             pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
             pose_code_deca = deca_code_list[pose_idx]
             deca_code_list[pose_idx] = torch.cat([pose_code_exp_deca, pose_code_deca[:,3:]], dim=1)
+            exp_code = expdeca_code[:, :self.config.n_exp]
+            deca_code_list[exp_idx] = exp_code
         elif self.config.exp_deca_jaw_pose:
             # global pose from DECA, jaw pose from ExpDeca
             pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
             pose_code_deca = deca_code_list[pose_idx]
             deca_code_list[pose_idx] = torch.cat([pose_code_deca[:, :3], pose_code_exp_deca], dim=1)
+            exp_code = expdeca_code[:, :self.config.n_exp]
+            deca_code_list[exp_idx] = exp_code
         else:
             exp_code = expdeca_code
             deca_code_list[exp_idx] = exp_code
