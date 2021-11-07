@@ -126,6 +126,9 @@ class Emo3DDFA_v2(EmotionRecognitionBaseModule):
             values["AUs"] = AUs
         return values
 
+    def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        pass # do nothing for this class
+
     def _compute_loss(self,
                      pred, gt,
                      class_weight,

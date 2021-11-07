@@ -63,6 +63,8 @@ class EmoDeep3DFace(EmotionRecognitionBaseModule):
             trainable_params += list(self.mlp.parameters())
         return trainable_params
 
+    def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        pass # do nothing
 
     def forward(self, batch):
         values = self.model.encode(batch)

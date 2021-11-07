@@ -1,7 +1,7 @@
-try:
-    from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
-except ImportError as e:
-    print("Could not import Emo3DDFA_v2")
+# try:
+#     from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
+# except ImportError as e:
+#     print("Could not import Emo3DDFA_v2")
 
 import os, sys
 from pathlib import Path
