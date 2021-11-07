@@ -1,3 +1,11 @@
+if cfg.model.emodeca_type == 'EmoDeep3DFace':
+    ## ugly and yucky import but otherwise there's import collisions with 3DDFA
+    try:
+        from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
+    except ImportError as e:
+        print("Could not import EmoDeep3DFace")
+
+
 import os, sys
 from pathlib import Path
 from omegaconf import OmegaConf
@@ -14,7 +22,6 @@ import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from gdl_apps.DECA.interactive_deca_decoder import hack_paths
-
 
 
 project_name = 'EmoDECA'
