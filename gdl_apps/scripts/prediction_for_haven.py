@@ -68,11 +68,9 @@ def main(input_folder, output_folder ):
             imsave(final_out_path / "color_rendering_masked.png", color_rendering)
             imsave(final_out_path / "final_rendering_masked.png", final_rendering)
             imsave(final_out_path / "input_image.png", img)
-            imsave(final_out_path / "input_image.png", img)
 
-            im_geometry = from_tensor(values["geometry_coarse"][i])
-            imsave(final_out_path / "im_geometry_masked.png", img)
-            imsave(final_out_path / "im_geometry.png", final_rendering + (inverted_mask*im_geometry))
+            im_geometry = from_tensor(out["geometry_coarse"][i])
+            imsave(final_out_path / "im_geometry.png", im_geometry + (inverted_mask*img))
             imsave(final_out_path / "im_geometry_masked.png", im_geometry)
 
 
