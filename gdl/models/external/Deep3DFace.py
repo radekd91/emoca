@@ -394,3 +394,31 @@ class Deep3DFaceWrapper(torch.nn.Module):
 
         return geometry_im
 
+    def compute_unlit_render(self):#, coef_dict):
+        """
+        Return:
+            face_vertex     -- torch.tensor, size (B, N, 3), in camera coordinate
+            face_color      -- torch.tensor, size (B, N, 3), in RGB order
+            landmark        -- torch.tensor, size (B, 68, 2), y direction is opposite to v direction
+        Parameters:
+            coeffs          -- torch.tensor, size (B, 257)
+        """
+        # coef_dict = self.split_coeff(coeffs)
+        coef_dict = self.model.pred_coeffs_dict
+
+        face_shape = self.model.facemodel.compute_shape(coef_dict['id'], coef_dict['exp'])
+        rotation = self.model.facemodel.compute_rotation(coef_dict['angle'])
+
+        face_shape_transformed = self.model.facemodel.transform(face_shape, rotation, coef_dict['trans'])
+        face_vertex = self.model.facemodel.to_camera(face_shape_transformed)
+
+        face_proj = self.model.facemodel.to_image(face_vertex)
+        # landmark = self.model.get_landmarks(face_proj)
+
+        face_texture = self.model.facemodel.compute_texture(coef_dict['tex'])
+
+
+
+        mask_im, depth_im, unlit_im = self.model.renderer(
+            face_vertex, self.model.facemodel.face_buf, feat=face_texture.contiguous())
+        return unlit_im
