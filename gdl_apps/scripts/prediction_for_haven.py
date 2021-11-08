@@ -10,11 +10,6 @@ import numpy as np
 from skimage.io import imsave
 import imageio.core.util
 
-def ignore_warnings(*args, **kwargs):
-    pass
-
-imageio.core.util._precision_warn = ignore_warnings
-
 def from_tensor(tensor):
     image = tensor.detach().cpu().numpy().transpose([1,2,0]).clip(0,1)
     image *= 255.
@@ -61,14 +56,15 @@ def main(input_folder, output_folder ):
             np.save(final_out_path / "shapecode.npy",
                     out["shapecode"][i].detach().cpu().numpy())
             mask = from_tensor(out["mask"][i])
+            inverted_mask = (1-mask/255).astype(np.uint8)
             imsave(final_out_path / "mask.png", mask)
             color_rendering = from_tensor(unlit_im[i])
             img = from_tensor( batch["image"][i])
-            imsave(final_out_path / "color_rendering_masked.png", color_rendering * mask + (255-mask)*img)
+            imsave(final_out_path / "color_rendering.png", color_rendering  + (inverted_mask*img))
             final_rendering = from_tensor( model.model.pred_face[i])
-            imsave(final_out_path / "final_rendering_masked.png", (final_rendering * mask+ (255-mask)*img).astype(np.uint8))
-            imsave(final_out_path / "color_rendering.png", color_rendering)
-            imsave(final_out_path / "final_rendering.png", final_rendering)
+            imsave(final_out_path / "final_rendering.png", final_rendering + (inverted_mask*img))
+            imsave(final_out_path / "color_rendering_masked.png", color_rendering)
+            imsave(final_out_path / "final_rendering_masked.png", final_rendering)
 
             imsave(final_out_path / "input_image.png", img)
 
