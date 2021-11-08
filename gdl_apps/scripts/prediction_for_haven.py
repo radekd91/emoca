@@ -65,7 +65,6 @@ def main(input_folder, output_folder ):
             imsave(final_out_path / "final_rendering.png", final_rendering + (inverted_mask*img))
             imsave(final_out_path / "color_rendering_masked.png", color_rendering)
             imsave(final_out_path / "final_rendering_masked.png", final_rendering)
-
             imsave(final_out_path / "input_image.png", img)
 
 
@@ -78,7 +77,10 @@ if __name__ == '__main__':
     input_root = "/is/cluster/scratch/hfeng/light_albedo/albedo-benchmark/full_benchmark/"
     output_root = "/is/cluster/scratch/rdanecek/for_haiwen/deep3dface"
 
-    subfolders = ["test_soft", "test_hard", "validation_soft", "validation_hard"]
+    if len(sys.argv) > 1:
+        subfolders = [sys.argv[1]]
+    else:
+        subfolders = ["test_soft", "test_hard", "validation_soft", "validation_hard"]
 
     for subfolder in subfolders:
         main(Path(input_root) / subfolder, Path(output_root) / subfolder  )
