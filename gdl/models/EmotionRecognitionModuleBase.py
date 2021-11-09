@@ -654,13 +654,13 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
             metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
                                                                     gt["expr_classification"][:, 0],
                                                                     class_weight)
-            metrics[pred_prefix + "expr_acc"] = ACC_torch(
-                torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
-                                                          gt["expr_classification"][:, 0])
         else:
             metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
                                                        gt["expr_classification"][:, 0],
                                                        None)
+        metrics[pred_prefix + "expr_acc"] = ACC_torch(
+            torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+                                                      gt["expr_classification"][:, 0])
 
         if loss is not None:
             if callable(loss):
