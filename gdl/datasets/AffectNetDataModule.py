@@ -1280,8 +1280,8 @@ if __name__ == "__main__":
     augmenter = None
     # 316239
     # dm = AffectNetEmoNetSplitModule(
-    # dm = AffectNetEmoNetSplitModuleValTest(
-    dm = AffectNetDataModule(
+    dm = AffectNetEmoNetSplitModuleValTest(
+    # dm = AffectNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",

@@ -379,12 +379,16 @@ def train_emodeca_on_cluster():
     # ]
 
     # # comparison methods
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_06_00-52-04_4368104297342516790_EmoDeep3DFace_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_06_00-50-56_3141812600970784200_EmoDeep3DFace_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_06_00-52-04_4368104297342516790_EmoDeep3DFace_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_06_00-50-56_3141812600970784200_EmoDeep3DFace_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_04_21-02-56_7522256879763590267_Emo3DDFA_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_04_21-02-30_5426539069370145078_Emo3DDFA_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_04_21-02-04_-7464743312740992253_Emo3DDFA_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_04_21-01-46_8158034355824336420_Emo3DDFA_shake_samp-balanced_expr_early"]
+
+
+    # EMONET AFFECTNET SPLIT
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
 
     stage = 1 # test stage
 

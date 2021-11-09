@@ -358,10 +358,12 @@ def train_on_selected_sequences():
         # ],
 
     ]
-    #
+    # #
     # sampler = "data.sampler=balanced_expr"
-    # dataset_coarse = "data/datasets=affectnet_cluster"
-    # dataset_detail = 'data/datasets=affectnet_cluster'
+    # dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    # # dataset_coarse = "data/datasets=affectnet_cluster"
+    # # dataset_detail = 'data/datasets=affectnet_cluster'
     # #
     sampler = "+data.sampler=False"
     # dataset_coarse = "data/datasets=coarse_data_cluster"
@@ -395,12 +397,13 @@ def train_on_selected_sequences():
     # resume_from = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_08_26_23-19-04_DECA__EFswin_t_EDswin_t_DeSegFalse_early/" # My DECA, SWIN tiny
 
     # use_emo_loss = True
-    use_emo_loss = False
+    use_emo_loss = False # WARNING: DON'T CHANGE THIS
 
     use_au_loss = None
     # use_au_loss = '+model/additional=au_feature_loss' # au feature loss
 
-    photometric_uses = [True, False]
+    # photometric_uses = [True, False]
+    photometric_uses = [True, ]
 
     for photo_use  in photometric_uses:
         use_photometric = photo_use
@@ -418,7 +421,8 @@ def train_on_selected_sequences():
             # # use_landmarks = True
             # use_landmarks = False
 
-            relative_distance_uses = [True, False]
+            # relative_distance_uses = [True, False]
+            relative_distance_uses = [True,]
 
             for rel_dist in relative_distance_uses:
                 use_eye_distance = rel_dist
@@ -433,8 +437,8 @@ def train_on_selected_sequences():
                 # use_mouth_corner_distance = False
 
 
-                # exp_deca_jaw_pose = True
-                exp_deca_jaw_pose = False
+                exp_deca_jaw_pose = True
+                # exp_deca_jaw_pose = False
 
                 fixed_overrides_coarse = [
                     # 'model/settings=coarse_train',

@@ -4,6 +4,7 @@ import train_emodeca
 import datetime
 from omegaconf import OmegaConf
 import time as t
+import random
 
 def submit(cfg, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -15,7 +16,7 @@ def submit(cfg, bid=10):
     submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/submission"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    submission_folder_name = time + "_" + "submission"
+    submission_folder_name = time + "_" + str(hash(random.randint(0, 100000))) + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
