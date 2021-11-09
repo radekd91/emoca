@@ -640,7 +640,7 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
 
 
         if (num_classes <= gt["expr_classification"].max()).any():
-            print("[Warning] Class lable index is higher and will be reduced.")
+            print("[Warning] Class label index is higher and will be reduced.")
             #TODO: evaluation hack warning
             gt["expr_classification"][gt["expr_classification"] >= num_classes] = num_classes-1
 

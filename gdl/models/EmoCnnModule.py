@@ -23,7 +23,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
     def __init__(self, config):
         super().__init__(config)
         # self.n_expression = 9  # we use all affectnet classes (included none) for now
-        self.n_expression = config.data.n_expression if 'n_expression' in config.data.n_expression.keys() else 9
+        self.n_expression = config.data.n_expression if 'n_expression' in config.data.keys() else 9
 
         self.num_outputs = 0
         if self.config.model.predict_expression:

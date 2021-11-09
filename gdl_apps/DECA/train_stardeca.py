@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from pytorch_lightning.loggers import WandbLogger
 import datetime
-
+from gdl.utils.other import class_from_str
 
 project_name = 'EmotionalDeca'
 
@@ -25,7 +25,7 @@ def prepare_data(cfg):
 
         dm = DecaDataModule(cfg)
         sequence_name = "DecaData"
-    elif data_class == 'AffectNetDataModule':
+    elif 'AffectNet' in data_class:
         if 'augmentation' in cfg.data.keys() and len(cfg.data.augmentation) > 0:
             augmentation = OmegaConf.to_container(cfg.data.augmentation)
         else:
@@ -39,7 +39,9 @@ def prepare_data(cfg):
 
         drop_last = cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else False
 
-        dm = AffectNetDataModule(
+        data_module = class_from_str(data_class, sys.modules[__name__])
+        dm = data_module(
+        # dm = AffectNetDataModule(
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
             processed_subfolder=cfg.data.processed_subfolder,

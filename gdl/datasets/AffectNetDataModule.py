@@ -793,7 +793,7 @@ class AffectNet(EmotionalImageDatasetBase):
             ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
 
             if ignore_invalid == "like_emonet":
-                ignored_classes += [AffectNetExpressions.None_]
+                ignored_classes += [AffectNetExpressions.None_.value]
 
             self.df = self.df[self.df["expression"].isin(ignored_classes) == False]
             # self.df = self.df.drop(self.df[self.df["expression"].isin(ignored_classes)].index)
@@ -1312,5 +1312,11 @@ if __name__ == "__main__":
     dltr = dm.train_dataloader()
     dlv = dm.val_dataloader()
     dlt = dm.test_dataloader()
+
+    for i in range(len(dm.training_set)):
+        sample = dm.training_set[i]
+        print(AffectNetExpressions(sample["affectnetexp"].item()))
+        print(sample["va"])
+        dm.training_set.visualize_sample(sample)
 
     print("Done")

@@ -462,7 +462,8 @@ def main():
                             # 'model.mlp_dimension_factor=4',
                             'model.mlp_dim=2048',
                             # 'data/datasets=emotionet_desktop',
-                            'data.data_class=AffectNetDataModuleValTest',
+                            # 'data.data_class=AffectNetDataModuleValTest',
+                            'data/datasets=affectnet_cluster_emonet_cleaned',
                             'data/augmentations=default_with_resize',
                             'data.num_workers=0'
                              ]

@@ -18,7 +18,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         super().__init__(config)
         self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
         if not config.model.load_pretrained_emonet:
-            n_expression = config.data.n_expression if 'n_expression' in config.data.n_expression.keys() else 9
+            n_expression = config.data.n_expression if 'n_expression' in config.data.keys() else 9
             self.emonet.n_expression = n_expression # we use all affectnet classes (included none) for now
             self.n_expression = n_expression# we use all affectnet classes (included none) for now
             self.emonet._create_Emo() # reinitialize
