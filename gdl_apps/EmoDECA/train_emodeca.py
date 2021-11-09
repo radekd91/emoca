@@ -4,7 +4,7 @@
 #     print("Could not import EmoDeep3DFace")
 ## ugly and yucky import but otherwise there's import collisions with EmoDeep3DFace
 try:
-    from gdl.models.external.Emo3DDFA_v2 import Emo3DDFA_v2
+    from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
 except ImportError as e:
     print("Could not import Emo3DDFA_v2")
 
@@ -157,7 +157,7 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
             if cfg.model.emodeca_type == 'Emo3DDFA_v2':
                 ## ugly and yucky import but otherwise there's import collisions with EmoDeep3DFace
                 try:
-                    from gdl.models.external.Emo3DDFA_v2 import Emo3DDFA_v2
+                    from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
                 except ImportError as e:
                     print("Could not import Emo3DDFA_v2")
 

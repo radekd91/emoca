@@ -95,32 +95,33 @@ def train_emodeca_on_cluster():
     ]
 
     # ## 4) Emo 3DDFA_V2
-    # emodeca_default = "emo3ddfa_v2"
-    # emodeca_overrides = [
-    #     'model/backbone=3ddfa_v2',
-    #     # 'model/backbone=3ddfa_v2_resnet',
-    #     'model.mlp_dim=2048',
-    #     # 'data/datasets=emotionet_desktop',
-    #     'data/datasets=affectnet_cluster',
-    #     'data.data_class=AffectNetDataModuleValTest',
-    #     # 'data/augmentations=default_with_resize',
-    #     'data.num_workers=0',
-    #     # 'learning/logging=none',
-    # ]
-    ## 4) Emo 3DDFA_V2
-    emodeca_default = "deep3dface"
+    emodeca_default = "emo3ddfa_v2"
     emodeca_overrides = [
-        'model/backbone=deep3dface',
+        'model/backbone=3ddfa_v2',
+        # 'model/backbone=3ddfa_v2_resnet',
         'model.mlp_dim=2048',
         # 'data/datasets=emotionet_desktop',
         # 'data/datasets=affectnet_cluster',
         'data/datasets=affectnet_cluster_emonet_cleaned',
         # 'data.data_class=AffectNetDataModuleValTest',
         # 'data/augmentations=default_with_resize',
-        # 'data.num_workers=0',
         'data.num_workers=16',
         # 'learning/logging=none',
     ]
+    # ## 4) Emo 3DDFA_V2
+    # emodeca_default = "deep3dface"
+    # emodeca_overrides = [
+    #     'model/backbone=deep3dface',
+    #     'model.mlp_dim=2048',
+    #     # 'data/datasets=emotionet_desktop',
+    #     # 'data/datasets=affectnet_cluster',
+    #     'data/datasets=affectnet_cluster_emonet_cleaned',
+    #     # 'data.data_class=AffectNetDataModuleValTest',
+    #     # 'data/augmentations=default_with_resize',
+    #     # 'data.num_workers=0',
+    #     'data.num_workers=16',
+    #     # 'learning/logging=none',
+    # ]
     deca_conf = None
     deca_conf_path = None
     fixed_overrides_deca = None

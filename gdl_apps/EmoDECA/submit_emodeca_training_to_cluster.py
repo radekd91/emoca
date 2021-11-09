@@ -101,11 +101,11 @@ def train_emodeca_on_cluster():
             ['data.sampler=balanced_expr'],
             []
         ],
-        # [
-        #     ['model.use_detail_code=true',
-        #      'data.sampler=balanced_expr'],
-        #     []
-        # ],
+        [
+            ['model.use_detail_code=true',
+             'data.sampler=balanced_expr'],
+            []
+        ],
         # [
         #     ['data.sampler=balanced_va'],
         #     []
@@ -268,11 +268,12 @@ def train_emodeca_on_cluster():
         # 'model/settings=AU_emotionet_bce_weighted',
         # '+model.mlp_norm_layer=BatchNorm1d',
         # 'model.use_identity=True', #
-        'model.use_jaw_pose=False',
+        # 'model.use_jaw_pose=False',
         # 'data/augmentations=default',
         # 'learning/optimizer=adabound',
         'data/datasets=affectnet_cluster',
-        'data.data_class=AffectNetDataModuleValTest',
+        # 'data/datasets=affectnet_cluster',
+        # 'data.data_class=AffectNetDataModuleValTest',
         'data.num_workers=16',
         # 'data/datasets=affectnet_v1_cluster',
         # 'data/datasets=emotionet_0_cluster',
