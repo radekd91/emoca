@@ -18,8 +18,9 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         super().__init__(config)
         self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
         if not config.model.load_pretrained_emonet:
-            self.emonet.n_expression = 9 # we use all affectnet classes (included none) for now
-            self.n_expression = 9 # we use all affectnet classes (included none) for now
+            n_expression = config.data.n_expression if 'n_expression' in config.data.n_expression.keys() else 9
+            self.emonet.n_expression = n_expression # we use all affectnet classes (included none) for now
+            self.n_expression = n_expression# we use all affectnet classes (included none) for now
             self.emonet._create_Emo() # reinitialize
         else:
             self.n_expression = 8
@@ -60,11 +61,12 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         values['expr_classification'] = expression
 
         # TODO: WARNING: HACK
-        if self.n_expression == 8:
-            values['expr_classification'] = torch.cat([
-                values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
-                                               + 2*values['expr_classification'].min()],
-                dim=1)
+        if 'n_expression' not in self.config.data:
+            if self.n_expression == 8:
+                values['expr_classification'] = torch.cat([
+                    values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
+                                                   + 2*values['expr_classification'].min()],
+                    dim=1)
 
         return values
 

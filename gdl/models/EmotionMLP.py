@@ -52,7 +52,7 @@ class EmotionMLP(torch.nn.Module):
 
         out_size = 0
         if self.config.predict_expression:
-            self.num_classes = 9
+            self.num_classes =  self.config.data.n_expression if 'n_expression' in self.config.data.keys() else 9
             out_size += self.num_classes
         if self.config.predict_valence:
             out_size += 1

@@ -36,12 +36,6 @@ def main(input_folder, output_folder ):
         with torch.no_grad():
             out = model(batch)
             unlit_im = model.compute_unlit_render()
-        model.model.pred_vertex
-        model.model.pred_tex
-        model.model.pred_color
-        model.model.pred_lm
-        model.model.pred_mask
-        model.model.pred_face
 
         bs = out["shapecode"].shape[0]
 

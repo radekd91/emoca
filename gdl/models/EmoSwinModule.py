@@ -20,7 +20,8 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
 
     def __init__(self, config):
         super().__init__(config)
-        self.n_expression = 9  # we use all affectnet classes (included none) for now
+        # self.n_expression = 9  # we use all affectnet classes (included none) for now
+        self.n_expression = self.config.data.n_expression if 'n_expression' in self.config.data.keys() else 9  # we use all affectnet classes (included none) for now
 
         self.num_outputs = 0
         if self.config.model.predict_expression:
@@ -132,12 +133,13 @@ class EmoSwinModule(EmotionRecognitionBaseModule):
             values['AUs'] = emotion['AUs']
 
         # TODO: WARNING: HACK
-        if self.n_expression == 8:
-            raise NotImplementedError("This here should not be called")
-            values['expr_classification'] = torch.cat([
-                values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
-                                               + 2*values['expr_classification'].min()],
-                dim=1)
+        if 'n_expression' not in self.config.data.keys():
+            if self.n_expression == 8:
+                raise NotImplementedError("This here should not be called")
+                values['expr_classification'] = torch.cat([
+                    values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
+                                                   + 2*values['expr_classification'].min()],
+                    dim=1)
 
         return values
 

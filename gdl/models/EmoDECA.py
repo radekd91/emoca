@@ -61,7 +61,8 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
         out_size = 0
         if self.predicts_expression():
-            self.num_classes = 9
+            # self.num_classes = 9
+            self.num_classes = self.config.data.n_expression if 'n_expression' in self.config.data.keys() else 9
             out_size += self.num_classes
         if self.predicts_valence():
             out_size += 1
@@ -82,7 +83,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
         if "use_emonet" in self.config.model.keys() and self.config.model.use_emonet:
             self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
             if not config.model.load_pretrained_emonet:
-                self.emonet.n_expression = 9  # we use all affectnet classes (included none) for now
+                self.emonet.n_expression = self.num_classes  # we use all affectnet classes (included none) for now
                 self.emonet._create_Emo()  # reinitialize
         else:
             self.emonet = None

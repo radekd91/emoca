@@ -90,6 +90,9 @@ class AffectNetDataModule(FaceDataModuleBase):
                  ring_size=None,
                  drop_last=False,
                  sampler=None,
+                 training_fname=None,
+                 validation_fname=None,
+                 test_fname=None,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -107,16 +110,23 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.mode = mode
         # self.subsets = sorted([f.name for f in (Path(input_dir) / "Manually_Annotated" / "Manually_Annotated_Images").glob("*") if f.is_dir()])
         self.input_dir = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
-        train = pd.read_csv(self.input_dir.parent / "training.csv")
-        val = pd.read_csv(self.input_dir.parent / "validation.csv")
+
+        training_fname = training_fname or  "training.csv"
+        training_fname = self.input_dir.parent / training_fname
+        validation_fname = validation_fname or self.input_dir.parent / "validation.csv"
+        validation_fname = self.input_dir.parent / validation_fname
+        self.test_fname = test_fname or "validation_representative_selection.csv"
+
+        train = pd.read_csv(training_fname)
+        val = pd.read_csv(validation_fname)
         self.df = pd.concat([train, val], ignore_index=True, sort=False)
         self.face_detector_type = 'fan'
         self.scale = scale
         self.use_processed = True
 
 
-        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "training.csv"
-        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation.csv"
+        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / training_fname.name
+        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / validation_fname.name
 
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
@@ -348,9 +358,12 @@ class AffectNetDataModule(FaceDataModuleBase):
                 prefix = self.mode + "_train_"
                 if self.ignore_invalid:
                     prefix += "valid_only_"
+                    if self.ignore_invalid == "like_emonet":
+                        prefix += "emonet"
                 feature_label = 'emo_net_emo_feat_2'
                 self._load_retrieval_arrays(prefix, feature_label)
                 nn_indices = self.nn_indices_array
+                nn_distances = self.nn_distances_array
                 nn_distances = self.nn_distances_array
             else:
                 nn_indices = None
@@ -385,7 +398,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                                         ext=self.processed_ext
                                         )
 
-        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        self.test_dataframe_path = Path(self.output_dir) / self.test_fname
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid= self.ignore_invalid,
                                   ring_type=None,
@@ -492,6 +505,9 @@ class AffectNetDataModule(FaceDataModuleBase):
         prefix = self.mode + "_train_"
         if self.ignore_invalid:
             prefix += "valid_only_"
+            if self.ignore_invalid == "like_emonet":
+                prefix += "emonet"
+
         feature_label = 'emo_net_emo_feat_2'
         nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
         nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
@@ -569,11 +585,43 @@ class AffectNetDataModule(FaceDataModuleBase):
 
 class AffectNetEmoNetSplitModule(AffectNetDataModule):
 
-    def __init__(self, *args, **kwargs):
-        kwargs["ignore_invalid"] = True
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, ignore_invalid=True, **kwargs):
+        # kwargs["ignore_invalid"] = True
+        # kwargs["ignore_invalid"] = "like_emonet"
+        training_fname = "training_emonet_split.csv" # training split does not have a cleaned version
+        if ignore_invalid is True:
+            validation_fname = "validation_emonet_split.csv"
+            # test_fname = "testing_emonet_split.csv"
+            test_fname = "validation_representative_emonet_split.csv"
+        elif ignore_invalid == "like_emonet":
+            validation_fname = "validation_emonet_split_clean.csv"
+            # test_fname = "testing_emonet_split.csv"
+            test_fname = "validation_emonet_split_clean_representative.csv"
+        else:
+            raise NotImplementedError("Probably not what you want.")
+
+        super().__init__(*args, ignore_invalid=ignore_invalid,
+                         training_fname=training_fname, validation_fname=validation_fname, test_fname=test_fname,
+                         **kwargs)
 
     def setup(self, stage=None):
+        self.training_set = self._new_training_set()
+        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                        None, ignore_invalid=self.ignore_invalid,
+                                        ring_type=None,
+                                        ring_size=None,
+                                        ext=self.processed_ext
+                                        )
+        if self.ignore_invalid == "like_emonet":
+            self.validation_set2 = AffectNet(self.image_path,
+                                             self.val_dataframe_path.parent / "validation_emonet_split.csv",
+                                             self.image_size, self.scale,
+                                            None, ignore_invalid=self.ignore_invalid,
+                                            ring_type=None,
+                                            ring_size=None,
+                                            ext=self.processed_ext
+                                            )
+
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
@@ -582,8 +630,82 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
         self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, self.ignore_invalid)
 
+    def val_dataloader(self):
+        dls = [DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.val_batch_size, drop_last=False)]
+
+        if self.ignore_invalid == "like_emonet":
+            dls += [DataLoader(self.validation_set2, shuffle=False, num_workers=self.num_workers,
+                           batch_size=self.val_batch_size, drop_last=False)]
+            return dls
+        else:
+            return dls[0]
 
 
+    def test_dataloader(self):
+        return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.test_batch_size, drop_last=False)
+
+
+class AffectNetEmoNetSplitModuleValTest(AffectNetEmoNetSplitModule):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setup(self, stage=None):
+        self.training_set = self._new_training_set()
+        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                        None, ignore_invalid=self.ignore_invalid,
+                                        ring_type=None,
+                                        ring_size=None,
+                                        ext=self.processed_ext
+                                        )
+        if self.ignore_invalid == "like_emonet":
+            self.validation_set2 = AffectNet(self.image_path,
+                                             self.val_dataframe_path.parent / "validation_emonet_split.csv",
+                                             self.image_size, self.scale,
+                                            None, ignore_invalid=self.ignore_invalid,
+                                            ring_type=None,
+                                            ring_size=None,
+                                            ext=self.processed_ext
+                                            )
+
+        self.test_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=None,
+                                  ring_size=None,
+                                  ext=self.processed_ext
+                                  )
+        if self.ignore_invalid == "like_emonet":
+            self.test_set2 = AffectNet(self.image_path,
+                                             self.val_dataframe_path.parent / "validation_emonet_split.csv",
+                                             self.image_size, self.scale,
+                                            None, ignore_invalid=self.ignore_invalid,
+                                            ring_type=None,
+                                            ring_size=None,
+                                            ext=self.processed_ext
+                                            )
+
+    def val_dataloader(self):
+        dls = [DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.val_batch_size, drop_last=False)]
+
+        if self.ignore_invalid == "like_emonet":
+            dls += [DataLoader(self.validation_set2, shuffle=False, num_workers=self.num_workers,
+                           batch_size=self.val_batch_size, drop_last=False)]
+            return dls
+        else:
+            return dls[0]
+
+    def test_dataloader(self):
+        dls = [DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
+                          batch_size=self.test_batch_size, drop_last=False)]
+        if self.ignore_invalid == "like_emonet":
+            dls += [DataLoader(self.test_set2, shuffle=False, num_workers=self.num_workers,
+                           batch_size=self.val_batch_size, drop_last=False)]
+            return dls
+        else:
+            return dls[0]
 
 
 class AffectNetTestModule(AffectNetDataModule):
@@ -669,6 +791,10 @@ class AffectNet(EmotionalImageDatasetBase):
         if ignore_invalid:
             # filter invalid classes
             ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
+
+            if ignore_invalid == "like_emonet":
+                ignored_classes += [AffectNetExpressions.None_]
+
             self.df = self.df[self.df["expression"].isin(ignored_classes) == False]
             # self.df = self.df.drop(self.df[self.df["expression"].isin(ignored_classes)].index)
 
@@ -965,7 +1091,7 @@ class AffectNet(EmotionalImageDatasetBase):
         return combined_batch
 
 
-def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin=2):
+def sample_representative_set(df, output_file, sample_step=0.1, num_per_bin=2):
     va_array = []
     size = int(2 / sample_step)
     for i in range(size):
@@ -974,9 +1100,9 @@ def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin
             va_array[i] += [[]]
 
     print("Binning dataset")
-    for i in auto.tqdm(range(len(dataset.df))):
-        v = max(-1., min(1., dataset.df.loc[i]["valence"]))
-        a = max(-1., min(1., dataset.df.loc[i]["arousal"]))
+    for i in auto.tqdm(range(len(df))):
+        v = max(-1., min(1., df.loc[i]["valence"]))
+        a = max(-1., min(1., df.loc[i]["arousal"]))
         row_ = int((v + 1) / sample_step)
         col_ = int((a + 1) / sample_step)
         va_array[row_][ col_] += [i]
@@ -991,10 +1117,134 @@ def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin
             else:
                 print(f"No value for {i} and {j}")
 
-    selected_samples = dataset.df.loc[selected_indices]
+    selected_samples = df.loc[selected_indices]
     selected_samples.to_csv(output_file)
     print(f"Selected samples saved to '{output_file}'")
 
+
+def emonet_split_pkl_to_csv():
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/val_fullpath.pkl"), "rb") as f:
+        emonet_val_set = pkl.load(f)
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/test_fullpath.pkl"), "rb") as f:
+        emonet_test_set = pkl.load(f)
+
+    train_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/training.csv"
+    new_train_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/training_emonet_split.csv"
+    new_val_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation_emonet_split.csv"
+    new_subset_val_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation_representative_emonet_split.csv"
+
+    df = pd.read_csv(train_df_path)
+
+    trainset = set(df["subDirectory_filePath"].to_list())
+    val_set_emo = set(emonet_val_set.keys())
+    test_set_emo = set(emonet_test_set.keys())
+
+    forbidden_samples = test_set_emo.union(val_set_emo)
+    trainset.difference(forbidden_samples)
+
+    list(forbidden_samples)
+
+    new_train_df = df[~df['subDirectory_filePath'].isin(list(forbidden_samples))]
+    new_train_df = new_train_df.reset_index(drop=True)
+
+    if not Path(new_train_df_path).exists():
+        new_train_df.to_csv(new_train_df_path)
+        new_df_check = pd.read_csv(new_train_df_path)
+        new_trainset = set(new_train_df["subDirectory_filePath"].to_list())
+        assert len(val_set_emo.intersection(new_trainset)) == 0
+        assert len(new_train_df) == len(new_df_check)
+        assert len(new_train_df) < len(df)
+    else:
+        print(f"File {new_train_df_path} already exists. Will not overwrite.")
+
+    new_val_df = df[df['subDirectory_filePath'].isin(list(val_set_emo))]
+    new_val_df = new_val_df.reset_index(drop=True)
+    if not Path(new_val_df_path).exists():
+        new_val_df.to_csv(new_val_df_path)
+        new_df_check = pd.read_csv(new_val_df_path)
+        assert len(new_val_df) == len(new_df_check)
+        assert len(new_val_df) < len(df)
+    else:
+        print(f"File {new_val_df_path} already exists. Will not overwrite.")
+
+    sample_representative_set(new_val_df, new_subset_val_df_path)
+
+
+def replace_labels(df, dic):
+    zero_found = False
+    augmented_count = 0
+    expression_correct_count = 0
+    valence_different = 0
+    arousal_different = 0
+    expression_different = 0
+    incorrect_indices = []
+    for key, value in auto.tqdm(dic.items()):
+        indexer = df['subDirectory_filePath'] == key
+        assert indexer.sum() == 1
+        idx = indexer[indexer].index.values[0]
+        if df.loc[idx, "valence"] != float(value["valence"]):
+            valence_different += 1
+        if df.loc[idx, "arousal"] != float(value["arousal"]):
+            arousal_different += 1
+        if df.loc[idx, "expression"] != float(value["expression"]):
+            expression_different += 1
+        df.loc[idx, "valence"] = float(value["valence"])
+        df.loc[idx, "arousal"] = float(value["arousal"])
+        expression_correct_count += int(value["expression_correct"])
+        if not int(value["expression_correct"]) or int(value["expression"]) == 8 : # 8 == None_
+            incorrect_indices += [idx]
+        # if df.loc[idx, "expression"] == 0 and int(value["expression"]) == 0:
+        #     print("YOOOO")
+        df.loc[idx, "expression"] = int(value["expression"])
+        # if int(value["expression"]) == 8 and int(value["expression_correct"]):
+        #     incorrect_indices += [idx]
+        zero_found = zero_found or value["expression"] == 0
+        augmented_count += int(value["augmented"])
+        #
+        df.loc[idx, "face_x"] = int(value["faceX"])
+        df.loc[idx, "face_y"] = int(value["faceY"])
+        df.loc[idx, "face_width"] = int(value["face_width"])
+        df.loc[idx, "face_height"] = int(value["face_height"])
+
+        landmark_list = value["landmarks"].flatten().tolist()
+        landmark_list = ",".join( [f"{f:.3f}" for f in landmark_list])
+        df.loc[idx, "facial_landmarks"] = landmark_list
+    assert not zero_found # sanity check if expression indexing starts from zero
+    incorrect_indices = np.array(incorrect_indices)
+    df = df.drop(incorrect_indices)
+    df = df.reset_index(drop=True)
+    return df
+
+def emonet_split_cleaned_label_transfer():
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/val_fullpath.pkl"), "rb") as f:
+        emonet_val_set = pkl.load(f)
+    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/test_fullpath.pkl"), "rb") as f:
+        emonet_test_set = pkl.load(f)
+
+    new_val_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation_emonet_split.csv"
+    new_val_df_cleaned_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation_emonet_split_clean.csv"
+    new_val_df_cleaned_repre_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation_emonet_split_clean_representative.csv"
+    new_val_df = pd.read_csv(new_val_df_path)
+    new_val_df_cleaned = replace_labels(new_val_df, emonet_val_set)
+    if not Path(new_val_df_cleaned_path).exists():
+        new_val_df_cleaned.to_csv(new_val_df_cleaned_path)
+    else:
+        print(f"File {new_val_df_cleaned_path} already exists. Will not overwrite.")
+    sample_representative_set(new_val_df_cleaned, new_val_df_cleaned_repre_path)
+
+    new_test_df_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/testing_emonet_split.csv"
+    new_test_df_cleaned_path = "/ps/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/testing_emonet_split_clean.csv"
+    new_test_df = pd.read_csv(new_test_df_path)
+    new_test_df_cleaned = replace_labels(new_test_df, emonet_test_set)
+    if not Path(new_test_df_cleaned_path).exists():
+        new_test_df_cleaned.to_csv(new_test_df_cleaned_path)
+    else:
+        print(f"File {new_test_df_cleaned_path} already exists. Will not overwrite.")
+
+
+def process_emonet_split():
+    emonet_split_pkl_to_csv()
+    emonet_split_cleaned_label_transfer()
 
 
 if __name__ == "__main__":
@@ -1026,8 +1276,11 @@ if __name__ == "__main__":
     #          ring_size=4
     #         )
     import yaml
-    augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
-
+    # augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
+    augmenter = None
+    # 316239
+    # dm = AffectNetEmoNetSplitModule(
+    # dm = AffectNetEmoNetSplitModuleValTest(
     dm = AffectNetDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
@@ -1035,6 +1288,7 @@ if __name__ == "__main__":
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",
              processed_subfolder="processed_2021_Aug_27_19-58-02",
+    #          processed_subfolder="processed_2021_Apr_05_15-22-18",
              processed_ext=".jpg",
              mode="manual",
              scale=1.7,
@@ -1042,69 +1296,21 @@ if __name__ == "__main__":
              bb_center_shift_x=0,
              bb_center_shift_y=-0.3,
              ignore_invalid=True,
+             # ignore_invalid="like_emonet",
              # ring_type="gt_expression",
-             ring_type="gt_va",
+             # ring_type="gt_va",
              # ring_type="emonet_feature",
-             ring_size=4,
+             # ring_size=4,
             augmentation=augmenter,
+            # use_clean_labels=True
             )
-
+    #
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
-    # dm._extract_emotion_features()
-    # dl = dm.val_dataloader()
-    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/val_fullpath.pkl"), "rb") as f:
-        emonet_val_set = pkl.load(f)
-    with open(Path("/home/rdanecek/Workspace/Repos/emonet/pickles/test_fullpath.pkl"), "rb") as f:
-        emonet_test_set = pkl.load(f)
+    # # dm._extract_emotion_features()
+    dltr = dm.train_dataloader()
+    dlv = dm.val_dataloader()
+    dlt = dm.test_dataloader()
 
-    valset = set(dm.validation_set.df["subDirectory_filePath"].to_list())
-    valset_emo = set(emonet_val_set.keys())
-
-    trainset = set(dm.training_set.df["subDirectory_filePath"].to_list())
-    testset_emo = set(emonet_test_set.keys())
-
-    next(valset)
-
-    emonet_val_set_exp_counter = {}
-    for key, value in emonet_val_set.items():
-        expression_label = emonet_val_set[key]['expression']
-        if expression_label not in emonet_val_set_exp_counter.keys():
-            emonet_val_set_exp_counter[expression_label] = 1
-        else:
-            emonet_val_set_exp_counter[expression_label] += 1
-
-    emonet_test_set_exp_counter = {}
-    for key, value in emonet_test_set.items():
-        expression_label = emonet_test_set[key]['expression']
-        if expression_label not in emonet_test_set_exp_counter.keys():
-            emonet_test_set_exp_counter[expression_label] = 1
-        else:
-            emonet_test_set_exp_counter[expression_label] += 1
-
-
-    print(f"len training set: {len(dm.training_set)}")
-    # print(f"len validation set: {len(dm.validation_set)}")
-    # # dl = dm.train_dataloader()
-    # # for bi, batch in enumerate(dl):
-    #     # if bi == 10:
-    #     #     break
-    # for si in range(len(dm.training_set)):
-    #     dm.training_set.visualize_sample(si)
-
-    # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
-    # sample_representative_set(dm.validation_set, out_path)
-    #
-    # validation_set = AffectNet(
-    #     dm.image_path, out_path, dm.image_size, dm.scale, None,
-    # )
-    # for i in range(len(validation_set)):
-    #     sample = validation_set[i]
-    #     validation_set.visualize_sample(sample)
-    #
-    # # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
-
-    # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
-
-    # dm._detect_faces()
+    print("Done")
