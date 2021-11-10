@@ -379,8 +379,13 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
                 deca_cfg_ = OmegaConf.load(f)
             deca_cfg = deca_cfg_[deca_stage]
 
-            ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best',
-                                     )
+            try:
+                ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path, mode='best',
+                                         )
+            except FileNotFoundError:
+                ckpt = locate_checkpoint(deca_cfg, replace_root=replace_root_path, relative_to=relative_to_path,
+                                         mode='latest',
+                                         )
             if ckpt is None:
                 deca_stage = "coarse"
                 deca_cfg = deca_cfg_[deca_stage]
@@ -394,6 +399,10 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
         cfg.model.deca_cfg = deca_cfg
         cfg.model.deca_stage = deca_stage
+
+        # take DECA's tags (if any) and add them to the emodeca config
+        if 'tags' in deca_cfg.learning.keys():
+            cfg.model.tags += [deca_cfg.learning.tags]
 
     if 'swin_type' in cfg.model.keys():
         if cfg.model.swin_cfg == 'todo':

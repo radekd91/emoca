@@ -177,12 +177,18 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
         short_version = version[:128]
         print(f"Short name len: {len(short_name)}")
         print(short_name)
+        if config is not None:
+            tags = config['learning']['tags'] if 'tags' in config['learning']['tags'].keys() else None
+        else:
+            tags = None
+
         logger = WandbLogger(name=short_name,
                              notes=name,
                              project=project_name,
                              version=short_version,
                              save_dir=save_dir,
-                             config=config)
+                             config=config,
+                             tags=tags)
         max_tries = 100
         tries = 0
         if logger is not None:

@@ -46,7 +46,7 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
                 min_value = loss_value
                 min_idx = idx
         if min_idx == -1:
-            raise RuntimeError("Finding the best checkpoint failed")
+            raise FileNotFoundError("Finding the best checkpoint failed")
         checkpoint = str(checkpoints[min_idx])
     else:
         raise ValueError(f"Invalid checkpoint loading mode '{mode}'")

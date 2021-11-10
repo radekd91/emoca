@@ -271,8 +271,9 @@ def train_emodeca_on_cluster():
         # 'model.use_identity=True', #
         # 'data/augmentations=default',
         # 'learning/optimizer=adabound',
-        'data/datasets=affectnet_cluster',
-        'data.data_class=AffectNetDataModuleValTest',
+        # 'data/datasets=affectnet_cluster',
+        # 'data.data_class=AffectNetDataModuleValTest',
+        'data/datasets=affectnet_cluster_emonet_cleaned',
         'data.num_workers=16',
         # 'data/datasets=affectnet_v1_cluster',
         # 'data/datasets=emotionet_0_cluster',
@@ -484,6 +485,26 @@ def train_emodeca_on_cluster():
 
     ## ONE Sanity check - reproducing ResNet clode best candidate, run the rest if necessary
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_06_22-18-51_-8514519696387528299_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+
+    # EMONET SPLIT RUN:
+    tags = None
+
+
+    # emonet ablation
+    tags = ["EMONET_SPLIT_ABLATION_EMONET"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_8154275745776863855_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_8341774161001263236_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_-1548615666948242852_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_2916708914926921364_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+
+    if tags is not None:
+        fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
+
 
     for deca_conf_path in  run_names:
 

@@ -359,17 +359,17 @@ def train_on_selected_sequences():
 
     ]
     #
-    # sampler = "data.sampler=balanced_expr"
-    # dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
-    # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-    # # dataset_coarse = "data/datasets=affectnet_cluster"
-    # # dataset_detail = 'data/datasets=affectnet_cluster'
+    sampler = "data.sampler=balanced_expr"
+    dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    # dataset_coarse = "data/datasets=affectnet_cluster"
+    # dataset_detail = 'data/datasets=affectnet_cluster'
     # #
-    sampler = "+data.sampler=False"
-    # dataset_coarse = "data/datasets=coarse_data_cluster"
-    # dataset_detail = 'data/datasets=detail_data_cluster'
-    dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
-    dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+    # sampler = "+data.sampler=False"
+    # # dataset_coarse = "data/datasets=coarse_data_cluster"
+    # # dataset_detail = 'data/datasets=detail_data_cluster'
+    # dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
+    # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
 
     # learning_rates = [0.0001]
     # learning_rates = [0.0001, 0.00005, 0.00001]
@@ -402,7 +402,7 @@ def train_on_selected_sequences():
         # SWIN - base
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-52_5038147139113833903_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-16_3124535509353356305_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"
-        emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
+        # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
 
         # VGG 19BN
         # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
@@ -414,7 +414,7 @@ def train_on_selected_sequences():
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-00-06_-8559276509623672361_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-16-15_-4954470508546110068_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-06_2594210365109986369_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
-        # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
+        emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
 
         for emonet in emonets:
 
@@ -555,6 +555,7 @@ def train_on_selected_sequences():
                                 fixed_overrides_detail += [use_au_loss]
 
                             emonet_weights = [1.0]
+                            # emonet_weights = [0.1, 0.5,  5., 10.]
 
                             config_pairs = []
                             for emonet_weight in emonet_weights:

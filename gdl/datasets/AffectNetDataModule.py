@@ -1248,6 +1248,7 @@ def process_emonet_split():
 
 
 if __name__ == "__main__":
+    emonet_split_pkl_to_csv()
     # d = AffectNetOriginal(
     #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/Manually_Annotated_Images",
     #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation.csv",
