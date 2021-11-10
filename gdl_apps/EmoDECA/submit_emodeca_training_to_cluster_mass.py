@@ -5,6 +5,10 @@ import datetime
 from omegaconf import OmegaConf
 import time as t
 import random
+import pandas as pd
+import wandb
+
+
 
 def submit(cfg, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -70,7 +74,7 @@ def submit(cfg, bid=10):
                        concurrency_tag="emodeca_train",
                        modules_to_load=['cuda/11.4'],
                        )
-    t.sleep(2)
+    # t.sleep(2)
 
 
 def train_emodeca_on_cluster():
@@ -489,10 +493,10 @@ def train_emodeca_on_cluster():
 
     # EMONET SPLIT RUN:
     tags = None
-
+    api = wandb.Api()
 
     # emonet ablation
-    tags = ["EMONET_SPLIT_ABLATION_EMONET"]
+    # # tags = ["EMONET_SPLIT_ABLATION_EMONET"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_8154275745776863855_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_8341774161001263236_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
@@ -500,13 +504,65 @@ def train_emodeca_on_cluster():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_2916708914926921364_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
+    # # tags = ["EMONET_SPLIT_ABLATION_EMONET_JAW"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-21-17_3117709423447065408_ExpDECA_Affec_clone_Jaw_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-21-17_-3658324653371799778_ExpDECA_Affec_clone_Jaw_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
+    # # tags = ['EMONET_SPLIT_ABLATION_PHOTOMETRIC_REL']
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-05-06_244631536517617441_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-05-01_5101174495546322475_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-04-15_9157589239172551865_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-04-08_-6517858133142386828_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # # tags = ['EMONET_SPLIT_ABLATION_LANDMARKS']
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_1092543351772726789_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_1056504990304470492_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_-3505404531826926943_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
+    # # tags = ['EMONET_SPLIT_ABLATION_EMO_METRIC']
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_6160996897661237206_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_1218762018464274311_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_-5511487677556972267_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
-
-    if tags is not None:
-        fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
-
+    # # tags = ['EMONET_SPLIT_ABLATION_NO_EMO_CLONE']
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-11_-7854117761220635898_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-48-54_3114387149519252327_ExpDECA_Affec_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-48-36_-2088077727545369691_ExpDECA_Affec_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    # # tags = ['EMONET_SPLIT_ABLATION_NO_EMO']
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-47-40_-6121237435910246400_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-47-38_-7658985706608461505_ExpDECA_Affec_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-46-17_-3537904820935564917_ExpDECA_Affec_para_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-45-58_6136426326225856038_ExpDECA_Affec_para_NoRing_DeSegrend_BlackB_Aug_early"]
 
     for deca_conf_path in  run_names:
+        name = str(Path(deca_conf_path).name)
+        idx = name.find("ExpDECA")
+        run_id = name[:idx-1]
+        run = api.run("rdanecek/EmotionalDeca/" + run_id)
+        tags = run.tags
+        tags += ["NEW_SPLIT"]
+        fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
 
         deca_conf = None
         fixed_overrides_deca = None

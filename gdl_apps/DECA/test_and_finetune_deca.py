@@ -178,7 +178,12 @@ def create_logger(logger_type, name, project_name, version, save_dir, config=Non
         print(f"Short name len: {len(short_name)}")
         print(short_name)
         if config is not None:
-            tags = config['learning']['tags'] if 'tags' in config['learning'].keys() else None
+            if 'learning' in config.keys():
+                tags = config['learning']['tags'] if 'tags' in config['learning'].keys() else None
+            elif "coarse" in config.keys():
+                tags = config["coarse"]['learning']['tags'] if 'tags' in config["coarse"]['learning'].keys() else None
+            elif "detail" in config.keys():
+                tags = config["detail"]['learning']['tags'] if 'tags' in config["detail"]['learning'].keys() else None
         else:
             tags = None
 
