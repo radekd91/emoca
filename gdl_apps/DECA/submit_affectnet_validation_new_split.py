@@ -161,8 +161,8 @@ def main():
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-27-09_3536700504397748218_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
-    # mode = 'coarse'
-    mode = 'detail'
+    mode = 'coarse'
+    # mode = 'detail'
 
     tags = None
 
