@@ -4,6 +4,7 @@ import train_emodeca
 import datetime
 from omegaconf import OmegaConf
 import time as t
+import random
 
 def submit(resume_folder,
            stage = None,
@@ -21,7 +22,7 @@ def submit(resume_folder,
     result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/emodeca"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    submission_folder_name = time + "_" + str(hash(time)) + "_" + "submission"
+    submission_folder_name = time + "_" + str(hash(random.randint(0,10000000))) + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
@@ -388,7 +389,21 @@ def train_emodeca_on_cluster():
 
 
     # EMONET AFFECTNET SPLIT
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+
+    # unbalanced ablation
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-47-11_-8933594028053688272_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+
+    #tf based methods
+    ## resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-40-47_788901720705055085_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-23_-1563842771012871107_EmoMGCNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_7185746630127973131_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_-5897906937639522740_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_-4243265131868277692_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-09_-5731619448091644006_EmoMGCNet_shake_samp-balanced_expr_early"]
+    #
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_1100038809156575863_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_5819872215734350943_EmoExpNet_shake_samp-balanced_expr_early"]
 
     stage = 1 # test stage
 

@@ -561,14 +561,19 @@ def train_emodeca_on_cluster():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-3997268493304040250_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
     ## SWIN WEIGHT ABLATION - to run
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-08_3278107752429068516_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    #run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-3310835230647295291_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-2154597728523907962_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-2106219737797182304_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-08_3278107752429068516_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # #run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-3310835230647295291_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-2154597728523907962_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-07_-2106219737797182304_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
     # missing DecaD ablation
 
     # missing unbalanced ExpDECA on Affecntet
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-28-27_7449334996109808959_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-28-07_-753452132482044016_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-28-07_-6499863499965279138_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-27-09_3536700504397748218_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
 
     for deca_conf_path in  run_names:
         name = str(Path(deca_conf_path).name)

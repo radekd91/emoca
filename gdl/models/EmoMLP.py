@@ -136,4 +136,5 @@ class EmoMLP(EmotionRecognitionBaseModule):
             # losses_mlp, metrics_mlp = {}, {}
         return losses_mlp, metrics_mlp
 
-
+    def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        pass
