@@ -797,6 +797,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.load_emotion_feature = load_emotion_feature
         self.nn_distances_array = nn_distances_array
         self.ext=ext
+        self.num_skips = 0
 
         if ignore_invalid:
             # filter invalid classes
@@ -907,6 +908,7 @@ class AffectNet(EmotionalImageDatasetBase):
         return {}
 
     def _get_sample(self, index):
+        num_skips = 0
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
@@ -917,6 +919,7 @@ class AffectNet(EmotionalImageDatasetBase):
             # if the image is corrupted or missing (there is a few :-/), find some other one
             while True:
                 index += 1
+                num_skips += 1
                 index = index % len(self)
                 im_rel_path = self.df.loc[index]["subDirectory_filePath"]
                 im_file = Path(self.image_path) / im_rel_path
@@ -929,6 +932,9 @@ class AffectNet(EmotionalImageDatasetBase):
                     success = False
                 if success:
                     break
+        self.num_skips += num_skips
+        if num_skips > 0:
+            prin(f"Warning: skipped {num_skips} samples do to failed loading. In total {self.num_skips} samples skipped")
 
         left = self.df.loc[index]["face_x"]
         top = self.df.loc[index]["face_y"]
