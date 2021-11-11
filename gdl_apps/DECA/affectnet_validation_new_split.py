@@ -31,8 +31,6 @@ def load_model(path_to_models,
                          relative_to_path,
                          replace_root_path,
                          )
-    if stage == "coarse":
-        deca.reconfigure(conf["detail"].model, conf["detail"].inout, conf["detail"].learning, stage_name="", downgrade_ok=False, train=False)
 
     return deca, conf
 
@@ -64,11 +62,14 @@ def main():
         mode = sys.argv[2]
     else:
         mode = 'coarse'
-        # mode = 'detail'
-    deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
 
+    deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
     deca.eval()
 
+    # now that we loaded, let's reconfigure to detail
+    mode = 'detail'
+    deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
+                     downgrade_ok=False, train=False)
     import wandb
     api = wandb.Api()
     name = str(Path(run_name).name)
