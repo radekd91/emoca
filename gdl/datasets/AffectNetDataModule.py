@@ -903,12 +903,16 @@ class AffectNet(EmotionalImageDatasetBase):
     def __len__(self):
         return len(self.df)
 
+    def _load_additional_data(self, im_rel_path):
+        return {}
+
     def _get_sample(self, index):
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
             im_file = im_file.parent / (im_file.stem + self.ext)
             input_img = imread(im_file)
+            additional_data = self._load_additional_data(im_rel_path)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
             while True:
@@ -919,6 +923,7 @@ class AffectNet(EmotionalImageDatasetBase):
                 im_file = im_file.parent / (im_file.stem + self.ext)
                 try:
                     input_img = imread(im_file)
+                    additional_data = self._load_additional_data(im_rel_path)
                     success = True
                 except Exception as e2:
                     success = False
@@ -996,6 +1001,7 @@ class AffectNet(EmotionalImageDatasetBase):
             "valence_sample_weight": torch.tensor([self.v_sample_weights[index],], dtype=torch.float32),
             "arousal_sample_weight": torch.tensor([self.a_sample_weights[index],], dtype=torch.float32),
             "va_sample_weight": torch.tensor([self.va_sample_weights[index],], dtype=torch.float32),
+            **additional_data
         }
 
         if landmark is not None:
@@ -1110,24 +1116,40 @@ class AffectNetWithPredictions(AffectNet):
         self.shape_prediction_name = shape_name
         self.exp_prediction_name = exp_name
 
-    def _get_sample(self, index):
-        sample = super()._get_sample(index)
-
-        im_rel_path = sample["path"]
-        im_rel_path = Path(im_rel_path).relative_to(self.image_path)
-        im_rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
-
-        prediction_path = Path(self.image_path).parent / "predictions" / self.predictor / im_rel_path
+    def _load_additional_data(self, im_rel_path):
+        rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
+        prediction_path = Path(self.image_path).parent / "predictions" / self.predictor / rel_path
         shape_prediction_path = prediction_path / (self.shape_prediction_name + ".npy")
         exp_prediction_path = prediction_path / (self.exp_prediction_name + ".npy")
 
         shape_prediction = np.load(shape_prediction_path).squeeze()
         exp_prediction = np.load(exp_prediction_path).squeeze()
 
-        sample["shapecode"] = torch.from_numpy(shape_prediction)
-        sample["expcode"] = torch.from_numpy(exp_prediction)
+        additional = {}
+        additional["shapecode"] = torch.from_numpy(shape_prediction)
+        additional["expcode"] = torch.from_numpy(exp_prediction)
+        return additional
 
-        return sample
+    # def _get_sample(self, index):
+    #     sample = super()._get_sample(index)
+    #
+    #     #TODO: what if prediction not found? we have about 420068 processed images.
+    #     # The predicitons could have failed for some
+    #     im_rel_path = sample["path"]
+    #     im_rel_path = Path(im_rel_path).relative_to(self.image_path)
+    #     im_rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
+    #
+    #     prediction_path = Path(self.image_path).parent / "predictions" / self.predictor / im_rel_path
+    #     shape_prediction_path = prediction_path / (self.shape_prediction_name + ".npy")
+    #     exp_prediction_path = prediction_path / (self.exp_prediction_name + ".npy")
+    #
+    #     shape_prediction = np.load(shape_prediction_path).squeeze()
+    #     exp_prediction = np.load(exp_prediction_path).squeeze()
+    #
+    #     sample["shapecode"] = torch.from_numpy(shape_prediction)
+    #     sample["expcode"] = torch.from_numpy(exp_prediction)
+    #
+    #     return sample
 
 
 class AffectNetWithMGCNetPredictions(AffectNetWithPredictions):

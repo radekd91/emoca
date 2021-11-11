@@ -94,7 +94,7 @@ def train_emodeca_on_cluster():
         ],
     ]
 
-    # ## 1) Emo 3DDFA_V2
+    # # ## 1) Emo 3DDFA_V2
     emodeca_default = "emo3ddfa_v2"
     emodeca_overrides = [
         # 'model/backbone=3ddfa_v2',
@@ -104,7 +104,7 @@ def train_emodeca_on_cluster():
         # 'data/datasets=affectnet_cluster',
         'data/datasets=affectnet_cluster_emonet_cleaned',
         # 'data.data_class=AffectNetDataModuleValTest',
-        # 'data/augmentations=default_with_resize',
+        'data/augmentations=none',
         'data.num_workers=16',
         # 'learning/logging=none',
     ]
@@ -118,38 +118,34 @@ def train_emodeca_on_cluster():
     #     # 'data/datasets=affectnet_cluster',
     #     'data/datasets=affectnet_cluster_emonet_cleaned',
     #     # 'data.data_class=AffectNetDataModuleValTest',
-    #     # 'data/augmentations=default_with_resize',
+    #     'data/augmentations=none',
     #     # 'data.num_workers=0',
+    # 'data/datasets=affectnet_cluster_emonet_cleaned',
     #     'data.num_workers=16',
     #     # 'learning/logging=none',
     # ]
-
-    ## 3) EmoMGCNET
+    #
+    # #3) EmoMGCNET
     # emodeca_default = "emomgcnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
-    #     # 'data/datasets=emotionet_desktop',
-    #     # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
     #     '+data.dataset_type=AffectNetWithMGCNetPredictions',
-    #     'data/augmentations=default_with_resize',
-    #     'data.num_workers=0',
-    #     # 'data.num_workers=16',
-    #     'learning/logging=none',
+    #      'learning.gpu_memory_min_gb=12',
+    #     'data/augmentations=none',
+    # 'data/datasets=affectnet_cluster_emonet_cleaned',
+    #     'data.num_workers=16',
     # ]
 
-    ## 3) EmoExpNET
-    emodeca_default = "emoexpnet"
-    emodeca_overrides = [
-        # 'model.mlp_dim=2048',
-        # 'data/datasets=emotionet_desktop',
-        # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
-        '+data.dataset_type=AffectNetWithExpNetPredictions',
-        # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
-        'data/augmentations=default_with_resize',
-        'data.num_workers=0',
-        # 'data.num_workers=16',
-        'learning/logging=none',
-    ]
+    # ## 4) EmoExpNET
+    # emodeca_default = "emoexpnet"
+    # emodeca_overrides = [
+    #     # 'model.mlp_dim=2048',
+    #     '+data.dataset_type=AffectNetWithExpNetPredictions',
+    #     # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+    #     'learning.gpu_memory_min_gb=12',
+    #     'data/augmentations=none',
+    #     'data.num_workers=16',
+    # ]
 
     deca_conf = None
     deca_conf_path = None
