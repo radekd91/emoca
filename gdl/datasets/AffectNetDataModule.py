@@ -745,6 +745,19 @@ class AffectNetTestModule(AffectNetDataModule):
                           batch_size=self.test_batch_size)
 
 
+class AffectNetEmoNetSplitTestModule(AffectNetTestModule):
+
+    def setup(self, stage=None):
+        self.test_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation_emonet_split_clean_representative.csv"
+        if self.use_processed:
+            self.image_path = Path(self.output_dir) / "detections"
+        else:
+            self.image_path = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None, self.ignore_invalid)
+
+
+
 class AffectNetDataModuleValTest(AffectNetDataModule):
 
     def __init__(self, *args, **kwargs):

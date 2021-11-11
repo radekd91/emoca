@@ -395,7 +395,7 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-47-11_-8933594028053688272_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
 
     #tf based methods
-    ## resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-40-47_788901720705055085_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-40-47_788901720705055085_EmoExpNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-23_-1563842771012871107_EmoMGCNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_7185746630127973131_EmoExpNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_-5897906937639522740_EmoExpNet_shake_samp-balanced_expr_early"]
@@ -405,10 +405,12 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_1100038809156575863_EmoExpNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_5819872215734350943_EmoExpNet_shake_samp-balanced_expr_early"]
 
+    bid = 10
+
     stage = 1 # test stage
 
     for resume_folder in resume_folders:
-        submit(resume_folder, stage)
+        submit(resume_folder, stage, bid=bid)
 
 
 if __name__ == "__main__":
