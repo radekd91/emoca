@@ -21,31 +21,30 @@ def main():
         replace_root_path = None
 
 
-        ## 4) EmoMGCNET
-        # emodeca_default = "emomgcnet"
-        # emodeca_overrides = [
-        #     # 'model.mlp_dim=2048',
-        #     # 'data/datasets=emotionet_desktop',
-        #     # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
-        #     '+data.dataset_type=AffectNetWithMGCNetPredictions',
-        #     'data/augmentations=default_with_resize',
-        #     'data.num_workers=0',
-        #     # 'data.num_workers=16',
-        #     'learning/logging=none',
-        # ]
-
-        emodeca_default = "emoexpnet"
+        ## EmoMGCNET
+        emodeca_default = "emomgcnet"
         emodeca_overrides = [
             # 'model.mlp_dim=2048',
             # 'data/datasets=emotionet_desktop',
             # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
-            # '+data.dataset_type=AffectNetWithExpNetPredictions',
-            '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
-            'data/augmentations=default_with_resize',
+            '+data.dataset_type=AffectNetWithMGCNetPredictions',
             'data.num_workers=0',
             # 'data.num_workers=16',
             'learning/logging=none',
         ]
+
+        ## EmoExpNET
+        # emodeca_default = "emoexpnet"
+        # emodeca_overrides = [
+        #     # 'model.mlp_dim=2048',
+        #     # 'data/datasets=emotionet_desktop',
+        #     # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
+        #     # '+data.dataset_type=AffectNetWithExpNetPredictions',
+        #     '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+        #     'data.num_workers=0',
+        #     # 'data.num_workers=16',
+        #     'learning/logging=none',
+        # ]
         deca_conf = None
         deca_conf_path = None
         fixed_overrides_deca = None

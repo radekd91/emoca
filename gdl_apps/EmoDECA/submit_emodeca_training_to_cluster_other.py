@@ -95,35 +95,35 @@ def train_emodeca_on_cluster():
     ]
 
     # # ## 1) Emo 3DDFA_V2
-    emodeca_default = "emo3ddfa_v2"
-    emodeca_overrides = [
-        # 'model/backbone=3ddfa_v2',
-        'model/backbone=3ddfa_v2_resnet',
-        'model.mlp_dim=2048',
-        # 'data/datasets=emotionet_desktop',
-        # 'data/datasets=affectnet_cluster',
-        'data/datasets=affectnet_cluster_emonet_cleaned',
-        # 'data.data_class=AffectNetDataModuleValTest',
-        'data/augmentations=none',
-        'data.num_workers=16',
-        # 'learning/logging=none',
-    ]
-
-    # ## 2) Deep 3D Face
-    # emodeca_default = "deep3dface"
+    # emodeca_default = "emo3ddfa_v2"
     # emodeca_overrides = [
-    #     'model/backbone=deep3dface',
+    #     # 'model/backbone=3ddfa_v2',
+    #     'model/backbone=3ddfa_v2_resnet',
     #     'model.mlp_dim=2048',
     #     # 'data/datasets=emotionet_desktop',
     #     # 'data/datasets=affectnet_cluster',
     #     'data/datasets=affectnet_cluster_emonet_cleaned',
     #     # 'data.data_class=AffectNetDataModuleValTest',
     #     'data/augmentations=none',
-    #     # 'data.num_workers=0',
-    # 'data/datasets=affectnet_cluster_emonet_cleaned',
     #     'data.num_workers=16',
     #     # 'learning/logging=none',
     # ]
+
+    # ## 2) Deep 3D Face
+    emodeca_default = "deep3dface"
+    emodeca_overrides = [
+        'model/backbone=deep3dface',
+        'model.mlp_dim=2048',
+        # 'data/datasets=emotionet_desktop',
+        # 'data/datasets=affectnet_cluster',
+        'data/datasets=affectnet_cluster_emonet_cleaned',
+        # 'data.data_class=AffectNetDataModuleValTest',
+        'data/augmentations=none',
+        # 'data.num_workers=0',
+        'data/datasets=affectnet_cluster_emonet_cleaned',
+        'data.num_workers=16',
+        # 'learning/logging=none',
+    ]
     #
     # #3) EmoMGCNET
     # emodeca_default = "emomgcnet"
@@ -132,7 +132,7 @@ def train_emodeca_on_cluster():
     #     '+data.dataset_type=AffectNetWithMGCNetPredictions',
     #      'learning.gpu_memory_min_gb=12',
     #     'data/augmentations=none',
-    # 'data/datasets=affectnet_cluster_emonet_cleaned',
+    #     'data/datasets=affectnet_cluster_emonet_cleaned',
     #     'data.num_workers=16',
     # ]
 
@@ -140,8 +140,8 @@ def train_emodeca_on_cluster():
     # emodeca_default = "emoexpnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
-    #     '+data.dataset_type=AffectNetWithExpNetPredictions',
-    #     # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+    #     # '+data.dataset_type=AffectNetWithExpNetPredictions',
+    #     '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
     #     'learning.gpu_memory_min_gb=12',
     #     'data/augmentations=none',
     #     'data.num_workers=16',
