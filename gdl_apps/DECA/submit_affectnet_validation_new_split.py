@@ -5,6 +5,7 @@ import datetime
 from omegaconf import OmegaConf
 import time as t
 import random
+import wandb
 
 def submit(cfg, model_folder_name, mode, bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -170,13 +171,13 @@ def main():
     for run_name in run_names:
 
         api = wandb.Api()
-        name = str(Path(deca_conf_path).name)
+        name = str(Path(run_name).name)
         idx = name.find("ExpDECA")
         run_id = name[:idx-1]
         run = api.run("rdanecek/EmotionalDeca/" + run_id)
         tags = run.tags
-        tags += ["NEW_SPLIT"]
-        fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
+        # tags += ["NEW_SPLIT"]
+        # fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
 
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:
