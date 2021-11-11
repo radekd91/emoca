@@ -4,6 +4,7 @@ import resume_expdeca_training
 import datetime
 from omegaconf import OmegaConf
 import time as t
+import random
 
 def submit(
         resume_folder,
@@ -26,7 +27,7 @@ def submit(
     result_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/finetune_deca"
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    submission_folder_name = time + "_" + "submission"
+    submission_folder_name = time + "_" + str(hash(random.randint(0,1000000))) + "_" + "submission"
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
@@ -75,7 +76,7 @@ def submit(
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement
                        )
-    t.sleep(1)
+    # t.sleep(1)
 
 
 def main():
@@ -207,9 +208,28 @@ def main():
     #     "2021_11_02_12-42-41_4316282956709408142_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # resume_folders += [
     #     "2021_11_02_12-42-41_-1213070571142271333_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
+    # final ExpDECA ablations on DECA dataset
+
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-56-46_5920957646486902084_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-56-39_-8971851772753744759_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-38_1354461056444555550_ExpDECA_DecaD_para_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-41_7798762876288315974_ExpDECA_DecaD_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    ##resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-32_-428770426719310834_ExpDECA_DecaD_para_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-28_6450489661335316335_ExpDECA_DecaD_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-19_-698052302382081628_ExpDECA_DecaD_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-17_-6566800429279817771_ExpDECA_DecaD_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+
     #
-    # for resume_folder in resume_folders:
-    #     submit(resume_folder, stage, resume_from_previous, force_new_location)
+    for resume_folder in resume_folders:
+        submit(resume_folder, stage, resume_from_previous, force_new_location)
 
     # stage = 2
     # resume_from_previous = False

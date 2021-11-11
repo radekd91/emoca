@@ -359,17 +359,18 @@ def train_on_selected_sequences():
 
     ]
     #
-    # sampler = "data.sampler=balanced_expr"
-    # dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
-    # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    # sampler = "data.sampler=False"
+    sampler = "data.sampler=balanced_expr"
+    dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
     # # dataset_coarse = "data/datasets=affectnet_cluster"
     # # dataset_detail = 'data/datasets=affectnet_cluster'
     # #
-    sampler = "+data.sampler=False"
-    # dataset_coarse = "data/datasets=coarse_data_cluster"
-    # dataset_detail = 'data/datasets=detail_data_cluster'
-    dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
-    dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+    # sampler = "+data.sampler=False"
+    # # dataset_coarse = "data/datasets=coarse_data_cluster"
+    # # dataset_detail = 'data/datasets=detail_data_cluster'
+    # dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
+    # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
 
     # learning_rates = [0.0001]
     # learning_rates = [0.0001, 0.00005, 0.00001]

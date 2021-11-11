@@ -1,5 +1,5 @@
 defaults:
-  - data/datasets: affectnet_cluster
+  - data/datasets: affectnet_cluster_emonet_cleaned
   - data/augmentations: none
 #  - model/paths : desktop
   - model/backbone : coarse_emodeca

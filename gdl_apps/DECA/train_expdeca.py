@@ -71,6 +71,7 @@ def prepare_data(cfg):
                 drop_last=drop_last,
                 sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
                 processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
+                dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None
             )
         # elif data_class == 'AffectNetDataModuleValTest':
         #     dm = AffectNetDataModuleValTest(

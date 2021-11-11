@@ -18,6 +18,7 @@ from gdl.models.EmoDECA import EmoDECA
 from gdl.models.EmoSwinModule import EmoSwinModule
 from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.models.EmoNetModule import EmoNetModule
+from gdl.models.EmoMLP import EmoMLP
 
 from gdl.utils.other import class_from_str
 import datetime
@@ -84,6 +85,13 @@ def create_experiment_name(cfg, version=1):
         experiment_name = "Emo3DDFA"
     elif cfg.model.emodeca_type == "EmoDeep3DFace":
         experiment_name = "EmoDeep3DFace"
+    elif cfg.model.emodeca_type == "EmoMLP":
+        if cfg.data.dataset_type == "AffectNetWithMGCNetPredictions":
+            experiment_name = "EmoMGCNet"
+        elif "AffectNetWithExpNetPredictions" in cfg.data.dataset_type:
+            experiment_name = "EmoExpNet"
+        else:
+            raise NotImplementedError(f"Uknown data type {cfg.data.dataset_type} for {cfg.model.emodeca_type}")
     else:
         raise ValueError(f"Invalid emodeca_type: '{cfg.model.emodeca_type}'")
 
@@ -160,7 +168,6 @@ def single_stage_deca_pass(deca, cfg, stage, prefix, dm=None, logger=None,
                     from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
                 except ImportError as e:
                     print("Could not import Emo3DDFA_v2")
-
             deca_class = class_from_str(cfg.model.emodeca_type, sys.modules[__name__])
         else:
             deca_class = EmoDECA

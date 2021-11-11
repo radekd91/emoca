@@ -25,6 +25,7 @@ from torchvision.transforms import Resize, Compose
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data._utils.collate import default_collate
 from torch.utils.data.sampler import WeightedRandomSampler
+from gdl.utils.other import class_from_str
 
 
 class AffectNetExpressions(Enum):
@@ -65,6 +66,11 @@ def make_balanced_sample_by_weights(weights):
     return WeightedRandomSampler(weights, len(weights))
 
 
+def new_affectnet(class_name):
+    dataset_class = class_from_str(class_name, sys.modules[__name__])
+    return dataset_class
+
+
 class AffectNetDataModule(FaceDataModuleBase):
 
     def __init__(self,
@@ -93,6 +99,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                  training_fname=None,
                  validation_fname=None,
                  test_fname=None,
+                 dataset_type = None
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -105,6 +112,7 @@ class AffectNetDataModule(FaceDataModuleBase):
                          device=device)
         # accepted_modes = ['manual', 'automatic', 'all'] # TODO: add support for the other images
         accepted_modes = ['manual']
+        self.dataset_type = dataset_type or "AffectNet"
         if mode not in accepted_modes:
             raise ValueError(f"Invalid mode '{mode}'. Accepted modes: {'_'.join(accepted_modes)}")
         self.mode = mode
@@ -369,18 +377,18 @@ class AffectNetDataModule(FaceDataModuleBase):
                 nn_indices = None
                 nn_distances = None
 
-            return AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
-                             im_transforms_train,
-                             ignore_invalid=self.ignore_invalid,
-                             ring_type=self.ring_type,
-                             ring_size=self.ring_size,
-                             load_emotion_feature=False,
-                             nn_indices_array=nn_indices,
-                             nn_distances_array= nn_distances,
-                             ext=self.processed_ext,
-                             )
+            return new_affectnet(self.dataset_type)(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
+                                                    im_transforms_train,
+                                                    ignore_invalid=self.ignore_invalid,
+                                                    ring_type=self.ring_type,
+                                                    ring_size=self.ring_size,
+                                                    load_emotion_feature=False,
+                                                    nn_indices_array=nn_indices,
+                                                    nn_distances_array= nn_distances,
+                                                    ext=self.processed_ext,
+                                                    )
 
-        return AffectNet(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
+        return new_affectnet(self.dataset_type)(self.image_path, self.train_dataframe_path, self.image_size, self.scale,
                          None,
                          ignore_invalid=self.ignore_invalid,
                          ring_type=None,
@@ -391,7 +399,7 @@ class AffectNetDataModule(FaceDataModuleBase):
 
     def setup(self, stage=None):
         self.training_set = self._new_training_set()
-        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
                                         ring_size=None,
@@ -399,8 +407,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                                         )
 
         self.test_dataframe_path = Path(self.output_dir) / self.test_fname
-        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None, ignore_invalid= self.ignore_invalid,
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                  None, ignore_invalid= self.ignore_invalid,
                                   ring_type=None,
                                   ring_size=None,
                                   ext=self.processed_ext
@@ -606,14 +614,14 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
 
     def setup(self, stage=None):
         self.training_set = self._new_training_set()
-        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
                                         ring_size=None,
                                         ext=self.processed_ext
                                         )
         if self.ignore_invalid == "like_emonet":
-            self.validation_set2 = AffectNet(self.image_path,
+            self.validation_set2 = new_affectnet(self.dataset_type)(self.image_path,
                                              self.val_dataframe_path.parent / "validation_emonet_split.csv",
                                              self.image_size, self.scale,
                                             None, ignore_invalid=self.ignore_invalid,
@@ -621,13 +629,15 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
                                             ring_size=None,
                                             ext=self.processed_ext
                                             )
-
-        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        if self.ignore_invalid == "like_emonet":
+            self.test_dataframe_path = Path(self.output_dir) / "validation_emonet_split_clean_representative.csv"
+        else:
+            self.test_dataframe_path = Path(self.output_dir) / "validation_representative_emonet_split.csv"
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
-        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, self.ignore_invalid)
 
     def val_dataloader(self):
@@ -654,14 +664,14 @@ class AffectNetEmoNetSplitModuleValTest(AffectNetEmoNetSplitModule):
 
     def setup(self, stage=None):
         self.training_set = self._new_training_set()
-        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
                                         ring_size=None,
                                         ext=self.processed_ext
                                         )
         if self.ignore_invalid == "like_emonet":
-            self.validation_set2 = AffectNet(self.image_path,
+            self.validation_set2 = new_affectnet(self.dataset_type)(self.image_path,
                                              self.val_dataframe_path.parent / "validation_emonet_split.csv",
                                              self.image_size, self.scale,
                                             None, ignore_invalid=self.ignore_invalid,
@@ -670,14 +680,14 @@ class AffectNetEmoNetSplitModuleValTest(AffectNetEmoNetSplitModule):
                                             ext=self.processed_ext
                                             )
 
-        self.test_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid= self.ignore_invalid,
                                   ring_type=None,
                                   ring_size=None,
                                   ext=self.processed_ext
                                   )
         if self.ignore_invalid == "like_emonet":
-            self.test_set2 = AffectNet(self.image_path,
+            self.test_set2 = new_affectnet(self.dataset_type)(self.image_path,
                                              self.val_dataframe_path.parent / "validation_emonet_split.csv",
                                              self.image_size, self.scale,
                                             None, ignore_invalid=self.ignore_invalid,
@@ -720,7 +730,7 @@ class AffectNetTestModule(AffectNetDataModule):
             self.image_path = Path(self.output_dir) / "detections"
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
-        self.test_set = AffectNet(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, self.ignore_invalid)
 
     def train_dataloader(self):
@@ -742,14 +752,14 @@ class AffectNetDataModuleValTest(AffectNetDataModule):
 
     def setup(self, stage=None):
         self.training_set = self._new_training_set()
-        self.validation_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                         None, ignore_invalid=self.ignore_invalid,
                                         ring_type=None,
                                         ring_size=None,
                                         ext=self.processed_ext
                                         )
 
-        self.test_set = AffectNet(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid= self.ignore_invalid,
                                   ring_type=None,
                                   ring_size=None,
@@ -1091,6 +1101,60 @@ class AffectNet(EmotionalImageDatasetBase):
         return combined_batch
 
 
+
+class AffectNetWithPredictions(AffectNet):
+
+    def __init__(self, predictor, shape_name, exp_name, *args, **kwargs):
+        super().__init__( *args, **kwargs)
+        self.predictor = predictor
+        self.shape_prediction_name = shape_name
+        self.exp_prediction_name = exp_name
+
+    def _get_sample(self, index):
+        sample = super()._get_sample(index)
+
+        im_rel_path = sample["path"]
+        im_rel_path = Path(im_rel_path).relative_to(self.image_path)
+        im_rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
+
+        prediction_path = Path(self.image_path).parent / "predictions" / self.predictor / im_rel_path
+        shape_prediction_path = prediction_path / (self.shape_prediction_name + ".npy")
+        exp_prediction_path = prediction_path / (self.exp_prediction_name + ".npy")
+
+        shape_prediction = np.load(shape_prediction_path).squeeze()
+        exp_prediction = np.load(exp_prediction_path).squeeze()
+
+        sample["shapecode"] = torch.from_numpy(shape_prediction)
+        sample["expcode"] = torch.from_numpy(exp_prediction)
+
+        return sample
+
+
+class AffectNetWithMGCNetPredictions(AffectNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "MGCNet"
+        shape_name = "shape_coeffs"
+        exp_name = "exp_coeffs"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+        
+
+class AffectNetWithExpNetPredictions(AffectNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "ExpNet"
+        shape_name = "shape"
+        exp_name = "exp"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+
+class AffectNetWithExpNetPredictionsMyCrop(AffectNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "ExpNet_my_crops"
+        shape_name = "shape"
+        exp_name = "exp"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+
 def sample_representative_set(df, output_file, sample_step=0.1, num_per_bin=2):
     va_array = []
     size = int(2 / sample_step)
@@ -1248,7 +1312,7 @@ def process_emonet_split():
 
 
 if __name__ == "__main__":
-    emonet_split_pkl_to_csv()
+    # emonet_split_pkl_to_csv()
     # d = AffectNetOriginal(
     #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/Manually_Annotated_Images",
     #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation.csv",
@@ -1288,9 +1352,9 @@ if __name__ == "__main__":
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/affectnet/",
-             processed_subfolder="processed_2021_Aug_27_19-58-02",
-    #          processed_subfolder="processed_2021_Apr_05_15-22-18",
-             processed_ext=".jpg",
+             # processed_subfolder="processed_2021_Aug_27_19-58-02",
+             processed_subfolder="processed_2021_Apr_05_15-22-18",
+             processed_ext=".png",
              mode="manual",
              scale=1.7,
              image_size=512,
@@ -1304,6 +1368,8 @@ if __name__ == "__main__":
              # ring_size=4,
             augmentation=augmenter,
             # use_clean_labels=True
+        # dataset_type="AffectNetWithMGCNetPredictions",
+        dataset_type="AffectNetWithExpNetPredictions",
             )
     #
     print(dm.num_subsets)
