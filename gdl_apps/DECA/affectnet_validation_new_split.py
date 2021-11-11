@@ -64,7 +64,6 @@ def main():
         mode = 'coarse'
 
     deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
-    deca.eval()
 
     # now that we loaded, let's reconfigure to detail
     mode = 'detail'
