@@ -934,7 +934,7 @@ class AffectNet(EmotionalImageDatasetBase):
                     break
         self.num_skips += num_skips
         if num_skips > 0:
-            prin(f"Warning: skipped {num_skips} samples do to failed loading. In total {self.num_skips} samples skipped")
+            print(f"Warning: skipped {num_skips} samples do to failed loading. In total {self.num_skips} samples skipped")
 
         left = self.df.loc[index]["face_x"]
         top = self.df.loc[index]["face_y"]
