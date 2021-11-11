@@ -70,6 +70,8 @@ def main():
     mode = 'detail'
     deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
                      downgrade_ok=False, train=False)
+    deca.eval()
+
     import wandb
     api = wandb.Api()
     name = str(Path(run_name).name)
