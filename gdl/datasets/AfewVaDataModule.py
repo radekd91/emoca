@@ -731,15 +731,16 @@ class AfewVa(EmotionalImageDatasetBase):
         im_file = Path(self.image_path) / im_rel_path
         im_file = im_file.parent / (im_file.stem + self.ext)
         input_img = imread(im_file)
-        # scale_factor_x = 1.48
-        scale_factor_x = 1.25
-        # scale_factor_x = 1
-        input_img = rescale(input_img, (1, scale_factor_x, 1))
-
+        # # scale_factor_x = 1.48
+        # scale_factor_x = 1.25
+        # # scale_factor_x = 1
+        # input_img = resize(input_img, (432, 720, 1))
+        input_img = resize(input_img, (576, 960))
+        scale_factor_x = 720 / 960
         valence = vid_gt['frames'][selected_frame]['valence']
         arousal = vid_gt['frames'][selected_frame]['arousal']
         facial_landmarks = np.array(vid_gt['frames'][selected_frame]['landmarks'])
-        facial_landmarks[:,0] *= scale_factor_x
+        facial_landmarks[:,0] /= scale_factor_x
 
         if self.normalize_va:
             valence /= 10.
@@ -1007,8 +1008,8 @@ if __name__ == "__main__":
              processed_subfolder="processed_2021_Nov_07_23-37-18",
              processed_ext=".png",
              # scale=1.7,
-             scale=1.25,
-             # scale=1.4,
+             # scale=1.25,
+             scale=1.4,
              # image_size=224,
              image_size=512,
              bb_center_shift_x=0,

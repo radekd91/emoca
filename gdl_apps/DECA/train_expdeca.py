@@ -2,6 +2,7 @@ from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_che
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetDataModuleValTest, \
     AffectNetEmoNetSplitModuleValTest, AffectNetEmoNetSplitModule
+from gdl.datasets.CombinedDataModule import CombinedDataModule
 from gdl.datasets.EmotioNetDataModule import EmotioNetDataModule
 from omegaconf import DictConfig, OmegaConf
 import sys
@@ -13,14 +14,8 @@ from gdl.utils.other import class_from_str
 
 project_name = 'EmotionalDeca'
 
-
-def prepare_data(cfg):
-    if 'data_class' in cfg.data.keys():
-        data_class = cfg.data.data_class
-    else:
-        data_class = 'DecaDataModule'
-    if data_class == 'DecaDataModule':
-
+def create_single_dm(cfg, data_class):
+    if data_class in 'DecaDataModule':
         if 'expression_constrain_type' in cfg.model.keys() and \
                 (cfg.model.expression_constrain_type is not None and str(cfg.model.expression_constrain_type).lower() != 'none'):
             raise ValueError("DecaDataModule does not support expression exchange!")
@@ -114,6 +109,25 @@ def prepare_data(cfg):
         sequence_name = "EmotioNet"
     else:
         raise ValueError(f"Invalid data_class '{data_class}'")
+    return dm, sequence_name
+
+def prepare_data(cfg):
+    if 'data_class' in cfg.data.keys():
+        data_class = cfg.data.data_class
+    else:
+        data_class = 'DecaDataModule'
+
+    if data_class == 'CombinedDataModule':
+        data_classes =  cfg.data.data_classes
+        dms = {}
+        for data_class in data_classes:
+            dm, sequence_name = create_single_dm(cfg, data_class)
+            dms[data_class] = dm
+        dm = CombinedDataModule(dms)
+        sequence_name = "ComboNet"
+    else:
+        dm, sequence_name = create_single_dm(cfg, data_class)
+
     return dm, sequence_name
 
 
@@ -301,6 +315,7 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=-1, resume_from_previous = Tru
     if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
+            cfg_coarse.inout.previous_run_dir = cfg_coarse.inout.full_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail)
@@ -383,6 +398,13 @@ def configure(coarse_cfg_default, coarse_overrides,
     cfg_coarse = compose(config_name=coarse_cfg_default, overrides=coarse_overrides)
     cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
     return cfg_coarse, cfg_detail
+
+
+def configure_detail(detail_cfg_default, detail_overrides):
+    from hydra.experimental import compose, initialize
+    initialize(config_path="deca_conf", job_name="train_deca")
+    cfg_detail = compose(config_name=detail_cfg_default, overrides=detail_overrides)
+    return cfg_detail
 
 
 def configure_and_train(coarse_cfg_default, coarse_overrides,
@@ -503,20 +525,33 @@ def main():
         else:
             coarse_conf = sys.argv[1]
             detail_conf = sys.argv[2]
+        if len(sys.argv) > 3:
+            start_from = int(sys.argv[3])
+            if len(sys.argv) > 4:
+                resume_from_previous = bool(int(sys.argv[4]))
+                if len(sys.argv) > 5:
+                    force_new_location = bool(int(sys.argv[5]))
+                else:
+                    force_new_location = True
+            else:
+                resume_from_previous = True
+        else:
+            start_from = -1
     else:
         coarse_conf = "deca_finetune_coarse_cluster"
         detail_conf = "deca_finetune_detail_cluster"
         coarse_override = []
         detail_override = []
 
-    if len(sys.argv) > 4:
-        coarse_override = sys.argv[3]
-        detail_override = sys.argv[4]
+    # if len(sys.argv) > 4:
+    #     coarse_override = sys.argv[3]
+    #     detail_override = sys.argv[4]
     # else:
     #     coarse_override = []
     #     detail_override = []
     if configured:
-        train_expdeca(coarse_conf, detail_conf)
+        train_expdeca(coarse_conf, detail_conf,
+                      start_from, resume_from_previous, force_new_location)
     else:
         configure_and_train(coarse_conf, coarse_override, detail_conf, detail_override)
 

@@ -144,10 +144,10 @@ class AffectNetDataModule(FaceDataModuleBase):
 
         self.ignore_invalid = ignore_invalid
 
-        self.train_batch_size = train_batch_size
-        self.val_batch_size = val_batch_size
-        self.test_batch_size = test_batch_size
-        self.num_workers = num_workers
+        self.train_batch_size_ = train_batch_size
+        self.val_batch_size_ = val_batch_size
+        self.test_batch_size_ = test_batch_size
+        self.num_workers_ = num_workers
         self.augmentation = augmentation
         self.sampler = sampler or "uniform"
         if self.sampler not in ["uniform", "balanced_expr", "balanced_va", "balanced_v", "balanced_a"]:
@@ -159,6 +159,21 @@ class AffectNetDataModule(FaceDataModuleBase):
         self.ring_size = ring_size
 
         self.drop_last = drop_last
+
+    @property
+    def train_batch_size(self):
+        return self.train_batch_size_
+
+    @property
+    def val_batch_size(self):
+        return self.val_batch_size_
+    @property
+    def test_batch_size(self):
+        return self.test_batch_size_
+
+    @property
+    def num_workers(self):
+        return self.num_workers_
 
     @property
     def subset_size(self):

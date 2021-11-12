@@ -63,17 +63,33 @@ class DecaDataModule(LightningDataModule):
         self.split_ratio = config.data.split_ratio
         self.split_style = config.data.split_style
 
+    @property
+    def train_batch_size(self):
+        return self.config.learning.batch_size_train
+
+    @property
+    def val_batch_size(self):
+        return self.config.learning.batch_size_val
+
+    @property
+    def test_batch_size(self):
+        return self.config.learning.batch_size_test
+
+    @property
+    def num_workers(self):
+        return self.config.data.num_workers
+
     def setup(self, stage=None):
         dataset = build_dataset(self.config, self.config.data.training_datasets, concat=True)
-        self.train_dataset = DatasetSplitter(dataset, self.split_ratio, self.split_style)
-        self.validation_dataset = []
+        self.training_set = DatasetSplitter(dataset, self.split_ratio, self.split_style)
+        self.validation_set = []
         if self.split_ratio < 1.:
-            self.validation_dataset += [self.train_dataset.complementary_set(), ]
-        self.validation_dataset += build_dataset(self.config, self.config.data.validation_datasets, concat=False)
-        self.test_dataset = build_dataset(self.config, self.config.data.testing_datasets, concat=False)
+            self.validation_set += [self.training_set.complementary_set(), ]
+        self.validation_set += build_dataset(self.config, self.config.data.validation_datasets, concat=False)
+        self.test_set = build_dataset(self.config, self.config.data.testing_datasets, concat=False)
 
     def train_dataloader(self, *args, **kwargs):
-        train_loader = DataLoader(self.train_dataset,
+        train_loader = DataLoader(self.training_set,
                                   batch_size=self.config.learning.batch_size_train, shuffle=True,
                                   num_workers=self.config.data.num_workers,
                                   pin_memory=True)
@@ -85,14 +101,14 @@ class DecaDataModule(LightningDataModule):
         val_loaders = [DataLoader(val_set,
                                   batch_size=self.config.learning.batch_size_val, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for val_set in self.validation_dataset]
+                                  pin_memory=True) for val_set in self.validation_set]
         return val_loaders
 
     def test_dataloader(self):
         test_loaders = [DataLoader(test_set,
                                   batch_size=self.config.learning.batch_size_test, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for test_set in self.test_dataset]
+                                  pin_memory=True) for test_set in self.test_set]
         return test_loaders
 
 
@@ -1657,7 +1673,7 @@ if __name__ == "__main__":
     dm.prepare_data()
     dm.setup()
     # dataset = dm.train_dataloader()
-    dataset = dm.train_dataset
+    dataset = dm.training_set
 
     import matplotlib.pyplot as plt
 

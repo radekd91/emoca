@@ -1383,8 +1383,9 @@ class DecaModule(LightningModule):
             self.deca.config.use_geometric_losses_expression_exchange
 
         if training and ('expression_constrain_type' in self.deca.config.keys() \
-            and self.deca.config.expression_constrain_type == 'exchange' or
-                         self.deca.config.shape_constrain_type in ['shuffle_expression', 'shuffle_shape']) \
+            and ('expression_constrain_type' in self.deca.config.keys() and self.deca.config.expression_constrain_type == 'exchange') or
+                         ( 'shape_constrain_type' in self.deca.config.keys() and
+                           self.deca.config.shape_constrain_type in ['shuffle_expression', 'shuffle_shape'])) \
             and (self.deca.mode == DecaMode.COARSE or self.deca.config.train_coarse) \
             and (not use_geom_losses):
             if batch_size % 2 != 0:

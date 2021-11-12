@@ -1,18 +1,18 @@
 # @package model
 
 deca_class: ExpDECA
-expression_backbone: deca_parallel
-#expression_backbone: deca_clone
+#expression_backbone: deca_parallel
+expression_backbone: deca_clone
 #expression_backbone: emonet_trainable
 #expression_backbone: emonet_static
 
 
 exp_deca_global_pose: False
 #exp_deca_global_pose: True
-exp_deca_jaw_pose: True
-#exp_deca_jaw_pose: False
+#exp_deca_jaw_pose: True
+exp_deca_jaw_pose: False
 
-max_epochs: 8
+max_epochs: 12
 val_check_interval: 0.2
 
 test_vis_frequency: 1
@@ -23,8 +23,8 @@ train_coarse: false
 useSeg: false
 #useSeg: true
 background_from_input: true
-#detail_constrain_type: exchange
-detail_constrain_type: none
+detail_constrain_type: exchange
+#detail_constrain_type: none
 
 expression_constrain_type: none
 expression_constrain_use_jaw_pose: True

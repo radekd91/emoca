@@ -18,7 +18,7 @@ def main():
     dm, sequence_name = prepare_data(cfg_detail)
     dm.setup()
 
-    dataset = dm.train_dataset
+    dataset = dm.training_set
     for i in range(50):
         print(i)
         sample = dataset[i]

@@ -53,9 +53,9 @@ def main():
 
     dm.setup()
 
-    dl = DataLoader(dm.train_dataset,
-                  batch_size=config.learning.batch_size_train, shuffle=False,
-                  num_workers=config.data.num_workers)
+    dl = DataLoader(dm.training_set,
+                    batch_size=config.learning.batch_size_train, shuffle=False,
+                    num_workers=config.data.num_workers)
     # # dl = dm.train_dataloader()
 
     emonet = get_emonet()
@@ -67,9 +67,9 @@ def main():
     d['expression'] = []
 
     # for idx, batch in enumerate(tqdm(dl)):
-    for idx in tqdm(range(len(dm.train_dataset))):
+    for idx in tqdm(range(len(dm.training_set))):
     # for idx in tqdm(range(10)):
-        batch = dm.train_dataset[idx]
+        batch = dm.training_set[idx]
 
         images = batch['image'].view(-1, 3, config.model.image_size, config.model.image_size)
         images = images.cuda()
