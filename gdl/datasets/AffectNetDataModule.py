@@ -1045,7 +1045,6 @@ class AffectNet(EmotionalImageDatasetBase):
             "path": str(im_file),
             **additional_data
         }
-
         gt = {
             "affectnetexp": torch.tensor([expression, ], dtype=torch.long),
             "va": torch.tensor([valence, arousal], dtype=torch.float32),
@@ -1065,7 +1064,7 @@ class AffectNet(EmotionalImageDatasetBase):
         if landmark is not None:
             sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
-            sample["mask"] = numpy_image_to_torch(seg_image)
+            sample["mask"] = numpy_image_to_torch(seg_image)[0]
         if emotion_features is not None:
             for key, value in emotion_features.items():
                 if isinstance(value, np.ndarray):

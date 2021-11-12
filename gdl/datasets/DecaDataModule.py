@@ -373,7 +373,7 @@ class VoxelDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
@@ -498,10 +498,9 @@ class VGGFace2Dataset(Dataset):
         #     images_array = images_array.squeeze()
         #     kpt_array = kpt_array.squeeze()
         #     mask_array = mask_array.squeeze()
-
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
@@ -628,7 +627,7 @@ class VGGFace2HQDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
@@ -759,7 +758,7 @@ class EthnicityDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array,
         }
 
@@ -862,7 +861,7 @@ class COCODataset(Dataset):
 
             data_dict = {
                 'image': images_array * 2. - 1,
-                'landmark': kpt_array,
+                'landmark': kpt_array[:,:,:2],
                 # 'mask': mask_array
             }
 
@@ -959,7 +958,7 @@ class CelebAHQDataset(Dataset):
 
             data_dict = {
                 'image': images_array,
-                'landmark': kpt_array,
+                'landmark': kpt_array[:,:,:2],
                 # 'mask': mask_array
             }
 
