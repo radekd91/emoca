@@ -81,12 +81,10 @@ def train_on_selected_sequences():
     coarse_conf = "deca_train_coarse_cluster"
     detail_conf = "deca_train_detail_cluster"
 
-    # ring_type = "gt_expression"
-    ring_type = "gt_va"
-    # ring_type = "emonet_feature"
 
     resume_folders = []
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"] # TODO: add path here
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"] # TODO: add path here
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
 
 
@@ -115,16 +113,24 @@ def train_on_selected_sequences():
             #      'model.detail_constrain_type=None', ]
             # ],
 
-            # # cloned expression encoder AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
+            # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
             [
-                ['model.useSeg=rend', 'model.idw=0',
-                 'model.expression_backbone=deca_clone',
+                ['model.useSeg=rend',
+                 'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 # 'model.shape_constrain_type=None',
                  'model.detail_constrain_type=None',
-                 # 'data/datasets=affectnet_cluster',
                  'learning.batch_size_test=1',
-                 'data/augmentations=default']
+                 'data/augmentations=default'
+                 ]
+            ],
+            [
+                ['model.useSeg=gt',
+                 'model.idw=0',
+                 'learning/batching=single_gpu_expdeca_detail_32gb',
+                 'model.detail_constrain_type=None',
+                 'learning.batch_size_test=1',
+                 'data/augmentations=default'
+                 ]
             ],
 
         ]
@@ -145,6 +151,7 @@ def train_on_selected_sequences():
         dataset_detail_ring_type = "augment"
 
 
+
         learning_rates = [0.0001]
         # learning_rates = [0.0001, 0.00005, 0.00001]
         # learning_rates = [0.00005]
@@ -154,14 +161,14 @@ def train_on_selected_sequences():
 
         for lr in learning_rates:
 
-            # train_K = 4
-            # batch_size_train = 4
+            train_K = 4
+            batch_size_train = 4
+            val_K = 1
+            batch_size_val = 4
+            # train_K = 2
+            # batch_size_train = 1
             # val_K = 2
-            # batch_size_val = 4
-            train_K = 2
-            batch_size_train = 1
-            val_K = 2
-            batch_size_val = 1
+            # batch_size_val = 1
             background_from_input = "True"
             train_coarse = "False"
             detail_constraint = "exchange"
@@ -200,8 +207,8 @@ def train_on_selected_sequences():
                 dataset_detail,
                 sampler,
             ]
-            if ring_type is not None:
-                fixed_overrides_detail.append(f'data.ring_type={ring_type}')
+            if dataset_detail_ring_type is not None:
+                fixed_overrides_detail.append(f'data.ring_type={dataset_detail_ring_type}')
                 fixed_overrides_detail.append(f'data.ring_size={batch_size_train}')
 
 
@@ -215,9 +222,10 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                submit = False
-                if submit:
-                    submit(cfg_coarse_to_fork, cfg_detail)
+                # submit_ = False
+                submit_ = True
+                if submit_:
+                    submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:
                     train_expdeca.train_expdeca(cfg_coarse_to_fork, cfg_detail, start_i=2,
                                                 resume_from_previous=True, force_new_location=True)

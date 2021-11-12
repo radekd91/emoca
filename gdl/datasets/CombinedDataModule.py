@@ -54,7 +54,8 @@ class CombinedDataModule(LightningDataModule):
         for key, dm in self.dms.items():
             datasets += [dm.training_set]
 
-        concat_dataset = torch.utils.data.ConcatDataset(datasets)
+        # concat_dataset = torch.utils.data.ConcatDataset(datasets)
+        concat_dataset = torch.utils.data.ChainDataset(datasets)
         dataloader = torch.utils.data.DataLoader(concat_dataset, batch_size=self.train_batch_size,
                                                  num_workers=self.num_workers,
                                                  drop_last=True,  shuffle=True)
