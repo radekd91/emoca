@@ -161,14 +161,14 @@ def train_on_selected_sequences():
 
         for lr in learning_rates:
 
-            train_K = 4
-            batch_size_train = 4
-            val_K = 1
-            batch_size_val = 4
-            # train_K = 2
-            # batch_size_train = 1
-            # val_K = 2
-            # batch_size_val = 1
+            # train_K = 4
+            # batch_size_train = 4
+            # val_K = 1
+            # batch_size_val = 4
+            train_K = 2
+            batch_size_train = 1
+            val_K = 2
+            batch_size_val = 1
             background_from_input = "True"
             train_coarse = "False"
             detail_constraint = "exchange"
@@ -222,8 +222,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                # submit_ = False
-                submit_ = True
+                submit_ = False
+                # submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:

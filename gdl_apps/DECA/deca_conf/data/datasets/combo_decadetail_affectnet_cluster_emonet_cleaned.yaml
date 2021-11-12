@@ -24,6 +24,7 @@ ring_size: 4
 
 drop_last: true
 sampler: uniform
+use_gt: false
 
 
 ## DecaDataModule params
