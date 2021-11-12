@@ -114,24 +114,24 @@ def train_on_selected_sequences():
             # ],
 
             # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
-            # [
-            #     ['model.useSeg=rend',
-            #      'model.idw=0',
-            #      'learning/batching=single_gpu_expdeca_detail_32gb',
-            #      'model.detail_constrain_type=None',
-            #      'learning.batch_size_test=1',
-            #      'data/augmentations=default'
-            #      ]
-            # ],
-            # [
-            #     ['model.useSeg=gt',
-            #      'model.idw=0',
-            #      'learning/batching=single_gpu_expdeca_detail_32gb',
-            #      'model.detail_constrain_type=None',
-            #      'learning.batch_size_test=1',
-            #      'data/augmentations=default'
-            #      ]
-            # ],
+            [
+                ['model.useSeg=rend',
+                 'model.idw=0',
+                 'learning/batching=single_gpu_expdeca_detail_32gb',
+                 'model.detail_constrain_type=None',
+                 'learning.batch_size_test=1',
+                 'data/augmentations=default'
+                 ]
+            ],
+            [
+                ['model.useSeg=gt',
+                 'model.idw=0',
+                 'learning/batching=single_gpu_expdeca_detail_32gb',
+                 'model.detail_constrain_type=None',
+                 'learning.batch_size_test=1',
+                 'data/augmentations=default'
+                 ]
+            ],
             [
                 ['model.useSeg=gt',
                  'model.idw=0',
@@ -159,14 +159,14 @@ def train_on_selected_sequences():
         # dataset_detail_ring_type = "augment"
         # # # # dataset_detail = 'data/datasets=affectnet_cluster'
         # #
-        sampler = "+data.sampler=False"
-        # dataset_detail = 'data/datasets=detail_data_cluster'
-        dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
-        dataset_detail_ring_type = None
+        # sampler = "+data.sampler=False"
+        # # dataset_detail = 'data/datasets=detail_data_cluster'
+        # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+        # dataset_detail_ring_type = None
 
-        # sampler = "data.sampler=False"
-        # dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
-        # dataset_detail_ring_type = "augment"
+        sampler = "data.sampler=False"
+        dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
+        dataset_detail_ring_type = "augment"
 
 
 
