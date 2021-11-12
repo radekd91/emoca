@@ -442,7 +442,7 @@ class AffectNetDataModule(FaceDataModuleBase):
         #     self.dataframe = pd.load_csv(
         #         self.path / "Automatically_Annotated" / "Automatically_annotated_file_list.csv")
 
-    def train_dataloader(self):
+    def train_sampler(self):
         if self.sampler == "uniform":
             sampler = None
         elif self.sampler == "balanced_expr":
@@ -455,6 +455,10 @@ class AffectNetDataModule(FaceDataModuleBase):
             sampler = make_balanced_sample_by_weights(self.training_set.a_sample_weights)
         else:
             raise ValueError(f"Invalid sampler value: '{self.sampler}'")
+        return sampler
+
+    def train_dataloader(self):
+        sampler = self.train_sampler()
         dl = DataLoader(self.training_set, shuffle=sampler is None, num_workers=self.num_workers,
                         batch_size=self.train_batch_size, drop_last=self.drop_last, sampler=sampler)
         return dl

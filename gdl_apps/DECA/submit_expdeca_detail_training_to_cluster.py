@@ -113,7 +113,7 @@ def train_on_selected_sequences():
             #      'model.detail_constrain_type=None', ]
             # ],
 
-            # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
+            # # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
             [
                 ['model.useSeg=rend',
                  'model.idw=0',
@@ -140,7 +140,9 @@ def train_on_selected_sequences():
                  'learning.batch_size_test=1',
                  'data/augmentations=default',
                  'model.zsymw=0'
-                ],
+                ]
+            ],
+            [
                 ['model.useSeg=rend',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
@@ -149,7 +151,7 @@ def train_on_selected_sequences():
                  'data/augmentations=default',
                  'model.zsymw=0'
                  ]
-            ],
+            ]
 
         ]
         #
@@ -163,11 +165,14 @@ def train_on_selected_sequences():
         # # dataset_detail = 'data/datasets=detail_data_cluster'
         # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
         # dataset_detail_ring_type = None
-
+        #
         sampler = "data.sampler=False"
         dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
         dataset_detail_ring_type = "augment"
-
+        dm_weights = ["0.9", "0.1"]
+        # dm_weights = ["0.95", "0.05"]
+        # dm_weights = ["0.8", "0.2"]
+        # dm_weights = None
 
 
         learning_rates = [0.0001]
@@ -228,7 +233,8 @@ def train_on_selected_sequences():
             if dataset_detail_ring_type is not None:
                 fixed_overrides_detail.append(f'data.ring_type={dataset_detail_ring_type}')
                 fixed_overrides_detail.append(f'data.ring_size={batch_size_train}')
-
+            if dm_weights is not None:
+                fixed_overrides_detail += [f'data.data_class_weights={"[" + ", ".join(dm_weights) +"]"}']
 
             for fmode in finetune_modes:
                 detail_overrides = fixed_overrides_detail.copy()

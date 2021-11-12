@@ -3,20 +3,41 @@ from pytorch_lightning import LightningDataModule
 # from .DecaDataModule import DecaDataModule
 import torch
 from torch.utils.data._utils.collate import default_collate
-
+import numpy as np
 
 class CombinedDataModule(LightningDataModule):
 
-    def __init__(self, dms):
+    def __init__(self, dms, weights=None):
         super().__init__()
         assert len(dms) > 0
         self.dms = dms
+        if weights is None:
+            self.weights = {key: 1.0 for key in dms.keys()}
+        else:
+            self.weights = weights
+
         # for key, value in config.items():
         #     if data_preparation_function is None:
         #         dm_class = class_from_str(key, sys.modules[__name__])
         #         self.dms[key] = dm_class(**value)
         #     else:
         #         self.dms[key] = data_preparation_function(value)
+
+    def train_sampler(self):
+        sample_weights_list = []
+        for key, value in self.dms.items():
+            sampler = value.train_sampler()
+            if sampler is not None:
+                sample_weights = sampler.weights
+            else:
+                sample_weights = torch.tensor([1.0] * len(value.training_set))
+            sample_weights /= sample_weights.sum()
+            sample_weights *= self.weights[key]
+            sample_weights_list += [sample_weights]
+        final_sample_weights = torch.cat(sample_weights_list)
+        final_sample_weights /= final_sample_weights.sum()
+        return torch.utils.data.WeightedRandomSampler(final_sample_weights, len(final_sample_weights))
+
 
     @property
     def train_batch_size(self):
@@ -57,9 +78,10 @@ class CombinedDataModule(LightningDataModule):
 
         concat_dataset = torch.utils.data.ConcatDataset(datasets)
         # concat_dataset = torch.utils.data.ChainDataset(datasets)
+        sampler = self.train_sampler()
         dataloader = torch.utils.data.DataLoader(concat_dataset, batch_size=self.train_batch_size,
                                                  num_workers=self.num_workers,
-                                                 drop_last=True,  shuffle=True)
+                                                 drop_last=True,  shuffle=sampler is None, sampler=sampler)
         return dataloader
 
     def val_dataloader(self):
@@ -187,10 +209,11 @@ if __name__ == '__main__':
              ring_size=4,
             augmentation=augmenter,
             num_workers=0,
-        use_gt=False,
+            use_gt=False,
             # use_clean_labels=True
             # dataset_type="AffectNetWithMGCNetPredictions",
             # dataset_type="AffectNetWithExpNetPredictions",
+             sampler="balanced_expr"
             )
 
     dm = CombinedDataModule({"AffectNet" : affn_dm,

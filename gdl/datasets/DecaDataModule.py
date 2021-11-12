@@ -63,6 +63,9 @@ class DecaDataModule(LightningDataModule):
         self.split_ratio = config.data.split_ratio
         self.split_style = config.data.split_style
 
+    def train_sampler(self):
+        return None
+
     @property
     def train_batch_size(self):
         return self.config.learning.batch_size_train
