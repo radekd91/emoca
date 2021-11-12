@@ -153,16 +153,16 @@ def train_on_selected_sequences():
 
         ]
         #
-        # # sampler = "data.sampler=False"
-        sampler = "data.sampler=balanced_expr"
-        dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-        dataset_detail_ring_type = "augment"
-        # # # dataset_detail = 'data/datasets=affectnet_cluster'
+        # # # sampler = "data.sampler=False"
+        # sampler = "data.sampler=balanced_expr"
+        # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+        # dataset_detail_ring_type = "augment"
+        # # # # dataset_detail = 'data/datasets=affectnet_cluster'
         # #
-        # sampler = "+data.sampler=False"
-        # # dataset_detail = 'data/datasets=detail_data_cluster'
-        # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
-        # dataset_detail_ring_type = None
+        sampler = "+data.sampler=False"
+        # dataset_detail = 'data/datasets=detail_data_cluster'
+        dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+        dataset_detail_ring_type = None
 
         # sampler = "data.sampler=False"
         # dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'

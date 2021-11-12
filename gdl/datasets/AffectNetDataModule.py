@@ -1062,8 +1062,8 @@ class AffectNet(EmotionalImageDatasetBase):
             for key in gt.keys():
                 sample[key] = gt[key]
 
-        if landmark is not None:
-            sample["landmark"] = torch.from_numpy(landmark)
+        # if landmark is not None:
+        #     sample["landmark"] = torch.from_numpy(landmark)
         if seg_image is not None:
             sample["mask"] = numpy_image_to_torch(seg_image)
         if emotion_features is not None:
