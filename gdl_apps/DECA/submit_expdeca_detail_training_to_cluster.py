@@ -169,9 +169,9 @@ def train_on_selected_sequences():
         sampler = "data.sampler=False"
         dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
         dataset_detail_ring_type = "augment"
-        dm_weights = ["0.9", "0.1"]
+        # dm_weights = ["0.9", "0.1"]
         # dm_weights = ["0.95", "0.05"]
-        # dm_weights = ["0.8", "0.2"]
+        dm_weights = ["0.8", "0.2"]
         # dm_weights = None
 
 
@@ -246,8 +246,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                # submit_ = False
-                submit_ = True
+                submit_ = False
+                # submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:

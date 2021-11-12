@@ -124,7 +124,7 @@ def prepare_data(cfg):
         for data_class in data_classes:
             dm, sequence_name = create_single_dm(cfg, data_class)
             dms[data_class] = dm
-        data_class_weights = cfg.data.data_class_weights if 'data_class_weights' in cfg.data.keys() else None
+        data_class_weights = OmegaConf.to_container(cfg.data.data_class_weights) if 'data_class_weights' in cfg.data.keys() else None
         dm = CombinedDataModule(dms, data_class_weights)
         sequence_name = "ComboNet"
     else:
