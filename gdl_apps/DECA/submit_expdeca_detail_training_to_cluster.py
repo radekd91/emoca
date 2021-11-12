@@ -114,41 +114,59 @@ def train_on_selected_sequences():
             # ],
 
             # AffectNet with augmentation, DEFAULT DISABLED UNNECESSARY DEEP LOSSES, HIGHER BATCH SIZE, NO SHAPE RING
-            [
-                ['model.useSeg=rend',
-                 'model.idw=0',
-                 'learning/batching=single_gpu_expdeca_detail_32gb',
-                 'model.detail_constrain_type=None',
-                 'learning.batch_size_test=1',
-                 'data/augmentations=default'
-                 ]
-            ],
+            # [
+            #     ['model.useSeg=rend',
+            #      'model.idw=0',
+            #      'learning/batching=single_gpu_expdeca_detail_32gb',
+            #      'model.detail_constrain_type=None',
+            #      'learning.batch_size_test=1',
+            #      'data/augmentations=default'
+            #      ]
+            # ],
+            # [
+            #     ['model.useSeg=gt',
+            #      'model.idw=0',
+            #      'learning/batching=single_gpu_expdeca_detail_32gb',
+            #      'model.detail_constrain_type=None',
+            #      'learning.batch_size_test=1',
+            #      'data/augmentations=default'
+            #      ]
+            # ],
             [
                 ['model.useSeg=gt',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
                  'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
-                 'data/augmentations=default'
+                 'data/augmentations=default',
+                 'model.zsymw=0'
+                ],
+                ['model.useSeg=rend',
+                 'model.idw=0',
+                 'learning/batching=single_gpu_expdeca_detail_32gb',
+                 'model.detail_constrain_type=None',
+                 'learning.batch_size_test=1',
+                 'data/augmentations=default',
+                 'model.zsymw=0'
                  ]
             ],
 
         ]
         #
-        # # # sampler = "data.sampler=False"
-        # sampler = "data.sampler=balanced_expr"
-        # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-        # dataset_detail_ring_type = "augment"
-        # # # # dataset_detail = 'data/datasets=affectnet_cluster'
+        # # sampler = "data.sampler=False"
+        sampler = "data.sampler=balanced_expr"
+        dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+        dataset_detail_ring_type = "augment"
+        # # # dataset_detail = 'data/datasets=affectnet_cluster'
         # #
         # sampler = "+data.sampler=False"
         # # dataset_detail = 'data/datasets=detail_data_cluster'
         # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
         # dataset_detail_ring_type = None
 
-        sampler = "data.sampler=False"
-        dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
-        dataset_detail_ring_type = "augment"
+        # sampler = "data.sampler=False"
+        # dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
+        # dataset_detail_ring_type = "augment"
 
 
 
@@ -161,14 +179,14 @@ def train_on_selected_sequences():
 
         for lr in learning_rates:
 
-            # train_K = 4
-            # batch_size_train = 4
-            # val_K = 1
-            # batch_size_val = 4
-            train_K = 2
-            batch_size_train = 1
-            val_K = 2
-            batch_size_val = 1
+            train_K = 4
+            batch_size_train = 4
+            val_K = 1
+            batch_size_val = 4
+            # train_K = 2
+            # batch_size_train = 1
+            # val_K = 2
+            # batch_size_val = 1
             background_from_input = "True"
             train_coarse = "False"
             detail_constraint = "exchange"
@@ -222,8 +240,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                submit_ = False
-                # submit_ = True
+                # submit_ = False
+                submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:

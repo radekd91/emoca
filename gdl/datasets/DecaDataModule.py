@@ -312,8 +312,8 @@ class VoxelDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
 
     def __len__(self):
         return len(self.face_list)
@@ -448,8 +448,8 @@ class VGGFace2Dataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
 
     def __len__(self):
         return len(self.data_lines)
@@ -577,8 +577,8 @@ class VGGFace2HQDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
 
 
     def __len__(self):
@@ -698,8 +698,8 @@ class EthnicityDataset(Dataset):
         self.isTemporal = isTemporal
         self.scale = scale  # [scale_min, scale_max]
         self.trans_scale = trans_scale  # [dx, dy]
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
