@@ -7,7 +7,8 @@ import time as t
 import random
 from wandb import Api
 
-def submit(resume_folder,
+def submit(cfg,
+           resume_folder,
            stage = None,
            bid=10):
     cluster_repo_path = "/home/rdanecek/workspace/repos/gdl"
@@ -34,10 +35,9 @@ def submit(resume_folder,
 
     submission_folder_local.mkdir(parents=True)
 
-    config_file = Path(result_dir_local_mount) / resume_folder / "cfg.yaml"
-
-    with open(config_file, 'r') as f:
-        cfg = OmegaConf.load(f)
+    config_file  = submission_folder_local / "cfg.yaml"
+    with open(config_file, 'w') as f:
+         OmegaConf.save(cfg, f)
 
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
@@ -56,13 +56,12 @@ def submit(resume_folder,
     cuda_capability_requirement = 7
     mem_gb = 16
     # mem_gb = 30
-    args = f"{str(Path(result_dir_cluster_side) / resume_folder / 'cfg.yaml')}"
 
     start_from_previous = 1
     force_new_location = 1
     stage = 1
     project_name = "AffectNetEmoDECATest"
-    args += f" {stage} {start_from_previous} {force_new_location} {project_name} "
+    args = f" {config_file.name} {stage} {start_from_previous} {force_new_location} {project_name} "
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -98,10 +97,17 @@ def train_emodeca_on_cluster():
     api = Api()
 
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-36_-1044078422889696991_EmoDeep3DFace_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early"]
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-18-44_-5607778736970990207_Emo3DDFA_shake_samp-balanced_expr_early"]
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-18_15578703095531241_Emo3DDFA_shake_samp-balanced_expr_early"]
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-15_-7029531744226117801_Emo3DDFA_shake_samp-balanced_expr_early"]
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early"]
     # resume_folders += [""]
     # resume_folders += [""]
     # resume_folders += [""]
+
+    submit_ = False
+    # submit_ = True
 
     for resume_folder in resume_folders:
         name = str(Path(resume_folder).name)
@@ -120,8 +126,7 @@ def train_emodeca_on_cluster():
 
         cfg.data.data_class = "AffectNetEmoNetSplitModuleTest"
 
-        submit_ = False
-        # submit_ = True
+
         if submit_:
             submit(cfg, stage, bid=bid)
         else:
