@@ -598,7 +598,10 @@ def main():
             start_from_previous = True
 
     if len(sys.argv) > 4:
-        project_name_ = sys.argv[4]
+        project_name_ = bool(int(sys.argv[4]))
+
+    if len(sys.argv) > 5:
+        project_name_ = sys.argv[5]
     else:
         project_name_ = "EmoDECA"
 
