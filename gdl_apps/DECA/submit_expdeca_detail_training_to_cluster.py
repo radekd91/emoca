@@ -38,7 +38,9 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
     # gpu_mem_requirement_mb = cfg_detail.learning.gpu_memory_min_gb * 1024
-    gpu_mem_requirement_mb = 40*1024
+    gpu_mem_requirement_mb = 24*1024
+    gpu_mem_requirement_mb_max = 35*1024
+    # gpu_mem_requirement_mb = 24*1024
     # gpu_mem_requirement_mb = None
     cpus = cfg_coarse.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
@@ -64,6 +66,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
                        python_bin=python_bin,
                        username=username,
                        gpu_mem_requirement_mb=gpu_mem_requirement_mb,
+                       gpu_mem_requirement_mb_max=gpu_mem_requirement_mb_max,
                        cpus=cpus,
                        mem_gb=mem_gb,
                        gpus=gpus,
@@ -84,9 +87,8 @@ def train_on_selected_sequences():
 
 
     resume_folders = []
-    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"] # TODO: add path here
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"] # RESNTE
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early/"] # SWIN
 
 
     for resume_folder in resume_folders:
@@ -119,7 +121,6 @@ def train_on_selected_sequences():
                 ['model.useSeg=rend',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default'
                  ]
@@ -128,7 +129,6 @@ def train_on_selected_sequences():
                 ['model.useSeg=gt',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default'
                  ]
@@ -137,7 +137,6 @@ def train_on_selected_sequences():
                 ['model.useSeg=gt',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default',
                  'model.zsymw=0'
@@ -147,7 +146,6 @@ def train_on_selected_sequences():
                 ['model.useSeg=rend',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default',
                  'model.zsymw=0'
@@ -156,26 +154,26 @@ def train_on_selected_sequences():
 
         ]
         #
-        # sampler = "data.sampler=False"
-        sampler = "data.sampler=balanced_expr"
-        dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-        dataset_detail_ring_type = "augment"
-        dm_weights = None
+        # # sampler = "data.sampler=False"
+        # sampler = "data.sampler=balanced_expr"
+        # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+        # dataset_detail_ring_type = "augment"
+        # dm_weights = None
         # dataset_detail = 'data/datasets=affectnet_cluster'
         # #
         # sampler = "+data.sampler=False"
-        # # dataset_detail = 'data/datasets=detail_data_cluster'
-        # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
-        # dataset_detail_ring_type = None
-        # dm_weights = None
+        # dataset_detail = 'data/datasets=detail_data_cluster'
+        dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+        dataset_detail_ring_type = None
+        dm_weights = None
         #
         # sampler = "data.sampler=False"
-        # dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
-        # dataset_detail_ring_type = "augment"
-        # # dm_weights = ["0.9", "0.1"]
-        # # dm_weights = ["0.95", "0.05"]
+        dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
+        dataset_detail_ring_type = "augment"
+        dm_weights = ["0.9", "0.1"]
+        # dm_weights = ["0.95", "0.05"]
         # dm_weights = ["0.8", "0.2"]
-        # # dm_weights = None
+        # dm_weights = ["0.5", "0.5"]
 
 
         learning_rates = [0.0001]
@@ -187,14 +185,14 @@ def train_on_selected_sequences():
 
         for lr in learning_rates:
 
-            train_K = 4
-            batch_size_train = 4
+            train_K = 3
+            batch_size_train = 3
             val_K = 1
             batch_size_val = 4
             # train_K = 2
-            # batch_size_train = 1
-            # val_K = 2
-            # batch_size_val = 1
+            # batch_size_train = 2
+            # val_K = 1
+            # batch_size_val = 2
             background_from_input = "True"
             train_coarse = "False"
             detail_constraint = "exchange"
@@ -231,11 +229,11 @@ def train_on_selected_sequences():
                 f'learning.val_K={val_K}',
                 f'learning.batch_size_val={batch_size_val}',
                 dataset_detail,
-                sampler,
+                # sampler,
             ]
             if dataset_detail_ring_type is not None:
                 fixed_overrides_detail.append(f'data.ring_type={dataset_detail_ring_type}')
-                fixed_overrides_detail.append(f'data.ring_size={batch_size_train}')
+                fixed_overrides_detail.append(f'data.ring_size={train_K}')
             if dm_weights is not None:
                 fixed_overrides_detail += [f'data.data_class_weights={"[" + ", ".join(dm_weights) +"]"}']
 

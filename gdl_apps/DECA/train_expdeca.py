@@ -1,7 +1,7 @@
 from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetDataModuleValTest, \
-    AffectNetEmoNetSplitModuleValTest, AffectNetEmoNetSplitModule
+    AffectNetEmoNetSplitModuleValTest, AffectNetEmoNetSplitModule, AffectNetEmoNetSplitModuleTest
 from gdl.datasets.CombinedDataModule import CombinedDataModule
 from gdl.datasets.EmotioNetDataModule import EmotioNetDataModule
 from omegaconf import DictConfig, OmegaConf

@@ -27,7 +27,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from gdl_apps.DECA.interactive_deca_decoder import hack_paths
 
 
-project_name = 'EmoDECA'
+# project_name = 'EmoDECA'
 
 
 def create_experiment_name(cfg, version=1):
@@ -303,6 +303,7 @@ def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
     if cfg.inout.full_run_dir == 'todo' or force_new_location:
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
+            cfg.inout.previous_run_dir = cfg.inout.full_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg)
@@ -347,7 +348,7 @@ def train_emodeca(cfg, start_i=-1, resume_from_previous = True,
     logger = create_logger(
                          cfg.learning.logger_type,
                          name=experiment_name,
-                         project_name=project_name,
+                         project_name=project_name_,
                          config=OmegaConf.to_container(cfg),
                          version=version,
                          save_dir=full_run_dir)
@@ -595,7 +596,10 @@ def main():
         if start_stage == 1:
             start_from_previous = True
 
-    project_name_ = "EmoDECATest"
+    if len(sys.argv) > 4:
+        project_name_ = sys.argv[4]
+    else:
+        project_name_ = "EmoDECA"
 
     train_emodeca(cfg, start_stage, project_name_=project_name_, resume_from_previous=start_from_previous,
                   force_new_location=force_new_location)

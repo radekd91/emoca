@@ -490,6 +490,7 @@ def finetune_deca(cfg_coarse, cfg_detail, test_first=True, start_i=-1, resume_fr
     if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
+            cfg_coarse.inout.previous_run_dir = cfg_coarse.inout.full_run_dir
         if cfg_coarse.inout.full_run_dir != 'todo':
             old_run_dir = cfg_coarse.inout.full_run_dir
             cfg_coarse.inout.full_run_dir_previous = old_run_dir

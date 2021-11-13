@@ -253,7 +253,7 @@ def train_on_selected_sequences():
              # 'model.useSeg=gt',
              'model.useSeg=rend',
              'model.idw=0',
-             # 'model.expression_backbone=deca_clone',
+             'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_coarse_32gb',
              'model.shape_constrain_type=None',
              # 'data/datasets=affectnet_cluster',
@@ -261,7 +261,7 @@ def train_on_selected_sequences():
              'data/augmentations=default'],
 
             ['model.useSeg=rend', 'model.idw=0',
-             # 'model.expression_backbone=deca_clone',
+             'model.expression_backbone=deca_clone',
              'learning/batching=single_gpu_expdeca_detail_32gb',
              # 'model.shape_constrain_type=None',
              'model.detail_constrain_type=None',
@@ -359,18 +359,18 @@ def train_on_selected_sequences():
 
     ]
     #
-    # # sampler = "data.sampler=False"
+    sampler = "data.sampler=False"
     # sampler = "data.sampler=balanced_expr"
-    # dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
-    # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-    # # dataset_coarse = "data/datasets=affectnet_cluster"
-    # # dataset_detail = 'data/datasets=affectnet_cluster'
+    dataset_coarse = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+    # dataset_coarse = "data/datasets=affectnet_cluster"
+    # dataset_detail = 'data/datasets=affectnet_cluster'
     # #
-    sampler = "+data.sampler=False"
-    # dataset_coarse = "data/datasets=coarse_data_cluster"
-    # dataset_detail = 'data/datasets=detail_data_cluster'
-    dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
-    dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
+    # sampler = "+data.sampler=False"
+    # # dataset_coarse = "data/datasets=coarse_data_cluster"
+    # # dataset_detail = 'data/datasets=detail_data_cluster'
+    # dataset_coarse = "data/datasets=coarse_data_cluster_different_scaling"
+    # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
 
     # learning_rates = [0.0001]
     # learning_rates = [0.0001, 0.00005, 0.00001]
@@ -394,7 +394,7 @@ def train_on_selected_sequences():
         # Emonet
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-13-04_-3054817521854059132_EmoNet_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-37_-8481804677643293586_EmoNet_shake_samp-balanced_expr_Aug_early"
-        emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"]
+        # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"]
 
         # SWIN - other
         # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-05-57_1011354483695245068_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
@@ -406,7 +406,7 @@ def train_on_selected_sequences():
         emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
 
         # VGG 19BN
-        emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
+        # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-01-54_-540506871079560164_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-01-36_-4781895632192757268_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"
 
@@ -415,7 +415,7 @@ def train_on_selected_sequences():
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-00-06_-8559276509623672361_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-16-15_-4954470508546110068_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
         ##emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-06_2594210365109986369_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
-        emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
+        # emonets += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
 
         for emonet in emonets:
 

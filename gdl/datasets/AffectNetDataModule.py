@@ -665,7 +665,8 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None, self.ignore_invalid, use_gt=self.use_gt,)
+                                    None,
+                                                         ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
     def val_dataloader(self):
         dls = [DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
@@ -682,6 +683,44 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
                           batch_size=self.test_batch_size, drop_last=False)
+
+
+class AffectNetEmoNetSplitModuleTest(AffectNetDataModule):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.test_fname = ""
+
+    def setup(self, stage=None):
+        if self.ignore_invalid == "like_emonet":
+            self.test_dataframe_path = Path(self.output_dir) / "testing_emonet_split_clean.csv"
+        else:
+            self.test_dataframe_path = Path(self.output_dir) / "testing_emonet_split.csv"
+        if self.ignore_invalid == "like_emonet":
+            self.val_dataframe_path = Path(self.output_dir) / "validation_emonet_split_clean.csv"
+        else:
+            self.val_dataframe_path = Path(self.output_dir) / "validation_emonet_split.csv"
+
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=None,
+                                  ring_size=None,
+                                  ext=self.processed_ext,
+                                                         use_gt=self.use_gt,
+                                  )
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=None,
+                                  ring_size=None,
+                                  ext=self.processed_ext,
+                                                         use_gt=self.use_gt,
+                                  )
+
+    def train_dataloader(self):
+        raise NotImplementedError("Not implemented")
+
+    # def val_dataloader(self):
+    #     raise NotImplementedError("Not implemented")
 
 
 class AffectNetEmoNetSplitModuleValTest(AffectNetEmoNetSplitModule):
@@ -762,7 +801,7 @@ class AffectNetTestModule(AffectNetDataModule):
         else:
             self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None, self.ignore_invalid, use_gt=self.use_gt,)
+                                    None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
     def train_dataloader(self):
         raise NotImplementedError()
@@ -785,7 +824,7 @@ class AffectNetEmoNetSplitTestModule(AffectNetTestModule):
         else:
             self.image_path = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
-                                    None, self.ignore_invalid, use_gt=self.use_gt,)
+                                    None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
 
 

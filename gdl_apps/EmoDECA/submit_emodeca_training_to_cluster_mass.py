@@ -597,6 +597,12 @@ def train_emodeca_on_cluster():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-28-07_-6499863499965279138_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_11_01-27-09_3536700504397748218_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
+    # lr ablation
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-32-15_7264067905024760402_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-30-18_3842660621685827882_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-25-15_-7606645522376246067_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-25-05_5658338137145609621_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
     # stage = 'detail'
     stage = 'coarse'
 

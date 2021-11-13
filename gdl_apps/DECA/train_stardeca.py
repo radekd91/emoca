@@ -319,6 +319,7 @@ def train_stardeca(cfg_coarse, cfg_detail, start_i=-1, resume_from_previous = Tr
     if cfg_coarse.inout.full_run_dir == 'todo' or force_new_location:
         if force_new_location:
             print("The run will be resumed in a new foler (forked)")
+            cfg_coarse.inout.previous_run_dir = cfg_coarse.inout.full_run_dir
         time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         random_id = str(hash(time))
         experiment_name = create_experiment_name(cfg_coarse, cfg_detail)

@@ -72,6 +72,7 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        env='work36_cu11',
                        username='rdanecek',
                        gpu_mem_requirement_mb=None,
+                       gpu_mem_requirement_mb_max=None,
                        cuda_capability_requirement=None,
                        max_concurrent_jobs=None,
                        concurrency_tag = None,
@@ -120,6 +121,8 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
         requirements += [f"( TARGET.CUDACapability>={cuda_capability_requirement} )"]
     if gpu_mem_requirement_mb:
         requirements += [f"( TARGET.CUDAGlobalMemoryMb>={gpu_mem_requirement_mb} )"]
+    if gpu_mem_requirement_mb_max:
+        requirements += [f"( TARGET.CUDAGlobalMemoryMb<={gpu_mem_requirement_mb_max} )"]
     if len(requirements) > 0:
         requirements = " && ".join(requirements)
         requirements = "requirements=" + requirements
