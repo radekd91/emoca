@@ -540,6 +540,8 @@ def main():
             else:
                 resume_from_previous = True
         else:
+            resume_from_previous = True
+            force_new_location = False
             start_from = -1
     else:
         coarse_conf = "deca_finetune_coarse_cluster"

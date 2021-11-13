@@ -1451,8 +1451,8 @@ if __name__ == "__main__":
              # ring_size=4,
             augmentation=augmenter,
             # use_clean_labels=True
-        # dataset_type="AffectNetWithMGCNetPredictions",
-        dataset_type="AffectNetWithExpNetPredictions",
+            # dataset_type="AffectNetWithMGCNetPredictions",
+            dataset_type="AffectNetWithExpNetPredictions",
             )
     #
     print(dm.num_subsets)

@@ -37,7 +37,8 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = cfg_coarse.learning.gpu_memory_min_gb * 1024
+    # gpu_mem_requirement_mb = cfg_detail.learning.gpu_memory_min_gb * 1024
+    gpu_mem_requirement_mb = 40*1024
     # gpu_mem_requirement_mb = None
     cpus = cfg_coarse.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
@@ -118,7 +119,7 @@ def train_on_selected_sequences():
                 ['model.useSeg=rend',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 'model.detail_constrain_type=None',
+                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default'
                  ]
@@ -127,7 +128,7 @@ def train_on_selected_sequences():
                 ['model.useSeg=gt',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 'model.detail_constrain_type=None',
+                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default'
                  ]
@@ -136,7 +137,7 @@ def train_on_selected_sequences():
                 ['model.useSeg=gt',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 'model.detail_constrain_type=None',
+                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default',
                  'model.zsymw=0'
@@ -146,7 +147,7 @@ def train_on_selected_sequences():
                 ['model.useSeg=rend',
                  'model.idw=0',
                  'learning/batching=single_gpu_expdeca_detail_32gb',
-                 'model.detail_constrain_type=None',
+                 # 'model.detail_constrain_type=None',
                  'learning.batch_size_test=1',
                  'data/augmentations=default',
                  'model.zsymw=0'
@@ -155,24 +156,26 @@ def train_on_selected_sequences():
 
         ]
         #
-        # # # sampler = "data.sampler=False"
-        # sampler = "data.sampler=balanced_expr"
-        # dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
-        # dataset_detail_ring_type = "augment"
-        # # # # dataset_detail = 'data/datasets=affectnet_cluster'
+        # sampler = "data.sampler=False"
+        sampler = "data.sampler=balanced_expr"
+        dataset_detail = 'data/datasets=affectnet_cluster_emonet_cleaned'
+        dataset_detail_ring_type = "augment"
+        dm_weights = None
+        # dataset_detail = 'data/datasets=affectnet_cluster'
         # #
         # sampler = "+data.sampler=False"
         # # dataset_detail = 'data/datasets=detail_data_cluster'
         # dataset_detail = 'data/datasets=detail_data_cluster_different_scaling'
         # dataset_detail_ring_type = None
-        #
-        sampler = "data.sampler=False"
-        dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
-        dataset_detail_ring_type = "augment"
-        # dm_weights = ["0.9", "0.1"]
-        # dm_weights = ["0.95", "0.05"]
-        dm_weights = ["0.8", "0.2"]
         # dm_weights = None
+        #
+        # sampler = "data.sampler=False"
+        # dataset_detail = 'data/datasets=combo_decadetail_affectnet_cluster_emonet_cleaned'
+        # dataset_detail_ring_type = "augment"
+        # # dm_weights = ["0.9", "0.1"]
+        # # dm_weights = ["0.95", "0.05"]
+        # dm_weights = ["0.8", "0.2"]
+        # # dm_weights = None
 
 
         learning_rates = [0.0001]
@@ -246,8 +249,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                submit_ = False
-                # submit_ = True
+                # submit_ = False
+                submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:
