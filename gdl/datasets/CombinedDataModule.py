@@ -2,8 +2,78 @@ from pytorch_lightning import LightningDataModule
 # from .AffectNetDataModule import AffectNetDataModule, AffectNetEmoNetSplitModuleValTest, AffectNetEmoNetSplitModule
 # from .DecaDataModule import DecaDataModule
 import torch
-from torch.utils.data._utils.collate import default_collate
+from torch.utils.data._utils.collate import *
 import numpy as np
+
+
+def combined_collate(batch):
+    r"""Puts each data field into a tensor with outer dimension batch size"""
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, torch.Tensor):
+        out = None
+        if torch.utils.data.get_worker_info() is not None:
+            # If we're in a background process, concatenate directly into a
+            # shared memory tensor to avoid an extra copy
+            numel = sum([x.numel() for x in batch])
+            storage = elem.storage()._new_shared(numel)
+            out = elem.new(storage)
+        max_size = 0
+        max_i = 0
+        min_size = 10000000
+        # need to check if all elements in the batch have the same size on dim 0
+        # for i, elem_ in enumerate(batch):
+        #     if elem_.size(0) > max_size:
+        #         max_size = elem_.size(0)
+        #         max_i = i
+        #     if elem_.size(0) < min_size:
+        #         min_size = elem_.size(0)
+        #         min_i = i
+        #
+        # # if not, fix this by duplication
+        # new_batch = []
+        # for i, elem_ in enumerate(batch):
+        #     if batch[i].shape[0] != max_size:
+        #         # batch[i] = batch[i].repeat(max_size, 1, 1, 1)
+        #         # batch[i] = batch[i][:max_size, ...].clone()
+        #         new_batch += [batch[i].repeat(max_size, 1, 1, 1)[:max_size, ...].clone()]
+        #     else:
+        #         new_batch += [batch[i].clone()]
+        # final = torch.stack(new_batch, 0, out=out)
+        final = torch.stack(batch, 0, out=out)
+        return final
+    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
+            and elem_type.__name__ != 'string_':
+        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+            # array of string classes and object
+            if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
+                raise TypeError(default_collate_err_msg_format.format(elem.dtype))
+
+            return combined_collate([torch.as_tensor(b) for b in batch])
+        elif elem.shape == ():  # scalars
+            return torch.as_tensor(batch)
+    elif isinstance(elem, float):
+        return torch.tensor(batch, dtype=torch.float64)
+    elif isinstance(elem, int):
+        return torch.tensor(batch)
+    elif isinstance(elem, string_classes):
+        return batch
+    elif isinstance(elem, collections.abc.Mapping):
+        return {key: combined_collate([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+        combined =elem_type(*(combined_collate(samples) for samples in zip(*batch)))
+        return combined
+    elif isinstance(elem, collections.abc.Sequence):
+        # check to make sure that the elements in batch have consistent size
+        it = iter(batch)
+        elem_size = len(next(it))
+        if not all(len(elem) == elem_size for elem in it):
+            raise RuntimeError('each element in list of batch should be of equal size')
+        transposed = zip(*batch)
+        return [combined_collate(samples) for samples in transposed]
+
+    raise TypeError(default_collate_err_msg_format.format(elem_type))
+
 
 class CombinedDataModule(LightningDataModule):
 
@@ -75,13 +145,15 @@ class CombinedDataModule(LightningDataModule):
         datasets = []
         for key, dm in self.dms.items():
             datasets += [dm.training_set]
-
+            datasets[-1].drop_last = self.train_batch_size
         concat_dataset = torch.utils.data.ConcatDataset(datasets)
         # concat_dataset = torch.utils.data.ChainDataset(datasets)
-        sampler = self.train_sampler()
+        # sampler = self.train_sampler()
+        sampler = None
         dataloader = torch.utils.data.DataLoader(concat_dataset, batch_size=self.train_batch_size,
-                                                 num_workers=self.num_workers,
-                                                 drop_last=True,  shuffle=sampler is None, sampler=sampler)
+                                                 num_workers=self.num_workers, pin_memory=True,
+                                                 drop_last=True,  shuffle=sampler is None, sampler=sampler,
+                                                 collate_fn=combined_collate)
         return dataloader
 
     def val_dataloader(self):
@@ -93,16 +165,19 @@ class CombinedDataModule(LightningDataModule):
                 other_datasets += dm.validation_set[1:]
             else:
                 first_datasets += [dm.validation_set]
+            first_datasets[-1].drop_last = self.val_batch_size
         concat_dataset = torch.utils.data.ConcatDataset(first_datasets)
         dataloader = torch.utils.data.DataLoader(concat_dataset, batch_size=self.val_batch_size,
                                                  num_workers=self.num_workers,
-                                                 drop_last=False,  shuffle=False)
+                                                 drop_last=False,  shuffle=False, pin_memory=True,
+                                                 collate_fn=combined_collate)
 
         other_dataloaders = []
         for datasets in other_datasets:
             other_dataloaders += [torch.utils.data.DataLoader(datasets, batch_size=self.val_batch_size,
                                                               num_workers=self.num_workers,
-                                                              drop_last=False,  shuffle=False)]
+                                                              drop_last=False,  shuffle=False, pin_memory=True,
+                                                              collate_fn=combined_collate)]
         return [dataloader] + other_dataloaders
 
     def test_dataloader(self):
@@ -117,7 +192,8 @@ class CombinedDataModule(LightningDataModule):
             dataloaders += [torch.utils.data.DataLoader(concat_dataset,
                                                         batch_size=self.test_batch_size,
                                                         num_workers=self.num_workers,
-                                                        drop_last=False,  shuffle=False)]
+                                                        drop_last=False,  shuffle=False, pin_memory=True,
+                                                        collate_fn=combined_collate)]
         return dataloaders
 
 

@@ -42,9 +42,9 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     gpu_mem_requirement_mb_max = 35*1024
     # gpu_mem_requirement_mb = 24*1024
     # gpu_mem_requirement_mb = None
-    cpus = cfg_coarse.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
+    cpus = cfg_detail.learningdata.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
-    gpus = cfg_coarse.learning.num_gpus
+    gpus = cfg_detail.learning.num_gpus
     num_jobs = 1
     max_time_h = 36
     max_price = 10000
@@ -185,14 +185,14 @@ def train_on_selected_sequences():
 
         for lr in learning_rates:
 
-            train_K = 3
-            batch_size_train = 3
-            val_K = 1
-            batch_size_val = 4
-            # train_K = 2
-            # batch_size_train = 2
+            # train_K = 3
+            # batch_size_train = 3
             # val_K = 1
-            # batch_size_val = 2
+            # batch_size_val = 4
+            train_K = 2
+            batch_size_train = 2
+            val_K = 1
+            batch_size_val = 2
             background_from_input = "True"
             train_coarse = "False"
             detail_constraint = "exchange"
@@ -229,6 +229,7 @@ def train_on_selected_sequences():
                 f'learning.val_K={val_K}',
                 f'learning.batch_size_val={batch_size_val}',
                 dataset_detail,
+                f'model.val_check_interval=2'
                 # sampler,
             ]
             if dataset_detail_ring_type is not None:
@@ -247,8 +248,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                # submit_ = False
-                submit_ = True
+                submit_ = False
+                # submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:

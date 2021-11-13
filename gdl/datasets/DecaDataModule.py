@@ -95,7 +95,8 @@ class DecaDataModule(LightningDataModule):
         train_loader = DataLoader(self.training_set,
                                   batch_size=self.config.learning.batch_size_train, shuffle=True,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True)
+                                  pin_memory=True
+                                  )
                                   # drop_last=drop_last)
         # print('---- data length: ', len(train_dataset))
         return train_loader
@@ -104,14 +105,16 @@ class DecaDataModule(LightningDataModule):
         val_loaders = [DataLoader(val_set,
                                   batch_size=self.config.learning.batch_size_val, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for val_set in self.validation_set]
+                                  pin_memory=True
+                                  ) for val_set in self.validation_set]
         return val_loaders
 
     def test_dataloader(self):
         test_loaders = [DataLoader(test_set,
                                   batch_size=self.config.learning.batch_size_test, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for test_set in self.test_set]
+                                  pin_memory=True
+                                   ) for test_set in self.test_set]
         return test_loaders
 
 
@@ -261,6 +264,7 @@ class VoxelDataset(Dataset):
         self.path = path or '/ps/scratch/face2d3d'
         self.K = K
         self.image_size = image_size
+        self.drop_last = False
         if dataname == 'vox1':
             self.kpt_suffix = '.txt'
             self.imagefolder = '/ps/project/face2d3d/VoxCeleb/vox1/dev/images_cropped'
@@ -319,7 +323,15 @@ class VoxelDataset(Dataset):
         # self.include_image_path = False
 
     def __len__(self):
+        leng = len(self.face_list)
+        # leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.face_list)
+
+    # def __len__(self):
+    #     return 11
+        # return len(self.face_list)
 
     def __getitem__(self, idx):
         key = self.face_list[idx]
@@ -383,6 +395,8 @@ class VoxelDataset(Dataset):
         if self.include_image_path:
             data_dict['path'] = image_path_list
 
+        # print("VoxelDataset")
+        # print(data_dict['image'].shape)
         return data_dict
 
     def crop(self, image, kpt):
@@ -452,9 +466,16 @@ class VGGFace2Dataset(Dataset):
         # if isSingle:
         #     self.K = 1
         self.include_image_path = True
+        self.drop_last = False
         # self.include_image_path = False
 
+    # def __len__(self):
+    #     return len(self.data_lines)
     def __len__(self):
+        leng = len(self.data_lines)
+        # leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
 
     def __getitem__(self, idx):
@@ -581,10 +602,16 @@ class VGGFace2HQDataset(Dataset):
         #     self.K = 1
         self.include_image_path = True
         # self.include_image_path = False
+        self.drop_last = False
 
 
     def __len__(self):
+        # leng = len(self.data_lines)
+        leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
+
 
     def __getitem__(self, idx):
         images_list = []
@@ -636,6 +663,8 @@ class VGGFace2HQDataset(Dataset):
 
         if self.include_image_path:
             data_dict['path'] = image_path_list
+        # print("VGGFace2 ")
+        # print(data_dict['image'].shape)
         return data_dict
 
     def crop(self, image, kpt):
@@ -705,8 +734,12 @@ class EthnicityDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
+        self.drop_last = False
 
     def __len__(self):
+        leng = len(self.data_lines)
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
 
     def __getitem__(self, idx):

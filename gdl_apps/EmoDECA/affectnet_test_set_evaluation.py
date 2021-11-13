@@ -96,18 +96,67 @@ def train_emodeca_on_cluster():
     stage = 1 # test stage
     api = Api()
 
+    # comparison methods
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-36_-1044078422889696991_EmoDeep3DFace_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-18-44_-5607778736970990207_Emo3DDFA_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-18_15578703095531241_Emo3DDFA_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-15_-7029531744226117801_Emo3DDFA_shake_samp-balanced_expr_early"]
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-18-44_-5607778736970990207_Emo3DDFA_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-18_15578703095531241_Emo3DDFA_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-08-15_-7029531744226117801_Emo3DDFA_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early"]
+
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-09_-5731619448091644006_EmoMGCNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-23_-1563842771012871107_EmoMGCNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-40-47_788901720705055085_EmoExpNet_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_7185746630127973131_EmoExpNet_shake_samp-balanced_expr_early"]
+
+    # image based
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_20-48-55_-7323345455363258885_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-05-57_1011354483695245068_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
+
+    # # some of the best candidates
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_12_19-56-13_704003715291275370_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-42-30_8680779076656978317_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_12-13-16_-8024089022190881636_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_01-59-07_-9007648997833454518_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_01-58-56_1043302978911105834_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-58-31_-7948033884851958030_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-58-27_-5553059236244394333_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-57-28_-4957717700349337532_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-34-49_8015192522733347822_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-02_-5975857231436227431_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-00_-1889770853677981780_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-32-49_-6879167987895418873_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+
+    # TODO: some of the DECA dataset trained ExpDECAs are missing ablations are missing
+    # resume_folders += [""]
     # resume_folders += [""]
     # resume_folders += [""]
     # resume_folders += [""]
 
-    submit_ = False
-    # submit_ = True
+    # submit_ = False
+    submit_ = True
 
     for resume_folder in resume_folders:
         name = str(Path(resume_folder).name)
@@ -116,7 +165,7 @@ def train_emodeca_on_cluster():
         run = api.run("rdanecek/EmoDECA/" + run_id)
         tags = set(run.tags)
 
-        allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE"])
+        allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
 
         if len(allowed_tags.intersection(tags)) == 0:
             print(f"Run '{name}' is not tagged to be tested and will be skipped.")
