@@ -42,7 +42,7 @@ def submit(cfg_coarse, cfg_detail, bid=10):
     gpu_mem_requirement_mb_max = 35*1024
     # gpu_mem_requirement_mb = 24*1024
     # gpu_mem_requirement_mb = None
-    cpus = cfg_detail.learningdata.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
+    cpus = cfg_detail.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     gpus = cfg_detail.learning.num_gpus
     num_jobs = 1
@@ -87,8 +87,8 @@ def train_on_selected_sequences():
 
 
     resume_folders = []
-    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"] # RESNTE
-    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early/"] # SWIN
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_2212703344027741137_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"] # RESNTE
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early/"] # SWIN
 
 
     for resume_folder in resume_folders:
@@ -229,7 +229,7 @@ def train_on_selected_sequences():
                 f'learning.val_K={val_K}',
                 f'learning.batch_size_val={batch_size_val}',
                 dataset_detail,
-                f'model.val_check_interval=2'
+                # f'model.val_check_interval=2'
                 # sampler,
             ]
             if dataset_detail_ring_type is not None:
@@ -248,8 +248,8 @@ def train_on_selected_sequences():
                 )
                 GlobalHydra.instance().clear()
 
-                submit_ = False
-                # submit_ = True
+                # submit_ = False
+                submit_ = True
                 if submit_:
                     submit(cfg_coarse_to_fork, cfg_detail, bid=20)
                 else:

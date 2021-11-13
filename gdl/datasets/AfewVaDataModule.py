@@ -72,6 +72,10 @@ class AfewVaDataModule(FaceDataModuleBase):
                  ring_size=None,
                  drop_last=False,
                  sampler=None,
+                 split_seed=0,
+                 train_fraction=0.6,
+                 val_fraction=0.2,
+                 test_fraction=0.2,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -111,10 +115,35 @@ class AfewVaDataModule(FaceDataModuleBase):
         else:
             self.image_path = Path(input_dir)
 
-        self.train_list = video_gts
-        self.val_list = video_gts
-        self.test_list = video_gts
+        self.seed = split_seed
+        np.random.seed(self.seed)
 
+        indices = np.arange(len(video_gts), dtype=np.int32) + 1
+        np.random.shuffle(indices)
+
+        self.train_fraction = train_fraction
+        self.val_fraction = val_fraction
+        self.test_fraction = test_fraction
+
+        assert self.train_fraction + self.val_fraction + self.test_fraction == 1.0
+
+        train_end = int(len(indices) * self.train_fraction)
+        val_end = int(len(indices) * ( self.train_fraction + self.val_fraction))
+
+        self.train_indices = indices[:train_end]
+        self.val_indices = indices[train_end:val_end]
+        self.test_indices = indices[val_end:]
+
+        # iterate over the training indices and create a list of the corresponding video names
+        self.train_list = OrderedDict()
+        self.val_list = OrderedDict()
+        self.test_list = OrderedDict()
+        for tr_i in self.train_indices:
+            self.train_list[f"{tr_i:03d}"] = video_gts[f"{tr_i:03d}"]
+        for v_i in self.val_indices:
+            self.val_list[f"{v_i:03d}"] = video_gts[f"{v_i:03d}"]
+        for t_i in self.test_indices:
+            self.test_list[f"{t_i:03d}"] = video_gts[f"{t_i:03d}"]
         # self.ignore_invalid = ignore_invalid
 
         self.train_batch_size = train_batch_size
@@ -354,16 +383,16 @@ class AfewVaDataModule(FaceDataModuleBase):
                 nn_distances = None
 
             return AfewVa(self.image_path, self.train_list, self.image_size, self.scale,
-                             im_transforms_train,
-                             ring_type=self.ring_type,
-                             ring_size=self.ring_size,
-                             load_emotion_feature=False,
-                             nn_indices_array=nn_indices,
-                             nn_distances_array= nn_distances,
-                             ext=self.processed_ext,
-                             bb_center_shift_x=self.bb_center_shift_x,
-                             bb_center_shift_y=self.bb_center_shift_y,
-                             )
+                          im_transforms_train,
+                          ring_type=self.ring_type,
+                          ring_size=self.ring_size,
+                          load_emotion_feature=False,
+                          nn_indices_array=nn_indices,
+                          nn_distances_array= nn_distances,
+                          ext=self.processed_ext,
+                          bb_center_shift_x=self.bb_center_shift_x,
+                          bb_center_shift_y=self.bb_center_shift_y,
+                          )
 
         return AfewVa(self.image_path, self.train_list, self.image_size, self.scale,
                          None,
@@ -418,17 +447,20 @@ class AfewVaDataModule(FaceDataModuleBase):
         #     sampler = make_balanced_sample_by_weights(self.training_set.a_sample_weights)
         # else:
         #     raise ValueError(f"Invalid sampler value: '{self.sampler}'")
-        dl = DataLoader(self.training_set, shuffle=sampler is None, num_workers=self.num_workers,
+        dl = DataLoader(self.training_set, shuffle=sampler is None, num_workers=self.num_workers, pin_memory=True,
                         batch_size=self.train_batch_size, drop_last=self.drop_last, sampler=sampler)
         return dl
 
     def val_dataloader(self):
-        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers,
-                          batch_size=self.val_batch_size, drop_last=self.drop_last)
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+                          batch_size=self.val_batch_size, drop_last=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers,
-                          batch_size=self.test_batch_size, drop_last=self.drop_last)
+        return [
+            self.val_dataloader(),
+            DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+                          batch_size=self.test_batch_size, drop_last=False)
+        ]
 
     def _get_retrieval_array(self, prefix, feature_label, dataset_size, feature_shape, feature_dtype, modifier='w+'):
         outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
@@ -1020,6 +1052,7 @@ if __name__ == "__main__":
              # ring_type="emonet_feature",
              # ring_size=4,
             augmentation=augmenter,
+
             )
 
     # print(dm.num_subsets)
@@ -1041,6 +1074,7 @@ if __name__ == "__main__":
     np.random.shuffle(idxs)
     for si in range(len(data)):
         sample = dm.training_set[idxs[si]]
+        print(sample.keys())
         dm.training_set.visualize_sample(sample)
 
     # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"

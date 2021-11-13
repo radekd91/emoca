@@ -2,6 +2,7 @@ from gdl_apps.DECA.test_and_finetune_deca import single_stage_deca_pass, get_che
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetDataModuleValTest, \
     AffectNetEmoNetSplitModuleValTest, AffectNetEmoNetSplitModule, AffectNetEmoNetSplitModuleTest
+from gdl.datasets.AfewVaDataModule import AfewVaDataModule
 from gdl.datasets.CombinedDataModule import CombinedDataModule
 from gdl.datasets.EmotioNetDataModule import EmotioNetDataModule
 from omegaconf import DictConfig, OmegaConf
@@ -108,6 +109,30 @@ def create_single_dm(cfg, data_class):
         )
 
         sequence_name = "EmotioNet"
+    if data_class == 'AfewVaDataModule':
+        dm = AfewVaDataModule(
+            input_dir=cfg.data.input_dir,
+            output_dir=cfg.data.output_dir,
+            processed_subfolder=cfg.data.processed_subfolder,
+            # ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
+            face_detector=cfg.data.face_detector,
+            face_detector_threshold=cfg.data.face_detector_threshold,
+            image_size=cfg.data.image_size,
+            scale=cfg.data.scale,
+            train_batch_size=cfg.learning.batch_size_train,
+            val_batch_size=cfg.learning.batch_size_val,
+            test_batch_size=cfg.learning.batch_size_test,
+            num_workers=cfg.data.num_workers,
+            augmentation=augmentation,
+            ring_type=None,
+            ring_size=None,
+            drop_last=cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else False,
+            sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
+            processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
+            # dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None,
+            # use_gt=cfg.data.use_gt if "use_gt" in cfg.data.keys() else True,
+        )
+        sequence_name = "AFEW-VA"
     else:
         raise ValueError(f"Invalid data_class '{data_class}'")
     return dm, sequence_name
