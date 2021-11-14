@@ -129,7 +129,7 @@ def create_single_dm(cfg, data_class):
             drop_last=cfg.data.drop_last if 'drop_last' in cfg.data.keys() and str(cfg.data.drop_last).lower() != "none" else False,
             sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
             processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
-            # dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None,
+            dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None,
             # use_gt=cfg.data.use_gt if "use_gt" in cfg.data.keys() else True,
         )
         sequence_name = "AFEW-VA"

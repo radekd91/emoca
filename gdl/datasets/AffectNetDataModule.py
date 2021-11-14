@@ -827,6 +827,18 @@ class AffectNetEmoNetSplitTestModule(AffectNetTestModule):
                                     None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
 
+class AffectNetEmoNetSplitTestModule2(AffectNetTestModule):
+
+    def setup(self, stage=None):
+        self.test_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation_representative_selection.csv"
+        if self.use_processed:
+            self.image_path = Path(self.output_dir) / "detections"
+        else:
+            self.image_path = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
+
+
 
 class AffectNetDataModuleValTest(AffectNetDataModule):
 

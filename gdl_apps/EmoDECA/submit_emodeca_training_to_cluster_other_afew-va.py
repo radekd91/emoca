@@ -52,7 +52,7 @@ def submit(cfg, bid=10):
     cuda_capability_requirement = 7
     mem_gb = 16
     # mem_gb = 30
-    args = f"{config_file.name} {-1} {0} {1} {project_name}"
+    args = f"{config_file.name} {-1} {1} {0} {project_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -111,36 +111,37 @@ def train_emodeca_on_cluster():
     # ]
 
     # # ## 2) Deep 3D Face
-    emodeca_default = "deep3dface"
-    emodeca_overrides = [
-        'model/backbone=deep3dface',
-        'model.mlp_dim=2048',
-        'model.predict_expression=false',
-        'data/datasets=afew_va',
-        'data/augmentations=none',
-        # 'data.num_workers=0',
-        'data.num_workers=16',
-        # 'learning/logging=none',
-    ]
+    # emodeca_default = "deep3dface"
+    # emodeca_overrides = [
+    #     'model/backbone=deep3dface',
+    #     'model.mlp_dim=2048',
+    #     'model.predict_expression=false',
+    #     'data/datasets=afew_va',
+    #     'data/augmentations=none',
+    #     # 'data.num_workers=0',
+    #     'data.num_workers=16',
+    #     # 'learning/logging=none',
+    # ]
     #
     # #3) EmoMGCNET
-    # emodeca_default = "emomgcnet"
-    # emodeca_overrides = [
-    #     # 'model.mlp_dim=2048',
-    #     'model.predict_expression=false',
-    #     '+data.dataset_type=AffectNetWithMGCNetPredictions',
-    #      'learning.gpu_memory_min_gb=12',
-    #     'data/augmentations=none',
-    #     'data.num_workers=16',
-    # ]
+    emodeca_default = "emomgcnet"
+    emodeca_overrides = [
+        # 'model.mlp_dim=2048',
+        'model.predict_expression=false',
+        'data/datasets=afew_va',
+        '+data.dataset_type=AfewVaWithMGCNetPredictions',
+         'learning.gpu_memory_min_gb=12',
+        'data/augmentations=none',
+        'data.num_workers=16',
+    ]
 
-    # ## 4) EmoExpNET
+    ## 4) EmoExpNET
     # emodeca_default = "emoexpnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
     #     'model.predict_expression=false',
-    #     '+data.dataset_type=AffectNetWithExpNetPredictions',
-    #     # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+    #     'data/datasets=afew_va',
+    #     '+data.dataset_type=AfewVaWithExpNetPredictions',
     #     'learning.gpu_memory_min_gb=12',
     #     'data/augmentations=none',
     #     'data.num_workers=16',
@@ -167,7 +168,13 @@ def train_emodeca_on_cluster():
             deca_stage=stage
         )
         GlobalHydra.instance().clear()
-        submit(cfg)
+
+        sub = False
+        # sub = True
+        if sub:
+            submit(cfg)
+        else:
+            train_emodeca.train_emodeca(cfg, -1,1,0, project_name)
 
 
 if __name__ == "__main__":
