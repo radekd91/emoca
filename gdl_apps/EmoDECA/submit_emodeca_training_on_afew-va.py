@@ -168,6 +168,7 @@ def train_emodeca_on_cluster():
         # 'data/datasets=affectnet_cluster',
         # 'data.data_class=AffectNetDataModuleValTest',
         'data/datasets=afew_va',
+        'data/augmentations=none',
         # 'data.num_workers=6',
         'data.num_workers=16',
         'learning.max_epochs=100',
@@ -300,8 +301,8 @@ def train_emodeca_on_cluster():
             )
             GlobalHydra.instance().clear()
 
-            # sub = True
-            sub = False
+            sub = True
+            # sub = False
             if sub:
                 submit(cfg)
             else:

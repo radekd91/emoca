@@ -52,7 +52,7 @@ def submit(cfg, bid=10):
     cuda_capability_requirement = 7
     mem_gb = 16
     # mem_gb = 30
-    args = f"{config_file.name}"
+    args = f"{config_file.name} {-1} {0} {1} {project_name}"
 
     execute_on_cluster(str(cluster_script_path),
                        args,
@@ -76,7 +76,7 @@ def submit(cfg, bid=10):
                        chmod=False,
                        modules_to_load=['cuda/11.4']
                        )
-    t.sleep(2)
+    # t.sleep(2)
 
 
 def train_emodeca_on_cluster():
@@ -87,51 +87,50 @@ def train_emodeca_on_cluster():
         [
             [
                 'model.use_identity=true',
-                'model.use_expression=true',
-                'data.sampler=balanced_expr'],
+                'model.use_expression=true',],
             []
         ],
         [
             [
                 'model.use_identity=false',
-                'model.use_expression=true',
-                'data.sampler=balanced_expr'],
+                'model.use_expression=true',],
             []
         ],
     ]
 
     # # ## 1) Emo 3DDFA_V2
-    emodeca_default = "emo3ddfa_v2"
-    emodeca_overrides = [
-        # 'model/backbone=3ddfa_v2',
-        'model/backbone=3ddfa_v2_resnet',
-        'model.mlp_dim=2048',
-        'data/datasets=afew_va',
-        'data/augmentations=none',
-        'data.num_workers=16',
-    ]
+    # emodeca_default = "emo3ddfa_v2"
+    # emodeca_overrides = [
+    #     # 'model/backbone=3ddfa_v2',
+    #     'model/backbone=3ddfa_v2_resnet',
+    #     'model.mlp_dim=2048',
+    #     'model.predict_expression=false',
+    #     'data/datasets=afew_va',
+    #     'data/augmentations=none',
+    #     'data.num_workers=16',
+    # ]
 
     # # ## 2) Deep 3D Face
-    # emodeca_default = "deep3dface"
-    # emodeca_overrides = [
-    #     'model/backbone=deep3dface',
-    #     'model.mlp_dim=2048',
-    # 'data/datasets=afew_va',
-    #     'data/augmentations=none',
-    #     # 'data.num_workers=0',
-    #     'data/datasets=affectnet_cluster_emonet_cleaned',
-    #     'data.num_workers=16',
-    #     # 'learning/logging=none',
-    # ]
+    emodeca_default = "deep3dface"
+    emodeca_overrides = [
+        'model/backbone=deep3dface',
+        'model.mlp_dim=2048',
+        'model.predict_expression=false',
+        'data/datasets=afew_va',
+        'data/augmentations=none',
+        # 'data.num_workers=0',
+        'data.num_workers=16',
+        # 'learning/logging=none',
+    ]
     #
     # #3) EmoMGCNET
     # emodeca_default = "emomgcnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
+    #     'model.predict_expression=false',
     #     '+data.dataset_type=AffectNetWithMGCNetPredictions',
     #      'learning.gpu_memory_min_gb=12',
     #     'data/augmentations=none',
-    #     'data/datasets=affectnet_cluster_emonet_cleaned',
     #     'data.num_workers=16',
     # ]
 
@@ -139,6 +138,7 @@ def train_emodeca_on_cluster():
     # emodeca_default = "emoexpnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
+    #     'model.predict_expression=false',
     #     '+data.dataset_type=AffectNetWithExpNetPredictions',
     #     # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
     #     'learning.gpu_memory_min_gb=12',

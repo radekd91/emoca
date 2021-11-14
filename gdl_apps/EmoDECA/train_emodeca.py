@@ -1,13 +1,13 @@
-# warning: external import collision
-# try:
-#     from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
-# except ImportError as e:
-#     print("Could not import EmoDeep3DFace")
-# # warning: external import collision
+warning: external import collision
 try:
-    from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
+    from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
 except ImportError as e:
-    print("Could not import Emo3DDFA_v2")
+    print("Could not import EmoDeep3DFace")
+# # warning: external import collision
+# try:
+#     from gdl.models.external.Emo3DDFA_V2 import Emo3DDFA_v2
+# except ImportError as e:
+#     print("Could not import Emo3DDFA_v2")
 
 import os, sys
 from pathlib import Path
