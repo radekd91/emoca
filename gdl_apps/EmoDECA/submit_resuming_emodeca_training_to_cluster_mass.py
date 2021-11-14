@@ -405,8 +405,9 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_1100038809156575863_EmoExpNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_5819872215734350943_EmoExpNet_shake_samp-balanced_expr_early"]
 
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-44-22_1355786939759696886_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # AFEW-VA
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-44-22_1355786939759696886_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-38_3263741745524855578_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
     # resume_folders += [

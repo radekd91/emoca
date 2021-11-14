@@ -109,7 +109,7 @@ def create_single_dm(cfg, data_class):
         )
 
         sequence_name = "EmotioNet"
-    if data_class == 'AfewVaDataModule':
+    elif data_class == 'AfewVaDataModule':
         dm = AfewVaDataModule(
             input_dir=cfg.data.input_dir,
             output_dir=cfg.data.output_dir,
