@@ -42,7 +42,8 @@ def data_preparation_function(cfg,path_to_affectnet, path_to_processed_affectnet
              path_to_processed_affectnet,
              processed_subfolder="processed_2021_Nov_07_23-37-18",
              scale=1.25,
-             test_batch_size=1
+             test_batch_size=1,
+             processed_ext="png",
     )
     return dm
 

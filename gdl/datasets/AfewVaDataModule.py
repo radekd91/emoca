@@ -68,7 +68,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                  scale=1.25,
                  bb_center_shift_x=0.,
                  bb_center_shift_y=0.,
-                 processed_ext=".jpg",
+                 processed_ext=".png",
                  device=None,
                  augmentation=None,
                  train_batch_size=64,
