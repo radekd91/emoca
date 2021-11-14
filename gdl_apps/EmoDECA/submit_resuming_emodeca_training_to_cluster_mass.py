@@ -469,7 +469,10 @@ def train_emodeca_on_cluster():
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-30_6952350694460824219_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
 
-    bid = 10
+
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-34-37_-2191187378900156758_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+
+    bid = 100
 
     stage = 1 # test stage
 

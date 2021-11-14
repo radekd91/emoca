@@ -61,24 +61,16 @@ def main():
     # final_model_nicknames["8867238002216919009"] = "EmoNet Original"
     final_model_nicknames["-4553010808430891931"] = "EmoNet Original"
     final_model_nicknames["-1082829187662313332"] = "EMOCA-SWIN 10" # why not identity? - running - to be replaced
-    # final_model_nicknames["5167931985213549187"] = "EMOCA-SWIN 5" # without identity
-    final_model_nicknames["-4070931720609577319"] = "EMOCA-SWIN 5" # with identity
+    final_model_nicknames["5167931985213549187"] = "EMOCA-SWIN 5" # wy not identity? - running - to be replaced
     final_model_nicknames["2839023693996900189"] = "EMOCA-SWIN 1"
     final_model_nicknames["1338802996723128481"] = "EMOCA-SWIN 1 DecaD" # why not identity? - running - to be replaced
-    # final_model_nicknames["-7671276478970211630"] = "EMOCA-ResNet 5" # without identity
-    final_model_nicknames["-3448168656212712789"] = "EMOCA-ResNet 5" # with identity
+    final_model_nicknames["-7671276478970211630"] = "EMOCA-ResNet 5" # why not identity? - running - to be replaced
     final_model_nicknames["-1667632836893565667"] = "EMOCA-ResNet 1"
-    final_model_nicknames["-7287099288123125386"] = "EMOCA-ResNet 1 DecaD"
-    final_model_nicknames["-7163854018263734313"] = "EMOCA-ResNet cos"
-    final_model_nicknames["-4010187096645607381"] = "EMOCA-ResNet L1"
-    # final_model_nicknames["4154598636886285872"] = "EMOCA-ResNet not balanced" # whithout identity
-    final_model_nicknames["-2939789230769256174"] = "EMOCA-ResNet not balanced" # with identity
-    final_model_nicknames["-7787195888843808313"] = "DECA" # with identity
-    final_model_nicknames["7017738612092177501"] = "DECA detail" # with identity and detail
-    # final_model_nicknames["-3858966055357166666"] = "MGCNet exp"
-    final_model_nicknames["5479712542688490481"] = "MGCNet exp+id"
-    # final_model_nicknames["683485161921968157"] = "ExpNet exp"
-    final_model_nicknames["6513288339971951709"] = "ExpNet exp+id"
+    final_model_nicknames["-716385401826373431"] = "EMOCA-ResNet cos"
+    final_model_nicknames["4010187096645607381"] = "EMOCA-ResNet L1"
+    final_model_nicknames["4154598636886285872"] = "EMOCA-ResNet not balanced"
+    final_model_nicknames["-3858966055357166666"] = "MGCNet exp"
+    final_model_nicknames["6513288339971951709"] = "ExpNet exp"
     # final_model_nicknames["6235434408676196359"] = "3DDFA-v2 mobilenet exp"
     # final_model_nicknames["6239115371183456618"] = "3DDFA-v2 mobilenet exp+id"
     # final_model_nicknames["5168057079614915647"] = "3DDFA-v2 exp"
@@ -101,16 +93,17 @@ def main():
         # print(f"link: {run.url}")
         # print("--------------------------")
 
+
         if id in final_model_nicknames.keys():
             entry_dict["run_name"] = final_model_nicknames[id]
         elif not leave_out_not_metioned_runs:
             entry_dict["run_name"] = run.name
         else:
             continue
-        #
-        # if 'deca_cfg' in cfg.model.value.keys():
-        #     print(f"run_name: {entry_dict['run_name']}: ")
-        #     print(cfg.model.value.deca_cfg.inout.full_run_dir)
+
+
+
+
 
         for ki, key in enumerate(keys_to_recover):
             entry_dict[metrics_columns[ki]] = run.summary_metrics[key]

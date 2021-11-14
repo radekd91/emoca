@@ -99,16 +99,16 @@ def train_emodeca_on_cluster():
     ]
 
     # # ## 1) Emo 3DDFA_V2
-    # emodeca_default = "emo3ddfa_v2"
-    # emodeca_overrides = [
-    #     # 'model/backbone=3ddfa_v2',
-    #     'model/backbone=3ddfa_v2_resnet',
-    #     'model.mlp_dim=2048',
-    #     'model.predict_expression=false',
-    #     'data/datasets=afew_va',
-    #     'data/augmentations=none',
-    #     'data.num_workers=16',
-    # ]
+    emodeca_default = "emo3ddfa_v2"
+    emodeca_overrides = [
+        # 'model/backbone=3ddfa_v2',
+        'model/backbone=3ddfa_v2_resnet',
+        'model.mlp_dim=2048',
+        'model.predict_expression=false',
+        'data/datasets=afew_va',
+        'data/augmentations=none',
+        'data.num_workers=16',
+    ]
 
     # # ## 2) Deep 3D Face
     # emodeca_default = "deep3dface"
@@ -135,17 +135,17 @@ def train_emodeca_on_cluster():
     #     'data.num_workers=16',
     # ]
 
-    # 4) EmoExpNET
-    emodeca_default = "emoexpnet"
-    emodeca_overrides = [
-        # 'model.mlp_dim=2048',
-        'model.predict_expression=false',
-        'data/datasets=afew_va',
-        '+data.dataset_type=AfewVaWithExpNetPredictions',
-        'learning.gpu_memory_min_gb=12',
-        'data/augmentations=none',
-        'data.num_workers=16',
-    ]
+    # # 4) EmoExpNET
+    # emodeca_default = "emoexpnet"
+    # emodeca_overrides = [
+    #     # 'model.mlp_dim=2048',
+    #     'model.predict_expression=false',
+    #     'data/datasets=afew_va',
+    #     '+data.dataset_type=AfewVaWithExpNetPredictions',
+    #     'learning.gpu_memory_min_gb=12',
+    #     'data/augmentations=none',
+    #     'data.num_workers=16',
+    # ]
 
     deca_conf = None
     deca_conf_path = None

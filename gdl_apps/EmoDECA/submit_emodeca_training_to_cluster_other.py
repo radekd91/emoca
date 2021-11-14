@@ -137,15 +137,15 @@ def train_emodeca_on_cluster():
     # ]
 
     # ## 4) EmoExpNET
-    # emodeca_default = "emoexpnet"
-    # emodeca_overrides = [
-    #     # 'model.mlp_dim=2048',
-    #     '+data.dataset_type=AffectNetWithExpNetPredictions',
-    #     # '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
-    #     'learning.gpu_memory_min_gb=12',
-    #     'data/augmentations=none',
-    #     'data.num_workers=16',
-    # ]
+    emodeca_default = "emoexpnet"
+    emodeca_overrides = [
+        # 'model.mlp_dim=2048',
+        # '+data.dataset_type=AffectNetWithExpNetPredictions',
+        '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+        'learning.gpu_memory_min_gb=12',
+        'data/augmentations=none',
+        'data.num_workers=16',
+    ]
 
     deca_conf = None
     deca_conf_path = None
