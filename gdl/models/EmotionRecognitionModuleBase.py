@@ -68,13 +68,25 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
     def predicts_valence(self):
         return self.config.model.predict_valence
 
+    def trains_valence(self):
+        return self.config.model.v_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.v_loss)
+
     # @property
     def predicts_arousal(self):
         return self.config.model.predict_arousal
 
+    def trains_arousal(self):
+        return self.config.model.a_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.a_loss)
+
     # @property
     def predicts_expression(self):
         return self.config.model.predict_expression
+
+    def trains_expression(self):
+        return self.config.model.exp_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.exp_loss)
 
     # @property
     def predicts_AUs(self):
@@ -82,6 +94,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             return self.config.model.predict_AUs
         return 0
 
+    def trains_AUs(self):
+        return self.config.model.AU_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.AU_loss)
 
     def forward(self, image):
         raise NotImplementedError()
@@ -218,19 +233,19 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             v_weight = None
             a_weight = None
 
-        if self.predicts_valence():
+        if self.predicts_valence() and self.trains_valence():
             losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
                                           pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                           sample_weights=v_weight)
-        if self.predicts_arousal():
+        if self.predicts_arousal() and self.trains_arousal():
             losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
                                           pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                           sample_weights=a_weight)
-        if self.predicts_arousal() and self.predicts_valence():
+        if self.predicts_arousal() and self.predicts_valence() and self.trains_arousal() and self.trains_valence():
             losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
                                       permit_dropping_corr=not training, sample_weights=v_weight)
 
-        if self.predicts_expression():
+        if self.predicts_expression() and self.trains_expression():
             losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                        self.config.model.expression_balancing, self.num_classes, pred_prefix=pred_prefix)
 
@@ -369,13 +384,13 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         expression_sample_weight = batch["expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
 
         gt = {}
-        if self.predicts_valence():
+        if self.predicts_valence() and self.trains_valence():
             valence_gt = batch["va"][:, 0:1]
             gt["valence"] = valence_gt
-        if self.predicts_arousal():
+        if self.predicts_arousal() and self.trains_arousal():
             arousal_gt = batch["va"][:, 1:2]
             gt["arousal"] = arousal_gt
-        if self.predicts_expression():
+        if self.predicts_expression() and self.trains_expression():
             expr_classification_gt = batch["affectnetexp"]
             gt["expr_classification"] = expr_classification_gt
             if "expression_weight" in batch.keys():
@@ -421,12 +436,15 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             arousal_gt = batch["va"][:, 1:2]
             gt["arousal"] = arousal_gt
         if self.predicts_expression():
-            expr_classification_gt = batch["affectnetexp"]
-            if "expression_weight" in batch.keys():
-                class_weight = batch["expression_weight"][0]
+            if "affectnetexp" in batch.keys():
+                expr_classification_gt = batch["affectnetexp"]
+                if "expression_weight" in batch.keys():
+                    class_weight = batch["expression_weight"][0]
+                else:
+                    class_weight = None
+                gt["expr_classification"] = expr_classification_gt
             else:
                 class_weight = None
-            gt["expr_classification"] = expr_classification_gt
         else:
             class_weight = None
 

@@ -110,18 +110,18 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-22_7185746630127973131_EmoExpNet_shake_samp-balanced_expr_early"]
 
     # image based
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_20-48-55_-7323345455363258885_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-05-57_1011354483695245068_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
-    resume_folders += [
-        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_20-48-55_-7323345455363258885_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-05-57_1011354483695245068_EmoSwin_swin_tiny_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early"]
 
     # # some of the best candidates
     # resume_folders += [

@@ -1028,8 +1028,8 @@ if __name__ == "__main__":
     #          ring_size=4
     #         )
     import yaml
-    # augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
-    augmenter = None
+    augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
+    # augmenter = None
 
     dm = AfewVaDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",

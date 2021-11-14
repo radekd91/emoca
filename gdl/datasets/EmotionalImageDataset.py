@@ -192,7 +192,7 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
     def _augment(self, img, seg_image, landmark, input_img_shape=None):
 
         if self.transforms is not None:
-            res = self.transforms(image=img,
+            res = self.transforms(image=img.astype(np.float32),
                                   segmentation_maps=seg_image,
                                   keypoints=landmark)
             if seg_image is not None and landmark is not None:
