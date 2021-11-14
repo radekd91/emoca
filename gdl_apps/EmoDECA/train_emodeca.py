@@ -87,9 +87,9 @@ def create_experiment_name(cfg, version=1):
     elif cfg.model.emodeca_type == "EmoDeep3DFace":
         experiment_name = "EmoDeep3DFace"
     elif cfg.model.emodeca_type == "EmoMLP":
-        if cfg.data.dataset_type == "AffectNetWithMGCNetPredictions":
+        if cfg.data.dataset_type in ["AffectNetWithMGCNetPredictions", "AfewVaWithMGCNetPredictions"]:
             experiment_name = "EmoMGCNet"
-        elif "AffectNetWithExpNetPredictions" in cfg.data.dataset_type:
+        elif "AffectNetWithExpNetPredictions" in cfg.data.dataset_type or cfg.data.dataset_type in ["AfewVaWithExpNetPredictions"]:
             experiment_name = "EmoExpNet"
         else:
             raise NotImplementedError(f"Uknown data type {cfg.data.dataset_type} for {cfg.model.emodeca_type}")
