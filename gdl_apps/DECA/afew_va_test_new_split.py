@@ -40,9 +40,7 @@ def data_preparation_function(cfg,path_to_affectnet, path_to_processed_affectnet
     dm = AfewVaDataVisTestModule(
             path_to_affectnet,
              path_to_processed_affectnet,
-             # processed_subfolder="processed_2021_Apr_02_03-13-33",
-             processed_subfolder="processed_2021_Apr_05_15-22-18",
-             mode="manual",
+             processed_subfolder="processed_2021_Nov_07_23-37-18",
              scale=1.25,
              test_batch_size=1
     )
