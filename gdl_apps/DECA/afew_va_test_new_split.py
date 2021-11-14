@@ -3,7 +3,7 @@ from gdl_apps.DECA.interactive_deca_decoder import load_deca
 from omegaconf import DictConfig, OmegaConf
 import os, sys
 from pathlib import Path
-from gdl.datasets.AfewVaDataModule import AfewVaDataModule
+from gdl.datasets.AfewVaDataModule import AfewVaDataVisTestModule
 
 
 def load_model(path_to_models,
