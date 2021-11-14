@@ -1,6 +1,7 @@
 # @package data
 data_class: AfewVaDataModule
-input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/afew-va/
+input_dir: /is/cluster/work/rdanecek/data/afew-va_not_processed/
+#input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/afew-va/
 output_dir: /is/cluster/work/rdanecek/data/afew-va/
 processed_subfolder: processed_2021_Nov_07_23-37-18
 num_workers: 6

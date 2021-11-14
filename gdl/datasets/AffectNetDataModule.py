@@ -1242,27 +1242,6 @@ class AffectNetWithPredictions(AffectNet):
         additional["expcode"] = torch.from_numpy(exp_prediction)
         return additional
 
-    # def _get_sample(self, index):
-    #     sample = super()._get_sample(index)
-    #
-    #     #TODO: what if prediction not found? we have about 420068 processed images.
-    #     # The predicitons could have failed for some
-    #     im_rel_path = sample["path"]
-    #     im_rel_path = Path(im_rel_path).relative_to(self.image_path)
-    #     im_rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
-    #
-    #     prediction_path = Path(self.image_path).parent / "predictions" / self.predictor / im_rel_path
-    #     shape_prediction_path = prediction_path / (self.shape_prediction_name + ".npy")
-    #     exp_prediction_path = prediction_path / (self.exp_prediction_name + ".npy")
-    #
-    #     shape_prediction = np.load(shape_prediction_path).squeeze()
-    #     exp_prediction = np.load(exp_prediction_path).squeeze()
-    #
-    #     sample["shapecode"] = torch.from_numpy(shape_prediction)
-    #     sample["expcode"] = torch.from_numpy(exp_prediction)
-    #
-    #     return sample
-
 
 class AffectNetWithMGCNetPredictions(AffectNetWithPredictions):
 
