@@ -38,7 +38,9 @@ def submit(cfg, bid=10):
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = cfg.learning.gpu_memory_min_gb * 1024
+    # gpu_mem_requirement_mb = cfg.learning.gpu_memory_min_gb * 1024
+    gpu_mem_requirement_mb = 20 * 1024
+    # gpu_mem_requirement_mb_max = 40 * 1024
     # gpu_mem_requirement_mb = None
     cpus = cfg.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
@@ -60,6 +62,7 @@ def submit(cfg, bid=10):
                        python_bin=python_bin,
                        username=username,
                        gpu_mem_requirement_mb=gpu_mem_requirement_mb,
+                       # gpu_mem_requirement_mb_max=gpu_mem_requirement_mb_max,
                        cpus=cpus,
                        mem_gb=mem_gb,
                        gpus=gpus,
@@ -223,8 +226,8 @@ def train_emodeca_on_cluster():
     # #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-32-49_-6879167987895418873_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
 
     run_names = []
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-56-46_5920957646486902084_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-56-46_5920957646486902084_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
     run_names += [
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-56-39_-8971851772753744759_ExpDECA_DecaD_para_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
     run_names += [
@@ -297,8 +300,8 @@ def train_emodeca_on_cluster():
             )
             GlobalHydra.instance().clear()
 
-            sub = True
-            # sub = False
+            # sub = True
+            sub = False
             if sub:
                 submit(cfg)
             else:

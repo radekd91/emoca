@@ -420,6 +420,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         self._log_losses_and_metrics(losses, metrics, "train")
         total_loss = losses["total"]
+        # print("total_loss: ", total_loss.item())
         return total_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
@@ -481,6 +482,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         self._log_losses_and_metrics(losses, metrics, "val")
         # visdict = self._test_visualization(values, batch, batch_idx, dataloader_idx=dataloader_idx)
         total_loss = losses["total"]
+        # print("total_loss: ", total_loss.item())
         return total_loss
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
@@ -576,11 +578,29 @@ def v_or_a_loss(loss, pred, gt, term_weights,
             metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
             metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
 
+            if metrics[pred_prefix + f"{measure[0]}_pcc"].isnan().any().item():
+                print(f"[WARNING] pcc is nan")
+                metrics[pred_prefix + f"{measure[0]}_pcc"] = torch.zeros_like(metrics[pred_prefix + f"{measure[0]}_pcc"])
+
+            if metrics[pred_prefix + f"{measure[0]}_ccc"].isnan().any().item():
+                print(f"[WARNING] ccc is nan")
+                metrics[pred_prefix + f"{measure[0]}_ccc"] = torch.zeros_like(metrics[pred_prefix + f"{measure[0]}_pcc"])
+
             if sample_weights is not None:
                 metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = PCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
                 metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = CCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
+                if metrics[pred_prefix + f"{measure[0]}_pcc_weighted"].isnan().any().item():
+                    metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = torch.zeros_like(
+                        metrics[pred_prefix + f"{measure[0]}_pcc_weighted"])
+                    print(f"[WARNING] pcc weighted is nan")
+
+                if metrics[pred_prefix + f"{measure[0]}_ccc_weighted"].isnan().any().item():
+                    metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = torch.zeros_like(
+                        metrics[pred_prefix + f"{measure[0]}_pcc_weighted"])
+                    print(f"[WARNING] ccc weighted is nan")
+
         elif permit_dropping_corr:
             pass
         else:

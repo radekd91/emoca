@@ -460,13 +460,13 @@ class AfewVaDataModule(FaceDataModuleBase):
         return dl
 
     def val_dataloader(self):
-        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+        return DataLoader(self.validation_set, shuffle=True, num_workers=self.num_workers, pin_memory=True,
                           batch_size=self.val_batch_size, drop_last=False)
 
     def test_dataloader(self):
         return [
             self.val_dataloader(),
-            DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+            DataLoader(self.test_set, shuffle=True, num_workers=self.num_workers, pin_memory=True,
                           batch_size=self.test_batch_size, drop_last=False)
         ]
 
@@ -756,6 +756,7 @@ class AfewVa(EmotionalImageDatasetBase):
 
 
     def __len__(self):
+        # return 100
         return self.size
 
     def _load_image(self, index):

@@ -38,7 +38,9 @@ def submit(cfg, bid=10):
     # python_bin = 'python'
     python_bin = '/home/rdanecek/anaconda3/envs/<<ENV>>/bin/python'
     username = 'rdanecek'
-    gpu_mem_requirement_mb = cfg.learning.gpu_memory_min_gb * 1024
+    # gpu_mem_requirement_mb = cfg.learning.gpu_memory_min_gb * 1024
+    gpu_mem_requirement_mb = 20 * 1024
+    # gpu_mem_requirement_mb_max = 40 * 1024
     # gpu_mem_requirement_mb = None
     cpus = cfg.data.num_workers + 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
     # cpus = 2 # 1 for the training script, 1 for wandb or other loggers (and other stuff), the rest of data loading
@@ -60,6 +62,7 @@ def submit(cfg, bid=10):
                        python_bin=python_bin,
                        username=username,
                        gpu_mem_requirement_mb=gpu_mem_requirement_mb,
+                       gpu_mem_requirement_mb_max=gpu_mem_requirement_mb_max,
                        cpus=cpus,
                        mem_gb=mem_gb,
                        gpus=gpus,
@@ -256,7 +259,7 @@ def train_emodeca_on_cluster():
         sub = True
         # sub = False
         if sub:
-            submit(cfg)
+            submit(cfg, bid=30)
         else:
             cfg.data.num_workers = 2
             train_emodeca.train_emodeca(cfg, 0, True, True, project_name)
