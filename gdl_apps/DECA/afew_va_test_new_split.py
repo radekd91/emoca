@@ -97,7 +97,7 @@ def main():
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     conf[mode].inout.random_id = str(hash(time))
     print(f"Beginning testing for '{run_name}' in mode '{mode}'")
-    single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net",
+    single_stage_deca_pass(deca, conf[mode], stage="test", prefix="afew_test_new_split",
                            dm=dm, project_name_="AfewVATestVis")
     print("We're done y'all")
 

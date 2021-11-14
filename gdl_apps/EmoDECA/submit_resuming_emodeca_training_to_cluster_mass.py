@@ -405,6 +405,69 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_1100038809156575863_EmoExpNet_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_13-47-23_5819872215734350943_EmoExpNet_shake_samp-balanced_expr_early"]
 
+    resume_folders += [
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-44-22_1355786939759696886_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-38_3263741745524855578_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-38_-2173935624180351936_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-37_6419514851386673597_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-37_5804902462619208346_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-27_4690126832397182704_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-27_2517176429429832703_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_05-43-04_4390452123163373707_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-52_5063894700880742144_EmoSwin_swin_base_patch4_window7_224_shake_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-08_-6557913516496940171_EmoNet_shake_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-06_5824575168153882277_EmoSwin_swin_tiny_patch4_window7_224_shake_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-03_1650355822631362210_EmoCnn_vgg19_bn_shake_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-50-47_2165311197696423212_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-50-45_-1078162224083866132_EmoCnn_resnet50_shake_Aug_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-50-34_-4147098627249931340_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-50-19_-2753470226601469411_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-57_-8073653537661498145_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-57_8253184588845804991_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-56_-769750103465679934_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-53_-1178328002648582111_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-51_3416645760118062473_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-49_5394202179722405086_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-48_-6639782345534213702_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-47_9100739897692345548_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-46_1477440115901307368_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-46_9029272801247232242_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-44_-830365848295859353_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-40_815930939297900178_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-30_-4866079105883540143_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-30_8644805620872834117_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+    # resume_folders += [
+    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-49-30_6952350694460824219_EmoDECA_AfewV_ExpDECA_nl-4BatchNorm1d_exp_jaw_shake_early"]
+
     bid = 10
 
     stage = 1 # test stage

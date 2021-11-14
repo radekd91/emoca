@@ -300,6 +300,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        return None
         valence_pred = output_values["valence"]
         arousal_pred = output_values["arousal"]
         expr_classification_pred = output_values["expr_classification"]
