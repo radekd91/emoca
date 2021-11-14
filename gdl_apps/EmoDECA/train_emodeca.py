@@ -1,4 +1,4 @@
-warning: external import collision
+#warning: external import collision
 try:
     from gdl.models.external.EmoDeep3DFace import EmoDeep3DFace
 except ImportError as e:
