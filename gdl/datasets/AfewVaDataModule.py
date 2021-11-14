@@ -31,6 +31,7 @@ from collections import OrderedDict
 from munch import Munch
 import json
 import bisect
+from gdl.utils.other import class_from_str
 
 
 # def make_class_balanced_sampler(labels):
@@ -47,6 +48,12 @@ import bisect
 #
 # def make_balanced_sample_by_weights(weights):
 #     return WeightedRandomSampler(weights, len(weights))
+
+
+
+def new_affewva(class_name):
+    dataset_class = class_from_str(class_name, sys.modules[__name__])
+    return dataset_class
 
 
 class AfewVaDataModule(FaceDataModuleBase):
@@ -76,6 +83,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                  train_fraction=0.6,
                  val_fraction=0.2,
                  test_fraction=0.2,
+                 dataset_type=None,
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -86,7 +94,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                          scale=scale,
                          processed_ext=processed_ext,
                          device=device)
-
+        self.dataset_type = dataset_type or "AfewVa"
         # # self.subsets = sorted([f.name for f in (Path(input_dir) / "Manually_Annotated" / "Manually_Annotated_Images").glob("*") if f.is_dir()])
         # self.input_dir = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
         # train = pd.read_csv(self.input_dir.parent / "training.csv")
@@ -382,7 +390,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                 nn_indices = None
                 nn_distances = None
 
-            return AfewVa(self.image_path, self.train_list, self.image_size, self.scale,
+            return new_affewva(self.dataset_type)(self.image_path, self.train_list, self.image_size, self.scale,
                           im_transforms_train,
                           ring_type=self.ring_type,
                           ring_size=self.ring_size,
@@ -394,7 +402,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                           bb_center_shift_y=self.bb_center_shift_y,
                           )
 
-        return AfewVa(self.image_path, self.train_list, self.image_size, self.scale,
+        return new_affewva(self.dataset_type)(self.image_path, self.train_list, self.image_size, self.scale,
                          None,
                          ring_type=None,
                          ring_size=None,
@@ -406,7 +414,7 @@ class AfewVaDataModule(FaceDataModuleBase):
 
     def setup(self, stage=None):
         self.training_set = self._new_training_set()
-        self.validation_set = AfewVa(self.image_path, self.val_list, self.image_size, self.scale,
+        self.validation_set = new_affewva(self.dataset_type)(self.image_path, self.val_list, self.image_size, self.scale,
                                         None,
                                         ring_type=None,
                                         ring_size=None,
@@ -416,7 +424,7 @@ class AfewVaDataModule(FaceDataModuleBase):
                                         )
 
         self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
-        self.test_set = AfewVa(self.image_path, self.test_list, self.image_size, self.scale,
+        self.test_set = new_affewva(self.dataset_type)(self.image_path, self.test_list, self.image_size, self.scale,
                                     None,
                                   ring_type=None,
                                   ring_size=None,
@@ -780,17 +788,27 @@ class AfewVa(EmotionalImageDatasetBase):
 
         return input_img, facial_landmarks, valence, arousal, im_file
 
+    def _load_additional_data(self, im_rel_path):
+        return {}
 
     def _get_sample(self, index):
+        num_fails = 0
+        max_fails = 50
         try:
             input_img, facial_landmarks, valence, arousal, image_path  = self._load_image(index)
+            additional_data = self._load_additional_data(Path(image_path).relative_to(self.image_path))
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
             while True:
+                num_fails += 1
+                if num_fails >= max_fails:
+                    # something must have gone serious wrong. Nothing loads, so throw an exception
+                    raise e
                 index += 1
                 index = index % len(self)
                 try:
                     input_img, facial_landmarks, valence, arousal, image_path = self._load_image(index)
+                    additional_data = self._load_additional_data(Path(image_path).relative_to(self.image_path))
                     success = True
                 except Exception as e2:
                     success = False
@@ -862,6 +880,7 @@ class AfewVa(EmotionalImageDatasetBase):
             # "valence_sample_weight": torch.tensor([self.v_sample_weights[index],], dtype=torch.float32),
             # "arousal_sample_weight": torch.tensor([self.a_sample_weights[index],], dtype=torch.float32),
             # "va_sample_weight": torch.tensor([self.va_sample_weights[index],], dtype=torch.float32),
+            **additional_data
         }
 
         if landmark is not None:
@@ -998,6 +1017,54 @@ def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin
     print(f"Selected samples saved to '{output_file}'")
 
 
+class AfewVaNetWithPredictions(AfewVa):
+
+    def __init__(self, predictor, shape_name, exp_name, *args, **kwargs):
+        super().__init__( *args, **kwargs)
+        self.predictor = predictor
+        self.shape_prediction_name = shape_name
+        self.exp_prediction_name = exp_name
+
+    def _load_additional_data(self, im_rel_path):
+        rel_path = Path(im_rel_path).parent / Path(im_rel_path).stem
+        prediction_path = Path(self.image_path).parent / "afew-va" / "not_processed" / "predictions" / self.predictor / rel_path
+        shape_prediction_path = prediction_path / (self.shape_prediction_name + ".npy")
+        exp_prediction_path = prediction_path / (self.exp_prediction_name + ".npy")
+
+        shape_prediction = np.load(shape_prediction_path).squeeze()
+        exp_prediction = np.load(exp_prediction_path).squeeze()
+
+        additional = {}
+        additional["shapecode"] = torch.from_numpy(shape_prediction)
+        additional["expcode"] = torch.from_numpy(exp_prediction)
+        return additional
+
+class AfewVaWithMGCNetPredictions(AfewVaNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "MGCNet"
+        shape_name = "shape_coeffs"
+        exp_name = "exp_coeffs"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+
+
+class AfewVaWithExpNetPredictions(AfewVaNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "ExpNet"
+        shape_name = "shape"
+        exp_name = "exp"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+
+
+class AAfewVaWithExpNetPredictionsMyCrop(AfewVaNetWithPredictions):
+
+    def __init__(self, *args, **kwargs):
+        predictor = "ExpNet_my_crops"
+        shape_name = "shape"
+        exp_name = "exp"
+        super().__init__(predictor, shape_name, exp_name, *args, **kwargs)
+
 
 if __name__ == "__main__":
     # d = AffectNetOriginal(
@@ -1028,16 +1095,19 @@ if __name__ == "__main__":
     #          ring_size=4
     #         )
     import yaml
-    augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
-    # augmenter = None
+    # augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
+    augmenter = None
 
     dm = AfewVaDataModule(
              # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-             "/ps/project_cifs/EmotionalFacialAnimation/data/afew-va/",
+             # "/ps/project_cifs/EmotionalFacialAnimation/data/afew-va/",
+             # "/ps/project/EmotionalFacialAnimation/data/afew-va/",
+             "/is/cluster/work/rdanecek/data/afew-va_not_processed/",
              # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
              # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
              "/is/cluster/work/rdanecek/data/afew-va/",
-             processed_subfolder="processed_2021_Nov_07_23-37-18",
+             # processed_subfolder="processed_2021_Nov_07_23-37-18",
+             processed_subfolder="not_processed",
              processed_ext=".png",
              # scale=1.7,
              # scale=1.25,
@@ -1052,7 +1122,8 @@ if __name__ == "__main__":
              # ring_type="emonet_feature",
              # ring_size=4,
             augmentation=augmenter,
-
+            # dataset_type="AfewVaWithMGCNetPredictions",
+            dataset_type="AfewVaWithExpNetPredictions",
             )
 
     # print(dm.num_subsets)
