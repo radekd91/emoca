@@ -639,6 +639,17 @@ class AfewVaDataVisTestModule(AfewVaDataModule):
                                bb_center_shift_y=self.bb_center_shift_y,
                                   )
 
+    def val_dataloader(self):
+        return DataLoader(self.validation_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+                          batch_size=self.val_batch_size, drop_last=False)
+
+    def test_dataloader(self):
+        return [
+            self.val_dataloader(),
+            DataLoader(self.test_set, shuffle=False, num_workers=self.num_workers, pin_memory=True,
+                          batch_size=self.test_batch_size, drop_last=False)
+        ]
+
 
 class AfewVa(EmotionalImageDatasetBase):
 
