@@ -44,7 +44,7 @@ def data_preparation_function(cfg,path_to_affectnet, path_to_processed_affectnet
              scale=1.25,
         val_batch_size=1,
              test_batch_size=1,
-             processed_ext="png",
+             processed_ext=".png",
                 split_seed=0,
                 train_fraction=0.6,
                 val_fraction=0.2,
