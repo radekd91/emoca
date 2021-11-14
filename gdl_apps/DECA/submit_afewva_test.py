@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import affectnet_test_new_split  as script
+import afew_va_test_new_split  as script
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -59,7 +59,7 @@ def submit(cfg, model_folder_name, mode, bid=10):
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement,
                        max_concurrent_jobs = 20,
-                       concurrency_tag = "aftest2",
+                       concurrency_tag = "afewva_test",
                        modules_to_load=['cuda/11.4'],
                        )
     # t.sleep(1)

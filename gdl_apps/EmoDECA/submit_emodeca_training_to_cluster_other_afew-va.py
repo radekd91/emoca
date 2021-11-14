@@ -124,28 +124,28 @@ def train_emodeca_on_cluster():
     # ]
     #
     # #3) EmoMGCNET
-    emodeca_default = "emomgcnet"
-    emodeca_overrides = [
-        # 'model.mlp_dim=2048',
-        'model.predict_expression=false',
-        'data/datasets=afew_va',
-        '+data.dataset_type=AfewVaWithMGCNetPredictions',
-         'learning.gpu_memory_min_gb=12',
-        'data/augmentations=none',
-        'data.num_workers=16',
-    ]
-
-    ## 4) EmoExpNET
-    # emodeca_default = "emoexpnet"
+    # emodeca_default = "emomgcnet"
     # emodeca_overrides = [
     #     # 'model.mlp_dim=2048',
     #     'model.predict_expression=false',
     #     'data/datasets=afew_va',
-    #     '+data.dataset_type=AfewVaWithExpNetPredictions',
-    #     'learning.gpu_memory_min_gb=12',
+    #     '+data.dataset_type=AfewVaWithMGCNetPredictions',
+    #      'learning.gpu_memory_min_gb=12',
     #     'data/augmentations=none',
     #     'data.num_workers=16',
     # ]
+
+    # 4) EmoExpNET
+    emodeca_default = "emoexpnet"
+    emodeca_overrides = [
+        # 'model.mlp_dim=2048',
+        'model.predict_expression=false',
+        'data/datasets=afew_va',
+        '+data.dataset_type=AfewVaWithExpNetPredictions',
+        'learning.gpu_memory_min_gb=12',
+        'data/augmentations=none',
+        'data.num_workers=16',
+    ]
 
     deca_conf = None
     deca_conf_path = None
@@ -169,8 +169,8 @@ def train_emodeca_on_cluster():
         )
         GlobalHydra.instance().clear()
 
-        sub = False
-        # sub = True
+        # sub = False
+        sub = True
         if sub:
             submit(cfg)
         else:

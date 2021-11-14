@@ -612,6 +612,34 @@ class AfewVaDataModule(FaceDataModuleBase):
                          )
 
 
+class AfewVaDataVisTestModule(AfewVaDataModule):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+    def setup(self, stage=None):
+        self.training_set = None
+        self.validation_set = TestSubsetAfewVa(self.image_path, self.val_list, self.image_size, self.scale,
+                                        None,
+                                        ring_type=None,
+                                        ring_size=None,
+                                        ext=self.processed_ext,
+                                     bb_center_shift_x=self.bb_center_shift_x,
+                                     bb_center_shift_y=self.bb_center_shift_y,
+                                        )
+
+        self.test_dataframe_path = Path(self.output_dir) / "validation_representative_selection.csv"
+        self.test_set = TestSubsetAfewVa(self.image_path, self.test_list, self.image_size, self.scale,
+                                    None,
+                                  ring_type=None,
+                                  ring_size=None,
+                                  ext=self.processed_ext,
+                               bb_center_shift_x=self.bb_center_shift_x,
+                               bb_center_shift_y=self.bb_center_shift_y,
+                                  )
+
+
 class AfewVa(EmotionalImageDatasetBase):
 
     def __init__(self,
@@ -1039,6 +1067,20 @@ class AfewVaNetWithPredictions(AfewVa):
         additional["shapecode"] = torch.from_numpy(shape_prediction)
         additional["expcode"] = torch.from_numpy(exp_prediction)
         return additional
+
+
+class TestSubsetAfewVa(AfewVa):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.step = 20
+
+    def __len__(self):
+        return super().__len__() // self.step
+
+    def __getitem__(self,index):
+        return super().__getitem__(index*self.step)
+
 
 class AfewVaWithMGCNetPredictions(AfewVaNetWithPredictions):
 
