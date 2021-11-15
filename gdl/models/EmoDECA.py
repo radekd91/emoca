@@ -140,7 +140,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
         return values
 
     def forward(self, batch):
-        values = self.deca.encode(batch)
+        values = self.deca.encode(batch, training=False)
         shapecode = values['shapecode']
         # texcode = values['texcode']
         expcode = values['expcode']

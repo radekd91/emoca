@@ -174,6 +174,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         return caption
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        return None
         batch_size = input_batch['image'].shape[0]
 
         visdict = {}
