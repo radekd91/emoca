@@ -1089,23 +1089,30 @@ class AffectNet(EmotionalImageDatasetBase):
         if num_skips > 0:
             print(f"Warning: skipped {num_skips} samples do to failed loading. In total {self.num_skips} samples skipped")
 
-        left = self.df.loc[index]["face_x"]
-        top = self.df.loc[index]["face_y"]
-        right = left + self.df.loc[index]["face_width"]
-        bottom = top + self.df.loc[index]["face_height"]
-        facial_landmarks = self.df.loc[index]["facial_landmarks"]
+
         expression = self.df.loc[index]["expression"]
         valence = self.df.loc[index]["valence"]
         arousal = self.df.loc[index]["arousal"]
+        facial_landmarks = self.df.loc[index]["facial_landmarks"]
 
 
         input_img_shape = input_img.shape
 
         if not self.use_processed:
             # Use AffectNet as is provided (their bounding boxes, and landmarks, no segmentation)
+            # left = self.df.loc[index]["face_x"]
+            # top = self.df.loc[index]["face_y"]
+            # right = left + self.df.loc[index]["face_width"]
+            # bottom = top + self.df.loc[index]["face_height"]
+            input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
+            left = input_landmarks[:,0].min()
+            right = input_landmarks[:,0].max()
+            top = input_landmarks[:,1].min()
+            bottom = input_landmarks[:,1].max()
+            # old_size, center = bbox2point(left, right, top, bottom, type='bboxes')
             old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
             size = int(old_size * self.scale)
-            input_landmarks = np.array([float(f) for f in facial_landmarks.split(";")]).reshape(-1,2)
+
             img, landmark = bbpoint_warp(input_img, center, size, self.image_size, landmarks=input_landmarks)
             img *= 255.
 

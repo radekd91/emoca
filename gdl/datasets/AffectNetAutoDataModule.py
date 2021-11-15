@@ -57,7 +57,7 @@ if __name__ == '__main__':
         "/is/cluster/work/rdanecek/data/affectnet/",
         # processed_subfolder="",
         processed_ext=".jpg",
-        mode="manual",
+        mode="auto",
         scale=1.25,
         image_size=224,
         # bb_center_shift_x=0,

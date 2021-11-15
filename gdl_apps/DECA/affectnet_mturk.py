@@ -45,6 +45,7 @@ def data_preparation_function(cfg, path_to_affectnet, path_to_processed_affectne
              scale=1.25,
              test_batch_size=1,
              image_size=224,
+             ignore_invalid=True,
     )
     return dm
 
