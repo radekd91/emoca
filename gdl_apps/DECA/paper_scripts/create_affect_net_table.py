@@ -152,9 +152,9 @@ def main():
         else:
             continue
         #
-        if 'deca_cfg' in cfg.model.value.keys():
-            print(f"run_name: {entry_dict['run_name']}: ")
-            print(cfg.model.value.deca_cfg.inout.full_run_dir)
+        # if 'deca_cfg' in cfg.model.value.keys():
+        #     print(f"run_name: {entry_dict['run_name']}: ")
+        #     print(cfg.model.value.deca_cfg.inout.full_run_dir)
 
         for ki, key in enumerate(keys_to_recover):
             entry_dict[metrics_columns[ki]] = run.summary_metrics[key]
