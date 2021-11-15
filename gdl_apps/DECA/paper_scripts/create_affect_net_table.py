@@ -80,7 +80,8 @@ def main():
     # final_model_nicknames["-3858966055357166666"] = "MGCNet exp"
     final_model_nicknames["5479712542688490481"] = "MGCNet exp+id"
     # final_model_nicknames["683485161921968157"] = "ExpNet exp" # why nan?
-    final_model_nicknames["6513288339971951709"] = "ExpNet exp+id" # why nan?
+    # final_model_nicknames["6513288339971951709"] = "ExpNet exp+id" # why nan?
+    final_model_nicknames["4468883309025587637"] = "ExpNet exp+id" # no nan
     # final_model_nicknames["6235434408676196359"] = "3DDFA-v2 mobilenet exp"
     # final_model_nicknames["6239115371183456618"] = "3DDFA-v2 mobilenet exp+id"
     # final_model_nicknames["5168057079614915647"] = "3DDFA-v2 exp"

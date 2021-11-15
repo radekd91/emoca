@@ -80,6 +80,7 @@ def main():
     tags = run.tags
     conf["coarse"]["learning"]["tags"] = tags
     conf["detail"]["learning"]["tags"] = tags
+    tags += ["test"]
 
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1

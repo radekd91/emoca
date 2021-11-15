@@ -624,8 +624,8 @@ def train_emodeca_on_cluster():
 
 
     # TRYING EMODECA WITH detail
-    run_names += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-5406564322738469847_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-5406564322738469847_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-4816207216138971302_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
     # run_names += [
@@ -693,8 +693,8 @@ def train_emodeca_on_cluster():
             )
             GlobalHydra.instance().clear()
 
-            sub = False
-            # sub = True
+            # sub = False
+            sub = True
             if sub:
                 submit(cfg, bid=100)
             else:

@@ -162,7 +162,7 @@ def train_emodeca_on_cluster():
         # 'model/settings=AU_emotionet_bce',
         # 'model/settings=AU_emotionet_bce_weighted',
         # '+model.mlp_norm_layer=BatchNorm1d',
-        'model.use_identity=True', #
+        # 'model.use_identity=True', #
         # 'data/augmentations=default',
         # 'learning/optimizer=adabound',
         # 'data/datasets=affectnet_cluster',
@@ -179,24 +179,24 @@ def train_emodeca_on_cluster():
         # 'learning/training=emotionet',
     ]
 
-    # deca_conf_path = None
-    # deca_conf = "deca_train_detail_cluster"
-    # stage = None
-    # fixed_overrides_deca = [
-    #     # 'model/settings=coarse_train',
-    #     'model/settings=detail_train',
-    #     'model.resume_training=True',  # load the original DECA model
-    #     'model.useSeg=rend', 'model.idw=0',
-    #     'learning/batching=single_gpu_coarse',
-    #     # 'learning/batching=single_gpu_detail',
-    #     #  'model.shape_constrain_type=None',
-    #      'model.detail_constrain_type=None',
-    #     # 'data/datasets=affectnet_cluster',
-    #     'data/datasets=emotionet_cluster',
-    #     'learning.batch_size_test=1',
-    #     # 'data/augmentations=default',
-    #     # 'data/datasets=emotionet_cluster',
-    # ]
+    deca_conf_path = None
+    deca_conf = "deca_train_detail_cluster"
+    stage = None
+    fixed_overrides_deca = [
+        # 'model/settings=coarse_train',
+        'model/settings=detail_train',
+        'model.resume_training=True',  # load the original DECA model
+        'model.useSeg=rend', 'model.idw=0',
+        'learning/batching=single_gpu_coarse',
+        # 'learning/batching=single_gpu_detail',
+        #  'model.shape_constrain_type=None',
+         'model.detail_constrain_type=None',
+        # 'data/datasets=affectnet_cluster',
+        'data/datasets=emotionet_cluster',
+        'learning.batch_size_test=1',
+        # 'data/augmentations=default',
+        # 'data/datasets=emotionet_cluster',
+    ]
 
     # # # EMOEXPDECA
     # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
@@ -290,51 +290,51 @@ def train_emodeca_on_cluster():
     tags = None
     api = wandb.Api()
 
-    # stage = 'detail'
-    stage = 'coarse'
+    stage = 'detail'
+    # stage = 'coarse'
 
-    for deca_conf_path in  run_names:
-        name = str(Path(deca_conf_path).name)
-        idx = name.find("ExpDECA")
-        run_id = name[:idx-1]
-        run = api.run("rdanecek/EmotionalDeca/" + run_id)
-        tags = set(run.tags)
+    # # for deca_conf_path in  run_names:
+    # name = str(Path(deca_conf_path).name)
+    # idx = name.find("ExpDECA")
+    # run_id = name[:idx-1]
+    # run = api.run("rdanecek/EmotionalDeca/" + run_id)
+    # tags = set(run.tags)
+    #
+    # allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
 
-        allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
-
-        # if len(allowed_tags.intersection(tags)) == 0:
-        #     print(f"Run '{name}' is not tagged to be tested and will be skipped.")
-        #     continue
-        deca_conf = None
-        fixed_overrides_deca = None
+    # if len(allowed_tags.intersection(tags)) == 0:
+    #     print(f"Run '{name}' is not tagged to be tested and will be skipped.")
+    #     continue
+    # deca_conf = None
+    # fixed_overrides_deca = None
 
 
-        for mode in training_modes:
-            conf_overrides = fixed_overrides_cfg.copy()
+    for mode in training_modes:
+        conf_overrides = fixed_overrides_cfg.copy()
 
-            conf_overrides += [f"+learning.tags={'[' + ', '.join(tags) + ']'}"]
+        # conf_overrides += [f"+learning.tags={'[' + ', '.join(tags) + ']'}"]
 
-            conf_overrides += mode[0]
-            if deca_conf_path is None and fixed_overrides_deca is not None:
-                deca_overrides = fixed_overrides_deca.copy()
-                deca_overrides += mode[1]
-            else:
-                deca_overrides=None
+        conf_overrides += mode[0]
+        if deca_conf_path is None and fixed_overrides_deca is not None:
+            deca_overrides = fixed_overrides_deca.copy()
+            deca_overrides += mode[1]
+        else:
+            deca_overrides=None
 
-            cfg = train_emodeca.configure(
-                conf, conf_overrides,
-                deca_default=deca_conf, deca_overrides=deca_overrides,
-                deca_conf_path=deca_conf_path ,
-                deca_stage=stage
-            )
-            GlobalHydra.instance().clear()
+        cfg = train_emodeca.configure(
+            conf, conf_overrides,
+            deca_default=deca_conf, deca_overrides=deca_overrides,
+            deca_conf_path=deca_conf_path ,
+            deca_stage=stage
+        )
+        GlobalHydra.instance().clear()
 
-            sub = True
-            # sub = False
-            if sub:
-                submit(cfg)
-            else:
-                train_emodeca.train_emodeca(cfg, -1, True, False, project_name)
+        sub = True
+        # sub = False
+        if sub:
+            submit(cfg)
+        else:
+            train_emodeca.train_emodeca(cfg, -1, True, False, project_name)
 
 
 if __name__ == "__main__":
