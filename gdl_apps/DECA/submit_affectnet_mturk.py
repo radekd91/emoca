@@ -58,8 +58,8 @@ def submit(cfg, model_folder_name, mode, bid=10):
                        max_price=max_price,
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement,
-                       max_concurrent_jobs = 5,
-                       # max_concurrent_jobs = 20,
+                       # max_concurrent_jobs = 5,
+                       max_concurrent_jobs = 20,
                        concurrency_tag = "afewva_test",
                        modules_to_load=['cuda/11.4'],
                        )
@@ -84,16 +84,16 @@ def main():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-08_3278107752429068516_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_21-34-35_4654975036132116438_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    run_names += [ # EMOCA-SWIN 1
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_6160996897661237206_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_1218762018464274311_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    run_names += [ # EMOCA-ResNet 1
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-
-    mode = 'coarse'
+    # run_names += [ # EMOCA-SWIN 1
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-15-52_349713347846449814_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # # run_names += [
+    # #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_6160996897661237206_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # # run_names += [
+    # #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_1218762018464274311_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [ # EMOCA-ResNet 1
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    #
+    # mode = 'coarse'
 
     # # TRYING EMODECA WITH detail
     # run_names += [
@@ -143,7 +143,7 @@ def main():
         idx = name.find("ExpDECA")
         run_id = name[:idx-1]
         run = api.run("rdanecek/EmotionalDeca/" + run_id)
-        tags = run.tags
+        # tags = run.tags
         # tags += ["NEW_SPLIT"]
         # fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]
 
