@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import afew_va_test_new_split  as script
+import affectnet_mturk as script
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -93,7 +93,7 @@ def main():
     run_names += [ # EMOCA-ResNet 1
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
-    # mode = 'coarse'
+    mode = 'coarse'
 
     # # TRYING EMODECA WITH detail
     # run_names += [

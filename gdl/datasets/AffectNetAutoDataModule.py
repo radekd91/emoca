@@ -21,7 +21,6 @@ class AffectNetAutoTestDataModule(AffectNetAutoDataModule):
         # self.use_gt = False
 
     def setup(self, stage=None):
-        self.df = self.df[self.df["expression"] != "Neutral"]
         self.val_dataframe_path = Path(self.input_dir.parent / "Automatically_annotated_file_list" / "representative.csv" )
         self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path,
                                                                self.image_size, self.scale,

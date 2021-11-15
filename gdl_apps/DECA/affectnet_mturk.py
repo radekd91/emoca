@@ -3,7 +3,7 @@ from gdl_apps.DECA.interactive_deca_decoder import load_deca
 from omegaconf import DictConfig, OmegaConf
 import os, sys
 from pathlib import Path
-from gdl.datasets.AffectNetAutoDataModule import AffectNetAutoDataModule
+from gdl.datasets.AffectNetAutoDataModule import AffectNetAutoTestDataModule
 
 
 def load_model(path_to_models,
@@ -37,7 +37,7 @@ def load_model(path_to_models,
 
 
 def data_preparation_function(cfg, path_to_affectnet, path_to_processed_affectnet):
-    dm = AffectNetAutoDataModule(
+    dm = AffectNetAutoTestDataModule(
             path_to_affectnet,
              path_to_processed_affectnet,
              # processed_subfolder="processed_2021_Apr_02_03-13-33",
