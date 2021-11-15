@@ -1,5 +1,5 @@
 from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
-from gdl.models.external.Deep3DFace import Deep3DFaceModule
+# from gdl.models.external.Deep3DFace import Deep3DFaceModule
 import time as t
 from affectnet_mturk import *
 
