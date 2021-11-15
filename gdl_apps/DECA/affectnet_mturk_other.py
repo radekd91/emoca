@@ -1,5 +1,5 @@
-from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
-# from gdl.models.external.Deep3DFace import Deep3DFaceModule
+# from gdl.models.external.Face_3DDFA_v2 import Face3DDFAModule
+from gdl.models.external.Deep3DFace import Deep3DFaceModule
 import time as t
 from affectnet_mturk import *
 
@@ -55,8 +55,8 @@ def main():
     default = "deca_train_detail"
     overrides = [
         # 'model/settings=3ddfa',
-        'model/settings=3ddfa_resnet',
-        # 'model/settings=deep3dface',
+        # 'model/settings=3ddfa_resnet',
+        'model/settings=deep3dface',
         'learning/logging=none',
         'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
         # 'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
