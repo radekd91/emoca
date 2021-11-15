@@ -70,7 +70,16 @@ def main():
                      downgrade_ok=False, train=False)
     deca.eval()
 
-    deca.eval()
+    import wandb
+    api = wandb.Api()
+    name = str(Path(run_name).name)
+    idx = name.find("ExpDECA")
+    run_id = name[:idx - 1]
+    run = api.run("rdanecek/EmotionalDeca/" + run_id)
+    tags = run.tags
+    conf["coarse"]["learning"]["tags"] = tags
+    conf["detail"]["learning"]["tags"] = tags
+    tags += ['val']
 
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
