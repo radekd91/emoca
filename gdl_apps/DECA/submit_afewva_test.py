@@ -58,8 +58,8 @@ def submit(cfg, model_folder_name, mode, bid=10):
                        max_price=max_price,
                        job_name=job_name,
                        cuda_capability_requirement=cuda_capability_requirement,
-                       max_concurrent_jobs = 5,
-                       # max_concurrent_jobs = 20,
+                       # max_concurrent_jobs = 5,
+                       max_concurrent_jobs = 20,
                        concurrency_tag = "afewva_test",
                        modules_to_load=['cuda/11.4'],
                        )
@@ -160,23 +160,23 @@ def main():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-36_187831196779018813_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
     #
 
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-5406564322738469847_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-4816207216138971302_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-47-58_403387054595674003_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-47-58_1356413750339666012_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_-8338540563465925024_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_-8022299573244041531_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-36_187831196779018813_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
-    # mode = 'detail'
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-5406564322738469847_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-4816207216138971302_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-47-58_403387054595674003_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-47-58_1356413750339666012_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_-8338540563465925024_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_-8022299573244041531_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-36_187831196779018813_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
+    mode = 'detail'
 
 
     tags = None
