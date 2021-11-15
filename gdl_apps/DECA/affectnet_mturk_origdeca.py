@@ -90,7 +90,7 @@ def main():
 
         dm = data_preparation_function(conf, path_to_affectnet, path_to_processed_affectnet)
         conf[mode].model.test_vis_frequency = 1
-        conf[mode].inout.name = conf.model.deca_class
+        conf[mode].inout.name = conf[mode].model.deca_class
         conf[mode].inout.random_id = str(hash(time))
         conf[mode].inout.time = time
         conf[mode].inout.full_run_dir = str(Path( conf[mode].inout.output_dir) / (time + "_" + conf[mode].inout.random_id + "_" + conf[mode].inout.name) /  mode)
