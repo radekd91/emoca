@@ -100,7 +100,8 @@ class AffectNetDataModule(FaceDataModuleBase):
                  validation_fname=None,
                  test_fname=None,
                  dataset_type = None,
-                 use_gt = True
+                 use_gt = True,
+                 use_processed = True
                  ):
         super().__init__(input_dir, output_dir, processed_subfolder,
                          face_detector=face_detector,
@@ -111,36 +112,54 @@ class AffectNetDataModule(FaceDataModuleBase):
                          scale=scale,
                          processed_ext=processed_ext,
                          device=device)
-        # accepted_modes = ['manual', 'automatic', 'all'] # TODO: add support for the other images
-        accepted_modes = ['manual']
+        # accepted_modes = ['manual', 'automatic', 'all']
+        accepted_modes = ['manual', 'automatic']
+        # accepted_modes = ['manual']
         self.dataset_type = dataset_type or "AffectNet"
         if mode not in accepted_modes:
             raise ValueError(f"Invalid mode '{mode}'. Accepted modes: {'_'.join(accepted_modes)}")
         self.mode = mode
+
+        if mode == "manual":
+            self.mode_str = "Manually"
+        elif mode == "automatic":
+            self.mode_str = "Automatically"
+        else:
+            raise ValueError(f"Invalid mode '{mode}'. Accepted modes: {', '.join(accepted_modes)}")
+
         # self.subsets = sorted([f.name for f in (Path(input_dir) / "Manually_Annotated" / "Manually_Annotated_Images").glob("*") if f.is_dir()])
-        self.input_dir = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+        self.input_dir = Path(self.root_dir) / (self.mode_str+"_Annotated") /( self.mode_str+"_Annotated_Images")
 
-        training_fname = training_fname or  "training.csv"
-        training_fname = self.input_dir.parent / training_fname
-        validation_fname = validation_fname or self.input_dir.parent / "validation.csv"
-        validation_fname = self.input_dir.parent / validation_fname
-        self.test_fname = test_fname or "validation_representative_selection.csv"
+        if mode == "manual":
+            training_fname = training_fname or  "training.csv"
+            training_fname = self.input_dir.parent / training_fname
+            validation_fname = validation_fname or self.input_dir.parent / "validation.csv"
+            validation_fname = self.input_dir.parent / validation_fname
+            self.test_fname = test_fname or "validation_representative_selection.csv"
 
-        train = pd.read_csv(training_fname)
-        val = pd.read_csv(validation_fname)
-        self.df = pd.concat([train, val], ignore_index=True, sort=False)
+            train = pd.read_csv(training_fname)
+            val = pd.read_csv(validation_fname)
+            self.df = pd.concat([train, val], ignore_index=True, sort=False)
+            self.train_dataframe_path = Path(self.root_dir) / (self.mode_str + "_Annotated") / training_fname.name
+            self.val_dataframe_path = Path(self.root_dir) / (self.mode_str + "_Annotated") / validation_fname.name
+        elif mode == "automatic":
+            df_path = Path(self.input_dir.parent / "Automatically_annotated_file_list"/ "automatically_annotated.csv")
+            self.df = pd.read_csv(df_path)
+            self.train_dataframe_path = df_path
+            self.val_dataframe_path = df_path
+        else:
+            raise ValueError(f"Invalid mode '{mode}'. Accepted modes: {', '.join(accepted_modes)}")
+
         self.face_detector_type = 'fan'
         self.scale = scale
-        self.use_processed = True
+        self.use_processed = use_processed
 
 
-        self.train_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / training_fname.name
-        self.val_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / validation_fname.name
 
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
-            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+            self.image_path = Path(self.root_dir) / (self.mode_str+"_Annotated") / ( self.mode_str+"_Annotated_Images")
 
 
         self.ignore_invalid = ignore_invalid
@@ -663,7 +682,7 @@ class AffectNetEmoNetSplitModule(AffectNetDataModule):
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
-            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+            self.image_path = Path(self.output_dir) / (self.mode_str+"_Annotated__Annotated") / (self.mode_str+"_Annotated__Annotated_Images")
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None,
                                                          ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
@@ -799,7 +818,7 @@ class AffectNetTestModule(AffectNetDataModule):
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
-            self.image_path = Path(self.output_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+            self.image_path = Path(self.output_dir) / (self.mode_str + "_Annotated") / (self.mode_str + "_Annotated_Images")
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
@@ -818,11 +837,11 @@ class AffectNetTestModule(AffectNetDataModule):
 class AffectNetEmoNetSplitTestModule(AffectNetTestModule):
 
     def setup(self, stage=None):
-        self.test_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation_emonet_split_clean_representative.csv"
+        self.test_dataframe_path = Path(self.root_dir) / (self.mode_str + "_Annotated")  / "validation_emonet_split_clean_representative.csv"
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
-            self.image_path = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+            self.image_path = Path(self.root_dir) /  (self.mode_str + "_Annotated") / (self.mode_str + "_Annotated_Images")
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
@@ -830,11 +849,11 @@ class AffectNetEmoNetSplitTestModule(AffectNetTestModule):
 class AffectNetEmoNetSplitTestModule2(AffectNetTestModule):
 
     def setup(self, stage=None):
-        self.test_dataframe_path = Path(self.root_dir) / "Manually_Annotated" / "validation_representative_selection.csv"
+        self.test_dataframe_path = Path(self.root_dir) / (self.mode_str + "_Annotated") / "validation_representative_selection.csv"
         if self.use_processed:
             self.image_path = Path(self.output_dir) / "detections"
         else:
-            self.image_path = Path(self.root_dir) / "Manually_Annotated" / "Manually_Annotated_Images"
+            self.image_path = Path(self.root_dir) /  (self.mode_str + "_Annotated") / (self.mode_str + "_Annotated_Images")
         self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.test_dataframe_path, self.image_size, self.scale,
                                     None, ignore_invalid=self.ignore_invalid, use_gt=self.use_gt,)
 
@@ -896,7 +915,7 @@ class AffectNet(EmotionalImageDatasetBase):
         self.ignore_invalid = ignore_invalid
         self.load_emotion_feature = load_emotion_feature
         self.nn_distances_array = nn_distances_array
-        self.ext=ext
+        self.ext_=ext
         self.num_skips = 0
         self.use_gt = use_gt
         self.drop_last = False
@@ -925,7 +944,13 @@ class AffectNet(EmotionalImageDatasetBase):
             #     nn_distances_array = nn_distances_array[valid_indices, ...]
 
         self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
-        self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
+        exp_weight_tensor = []
+        for i in range(len(self.exp_weights)):
+            if i in self.exp_weights.keys():
+                exp_weight_tensor += [self.exp_weights[i]]
+            else:
+                exp_weight_tensor += [0.00001]
+        self.exp_weight_tensor = torch.tensor(exp_weight_tensor, dtype=torch.float32)
         self.exp_weight_tensor = 1. / self.exp_weight_tensor
         self.exp_weight_tensor /= torch.norm(self.exp_weight_tensor)
 
@@ -939,6 +964,12 @@ class AffectNet(EmotionalImageDatasetBase):
         self.ring_size = ring_size
         self._init_sample_weights()
 
+
+    def get_ext(self, fname):
+        if self.use_processed:
+            return self.ext_
+        else:
+            return Path(fname).suffix
 
     def _init_sample_weights(self):
         if self.ring_type == "gt_expression":
@@ -1013,25 +1044,41 @@ class AffectNet(EmotionalImageDatasetBase):
     def _load_additional_data(self, im_rel_path):
         return {}
 
+    def _load_image(self, im_file):
+        try:
+            input_img = imread(im_file)
+        except IOError:
+            im_file2 = im_file.parent / (im_file.stem + im_file.suffix.upper())
+            try:
+                input_img = imread(im_file2)
+            except IOError:
+                im_file2 = im_file.parent / (im_file.stem + im_file.suffix.lower())
+                input_img = imread(im_file2)
+        return input_img
+
     def _get_sample(self, index):
         num_skips = 0
+        max_skips = 50
         try:
             im_rel_path = self.df.loc[index]["subDirectory_filePath"]
             im_file = Path(self.image_path) / im_rel_path
-            im_file = im_file.parent / (im_file.stem + self.ext)
-            input_img = imread(im_file)
+            im_file = im_file.parent / (im_file.stem + self.get_ext(im_file))
+            input_img = self._load_image(im_file)
             additional_data = self._load_additional_data(im_rel_path)
         except Exception as e:
             # if the image is corrupted or missing (there is a few :-/), find some other one
             while True:
                 index += 1
                 num_skips += 1
+                if num_skips > max_skips:
+                    print(f"Too many images in the row failed to load")
+                    raise e
                 index = index % len(self)
                 im_rel_path = self.df.loc[index]["subDirectory_filePath"]
                 im_file = Path(self.image_path) / im_rel_path
-                im_file = im_file.parent / (im_file.stem + self.ext)
+                im_file = im_file.parent /  (im_file.stem + self.get_ext(im_file))
                 try:
-                    input_img = imread(im_file)
+                    input_img = self._load_image(im_file)
                     additional_data = self._load_additional_data(im_rel_path)
                     success = True
                 except Exception as e2:
@@ -1068,6 +1115,7 @@ class AffectNet(EmotionalImageDatasetBase):
                 #     self.path_prefix / self.landmark_list[index])
             landmark = landmark[np.newaxis, ...]
             seg_image = None
+            emotion_features = None
         else:
             # use AffectNet processed by me. I used their bounding boxes (to not have to worry about detecting
             # the correct face in case there's more) and I ran our FAN and segmentation over it
@@ -1294,7 +1342,10 @@ def sample_representative_set(df, output_file, sample_step=0.1, num_per_bin=2):
         a = max(-1., min(1., df.loc[i]["arousal"]))
         row_ = int((v + 1) / sample_step)
         col_ = int((a + 1) / sample_step)
-        va_array[row_][ col_] += [i]
+        try:
+            va_array[row_][ col_] += [i]
+        except IndexError as e:
+            print(f"{row_} {col_}")
 
 
     selected_indices = []
@@ -1490,11 +1541,11 @@ if __name__ == "__main__":
              # ring_type="gt_expression",
              # ring_type="gt_va",
              # ring_type="emonet_feature",
-             # ring_size=4,
+             ring_size=4,
             augmentation=augmenter,
             # use_clean_labels=True
             # dataset_type="AffectNetWithMGCNetPredictions",
-            dataset_type="AffectNetWithExpNetPredictions",
+            # dataset_type="AffectNetWithExpNetPredictions",
             )
     #
     print(dm.num_subsets)

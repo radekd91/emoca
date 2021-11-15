@@ -217,38 +217,41 @@ def train_emodeca_on_cluster():
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_00-45-43_-6861660935874010707_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
 
     # # detailed EmoDECA (with finetuned detail) TODO: run when ready - careful, most of them actually turned NaN
-    # run_names += [
+    # ran
+    #
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-40_8347105671606189869_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-37_9207638064621644556_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-36_4236836109803982115_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-31_1777376976408189062_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-31_-8190793573362684320_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-30_6980015522888660644_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-26_7466909277650738450_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # # run_names += [
+    # #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-26_7466909277650738450_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-26_-7775568986167485599_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-24_283650042734872595_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-00-25_-8235832594847732343_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_6108428734734499933_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-3074281716798214244_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-8668091520165208464_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_6310542865318504681_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
+    # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-758267559414284479_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
-    # run_names += [
-    #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-2347747697855330620_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+    # # run_names += [
+    # #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-2347747697855330620_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+    # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-10-16_-6893288210826685729_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
 
     # submit_ = False
     submit_ = True
