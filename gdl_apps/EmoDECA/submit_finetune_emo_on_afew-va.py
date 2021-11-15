@@ -82,129 +82,45 @@ def submit(cfg, bid=10):
 
 
 def train_emodeca_on_cluster():
-    # from hydra.core.global_hydra import GlobalHydra
-    #
-    #
-    # # #1 EMONET
-    # # conf = "emonet_cluster"
-    # # fixed_overrides_cfg = [
-    # #     'model/settings=emonet_trainable',
-    # #     # 'model/settings=emonet_trainable_weighted_va',
-    # #     # 'model/settings=emonet_trainable_weighted_va_mse',
-    # #     # '+learning/lr_scheduler=reduce_on_plateau',
-    # #     '+learning/lr_scheduler=exponential',
-    # #     # 'learning.max_steps=0',
-    # #     # 'learning.max_epochs=0',
-    # #     # 'learning/optimizer=adabound',
-    # #     'data/augmentations=default',
-    # # ]
-    # # deca_conf = None
-    # # deca_conf_path = None
-    # # fixed_overrides_deca = None
-    # # stage = None
-    #
-    # # # # #2 EMOSWIN
-    # # conf = "emoswin"
-    # # fixed_overrides_cfg = [
-    # #     'model/backbone=swin',
-    # #     # 'model/backbone=resnet50_cluster',
-    # #     # 'model/backbone=vgg13',
-    # #     # 'model/backbone=vgg16',
-    # #     # 'model/backbone=vgg16_bn',
-    # #     # 'model/backbone=vgg19_bn',
-    # #     # 'model/settings=AU_emotionet',
-    # #     'model/settings=AU_emotionet_bce',
-    # #     # 'model/settings=AU_emotionet_bce_weighted',
-    # #     # '+learning/lr_scheduler=reduce_on_plateau',
-    # #     # '+learning/lr_scheduler=exponential',
-    # #     # 'learning.batch_size_train=32',
-    # #     # swin_type: swin_base_patch4_window7_224
-    # #     # swin_type: swin_small_patch4_window7_224
-    # #     # swin_type: swin_tiny_patch4_window7_224
-    # #     'learning.batch_size_train=16',
-    # #     # 'model.swin_type=swin_large_patch4_window7_224_22k',
-    # #     # 'model.swin_type=swin_base_patch4_window7_224',
-    # #     'model.swin_type=swin_small_patch4_window7_224',
-    # #     # 'model.swin_type=swin_tiny_patch4_window7_224',
-    # #     # 'data/datasets=affectnet_cluster',
-    # #     # 'data/datasets=affectnet_v1_cluster',
-    # #     # 'data/datasets=emotionet_0_cluster',
-    # #     'data/datasets=emotionet_cluster',
-    # #     # 'learning.max_steps=0',
-    # #     # 'learning.max_epochs=0',
-    # #     'learning/training=emotionet',
-    # #     # 'learning/optimizer=adabound',
-    # #     # 'data/augmentations=default',
-    # #     'data/augmentations=default_with_resize',
-    # # ]
-    # # deca_conf = None
-    # # deca_conf_path = None
-    # # fixed_overrides_deca = None
-    # # stage = None
-    #
-    # # EMODECA
-    # conf = "emodeca_coarse_cluster"
-    # fixed_overrides_cfg = [
-    #     # 'model/settings=AU_emotionet',
-    #     # 'model/settings=AU_emotionet_bce',
-    #     # 'model/settings=AU_emotionet_bce_weighted',
-    #     # '+model.mlp_norm_layer=BatchNorm1d',
-    #     # 'model.use_identity=True', #
-    #     # 'data/augmentations=default',
-    #     # 'learning/optimizer=adabound',
-    #     # 'data/datasets=affectnet_cluster',
-    #     # 'data.data_class=AffectNetDataModuleValTest',
-    #     'data/datasets=afew_va',
-    #     'data.num_workers=16',
-    #     'learning.max_epochs=100',
-    #     'learning.val_check_interval=1.0',
-    #     # 'data/datasets=affectnet_v1_cluster',
-    #     # 'data/datasets=emotionet_0_cluster',
-    #     # 'data/datasets=emotionet_cluster',
-    #     # 'learning/training=emotionet',
-    # ]
-
     run_names = []
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-43-49_3394193947032742938_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-44-04_8688670044855202446_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_3882362656686027659_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-14_-168201693333588918_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-14_4337140264808142166_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-58_6855768109315710901_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-29_-1963146520759335803_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-09_-5731619448091644006_EmoMGCNet_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-32-49_-6879167987895418873_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-57-28_-4957717700349337532_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-58-27_-5553059236244394333_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-02_-5975857231436227431_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-43-49_3394193947032742938_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-44-04_8688670044855202446_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_3882362656686027659_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-14_-168201693333588918_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-14_4337140264808142166_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-58_6855768109315710901_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-33-29_-1963146520759335803_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-09_-5731619448091644006_EmoMGCNet_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-32-49_-6879167987895418873_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-57-28_-4957717700349337532_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-58-27_-5553059236244394333_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-02_-5975857231436227431_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early']
     run_names += [
         '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early']
     # EMONET SPLIT RUN:
     tags = None
     api = wandb.Api()
 
-    # stage = 'detail'
-    stage = 'coarse'
 
     for model_path in  run_names:
         name = str(Path(model_path).name)
@@ -220,9 +136,6 @@ def train_emodeca_on_cluster():
         #     continue
 
 
-        deca_conf = None
-        fixed_overrides_deca = None
-
         # augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
         #                            "data" / "augmentations" / "default.yaml"))#["augmentation"]
         # dataset =  yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
@@ -234,28 +147,11 @@ def train_emodeca_on_cluster():
                                "data" / "datasets" / "afew_va.yaml")
 
 
-        # for mode in training_modes:
-        # conf_overrides = fixed_overrides_cfg.copy()
 
-        # # conf_overrides += [f"+learning.tags={'[' + ', '.join(tags) + ']'}"]
-        #
-        # conf_overrides += mode[0]
-        # if model_path is None and fixed_overrides_deca is not None:
-        #     deca_overrides = fixed_overrides_deca.copy()
-        #     deca_overrides += mode[1]
-        # else:
-        #     deca_overrides=None
-
-        # cfg = train_emodeca.configure(
-        #     conf, conf_overrides,
-        #     deca_default=deca_conf, deca_overrides=deca_overrides,
-        #     deca_conf_path=model_path ,
-        #     deca_stage=stage
-        # )
-        # GlobalHydra.instance().clear()
 
         cfg = OmegaConf.load(Path(model_path) / "cfg.yaml")
-
+        if cfg.model.tags is None:
+            cfg.model.tags = ["AFFECTNET_PRETRAINED"]
         # cfg.data.augmentation = augmenter
 
         keys_to_remove = []
@@ -278,15 +174,11 @@ def train_emodeca_on_cluster():
             cfg = OmegaConf.to_container(cfg)
             del cfg["data"]["augmentation"]
             cfg = DictConfig(cfg)
-        #     with open_dict(cfg.data):
-        #         del cfg.data.augmentation
-        # #     if list(cfg.data.augmentation[1]["OneOf"][0].keys())[0] == 'JpegCompression':
-        # #         del cfg.data.augmentation[1]["OneOf"][0]
         except:
             pass
 
-        sub = True
-        # sub = False
+        # sub = True
+        sub = False
         if sub:
             submit(cfg, bid=30)
         else:
