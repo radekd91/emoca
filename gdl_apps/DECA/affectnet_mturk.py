@@ -64,6 +64,12 @@ def main():
         mode = 'detail'
     deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
 
+    # now that we loaded, let's reconfigure to detail
+    mode = 'detail'
+    deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
+                     downgrade_ok=False, train=False)
+    deca.eval()
+
     deca.eval()
 
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
