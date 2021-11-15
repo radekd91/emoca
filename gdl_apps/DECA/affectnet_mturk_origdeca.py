@@ -2,7 +2,7 @@
 # from gdl.models.external.Deep3DFace import Deep3DFaceModule
 import time as t
 from affectnet_mturk import *
-
+from omegaconf import open_dict
 # def str2module(class_name):
 #     if class_name in ["3ddfa", "Face3DDFAModule"]:
 #         return Face3DDFAModule
@@ -90,7 +90,11 @@ def main():
 
         dm = data_preparation_function(conf, path_to_affectnet, path_to_processed_affectnet)
         conf[mode].model.test_vis_frequency = 1
-        conf[mode].inout.name = "DECA"
+        # conf[mode].inout.name = "DECA"
+        with open_dict(conf["coarse"].model):
+            conf["coarse"].model["deca_class"] = "DECA"
+        with open_dict(conf["detail"].model):
+            conf["detail"].model["deca_class"] = "DECA"
         conf[mode].inout.random_id = str(hash(time))
         conf[mode].inout.time = time
         conf[mode].inout.full_run_dir = str(Path( conf[mode].inout.output_dir) / (time + "_" + conf[mode].inout.random_id + "_" + conf[mode].inout.name) /  mode)
