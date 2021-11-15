@@ -56,7 +56,7 @@ def main():
     path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
     # path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
     path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
-    run_name = sys.argv[1]
+    # run_name = sys.argv[1]
 
     # if len(sys.argv) > 2:
     #     mode = sys.argv[2]

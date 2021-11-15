@@ -145,10 +145,15 @@ def main():
         # print(f"link: {run.url}")
         # print("--------------------------")
 
+
         if id in final_model_nicknames.keys():
             entry_dict["run_name"] = final_model_nicknames[id]
+
+            print(f"run_names += ['{cfg.inout.value.full_run_dir}']")
         elif not leave_out_not_metioned_runs:
             entry_dict["run_name"] = run.name
+
+            print(f"run_names += ['{cfg.inout.value.full_run_dir}']")
         else:
             continue
         #
