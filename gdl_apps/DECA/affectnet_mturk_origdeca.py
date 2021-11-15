@@ -45,7 +45,8 @@ def main():
     path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
 
     run_names = []
-    run_names += ['2021_03_26_15-05-56_Orig_DECA']  # Detail with coarse
+    # run_names += ['2021_03_26_15-05-56_Orig_DECA']  # Detail with coarse
+    run_names += ['2021_03_26_15-05-56_Orig_DECA2']  # Detail with coarse
 
     mode = 'detail'
     # mode = 'coarse'
