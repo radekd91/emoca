@@ -69,7 +69,8 @@ def main():
     final_model_nicknames["1916228855864926169"] = "EMOCA-SWIN 1 DecaD" # with identity
     # final_model_nicknames["-7671276478970211630"] = "EMOCA-ResNet 5" # without identity
     final_model_nicknames["-3448168656212712789"] = "EMOCA-ResNet 5" # with identity
-    final_model_nicknames["2929045501486288941"] = "EMOCA-ResNet 1"
+    # final_model_nicknames["2401491572395417653"] = "EMOCA-ResNet 1"
+    final_model_nicknames["-7065481524420868895"] = "EMOCA-ResNet 1"
     final_model_nicknames["-7287099288123125386"] = "EMOCA-ResNet 1 DecaD"
     final_model_nicknames["-7163854018263734313"] = "EMOCA-ResNet cos"
     final_model_nicknames["-4010187096645607381"] = "EMOCA-ResNet L1"
@@ -108,6 +109,7 @@ def main():
     order["EMOCA-SWIN 1 DecaD"] = idx; idx+=1 # with identity
     # order["EMOCA-ResNet 5"] =  idx; idx+=1 # without identity
     order["EMOCA-ResNet 5"] =  idx; idx+=1 # with identity
+    # order["EMOCA-ResNet 1"] =  idx; idx+=1
     order["EMOCA-ResNet 1"] =  idx; idx+=1
     order["EMOCA-ResNet 1 DecaD"] =  idx; idx+=1
     order["EMOCA-ResNet cos"] =  idx; idx+=1

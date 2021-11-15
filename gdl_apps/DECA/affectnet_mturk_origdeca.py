@@ -45,7 +45,7 @@ def main():
     path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
 
     run_names = []
-    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_03_26_15-05-56_Orig_DECA']  # Detail with coarse
+    run_names += ['2021_03_26_15-05-56_Orig_DECA']  # Detail with coarse
 
     mode = 'detail'
     # mode = 'coarse'
@@ -83,18 +83,19 @@ def main():
         # conf[mode].data.root_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
 
         deca.deca.config.resume_training = True
-        deca.deca.config.pretrained_modelpath = "/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar"
+        # deca.deca.config.pretrained_modelpath = "/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar"
+        deca.deca.config.pretrained_modelpath = "/lustre/home/rdanecek/workspace/repos/DECA/data/deca_model.tar"
         deca.deca._load_old_checkpoint()
         run_name = "Original_DECA"
 
         dm = data_preparation_function(conf, path_to_affectnet, path_to_processed_affectnet)
-        conf.model.test_vis_frequency = 1
-        conf.inout.name = conf.model.deca_class
-        conf.inout.random_id = str(hash(time))
-        conf.inout.time = time
-        conf.inout.full_run_dir = str(Path( conf.inout.output_dir) / (time + "_" + conf.inout.random_id + "_" + conf.inout.name) /  mode)
-        conf.inout.checkpoint_dir = str(Path(conf.inout.full_run_dir) / "checkpoints")
-        Path(conf.inout.full_run_dir).mkdir(parents=True)
+        conf[mode].model.test_vis_frequency = 1
+        conf[mode].inout.name = conf.model.deca_class
+        conf[mode].inout.random_id = str(hash(time))
+        conf[mode].inout.time = time
+        conf[mode].inout.full_run_dir = str(Path( conf[mode].inout.output_dir) / (time + "_" + conf[mode].inout.random_id + "_" + conf[mode].inout.name) /  mode)
+        conf[mode].inout.checkpoint_dir = str(Path(conf[mode].inout.full_run_dir) / "checkpoints")
+        Path(conf[mode].inout.full_run_dir).mkdir(parents=True)
 
         single_stage_deca_pass(deca, conf[mode], stage="test", prefix="affect_net_mturk", dm=dm, project_name_="AffectNetMTurkTests",
                                )
