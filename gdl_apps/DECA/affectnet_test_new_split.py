@@ -64,11 +64,10 @@ def main():
         mode = 'coarse'
 
     deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
-
-    # now that we loaded, let's reconfigure to detail
-    mode = 'detail'
-    deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
-                     downgrade_ok=False, train=False)
+    if mode != 'detail':
+        mode = 'detail'
+        deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
+                         downgrade_ok=False, train=False)
     deca.eval()
 
     import wandb
