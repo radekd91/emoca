@@ -64,8 +64,8 @@ def main():
     #     mode = 'coarse'
     mode = 'detail'
 
-    run_names = []
-    run_names += ['2021_03_26_15-05-56_Orig_DECA2']  # Detail with coarse
+
+    run_name = '2021_03_26_15-05-56_Orig_DECA2'  # Detail with coarse
 
     # deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
 
@@ -82,7 +82,7 @@ def main():
     replace_root_path = None
 
     # for run_name in run_names:
-    print(f"Beginning testing for '{run_name}' in mode '{mode}'")
+    # print(f"Beginning testing for '{run_name}' in mode '{mode}'")
     deca, conf = load_model(path_to_models, run_name, mode, relative_to_path, replace_root_path)
     # conf.learning.logger_type = None
     # conf.data.root_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
