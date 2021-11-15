@@ -92,7 +92,7 @@ def train_emodeca_on_cluster():
 
     # # # EMOEXPDECA
     resume_folders = []
-    bid = 10
+    bid = 100
     stage = 1 # test stage
     api = Api()
 
@@ -253,6 +253,9 @@ def train_emodeca_on_cluster():
     # #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_01-04-42_-2347747697855330620_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_15_02-10-16_-6893288210826685729_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
 
+    # forgotten one:
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
+
     # submit_ = False
     submit_ = True
 
@@ -265,9 +268,9 @@ def train_emodeca_on_cluster():
 
         allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
 
-        # if len(allowed_tags.intersection(tags)) == 0:
-        #     print(f"Run '{name}' is not tagged to be tested and will be skipped.")
-        #     continue
+        if len(allowed_tags.intersection(tags)) == 0:
+            print(f"Run '{name}' is not tagged to be tested and will be skipped.")
+            continue
 
         cfg = OmegaConf.load(Path(resume_folder) / "cfg.yaml")
 

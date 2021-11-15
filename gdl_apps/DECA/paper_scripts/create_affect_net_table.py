@@ -69,10 +69,11 @@ def main():
     final_model_nicknames["1916228855864926169"] = "EMOCA-SWIN 1 DecaD" # with identity
     # final_model_nicknames["-7671276478970211630"] = "EMOCA-ResNet 5" # without identity
     final_model_nicknames["-3448168656212712789"] = "EMOCA-ResNet 5" # with identity
-    final_model_nicknames["-1667632836893565667"] = "EMOCA-ResNet 1"
+    final_model_nicknames["2929045501486288941"] = "EMOCA-ResNet 1"
     final_model_nicknames["-7287099288123125386"] = "EMOCA-ResNet 1 DecaD"
     final_model_nicknames["-7163854018263734313"] = "EMOCA-ResNet cos"
     final_model_nicknames["-4010187096645607381"] = "EMOCA-ResNet L1"
+    final_model_nicknames["-1667632836893565667"] = "EMOCA-EmoNet 1"
     # final_model_nicknames["4154598636886285872"] = "EMOCA-ResNet not balanced" # without identity
     final_model_nicknames["-2939789230769256174"] = "EMOCA-ResNet not balanced" # with identity
     final_model_nicknames["-7787195888843808313"] = "DECA" # with identity
@@ -111,6 +112,7 @@ def main():
     order["EMOCA-ResNet 1 DecaD"] =  idx; idx+=1
     order["EMOCA-ResNet cos"] =  idx; idx+=1
     order["EMOCA-ResNet L1"] =  idx; idx+=1
+    order["EMOCA-EmoNet 1"] =  idx; idx+=1
     # order["EMOCA-ResNet not balanced"] =  idx; idx+=1 # without identity
     order["EMOCA-ResNet not balanced"] =  idx; idx+=1 # with identity
     order["DECA"] = idx; idx+=1

@@ -32,7 +32,7 @@ from affectnet_mturk import *
 def main():
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    path_to_models = '"/is/cluster/work/rdanecek/emoca/finetune_deca'
+    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
     #
     # path_to_affectnet = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
     path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
@@ -45,7 +45,7 @@ def main():
     path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
 
     run_names = []
-    run_names += ['2021_03_26_15-05-56_DECA__DeSegFalse_DwC_early']  # Detail with coarse
+    run_names += ['/is/cluster/work/rdanecek/emoca/finetune_deca/2021_03_26_15-05-56_Orig_DECA']  # Detail with coarse
 
     mode = 'detail'
     # mode = 'coarse'
