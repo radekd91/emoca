@@ -85,8 +85,8 @@ def train_emodeca_on_cluster():
     run_names = []
     # run_names += [
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    # run_names += [
-    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
+    run_names += [
+        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
     # run_names += [
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-43-49_3394193947032742938_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
     # run_names += [
@@ -115,8 +115,8 @@ def train_emodeca_on_cluster():
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-02_-5975857231436227431_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
     # run_names += [
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_14-07-53_4456762721214245215_Emo3DDFA_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_11_15-39-32_6108539290469616315_EmoDeep3DFace_shake_samp-balanced_expr_early']
     # EMONET SPLIT RUN:
     tags = None
     api = wandb.Api()
@@ -155,6 +155,15 @@ def train_emodeca_on_cluster():
         # cfg.data.augmentation = augmenter
 
         keys_to_remove = []
+
+        if cfg.data.dataset_type is not None:
+            if 'Exp' in cfg.data.dataset_type:
+                new_dataset_type = "AfewVaWithExpNetPredictions"
+            elif "MGC" in cfg.data.dataset_type:
+                new_dataset_type = "AfewVaWithMGCNetPredictions"
+            else:
+                raise ValueError("Unknown dataset type: " + new_dataset_type)
+
         for key in cfg.data.keys():
             if key == "augmentation":
                 continue
@@ -165,6 +174,7 @@ def train_emodeca_on_cluster():
         for key in dataset.keys():
             cfg.data[key] = dataset[key]
 
+        cfg.data.dataset_type = new_dataset_type
         cfg.learning.val_check_interval = 1.
         cfg.learning.max_epochs = 100
         cfg.learning.checkpoint_after_training = "best"
