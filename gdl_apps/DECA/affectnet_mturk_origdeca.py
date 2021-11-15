@@ -77,7 +77,7 @@ def main():
     for run_name in run_names:
         print(f"Beginning testing for '{run_name}' in mode '{mode}'")
         deca, conf = load_model(path_to_models, run_name, mode, relative_to_path, replace_root_path)
-        conf.learning.logger_type = None
+        # conf.learning.logger_type = None
         # conf.data.root_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
         # conf.data.root_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"
         # conf[mode].data.root_dir = "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/"

@@ -90,7 +90,7 @@ def main():
     # #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_6160996897661237206_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # # run_names += [
     # #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-57-41_1218762018464274311_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
-    # run_names += [ # EMOCA-ResNet 1
+    # run_names += [ # EMOCA-Emonet 1
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     #
     # mode = 'coarse'

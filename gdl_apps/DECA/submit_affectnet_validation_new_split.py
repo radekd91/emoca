@@ -218,6 +218,8 @@ def main():
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_18-16-26_2689968017949274893_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-05-01_5101174495546322475_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+
     mode = 'coarse'
 
     # # TRYING EMODECA WITH detail
