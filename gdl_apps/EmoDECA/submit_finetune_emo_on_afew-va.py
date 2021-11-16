@@ -85,8 +85,8 @@ def train_emodeca_on_cluster():
     run_names = []
     # run_names += [
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
-    run_names += [
-        '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
+    # run_names += [
+    #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_23-27-01_6878473137680141500_EmoExpNet_shake_samp-balanced_expr_early']
     # run_names += [
     #     '/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_22-43-49_3394193947032742938_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early']
     # run_names += [
@@ -187,8 +187,8 @@ def train_emodeca_on_cluster():
         except:
             pass
 
-        # sub = True
-        sub = False
+        sub = True
+        # sub = False
         if sub:
             submit(cfg, bid=30)
         else:
