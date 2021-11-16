@@ -214,13 +214,13 @@ def emoca_vs_method(method_path, method_name, method_image_pattern=None, method_
     emoca_detail_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern)
 
 def main():
-    # emoca_detail_vs_deca_detail()
-    # emoca_coarse_vs_deca_coarse()
+    emoca_detail_vs_deca_detail()
+    emoca_coarse_vs_deca_coarse()
     #
     # # dictionary of methods and method their image paths:
     methods = {}
-    # methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
-    # methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
     for name, path in methods.items():
         emoca_vs_method(path, name)
 
