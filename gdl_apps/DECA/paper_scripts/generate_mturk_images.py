@@ -169,7 +169,7 @@ def emoca_detail_vs_method(method_path, method_name):
     create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask)
 
 
-def emoce_coarse_vs_method(method_path, method_name):
+def emoca_coarse_vs_method(method_path, method_name):
     input_images = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/inputs")
     path_emoca_coarse = Path(
@@ -184,16 +184,22 @@ def emoce_coarse_vs_method(method_path, method_name):
     create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask)
 
 
+def emoca_vs_method(method_path, method_name):
+    emoca_coarse_vs_method(method_path, method_name)
+    emoca_detail_vs_method(method_path, method_name)
+
 def main():
     # emoca_detail_vs_deca_detail()
-    emoca_coarse_vs_deca_coarse()
+    # emoca_coarse_vs_deca_coarse()
     #
     # # dictionary of methods and method their image paths:
-    # methods = {}
-    # methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
-    # methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods = {}
+    methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
     # methods["MGCNet"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_MGCNet/detail"
 
+    for name, path in methods.items():
+        emoca_vs_method(path, name)
 
 
 
