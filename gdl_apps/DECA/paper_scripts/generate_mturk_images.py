@@ -403,20 +403,27 @@ def compile_final_files():
         image_paths_cloud = []
         image_paths_rel = []
         for i, path in enumerate( image_paths):
-            print(i)
             image_path_rel = Path(path).relative_to(mturk_root)
             image_path_cloud = str(cloud_root / image_path_rel)
             # table_rel.loc[table_rel["images"] == str(image_paths_rel), "images"] = str(path)
             image_paths_rel += [str(image_path_rel)]
-            image_paths_cloud += [str(image_paths_cloud)]
+            image_paths_cloud += [str(image_path_cloud)]
 
-        df = df.append(";".join(image_paths.tolist()))
-        df_rel = df.append(";".join(image_paths_rel))
-        df_cloud = df.append(";".join(image_paths_cloud))
+        print(len(image_paths_cloud))
+        paths = [";".join(image_paths.tolist())]
+        paths_rel = [";".join(image_paths_rel)]
+        paths_cloud = [";".join(image_paths_cloud)]
+
+        # add the paths to the dataframe
+        df = df.append(pd.DataFrame(paths, columns=["Images"]))
+        df_rel = df_rel.append(pd.DataFrame(paths_rel, columns=["Images"]))
+        df_cloud = df_cloud.append(pd.DataFrame(paths_cloud, columns=["Images"]))
+
 
     df.to_csv(mturk_root / "mturk_images_final.csv", index=False)
     df_rel.to_csv(mturk_root / "mturk_images_final_rel.csv", index=False)
     df_cloud.to_csv(mturk_root / "mturk_images_final_cloud.csv", index=False)
+
 
 
 def main():
@@ -424,7 +431,7 @@ def main():
     #filter_and_generate_final_csv()
     #create_catch_sample()
     # sanity_check()
-    compile_final_files()
+    # compile_final_files()
 
 
 

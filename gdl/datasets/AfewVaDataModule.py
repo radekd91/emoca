@@ -32,6 +32,8 @@ from munch import Munch
 import json
 import bisect
 from gdl.utils.other import class_from_str
+import warnings
+warnings.filterwarnings('ignore')
 
 
 # def make_class_balanced_sampler(labels):
