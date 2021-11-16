@@ -161,8 +161,9 @@ def train_emodeca_on_cluster():
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-52_5063894700880742144_EmoSwin_swin_base_patch4_window7_224_shake_Aug_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_04-51-06_5824575168153882277_EmoSwin_swin_tiny_patch4_window7_224_shake_Aug_early"]
 
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_16_14-40-02_-8111157540632717872_EmoNet_shake_Aug_early"]
 
-    bid = 10
+    bid = 100
 
     stage = 1 # test stage
 

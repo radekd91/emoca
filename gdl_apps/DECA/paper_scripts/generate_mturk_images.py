@@ -426,12 +426,12 @@ def compile_final_files():
 
 
 
-def main():
-    #generate_mturk_images()
-    #filter_and_generate_final_csv()
-    #create_catch_sample()
-    # sanity_check()
-    # compile_final_files()
+# def main():
+#     #generate_mturk_images()
+#     #filter_and_generate_final_csv()
+#     #create_catch_sample()
+#     # sanity_check()
+#     # compile_final_files()
 
 
 

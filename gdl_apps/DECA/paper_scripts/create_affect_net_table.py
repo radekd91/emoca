@@ -71,10 +71,13 @@ def main():
     final_model_nicknames["-3448168656212712789"] = "EMOCA-ResNet 5" # with identity
     # final_model_nicknames["2401491572395417653"] = "EMOCA-ResNet 1"
     final_model_nicknames["-7065481524420868895"] = "EMOCA-ResNet 1"
+    final_model_nicknames["-3928358334100033342"] = "EMOCA-ResNet 1 + lmk"
     final_model_nicknames["-7287099288123125386"] = "EMOCA-ResNet 1 DecaD"
     final_model_nicknames["-7163854018263734313"] = "EMOCA-ResNet cos"
     final_model_nicknames["-4010187096645607381"] = "EMOCA-ResNet L1"
     final_model_nicknames["-1667632836893565667"] = "EMOCA-EmoNet 1"
+    final_model_nicknames["-5030181931578898064"] = "EMOCA DecaD no-emo"
+    final_model_nicknames["-9222822014674789097"] = "EMOCA no-emo"
     # final_model_nicknames["4154598636886285872"] = "EMOCA-ResNet not balanced" # without identity
     final_model_nicknames["-2939789230769256174"] = "EMOCA-ResNet not balanced" # with identity
     final_model_nicknames["-7787195888843808313"] = "DECA" # with identity
@@ -101,17 +104,20 @@ def main():
     # order["EmoNet Original"] =  idx; idx+=1
     order["EmoNet Original"] = idx; idx+=1
     # order["-EMOCA-SWIN 10"] =  idx; idx+=1 #without identity
-    order["EMOCA-SWIN 10"] =  idx; idx+=1 # with identity
+    order["EMOCA-SWIN 10"] = idx; idx+=1 # with identity
     # order["EMOCA-SWIN 5"] =  idx; idx+=1 # without identity
-    order["EMOCA-SWIN 5"] =  idx; idx+=1 # with identity
-    order["EMOCA-SWIN 1"] =  idx; idx+=1
+    order["EMOCA-SWIN 5"] = idx; idx+=1 # with identity
+    order["EMOCA-SWIN 1"] = idx; idx+=1
     # order["EMOCA-SWIN 1 DecaD"] =  idx; idx+=1# without identity
     order["EMOCA-SWIN 1 DecaD"] = idx; idx+=1 # with identity
     # order["EMOCA-ResNet 5"] =  idx; idx+=1 # without identity
-    order["EMOCA-ResNet 5"] =  idx; idx+=1 # with identity
+    order["EMOCA-ResNet 5"] = idx; idx+=1 # with identity
     # order["EMOCA-ResNet 1"] =  idx; idx+=1
-    order["EMOCA-ResNet 1"] =  idx; idx+=1
+    order["EMOCA-ResNet 1"] = idx; idx+=1
+    order["EMOCA-ResNet 1 + lmk"] =  idx; idx+=1
     order["EMOCA-ResNet 1 DecaD"] =  idx; idx+=1
+    order["EMOCA DecaD no-emo"] =  idx; idx+=1
+    order["EMOCA no-emo"] =  idx; idx+=1
     order["EMOCA-ResNet cos"] =  idx; idx+=1
     order["EMOCA-ResNet L1"] =  idx; idx+=1
     order["EMOCA-EmoNet 1"] =  idx; idx+=1
@@ -194,8 +200,10 @@ def main():
         # f.write(
         #         )
 
+
 def format(num):
     return f"{num:.02f}"
+
 
 if __name__ == '__main__':
     main()
