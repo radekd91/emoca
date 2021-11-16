@@ -185,8 +185,8 @@ def emoce_coarse_vs_method(method_path, method_name):
 
 
 def main():
-    emoca_detail_vs_deca_detail()
-    # emoca_coarse_vs_deca_coarse()
+    # emoca_detail_vs_deca_detail()
+    emoca_coarse_vs_deca_coarse()
     #
     # # dictionary of methods and method their image paths:
     # methods = {}
