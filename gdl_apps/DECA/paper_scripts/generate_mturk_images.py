@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from tqdm import auto
 from skimage.io import imread, imsave
-
+import matplotlib.pyplot as plt
 
 def create_comparison_image(image_input, image_output_left, image_output_right):
     # Concatenate the images horizontally and return them as a numpy array
@@ -152,7 +152,7 @@ def emoca_detail_vs_deca_detail():
     path_deca_mask = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-20-34_-4851631063966731039_Orig_DECA2/detail/affect_net_mturk_detail_test/mask")
 
-    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
     output_folder = "EmocaDetail-DecaDetail"
 
     output_path = mturk_root / output_folder
@@ -172,7 +172,7 @@ def emoca_coarse_vs_deca_coarse():
     path_deca_mask = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-20-34_-4851631063966731039_Orig_DECA2/detail/affect_net_mturk_detail_test/mask")
 
-    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
     output_folder = "EmocaCoarse-DecaCoarse"
 
     output_path = mturk_root / output_folder
@@ -184,11 +184,11 @@ def emoca_detail_vs_method(method_path, method_name, method_image_pattern, metho
     input_images = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/inputs")
     path_emoca_coarse = Path(
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/geometry_coarse")
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/geometry_detail")
     path_emoca_mask = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/mask")
 
-    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
     output_folder = f"EmocaDetail-{method_name}"
 
     output_path = mturk_root / output_folder
@@ -206,7 +206,7 @@ def emoca_coarse_vs_method(method_path, method_name, method_image_pattern, metho
     path_emoca_mask = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/mask")
 
-    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
     output_folder = f"EmocaCoarse-{method_name}"
 
     output_path = mturk_root / output_folder
@@ -237,12 +237,12 @@ def generate_mturk_images():
     emoca_vs_method("/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_MGCNet/detail", "MGCNet",
                     method_image_pattern="**/GeoOrigin.jpg")
 
-def filter_mturk_images(max_samples, seed=0):
+def filter_mturk_images(max_samples, threshold=0.5, seed=0):
     df = pd.read_csv("/ps/project/EmotionalFacialAnimation/data/affectnet/Automatically_Annotated/Automatically_annotated_file_list/representative.csv")
     # print the number of images in the dataset
     print(df.shape)
-
-    threshold = 0.5
+    # tale only first 499 rows # 499 because some methods somehow failed for the last two (didn't save the image)
+    df = df.iloc[:499]
 
     # get a numpy array of indices to df, where "arousal" is either higher than 0.5 or lower than -0.5
     arousal_indices1 = np.where(df["arousal"] > threshold)[0]
@@ -256,20 +256,139 @@ def filter_mturk_images(max_samples, seed=0):
     # get the union of the two
     indices = np.union1d(arousal_indices, valence_indices)
     # get the number of elements that fullfill this condition
-    print(indices.shape)
+    print("Filtered out: ", indices.shape)
 
-    np.random.seed(0)
+    np.random.seed(seed)
     np.random.shuffle(indices)
 
-    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
-    np.save(mturk_root / f"mturk_indices_{max_samples:04d}_{seed}.npy", indices)
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
+    np.save(mturk_root / f"mturk_indices_{threshold:0.2f}_{max_samples:04d}_{seed}.npy", indices)
 
     return indices[:max_samples]
 
 
+def create_mturk_csv(indices, output_path, n_repeat_at_the_end=20, catch_sample_indices=None):
+
+    to_repeat = indices[:n_repeat_at_the_end]
+    # append the indices to the end of the list
+    indices = np.concatenate([indices, to_repeat])
+
+    if catch_sample_indices is not None:
+        indices = indices.tolist()
+        catch_sample_indices.sort(reverse=True)
+        for catch_sample_idx in catch_sample_indices:
+            indices[catch_sample_idx:catch_sample_idx] = [-1]
+
+
+
+    # create a new table with a column named "images"
+    df = pd.DataFrame(columns=["images"])
+    df_rel = pd.DataFrame(columns=["images"])
+    for i in range(len(indices)):
+        idx = indices[i]
+        if indices[i] == -1:
+            df.loc[i] = Path(output_path).parent / "catch_sample.png"
+            df_rel.loc[i] = "../catch_sample.png"
+        else:
+            df.loc[i] = [f"{str(output_path)}/{idx:04d}.png"]
+            df_rel.loc[i] = f"{idx:04d}.png"
+    return df, df_rel
+
+
+def filter_and_generate_csv(num_samples, indices=None, seed=0, threshold=0.5):
+    if indices is None:
+        indices = filter_mturk_images(max_samples=num_samples, threshold=threshold, seed=seed)
+    else: 
+        np.random.seed(0)
+        np.random.shuffle(indices)
+
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
+    experiments = [p for p in list(mturk_root.glob("*")) if p.is_dir()]
+
+    n_repeat_at_the_end = 15
+    catch_sample_indices = [20, 50]
+
+    for experiment in experiments:
+        df, df_rel = create_mturk_csv(indices, str(experiment), n_repeat_at_the_end, catch_sample_indices)
+        if indices is None:
+            outfile = str(experiment) + f"/mturk_images_{num_samples}_{seed}_{threshold:0.2f}"
+        else: 
+            outfile = str(experiment) + f"/mturk_images_selected"
+            np.save( str(experiment) + f"/selection_indices_{seed}", indices)
+        df.to_csv(outfile + ".csv", index=False)
+        df.to_csv(outfile + "_rel.csv", index=False)
+        print("Wrote dataframe to: ", outfile)
+
+
+def filter_and_generate_final_csv():
+    # threshold = 0.5
+    # seed = 0
+    # filter_and_generate_csv(50, seed=seed, threshold= threshold)
+    # filter_and_generate_csv(75, seed=seed, threshold= threshold)
+    # filter_and_generate_csv(100, seed=seed, threshold= threshold)
+    indices = np.array(selected_indices, dtype=np.int32)
+    indices.sort()
+    print (indices.shape)
+    filter_and_generate_csv(100, indices=indices)
+
+
+def sanity_check():
+    #path  = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaDetail-Deep3DFace/mturk_images_50_0_0.75.csv"
+    #path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaDetail-Deep3DFace/mturk_images_100_0_0.75.csv"
+    # path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaCoarse-Deep3DFace/mturk_images_100_0_0.85.csv"
+    path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaCoarse-Deep3DFace/mturk_images_selected.csv"
+    df = pd.read_csv(path)
+    # for reach row
+    for i in range(df.shape[0]):
+        # get the image path
+        image_path = df.iloc[i]["images"]
+        # load the image with skimage
+        image = imread(image_path)
+        # show the image with matplotlib
+        plt.imshow(image)
+        plt.show()
+
+
+def create_catch_sample():
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
+    catch_sample_path1 = mturk_root / "catch_1.png"
+    catch_sample_path2 = mturk_root / "catch_2.png"
+    catch_sample_mask1 = mturk_root / "catch_1_mask.png"
+    catch_sample_mask2 = mturk_root / "catch_2_mask.png"
+    input = mturk_root / "catch_1_input.png"
+
+    # load the images
+    image1 = imread(catch_sample_path1)
+    image2 = imread(catch_sample_path2)
+    mask1 = imread(catch_sample_mask1)
+    mask2 = imread(catch_sample_mask2)
+    input_image = imread(input)
+
+    mask1 = mask1.astype(np.float32)
+    image1 = image1.astype(np.float32) / 255.0
+    image1 = image1 * mask1
+
+    mask2 = mask2.astype(np.float32)
+    image2 = image2.astype(np.float32) / 255.0
+    image2 = image2 * mask2
+
+    # concatenate image1, input and image2 together
+    image = np.concatenate([image1, input_image, image2], axis=1)
+    #save the image
+    imsave(str(mturk_root / "catch_sample.png"), image)
+
+
+selected_indices = [0, 1, 5, 6 , 8, 9, 10, 12, 19,  20, 23, 26, 27, 28, 30, 31, 35, 37, 49, 51, 54, 55, 57, 59, 63, 67, 
+70, 75, 77, 88, 96, 97, 101, 105, 107 , 110, 111, 125, 127, 138, 143, 142, 166, 169, 168, 176, 210, 207, 235, 248, 191, 244,286, 
+164, 275, 295, 277, 300, 323, 345, 349, 338, 357, 355, 361, 377, 378, 384, 383, 407, 429,  452, 433, 464, 467, 450, 489, 482, 490, 472, 405
+]
+
+
 def main():
     generate_mturk_images()
-    # indices = filter_mturk_images(50)
+    filter_and_generate_final_csv()
+    create_catch_sample()
+    # sanity_check()
 
 
 
