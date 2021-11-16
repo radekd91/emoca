@@ -85,7 +85,7 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
                 mask_image_1 = np.stack((mask_image_1, mask_image_1, mask_image_1), axis=2)
 
             # convert the mask and the image to float32
-            mask_image_1 = mask_image_1.astype(np.float32) / 255.0
+            mask_image_1 = mask_image_1.astype(np.float32)
             output_image_1 = output_image_1.astype(np.float32) / 255.0
             output_image_1 = output_image_1 * mask_image_1
 
@@ -99,7 +99,7 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
             if len(mask_image_2.shape) == 2 or mask_image_2.shape[2] == 1:
                 mask_image_2 = np.stack((mask_image_2, mask_image_2, mask_image_2), axis=2)
             # multiply the mask with the input image
-            mask_image_2 = mask_image_2.astype(np.float32) / 255.0
+            mask_image_2 = mask_image_2.astype(np.float32)
             output_image_2 = output_image_2.astype(np.float32) / 255.0
             output_image_2 = output_image_2 * mask_image_2
 
@@ -268,8 +268,8 @@ def filter_mturk_images(max_samples, seed=0):
 
 
 def main():
-    generate_mturk_images()
-    # indices = filter_mturk_images(50)
+    # generate_mturk_images()
+    indices = filter_mturk_images(50)
 
 
 
