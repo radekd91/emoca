@@ -268,8 +268,8 @@ def filter_mturk_images(max_samples, seed=0):
 
 
 def main():
-    # generate_mturk_images()
-    indices = filter_mturk_images(50)
+    generate_mturk_images()
+    # indices = filter_mturk_images(50)
 
 
 
