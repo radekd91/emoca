@@ -74,7 +74,7 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
         output_image_2 = imread(str(output_image_list_2[i]))
 
         # check that the filenames match
-        assert input_image_list[i].stem == output_image_list_1[i].stem == output_image_list_2[i].stem
+        assert input_image_list[i].stem == output_image_list_1[i].stem #== output_image_list_2[i].stem
 
         if mask_image_list_1 is not None:
             # check the filenames match
