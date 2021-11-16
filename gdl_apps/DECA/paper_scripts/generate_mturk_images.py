@@ -40,12 +40,6 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
 
     output_path.mkdir(parents=True, exist_ok=True)
 
-    assert len(input_image_list) == len(output_image_list_1) == len(output_image_list_2)
-    if mask_image_list_1 is not None:
-        assert len(input_image_list) == len(mask_image_list_1)
-    if mask_image_path_2 is not None:
-        assert len(input_image_list) == len(mask_image_list_2)
-
     N = min(len(input_image_list), len(output_image_list_1), len(output_image_list_2))
     input_image_list = input_image_list[:N]
     output_image_list_1 = output_image_list_1[:N]
@@ -54,6 +48,12 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
         mask_image_list_1 = mask_image_list_1[:N]
     if mask_image_list_2 is not None:
         mask_image_list_2 = mask_image_list_2[:N]
+
+    assert len(input_image_list) == len(output_image_list_1) == len(output_image_list_2)
+    if mask_image_list_1 is not None:
+        assert len(input_image_list) == len(mask_image_list_1)
+    if mask_image_path_2 is not None:
+        assert len(input_image_list) == len(mask_image_list_2)
 
     # create a pandas table with the following columns: filename, was_swapped
     df = pd.DataFrame(columns=["filename", "was_swapped"])
