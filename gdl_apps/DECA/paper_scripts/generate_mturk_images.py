@@ -336,7 +336,7 @@ def sanity_check():
     #path  = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaDetail-Deep3DFace/mturk_images_50_0_0.75.csv"
     #path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaDetail-Deep3DFace/mturk_images_100_0_0.75.csv"
     # path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaCoarse-Deep3DFace/mturk_images_100_0_0.85.csv"
-    path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaCoarse-Deep3DFace/mturk_images_selected.csv"
+    path = "/ps/scratch/ps_shared/rdanecek/mturk_study/EmocaDetail-Deep3DFace/mturk_images_selected.csv"
     df = pd.read_csv(path)
     # for reach row
     for i in range(df.shape[0]):
@@ -384,11 +384,47 @@ selected_indices = [0, 1, 5, 6 , 8, 9, 10, 12, 19,  20, 23, 26, 27, 28, 30, 31, 
 ]
 
 
+def compile_final_files():
+    mturk_root = Path("/ps/scratch/ps_shared/rdanecek/mturk_study")
+    cloud_root = Path("https://emoca.s3.eu-central-1.amazonaws.com/")
+    experiments = [p for p in list(mturk_root.glob("*")) if p.is_dir()]
+
+    # create a new dataframe with images
+    df = pd.DataFrame(columns=["images"])
+    df_rel = pd.DataFrame(columns=["images"])
+    df_cloud = pd.DataFrame(columns=["images"])
+
+    for exp in experiments:
+        table = pd.read_csv(exp / "mturk_images_selected.csv")
+        table_rel = pd.read_csv(exp / "mturk_images_selected_rel.csv")
+
+        # get the image paths
+        image_paths = table["images"].values
+        image_paths_cloud = []
+        image_paths_rel = []
+        for i, path in enumerate( image_paths):
+            print(i)
+            image_path_rel = Path(path).relative_to(mturk_root)
+            image_path_cloud = str(cloud_root / image_path_rel)
+            # table_rel.loc[table_rel["images"] == str(image_paths_rel), "images"] = str(path)
+            image_paths_rel += [str(image_path_rel)]
+            image_paths_cloud += [str(image_paths_cloud)]
+
+        df = df.append(";".join(image_paths.tolist()))
+        df_rel = df.append(";".join(image_paths_rel))
+        df_cloud = df.append(";".join(image_paths_cloud))
+
+    df.to_csv(mturk_root / "mturk_images_final.csv", index=False)
+    df_rel.to_csv(mturk_root / "mturk_images_final_rel.csv", index=False)
+    df_cloud.to_csv(mturk_root / "mturk_images_final_cloud.csv", index=False)
+
+
 def main():
-    generate_mturk_images()
-    filter_and_generate_final_csv()
-    create_catch_sample()
+    #generate_mturk_images()
+    #filter_and_generate_final_csv()
+    #create_catch_sample()
     # sanity_check()
+    compile_final_files()
 
 
 
