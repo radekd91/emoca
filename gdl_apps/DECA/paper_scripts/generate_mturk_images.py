@@ -17,24 +17,33 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
                             output_path,
                             mask_image_path_1=None,
                             mask_image_path_2=None,
+                            pattern_1=None,
+                            pattern_2=None,
+                            mask_pattern_1=None,
+                            mask_pattern_2=None,
                             ):
+    pattern_1 = "*.png" if pattern_1 is None else pattern_1
+    pattern_2 = "*.png" if pattern_2 is None else pattern_2
+    mask_pattern_1 = "*.png" if mask_pattern_1 is None else mask_pattern_1
+    mask_pattern_2 = "*.png" if mask_pattern_2 is None else mask_pattern_2
+
     # find all png files in the folders using pathlib and sort them
     input_image_path = Path(input_image_path)
     output_image_path_1 = Path(output_image_path_1)
     output_images_path_2 = Path(output_images_path_2)
 
-    input_image_list = sorted(list(input_image_path.glob("*.png")))
-    output_image_list_1 = sorted(list(output_image_path_1.glob("*.png")))
+    input_image_list = sorted(list(input_image_path.glob(pattern_1)))
+    output_image_list_1 = sorted(list(output_image_path_1.glob(pattern_1)))
     if mask_image_path_1 is not None:
         mask_image_path_1 = Path(mask_image_path_1)
-        mask_image_list_1 = sorted(list(mask_image_path_1.glob("*.png")))
+        mask_image_list_1 = sorted(list(mask_image_path_1.glob(mask_pattern_1)))
     else:
         mask_image_list_1 = None
 
-    output_image_list_2 = sorted(list(output_images_path_2.glob("*.png")))
+    output_image_list_2 = sorted(list(output_images_path_2.glob(pattern_2)))
     if mask_image_path_2 is not None:
         mask_image_path_2 = Path(mask_image_path_2)
-        mask_image_list_2 = sorted(list(mask_image_path_2.glob("*.png")))
+        mask_image_list_2 = sorted(list(mask_image_path_2.glob(mask_pattern_2)))
     else:
         mask_image_list_2 = None
 
@@ -154,7 +163,7 @@ def emoca_coarse_vs_deca_coarse():
                             path_deca_mask)
 
 
-def emoca_detail_vs_method(method_path, method_name):
+def emoca_detail_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern):
     input_images = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/inputs")
     path_emoca_coarse = Path(
@@ -166,10 +175,13 @@ def emoca_detail_vs_method(method_path, method_name):
     output_folder = f"EmocaDetail-{method_name}"
 
     output_path = mturk_root / output_folder
-    create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask)
+    create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask,
+                            pattern_2=method_image_pattern,
+                            mask_pattern_2=method_mask_pattern,
+                            )
 
 
-def emoca_coarse_vs_method(method_path, method_name):
+def emoca_coarse_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern):
     input_images = Path(
         "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/affect_net_mturk_detail_test/inputs")
     path_emoca_coarse = Path(
@@ -181,12 +193,15 @@ def emoca_coarse_vs_method(method_path, method_name):
     output_folder = f"EmocaCoarse-{method_name}"
 
     output_path = mturk_root / output_folder
-    create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask)
+    create_mturk_experiment(input_images, path_emoca_coarse, method_path, output_path, path_emoca_mask,
+                            pattern_2=method_image_pattern,
+                            mask_pattern_2=method_mask_pattern,
+                            )
 
 
-def emoca_vs_method(method_path, method_name):
-    emoca_coarse_vs_method(method_path, method_name)
-    emoca_detail_vs_method(method_path, method_name)
+def emoca_vs_method(method_path, method_name, method_image_pattern=None, method_mask_pattern=None):
+    emoca_coarse_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern)
+    emoca_detail_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern)
 
 def main():
     # emoca_detail_vs_deca_detail()
@@ -194,12 +209,13 @@ def main():
     #
     # # dictionary of methods and method their image paths:
     methods = {}
-    methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
-    methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
-    # methods["MGCNet"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_MGCNet/detail"
-
+    # methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    # methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
     for name, path in methods.items():
         emoca_vs_method(path, name)
+
+    emoca_vs_method("/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_MGCNet/detail", "MGCNet",
+                    method_image_pattern="**/GeoOrigin.jpg")
 
 
 
