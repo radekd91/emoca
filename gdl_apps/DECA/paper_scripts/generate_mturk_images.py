@@ -80,14 +80,24 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
             # check the filenames match
             assert input_image_list[i].stem == mask_image_list_1[i].stem
             mask_image_1 = imread(str(mask_image_list_1[i]))
+            # if mask has only one channel, duplicate it to match the input image
+            if len(mask_image_1.shape) == 2 or mask_image_1.shape[2] == 1:
+                mask_image_1 = np.stack((mask_image_1, mask_image_1, mask_image_1), axis=2)
+            output_image_1 = output_image_1 * mask_image_1
             # apply the mask to the output image_output
-            output_image_1[mask_image_1 == 0] = 0
+            # output_image_1[mask_image_1 == 0] = 0
         if mask_image_list_2 is not None:
             # check the filenames match
             assert input_image_list[i].stem == mask_image_list_2[i].stem
             mask_image_2 = imread(str(mask_image_list_2[i]))
+            # if mask has only one channel, duplicate it to match the input image
+            if len(mask_image_2.shape) == 2 or mask_image_2.shape[2] == 1:
+                mask_image_2 = np.stack((mask_image_2, mask_image_2, mask_image_2), axis=2)
+            # multiply the mask with the input image
+            output_image_2 = output_image_2 * mask_image_2
+
             # apply the mask to the output image_output
-            output_image_2[mask_image_2 == 0] = 0
+            # output_image_2[mask_image_2 == 0] = 0
 
         # swap the two output images with 50% chance
         if np.random.rand() > 0.5:
