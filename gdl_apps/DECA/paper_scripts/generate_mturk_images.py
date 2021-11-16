@@ -83,7 +83,12 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
             # if mask has only one channel, duplicate it to match the input image
             if len(mask_image_1.shape) == 2 or mask_image_1.shape[2] == 1:
                 mask_image_1 = np.stack((mask_image_1, mask_image_1, mask_image_1), axis=2)
+
+            # convert the mask and the image to float32
+            mask_image_1 = mask_image_1.astype(np.float32) / 255.0
+            output_image_1 = output_image_1.astype(np.float32) / 255.0
             output_image_1 = output_image_1 * mask_image_1
+
             # apply the mask to the output image_output
             # output_image_1[mask_image_1 == 0] = 0
         if mask_image_list_2 is not None:
@@ -94,6 +99,8 @@ def create_mturk_experiment(input_image_path, output_image_path_1,
             if len(mask_image_2.shape) == 2 or mask_image_2.shape[2] == 1:
                 mask_image_2 = np.stack((mask_image_2, mask_image_2, mask_image_2), axis=2)
             # multiply the mask with the input image
+            mask_image_2 = mask_image_2.astype(np.float32) / 255.0
+            output_image_2 = output_image_2.astype(np.float32) / 255.0
             output_image_2 = output_image_2 * mask_image_2
 
             # apply the mask to the output image_output
@@ -213,19 +220,56 @@ def emoca_vs_method(method_path, method_name, method_image_pattern=None, method_
     emoca_coarse_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern)
     emoca_detail_vs_method(method_path, method_name, method_image_pattern, method_mask_pattern)
 
-def main():
+
+def generate_mturk_images():
     emoca_detail_vs_deca_detail()
     emoca_coarse_vs_deca_coarse()
     #
     # # dictionary of methods and method their image paths:
     methods = {}
-    methods["3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
-    methods["Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods[
+        "3DDFA_v2"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-40-45_-5868754668879675020_Face3DDFAModule/detail/affect_net_mturk_detail_test/geometry_coarse"
+    methods[
+        "Deep3DFace"] = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-09-34_6754141025581837735_Deep3DFaceModule/detail/affect_net_mturk_detail_test/geometry_coarse"
     for name, path in methods.items():
         emoca_vs_method(path, name)
 
     emoca_vs_method("/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_MGCNet/detail", "MGCNet",
                     method_image_pattern="**/GeoOrigin.jpg")
+
+def filter_mturk_images(max_samples, seed=0):
+    df = pd.read_csv("/ps/project/EmotionalFacialAnimation/data/affectnet/Automatically_Annotated/Automatically_annotated_file_list/representative.csv")
+    # print the number of images in the dataset
+    print(df.shape)
+
+    threshold = 0.5
+
+    # get a numpy array of indices to df, where "arousal" is either higher than 0.5 or lower than -0.5
+    arousal_indices1 = np.where(df["arousal"] > threshold)[0]
+    arousal_indices2 = np.where(df["arousal"] < -threshold)[0]
+    # take the union of the two arrays
+    arousal_indices = np.union1d(arousal_indices1, arousal_indices2)
+    # do the same for valence
+    valence_indices1 = np.where(df["valence"] > threshold)[0]
+    valence_indices2 = np.where(df["valence"] < -threshold)[0]
+    valence_indices = np.union1d(valence_indices1, valence_indices2)
+    # get the union of the two
+    indices = np.union1d(arousal_indices, valence_indices)
+    # get the number of elements that fullfill this condition
+    print(indices.shape)
+
+    np.random.seed(0)
+    np.random.shuffle(indices)
+
+    mturk_root = Path("/is/cluster/work/rdanecek/emoca/mturk_study")
+    np.save(mturk_root / f"mturk_indices_{max_samples:04d}_{seed}.npy", indices)
+
+    return indices[:max_samples]
+
+
+def main():
+    generate_mturk_images()
+    # indices = filter_mturk_images(50)
 
 
 
