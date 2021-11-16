@@ -475,6 +475,10 @@ def main():
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_02_12-42-41_-1213070571142271333_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
+    run_names +=[ # mturk resnet model
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/"
+    ]
+
     for run_name in run_names:
         run_path = Path(path_to_models) / run_name
         with open(Path(run_path) / "cfg.yaml", "r") as f:

@@ -51,7 +51,7 @@ def main():
     final_model_nicknames["5239516111744668401"] = "SWIN-B"
     # final_model_nicknames["-1021932498572718565"] = "SWIN-T"
     final_model_nicknames["-3698006624804482910"] = "VGG19 BN"
-    final_model_nicknames["-8111157540632717872"] = "EmonNet Original"
+    final_model_nicknames["-963597621400333018"] = "EmoNet Original"
     # final_model_nicknames["-4513972209100694206"] = "VGG19BN"
     # final_model_nicknames["8967464683573230563"] = "SWIN-B"
     # final_model_nicknames["4363551435501292966"] = "EmoCnn_vgg19_bn_shake_Aug_early"
