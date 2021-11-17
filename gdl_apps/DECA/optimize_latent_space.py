@@ -266,8 +266,15 @@ def plot_single_status(input_image, coarse_prediction, detail_prediction, coarse
         axs[i].get_xaxis().set_visible(False)
         axs[i].get_yaxis().set_visible(False)
 
+
+
     if save_path is not None:
+        for i in range(len(images)):
+            if images[i] is not None:
+                imsave(save_path + titles[i], images[i])
+
         plt.savefig(save_path, dpi=300)
+
     if show:
         fig.show()
     plt.close()

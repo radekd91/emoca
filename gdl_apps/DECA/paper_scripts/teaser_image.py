@@ -31,6 +31,8 @@ def main():
     model_folder = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
 
 
+
+
     stage = "detail"
 
     # result_subfolder = "affect_net_detail_test"

@@ -375,8 +375,8 @@ def main():
     # kw["optimize_expression"] = False
     kw["optimize_neck_pose"] = False
     # kw["optimize_neck_pose"] = True
-    # kw["optimize_jaw_pose"] = False
-    kw["optimize_jaw_pose"] = True
+    kw["optimize_jaw_pose"] = False
+    # kw["optimize_jaw_pose"] = True
     # kw["optimize_cam"] = True
     kw["optimize_cam"] = False
     kw["losses_to_use"] = {
@@ -391,8 +391,8 @@ def main():
         "loss_expression_reg": 10.,
         # "loss_photometric_texture": 1.,
         # "loss_landmark": 100.,
-        "loss_lip_distance": 10.,
-        "metric_mouth_corner_distance": 10.,
+        # "loss_lip_distance": 10.,
+        # "metric_mouth_corner_distance": 10.,
         # "loss_landmark": 1.,
         # "loss_lip_distance": 1.,
         # "metric_mouth_corner_distance": 1.,
@@ -410,20 +410,20 @@ def main():
         #     "weight" : 100., # mouth opens, loss does minimize, but the mouth stays open a little too much
         #     # "weight" : 50.,
         # },
-        "jaw_reg": {
-            # "loss_type": "l1",
-            "loss_type": "l2",
-            "reference_type": "quat",
-            "reference_pose": "from_target",
-            # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
-            #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
-            # "weight" : 0.1,
-            # "weight" : 0.5,
-            # "weight" : 1.,
-            # "weight" : 5.,
-            "weight" : 10.,
-            # "weight": 50.,
-        }
+        # "jaw_reg": {
+        #     # "loss_type": "l1",
+        #     "loss_type": "l2",
+        #     "reference_type": "quat",
+        #     "reference_pose": "from_target",
+        #     # "reference_pose": trans.matrix_to_quaternion(trans.euler_angles_to_matrix(
+        #     #     torch.deg2rad(torch.tensor([0., 0., 0.])), "XYZ")).numpy().tolist(),
+        #     # "weight" : 0.1,
+        #     # "weight" : 0.5,
+        #     # "weight" : 1.,
+        #     # "weight" : 5.,
+        #     "weight" : 10.,
+        #     # "weight": 50.,
+        # }
     }
 
 
