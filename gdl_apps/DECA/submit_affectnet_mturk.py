@@ -133,7 +133,14 @@ def main():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_-8022299573244041531_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-36_187831196779018813_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
-    # mode = 'detail'
+    #
+    #
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+    #                "2021_11_13_03-43-40_4753326650554236353_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236354_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering_not_blurred"]
+
+    mode = 'detail'
 
     tags = None
 
@@ -141,11 +148,11 @@ def main():
 
     for run_name in run_names:
 
-        api = wandb.Api()
-        name = str(Path(run_name).name)
-        idx = name.find("ExpDECA")
-        run_id = name[:idx-1]
-        run = api.run("rdanecek/EmotionalDeca/" + run_id)
+        # api = wandb.Api()
+        # name = str(Path(run_name).name)
+        # idx = name.find("ExpDECA")
+        # run_id = name[:idx-1]
+        # run = api.run("rdanecek/EmotionalDeca/" + run_id)
         # tags = run.tags
         # tags += ["NEW_SPLIT"]
         # fixed_overrides_cfg += [f"+learning.tags={ '['+'_'.join(tags)+ ']'}"]

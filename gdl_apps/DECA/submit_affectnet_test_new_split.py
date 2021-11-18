@@ -145,8 +145,8 @@ def main():
     # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_-3505404531826926943_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
 
     # with lmk
-    run_names += [
-        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_1092543351772726789_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
+    # run_names += [
+    #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_19-00-11_1092543351772726789_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"]
     # # # TRYING EMODECA WITH detail
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-48-09_-5406564322738469847_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSegrend_BlackC_Aug_early"]
@@ -166,8 +166,11 @@ def main():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-36_187831196779018813_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
     # #
     # ### mode = 'detail'
-    # mode = 'detail'
+    mode = 'detail'
 
+    run_names += [
+        "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236354_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering_not_blurred"
+    ]
     tags = None
 
     bid = 100

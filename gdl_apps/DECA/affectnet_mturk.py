@@ -60,9 +60,12 @@ def main():
 
     if len(sys.argv) > 1:
         run_name = sys.argv[1]
+    # else:
+    #     run_name = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+    #                "2021_11_13_03-43-40_4753326650554236353_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering"
     else:
-        run_name = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
-                   "2021_11_13_03-43-40_4753326650554236353_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering"
+        run_name =\
+            "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236354_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering_not_blurred"
 
     if len(sys.argv) > 2:
         mode = sys.argv[2]
