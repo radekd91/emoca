@@ -823,6 +823,10 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
+            if self.deca.displacement_mask is not None:
+                if 'apply_displacement_masks' in self.deca.config.keys() and self.deca.config.apply_displacement_masks:
+                    uv_z = uv_z * self.deca.displacement_mask
+
             # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
             detach_from_coarse_geometry = not self.deca.config.train_coarse
@@ -2304,6 +2308,13 @@ class DECA(torch.nn.Module):
         mask = torch.from_numpy(mask[:, :, 0])[None, None, :, :].contiguous()
         uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         self.register_buffer('uv_face_eye_mask', uv_face_eye_mask)
+
+        if 'displacement_mask' in self.config.keys():
+            displacement_mask_ = 1-np.load(self.config.displacement_mask).astype(np.float32)
+            # displacement_mask_ = np.load(self.config.displacement_mask).astype(np.float32)
+            displacement_mask_ = torch.from_numpy(displacement_mask_)[None, None, ...].contiguous()
+            displacement_mask_ = F.interpolate(displacement_mask_, [self.config.uv_size, self.config.uv_size])
+            self.register_buffer('displacement_mask', displacement_mask_)
 
         ## displacement correct
         if os.path.isfile(self.config.fixed_displacement_path):

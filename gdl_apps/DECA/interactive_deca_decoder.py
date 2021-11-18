@@ -63,7 +63,7 @@ def load_deca(conf,
         "inout_params": cfg.inout,
         "stage_name": "testing",
     }
-    deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, **checkpoint_kwargs)
+    deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
     return deca
 
 

@@ -57,12 +57,18 @@ def main():
     path_to_affectnet = "/ps/project/EmotionalFacialAnimation/data/affectnet/"
     # path_to_processed_affectnet = "/ps/scratch/rdanecek/data/affectnet/"
     path_to_processed_affectnet = "/is/cluster/work/rdanecek/data/affectnet/"
-    run_name = sys.argv[1]
+
+    if len(sys.argv) > 1:
+        run_name = sys.argv[1]
+    else:
+        run_name = "/is/cluster/work/rdanecek/emoca/finetune_deca/" \
+                   "2021_11_13_03-43-40_4753326650554236353_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early_masked_rendering"
 
     if len(sys.argv) > 2:
         mode = sys.argv[2]
     else:
-        mode = 'coarse'
+        # mode = 'coarse'
+        mode = 'detail'
 
     deca, conf = load_model(path_to_models, run_name, mode, allow_stage_revert=True)
 
@@ -72,18 +78,18 @@ def main():
         deca.reconfigure(conf[mode].model, conf[mode].inout, conf[mode].learning, stage_name="",
                          downgrade_ok=False, train=False)
     deca.eval()
-
-    import wandb
-    api = wandb.Api()
-    name = str(Path(run_name).name)
-    idx = name.find("ExpDECA")
-    run_id = name[:idx - 1]
-    run = api.run("rdanecek/EmotionalDeca/" + run_id)
-    tags = run.tags
-    conf["coarse"]["learning"]["tags"] = tags
-    conf["detail"]["learning"]["tags"] = tags
-    tags += ['val']
-
+    #
+    # import wandb
+    # api = wandb.Api()
+    # name = str(Path(run_name).name)
+    # idx = name.find("ExpDECA")
+    # run_id = name[:idx - 1]
+    # run = api.run("rdanecek/EmotionalDeca/" + run_id)
+    # tags = run.tags
+    # conf["coarse"]["learning"]["tags"] = tags
+    # conf["detail"]["learning"]["tags"] = tags
+    # tags += ['val']
+    #
     dm = data_preparation_function(conf[mode], path_to_affectnet, path_to_processed_affectnet)
     conf[mode].model.test_vis_frequency = 1
     # conf[mode].inout.name = "affectnet_test"
