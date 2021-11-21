@@ -2521,7 +2521,7 @@ class DECA(torch.nn.Module):
         # uv_detail_normals = util.gaussian_blur(uv_detail_normals)
         return uv_detail_normals, uv_coarse_vertices
 
-    def visualize(self, visdict, savepath):
+    def visualize(self, visdict, savepath, catdim=1):
         grids = {}
         for key in visdict:
             # print(key)
@@ -2529,7 +2529,7 @@ class DECA(torch.nn.Module):
                 continue
             grids[key] = torchvision.utils.make_grid(
                 F.interpolate(visdict[key], [self.config.image_size, self.config.image_size])).detach().cpu()
-        grid = torch.cat(list(grids.values()), 1)
+        grid = torch.cat(list(grids.values()), catdim)
         grid_image = (grid.numpy().transpose(1, 2, 0).copy() * 255)[:, :, [2, 1, 0]]
         grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
         if savepath is not None:

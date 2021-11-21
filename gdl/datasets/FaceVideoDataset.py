@@ -673,7 +673,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
                             vis_folder.mkdir(exist_ok=True, parents=True)
                         vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
                         with torch.no_grad():
-                            vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None)
+                            vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None, catdim=2)
                         if save_vis:
                             # cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
                             cv2.imwrite(str(vis_folder / (name + '.png')), vis_im)
