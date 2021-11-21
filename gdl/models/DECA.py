@@ -823,7 +823,7 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
-            if self.deca.displacement_mask is not None:
+            if hasattr(self.deca, 'displacement_mask') and self.deca.displacement_mask is not None:
                 if 'apply_displacement_masks' in self.deca.config.keys() and self.deca.config.apply_displacement_masks:
                     uv_z = uv_z * self.deca.displacement_mask
 
@@ -2532,7 +2532,8 @@ class DECA(torch.nn.Module):
         grid = torch.cat(list(grids.values()), 1)
         grid_image = (grid.numpy().transpose(1, 2, 0).copy() * 255)[:, :, [2, 1, 0]]
         grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
-        cv2.imwrite(savepath, grid_image)
+        if savepath is not None:
+            cv2.imwrite(savepath, grid_image)
         return grid_image
 
     def create_mesh(self, opdict, dense_template):

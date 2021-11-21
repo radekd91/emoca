@@ -211,9 +211,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
-    def _get_path_to_sequence_reconstructions(self, sequence_id):
+    def _get_path_to_sequence_reconstructions(self, sequence_id, version=1):
         video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
+        if version == 0:
+            suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
+        else:
+            suffix = Path(video_file.parts[-4]) / 'reconstructions_emoca' / video_file.parts[-2] / video_file.stem
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
@@ -550,14 +553,55 @@ class FaceVideoDataModule(FaceDataModuleBase):
             detections_fnames = pkl.load(f)
         return embeddings, detections_fnames
 
-    def _get_reconstruction_net(self, device):
-        add_pretrained_deca_to_path()
-        from decalib.deca import DECA
-        from decalib.utils.config import cfg as deca_cfg
-        # deca_cfg.model.use_tex = args.useTex
-        deca_cfg.model.use_tex = False
-        deca = DECA(config=deca_cfg, device=device)
+    # def _get_reconstruction_net(self, device):
+    #     add_pretrained_deca_to_path()
+    #     from decalib.deca import DECA
+    #     from decalib.utils.config import cfg as deca_cfg
+    #     # deca_cfg.model.use_tex = args.useTex
+    #     deca_cfg.model.use_tex = False
+    #     deca = DECA(config=deca_cfg, device=device)
+    #     return deca
+
+    def _get_reconstruction_net(self, device, version=1):
+        if version == 0:
+            add_pretrained_deca_to_path()
+            from decalib.deca import DECA
+            from decalib.utils.config import cfg as deca_cfg
+            # deca_cfg.model.use_tex = args.useTex
+            deca_cfg.model.use_tex = False
+            deca = DECA(config=deca_cfg, device=device)
+            return deca
+        else:
+            checkpoint_mode = 'best'
+            mode = "test"
+            from gdl.models.IO import get_checkpoint_with_kwargs
+            from omegaconf import OmegaConf
+            model_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
+            cfg = OmegaConf.load(Path(model_path) / "cfg.yaml")
+            stage = 'detail'
+            cfg = cfg[stage]
+            checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, mode, checkpoint_mode=checkpoint_mode,
+                                                                       replace_root = None, relative_to = None)
+            # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
+            # pretrained DECA)
+
+            # cfg_pretrain_.model.deca_class = cfg_coarse.model.deca_class
+            # checkpoint_kwargs["config"]["model"]["deca_class"] = cfg_coarse.model.deca_class
+            # load from configs
+            from gdl.models.DECA import instantiate_deca
+            deca_checkpoint_kwargs = {
+                "model_params": checkpoint_kwargs["config"]["model"],
+                "learning_params": checkpoint_kwargs["config"]["learning"],
+                "inout_params": checkpoint_kwargs["config"]["inout"],
+                "stage_name": "train",
+            }
+            deca = instantiate_deca(cfg, mode, "",  checkpoint, deca_checkpoint_kwargs )
+            deca.to(device)
+            deca.deca.config.detail_constrain_type = 'none'
+            return deca
+            # return deca.deca
         return deca
+
 
     def _reconstruct_faces(self, device = None):
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -569,7 +613,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
                                        save_video=True):
         add_pretrained_deca_to_path()
-        from decalib.utils import util
+        # from decalib.utils import util
+        import gdl.utils.DecaUtils as util
         from scipy.io.matlab import savemat
 
         def fixed_image_standardization(image):
@@ -586,56 +631,71 @@ class FaceVideoDataModule(FaceDataModuleBase):
         detections_fnames = sorted(list(in_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
         batch_size = 64
-        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+        # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
-            images = fixed_image_standardization(batch['image'].to(device))
-            codedict = reconstruction_net.encode(images)
-            opdict, visdict = reconstruction_net.decode(codedict)
-            opdict = util.dict_tensor2npy(opdict)
-            #TODO: verify axis
-            # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
-            for j in range(images.shape[0]):
-                path = Path(batch['path'][j])
-                name = path.stem
+            with torch.no_grad():
+                images = fixed_image_standardization(batch['image'].to(device))[None, ...]
+                batch_ = {}
+                batch_["image"] = images
+                codedict = reconstruction_net.encode(batch_, training=False)
+                # opdict, visdict = reconstruction_net.decode(codedict)
+                codedict = reconstruction_net.decode(codedict, training=False)
 
-                if save_obj:
-                    if i*j == 0:
-                        mesh_folder = out_folder / 'meshes'
-                        mesh_folder.mkdir(exist_ok=True, parents=True)
-                    reconstruction_net.save_obj(str(mesh_folder / (name + '.obj')), opdict)
-                if save_mat:
-                    if i*j == 0:
-                        mat_folder = out_folder / 'mat'
-                        mat_folder.mkdir(exist_ok=True, parents=True)
-                    savemat(str(mat_folder / (name + '.mat')), opdict)
-                if save_vis or save_video:
-                    if i*j == 0:
-                        vis_folder = out_folder / 'vis'
-                        vis_folder.mkdir(exist_ok=True, parents=True)
-                    vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
-                    vis_im = reconstruction_net.visualize(vis_dict_j)
-                    if save_vis:
-                        # cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
-                        cv2.imwrite(str(vis_folder / (name + '.png')), vis_im)
-                    if save_video and video_writer is None:
-                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                        # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
-                        #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
-                        video_writer = cv2.VideoWriter(str(vis_folder / "video.mp4"), cv2.CAP_FFMPEG,
-                                                       fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]), (vis_im.shape[1], vis_im.shape[0]), True)
-                    if save_video:
-                        video_writer.write(vis_im)
-                if save_images:
-                    if i*j == 0:
-                        ims_folder = out_folder / 'ims'
-                        ims_folder.mkdir(exist_ok=True, parents=True)
-                    for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images']:
-                        if vis_name not in visdict.keys():
-                            continue
-                        image = util.tensor2image(visdict[vis_name][j])
-                        Path(ims_folder / vis_name).mkdir(exist_ok=True, parents=True)
-                        cv2.imwrite(str(ims_folder / vis_name / (name +'.jpg')), image)
+                uv_detail_normals = None
+                if 'uv_detail_normals' in codedict.keys():
+                    uv_detail_normals = codedict['uv_detail_normals']
+                visdict, grid_image = reconstruction_net._visualization_checkpoint(codedict['verts'],
+                                                                            codedict['trans_verts'],
+                                                                            codedict['ops'],
+                                                       uv_detail_normals, codedict, 0, "train", "")
+                values = util.dict_tensor2npy(codedict)
+                #TODO: verify axis
+                # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
+                for j in range(images.shape[0]):
+                    path = Path(batch['path'][j])
+                    name = path.stem
+
+                    if save_obj:
+                        if i*j == 0:
+                            mesh_folder = out_folder / 'meshes'
+                            mesh_folder.mkdir(exist_ok=True, parents=True)
+                        reconstruction_net.deca.save_obj(str(mesh_folder / (name + '.obj')), values)
+                    if save_mat:
+                        if i*j == 0:
+                            mat_folder = out_folder / 'mat'
+                            mat_folder.mkdir(exist_ok=True, parents=True)
+                        savemat(str(mat_folder / (name + '.mat')), values)
+                    if save_vis or save_video:
+                        if i*j == 0:
+                            vis_folder = out_folder / 'vis'
+                            vis_folder.mkdir(exist_ok=True, parents=True)
+                        vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
+                        with torch.no_grad():
+                            vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None)
+                        if save_vis:
+                            # cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
+                            cv2.imwrite(str(vis_folder / (name + '.png')), vis_im)
+                        if save_video and video_writer is None:
+                            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                            # video_writer = cv2.VideoWriter(filename=str(vis_folder / "video.mp4"), apiPreference=cv2.CAP_FFMPEG,
+                            #                                fourcc=fourcc, fps=dm.video_metas[sequence_id]['fps'], frameSize=(vis_im.shape[1], vis_im.shape[0]))
+                            video_writer = cv2.VideoWriter(str(vis_folder / "video.mp4"), cv2.CAP_FFMPEG,
+                                                           fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]),
+                                                           (vis_im.shape[1], vis_im.shape[0]), True)
+                        if save_video:
+                            video_writer.write(vis_im)
+                    if save_images:
+                        if i*j == 0:
+                            ims_folder = out_folder / 'ims'
+                            ims_folder.mkdir(exist_ok=True, parents=True)
+                        for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images']:
+                            if vis_name not in visdict.keys():
+                                continue
+                            image = util.tensor2image(visdict[vis_name][j])
+                            Path(ims_folder / vis_name).mkdir(exist_ok=True, parents=True)
+                            cv2.imwrite(str(ims_folder / vis_name / (name +'.png')), image)
         if video_writer is not None:
             video_writer.release()
         print("Done running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
@@ -2313,7 +2373,9 @@ class TestData(Dataset):
 
 
 def main():
-    root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
+    # root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")
+    # root = Path("/is/cluster/work/rdanecek/data/aff-wild2/")
+    root = Path("/ps/project/EmotionalFacialAnimation/data/aff-wild2/")
     root_path = root / "Aff-Wild2_ready"
     output_path = root / "processed"
     # subfolder = 'processed_2020_Dec_21_00-30-03'
@@ -2402,10 +2464,10 @@ def main():
     # failed_jobs = [154, 169, 390]
     # for fj in failed_jobs:
 
-    # fj = 9
+    fj = 9
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
-    # dm._reconstruct_faces_in_sequence(fj)
+    dm._reconstruct_faces_in_sequence(fj)
     # dm._identify_recognitions_for_sequence(fj)
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)
 

@@ -653,7 +653,8 @@ def remove_module(state_dict):
 def dict_tensor2npy(tensor_dict):
     npy_dict = {}
     for key in tensor_dict:
-        npy_dict[key] = tensor_dict[key][0].cpu().numpy()
+        if tensor_dict[key] is not None and isinstance(tensor_dict[key], torch.Tensor):
+            npy_dict[key] = tensor_dict[key][0].cpu().numpy()
     return npy_dict
 
 
