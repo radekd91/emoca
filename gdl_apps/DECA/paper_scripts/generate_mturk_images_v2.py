@@ -206,6 +206,187 @@ def create_csv_for_all_methods():
 #                     print(path)
 #
 
+mapping = {
+    1: "neutral",
+    2: "happy",
+    3: "sad",
+    4: "surprise",
+    5: "fear",
+    6: "disgust",
+    7: "anger",
+}
+
+# catch_labels = {
+#     "0000_0480_00_happy": 2,
+#     "0000_0077_00_sad" : 3,
+#     "0000_0239_00_fear": 5,
+#     "0000_0300_00_angry": 7,
+#     "0000_0238_00_anger": 7,
+# }
+#
+catch_labels = {
+    "0000_0480_00": 2,
+    "0000_0077_00" : 3,
+    "0000_0239_00": 5,
+    "0000_0300_00": 7,
+    "0000_0238_00": 7,
+}
+
+
+
+
+def analyze_response(method, answers, image_list, num_repeats=10):
+
+    assert len(answers) == len(image_list)
+
+    answers = answers[num_repeats:]
+    image_list = image_list[num_repeats:]
+
+    image_labels = {}
+    rec_lables = {}
+    catch_responses = {}
+
+
+    N = len(answers)
+    for i in range(N):
+        image_name = image_list[i]
+        if "real" in image_name:
+            image_labels[Path(image_name).stem] = answers[i]
+        elif method in image_name:
+            rec_lables[Path(image_name).stem] = answers[i]
+        else:
+            key = Path(image_name).stem
+            key = key[:12]
+            catch_responses[key] = answers[i]
+    if len(rec_lables) == 0:
+        print(method)
+        # sys.exit()
+
+
+    num_correct_catches = 0
+    for key in catch_responses.keys():
+        if int(catch_responses[key]) == int(catch_labels[key]):
+            num_correct_catches += 1
+
+    num_consistent_catches = 0
+    for key in catch_responses.keys():
+        if int(catch_responses[key]) == int(image_labels[key]):
+            num_consistent_catches += 1
+
+    if len(catch_responses) < 5:
+        print("Num catch responses", len(catch_responses))
+
+    discard_by_mislabel = False
+    if num_correct_catches < 3:
+        discard_by_mislabel = True
+
+    discard_by_incosistency = False
+    if num_consistent_catches < 3:
+        discard_by_incosistency = True
+
+
+    total_score = 0
+    correct_scores = {}
+    incorrect_scores = {}
+
+    for i in range(1,8):
+        correct_scores[i] = 0
+        incorrect_scores[i] = 0
+
+    for key, value in image_labels.items():
+        if key in rec_lables.keys():
+            if value != rec_lables[key]:
+                # print("Mismatch", key, value, rec_lables[key])
+                incorrect_scores[int(value)] += 1
+            else:
+                correct_scores[int(value)] += 1
+                total_score += 1
+
+
+    return discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores
+
+
+def analyze_results():
+    # file = "PartialResultsEmocaSecondRunBatch_4607964_batch_results.csv"
+    file = "Emoca_Results_CSV.csv"
+    fullf = Path(new_mturk_root) / file
+
+    df =  pd.read_csv(fullf)
+
+    print(len(df))
+
+    method_total_scores = {}
+    method_scores = {}
+    method_correct_scores = {}
+    method_incorrect_scores = {}
+    method_num_discarded = {}
+    method_num_valid = {}
+
+    for i in range(len(df)):
+        ei = df.loc[i]
+
+        answers = ei["Answer.submitValues"].split(",")
+        if answers[-1] == "":
+            answers = answers[:-1]
+        image_list = ei["Input.images"].split(";")
+        method = ""
+        for im in image_list:
+            # impath = Path(im)
+            if "MGC" in im:
+                method = "MGCNet"
+            elif "Deep3DFace" in im:
+                method = "Deep3DFace"
+            elif "3DDFA_v2" in im:
+                method = "3DDFA"
+            elif "DecaCoarse" in im:
+                method = "DecaCoarse"
+            elif "DecaDetail" in im:
+                method = "DecaDetail"
+            elif "EmocaCoarse" in im:
+                method = "EmocaCoarse"
+            elif "EmocaDetail" in im:
+                method = "EmocaDetail"
+            else:
+                continue
+            break
+        if method == "":
+            raise Exception("Method not found")
+
+        discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores = \
+            analyze_response(method, answers, image_list)
+
+        if method not in method_scores.keys():
+            method_scores[method] = []
+            method_correct_scores[method] = []
+            method_incorrect_scores[method] = []
+            method_num_discarded[method] = 0
+            method_total_scores[method] = 0
+            method_num_valid[method] = 0
+
+        if not (discard_by_mislabel or discard_by_incosistency):
+            method_scores[method] += [total_score]
+            method_total_scores[method] += total_score
+            method_correct_scores[method] += [correct_scores]
+            method_scores[method] += [incorrect_scores]
+            method_num_valid[method] += 1
+        else:
+            method_num_discarded[method] += 1
+
+    for method in method_scores.keys():
+        method_total_scores[method] /= method_num_valid[method]
+        method_total_scores[method] /= 30
+
+    print("Method scores:")
+    print(method_total_scores)
+    print("Discarded:")
+    print(method_num_discarded)
+    print("_____________________________")
+    print("Valid:")
+    print(method_num_valid)
+    print("_____________________________")
+
+
+
 def main():
     # df = pd.read_csv(
     #     "/ps/project/EmotionalFacialAnimation/data/affectnet/Automatically_Annotated/Automatically_annotated_file_list/representative.csv")
@@ -214,7 +395,8 @@ def main():
     # copy_for_all_methods()
     # create_csv_for_all_methods()
     # get_image_selection()
-    sanity_check()
+    # sanity_check()
+    analyze_results()
 
 
 
