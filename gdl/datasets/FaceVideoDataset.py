@@ -746,11 +746,18 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
-                                       save_video=True, rec_method='emoca'):
-        add_pretrained_deca_to_path()
+                                       save_video=True, rec_method='emoca', retarget_from=None,):
+        # add_pretrained_deca_to_path()
         # from decalib.utils import util
         import gdl.utils.DecaUtils as util
-        from scipy.io.matlab import savemat
+        from scipy.io.matlab import savemat, loadmat
+
+        if retarget_from is not None:
+            codedict_retarget = loadmat(retarget_from)
+        else:
+            codedict_retarget = None
+
+
 
         def fixed_image_standardization(image):
             return image / 255.
@@ -770,12 +777,17 @@ class FaceVideoDataModule(FaceDataModuleBase):
         loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
+            if i != len(loader) - 1:
+                continue
             with torch.no_grad():
                 images = fixed_image_standardization(batch['image'].to(device))#[None, ...]
                 batch_ = {}
                 batch_["image"] = images
                 codedict = reconstruction_net.encode(batch_, training=False)
                 # opdict, visdict = reconstruction_net.decode(codedict)
+                if codedict_retarget is not None:
+                    codedict["shapecode"] = codedict_retarget["shapecode"]
+                    codedict["detailcode"] = codedict_retarget["detailcode"]
                 codedict = reconstruction_net.decode(codedict, training=False)
 
                 uv_detail_normals = None
@@ -787,7 +799,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
                                                                                 codedict['ops'],
                                                            uv_detail_normals, codedict, 0, "train", "")
                 else:
-                    visdict = reconstruction_net._visualization_checkpoint(batch_size, batch_, codedict, i, "", "")
+                    visdict = reconstruction_net._visualization_checkpoint(batch_["image"].shape[0], batch_, codedict, i, "", "")
                 values = util.dict_tensor2npy(codedict)
                 #TODO: verify axis
                 # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
@@ -2630,12 +2642,13 @@ def main():
     fj = 9
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
+    # retarget_from = ""
     # dm._reconstruct_faces_in_sequence(fj)
-    # dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
+    dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False)
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca')
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', image_type="coarse")
-    dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True)
     # dm._identify_recognitions_for_sequence(fj)
