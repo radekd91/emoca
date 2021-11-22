@@ -837,8 +837,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
-    def _get_reconstructions_for_sequence(self, sid):
-        out_folder = self._get_path_to_sequence_reconstructions(sid)
+    def _get_reconstructions_for_sequence(self, sid, version=1):
+        out_folder = self._get_path_to_sequence_reconstructions(sid, version=version)
         vis_fnames = sorted(list((out_folder / "vis").glob("*.png")))
         if len(vis_fnames) == 0:
             vis_fnames = sorted(list((out_folder / "vis").glob("*.jpg")))
@@ -871,11 +871,11 @@ class FaceVideoDataModule(FaceDataModuleBase):
         indices, labels, mean, cov, fnames = FaceVideoDataModule._load_recognitions(recognition_path)
         return indices, labels, mean, cov, fnames
 
-    def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5):
+    def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5, version=1):
         from PIL import Image, ImageDraw
         # fid = 0
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
-        vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, version=version)
         vid_frames = self._get_frames_for_sequence(sequence_id)
 
         vis_fnames.sort()
@@ -929,12 +929,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 except ValueError as e:
                     continue
 
-                r = vis_im.shape[0]
-                c = vis_im.shape[1]
-                num_ims = c // r
+                im_r = vis_im.shape[0]
+                im_c = vis_im.shape[1]
+                num_ims = im_c // im_r
 
                 # vis_im = vis_im[:, r*3:r*4, ...] # coarse
-                vis_im = vis_im[:, r*4:r*5, ...] # detail
+                vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
                 # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
@@ -1064,7 +1064,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 except ValueError as e:
                     continue
 
-                vis_im = vis_im[:, -vis_im.shape[1] // 5:, ...]
+                im_r = vis_im.shape[0]
+                im_c = vis_im.shape[1]
+                num_ims = im_c // im_r
+
+                # vis_im = vis_im[:, r*3:r*4, ...] # coarse
+                vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
+                # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
                 vis_mask = (np.prod(vis_im, axis=2) > 30).astype(np.uint8) * 255
@@ -2478,7 +2484,9 @@ def main():
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
     # dm._reconstruct_faces_in_sequence(fj)
-    dm.create_reconstruction_video(fj, overwrite=True)
+    # dm.create_reconstruction_video(fj, overwrite=False)
+    dm.create_reconstruction_video(fj, overwrite=False, version=0)
+    # dm.create_reconstruction_video_with_recognition(fj, overwrite=True)
     # dm._identify_recognitions_for_sequence(fj)
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)
 
