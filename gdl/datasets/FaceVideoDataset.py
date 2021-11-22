@@ -631,8 +631,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
         detections_fnames = sorted(list(in_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
         batch_size = 64
-        # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
-        loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+        # loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
             with torch.no_grad():
@@ -903,6 +903,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
             frame = imread(frame_name)
 
+
             frame_pill_bb = Image.fromarray(frame)
             frame_deca_full = Image.fromarray(frame)
             frame_deca_trans = Image.fromarray(frame)
@@ -928,7 +929,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 except ValueError as e:
                     continue
 
-                vis_im = vis_im[:, -vis_im.shape[1] // 5:, ...]
+                r = vis_im.shape[0]
+                c = vis_im.shape[1]
+                num_ims = c // r
+
+                # vis_im = vis_im[:, r*3:r*4, ...] # coarse
+                vis_im = vis_im[:, r*4:r*5, ...] # detail
+                # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
                 vis_mask = (np.prod(vis_im, axis=2) > 30).astype(np.uint8) * 255
@@ -2470,8 +2477,8 @@ def main():
     fj = 9
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
-    dm._reconstruct_faces_in_sequence(fj)
-    # dm.create_reconstruction_video(fj, overwrite=True)
+    # dm._reconstruct_faces_in_sequence(fj)
+    dm.create_reconstruction_video(fj, overwrite=True)
     # dm._identify_recognitions_for_sequence(fj)
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)
 
