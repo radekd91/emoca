@@ -211,12 +211,16 @@ class FaceVideoDataModule(FaceDataModuleBase):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
-    def _get_path_to_sequence_reconstructions(self, sequence_id, version=1):
+    def _get_path_to_sequence_reconstructions(self, sequence_id, rec_method='emoca'):
         video_file = self.video_list[sequence_id]
-        if version == 0:
+        if rec_method == 'deca':
             suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
-        else:
+        elif rec_method == 'emoca':
             suffix = Path(video_file.parts[-4]) / 'reconstructions_emoca' / video_file.parts[-2] / video_file.stem
+        elif rec_method == 'deep3dface':
+            suffix = Path(video_file.parts[-4]) / 'reconstructions_deep3dface' / video_file.parts[-2] / video_file.stem
+        else:
+            raise ValueError("Unknown reconstruction method '%s'" % rec_method)
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
@@ -562,8 +566,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
     #     deca = DECA(config=deca_cfg, device=device)
     #     return deca
 
-    def _get_reconstruction_net(self, device, version=1):
-        if version == 0:
+    def _get_reconstruction_net(self, device, rec_method='deca'):
+        if rec_method == 'deca':
             add_pretrained_deca_to_path()
             from decalib.deca import DECA
             from decalib.utils.config import cfg as deca_cfg
@@ -571,7 +575,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
             deca_cfg.model.use_tex = False
             deca = DECA(config=deca_cfg, device=device)
             return deca
-        else:
+        elif rec_method == "emoca":
             checkpoint_mode = 'best'
             mode = "test"
             from gdl.models.IO import get_checkpoint_with_kwargs
@@ -600,7 +604,137 @@ class FaceVideoDataModule(FaceDataModuleBase):
             deca.deca.config.detail_constrain_type = 'none'
             return deca
             # return deca.deca
-        return deca
+        elif rec_method == "deep3dface":
+
+            # face_model = None
+            # from hydra.experimental import compose, initialize
+            #
+            # default = "deca_train_detail"
+            # overrides = [
+            #     # 'model/settings=3ddfa',
+            #     # 'model/settings=3ddfa_resnet',
+            #     'model/settings=deep3dface',
+            #     'learning/logging=none',
+            #     'data/datasets=affectnet_desktop',  # affectnet vs deca dataset
+            #     # 'data/datasets=affectnet_cluster',  # affectnet vs deca dataset
+            #     'data.num_workers=0',
+            #     'learning.batch_size_train=4',
+            # ]
+            #
+            # initialize(config_path="deca_conf", job_name="test_face_model")
+            # conf = compose(config_name=default, overrides=overrides)
+
+            from gdl.models.external.Deep3DFace import Deep3DFaceModule
+            from omegaconf import DictConfig
+
+            model_cfg = {
+                # "value": {
+                    "mode": "detail",
+                    # "n_cam": 3,
+                    # "n_exp": 50,
+                    # "n_tex": 50,
+                    # "n_pose": 6,
+                    # "n_light": 27,
+                    # "n_shape": 100,
+                    # "uv_size": 256,
+                    # "n_detail": 128,
+                    # "tex_path": "/ps/scratch/rdanecek/data/FLAME/texture/FLAME_albedo_from_BFM.npz",
+                    # "tex_type": "BFM",
+                    "n_dlatent": 512,
+                    "deca_class": "Deep3DFaceModule",
+                    "deep3dface": {
+                        "name": "face_recon_feat0.2_augment",
+                        "epoch": 20,
+                        "focal": 1015,
+                        "model": "facerecon",
+                        "phase": "test",
+                        "z_far": 15,
+                        "center": 112,
+                        "suffix": "null",
+                        "z_near": 5,
+                        "gpu_ids": 0,
+                        "isTrain": False,
+                        "use_ddp": False,
+                        "verbose": False,
+                        "camera_d": 10,
+                        "ddp_port": 12355,
+                        "add_image": True,
+                        "bfm_model": "BFM_model_front.mat",
+                        "init_path": "checkpoints/init_model/resnet50-0676ba61.pth",
+                        "net_recon": "resnet50",
+                        "bfm_folder": "BFM",
+                        "img_folder": "./datasets/examples",
+                        "world_size": 1,
+                        "use_last_fc": False,
+                        "dataset_mode": "None",
+                        "vis_batch_nums": 1,
+                        "checkpoints_dir": "./checkpoints",
+                        "eval_batch_nums": "inf",
+                        "display_per_batch": True
+                    },
+                    "image_size": 224,
+                    "max_epochs": 4,
+                    # "n_identity": 512,
+                    # "topology_path": "/ps/scratch/rdanecek/data/FLAME/geometry/head_template.obj",
+                    # "face_mask_path": "/ps/scratch/rdanecek/data/FLAME/mask/uv_face_mask.png",
+                    # "neural_renderer": false,
+                    # "flame_model_path": "/ps/scratch/rdanecek/data/FLAME/geometry/generic_model.pkl",
+                    # "val_vis_frequency": 200,
+                    # "face_eye_mask_path": "/ps/scratch/rdanecek/data/FLAME/mask/uv_face_eye_mask.png",
+                    # "test_vis_frequency": 1,
+                    # "val_check_interval": 0.2,
+                    # "train_vis_frequency": 1000,
+                    # "pretrained_modelpath": "/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar",
+                    # "background_from_input": true,
+                    # "fixed_displacement_path": "/ps/scratch/rdanecek/data/FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy",
+                    # "flame_lmk_embedding_path": "/ps/scratch/rdanecek/data/FLAME/geometry/landmark_embedding.npy",
+                    # "pretrained_vgg_face_path": "/ps/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl"
+                }
+            # }
+
+            learning_cfg =  {
+                "path": "/ps/scratch/face2d3d/",
+                "n_train": 10000000,
+                "scale_max": 1.6,
+                "scale_min": 1.2,
+                "data_class": "DecaDataModule",
+                "num_workers": 4,
+                "split_ratio": 0.9,
+                "split_style": "random",
+                "trans_scale": 0.1,
+                "testing_datasets": [
+                    "now-test",
+                    "now-val",
+                    "celeb-val"
+                ],
+                "training_datasets": [
+                    "vggface2hq",
+                    "vox2"
+                ],
+                "validation_datasets": [
+                    "now-val",
+                    "celeb-val"
+                ]
+            }
+
+            inout_cfg = {
+                "name": "ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early",
+                "time": "2021_11_13_03-43-40",
+                "random_id": "3038711584732653067",
+                "output_dir": "/is/cluster/work/rdanecek/emoca/finetune_deca",
+                "full_run_dir": "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail",
+                "checkpoint_dir": "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early/detail/checkpoints"
+            }
+
+
+            face_model = Deep3DFaceModule(DictConfig(model_cfg), DictConfig(learning_cfg),
+                                          DictConfig(inout_cfg), "")
+            face_model.to(device)
+            return face_model
+
+
+        else:
+            raise ValueError("Unknown version of the reconstruction net")
 
 
     def _reconstruct_faces(self, device = None):
@@ -609,9 +743,10 @@ class FaceVideoDataModule(FaceDataModuleBase):
         for sid in range(self.num_sequences):
             self._reconstruct_faces_in_sequence(sid, reconstruction_net, device)
 
+
     def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
-                                       save_video=True):
+                                       save_video=True, rec_method='emoca'):
         add_pretrained_deca_to_path()
         # from decalib.utils import util
         import gdl.utils.DecaUtils as util
@@ -622,17 +757,17 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         print("Running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
         in_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_folder = self._get_path_to_sequence_reconstructions(sequence_id)
+        out_folder = self._get_path_to_sequence_reconstructions(sequence_id, rec_method=rec_method)
 
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        reconstruction_net = reconstruction_net or self._get_reconstruction_net(device)
+        reconstruction_net = reconstruction_net or self._get_reconstruction_net(device, rec_method=rec_method)
 
         video_writer = None
         detections_fnames = sorted(list(in_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
         batch_size = 64
-        loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
-        # loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+        # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
             with torch.no_grad():
@@ -646,10 +781,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 uv_detail_normals = None
                 if 'uv_detail_normals' in codedict.keys():
                     uv_detail_normals = codedict['uv_detail_normals']
-                visdict, grid_image = reconstruction_net._visualization_checkpoint(codedict['verts'],
-                                                                            codedict['trans_verts'],
-                                                                            codedict['ops'],
-                                                       uv_detail_normals, codedict, 0, "train", "")
+                if rec_method in ['emoca', 'deca']:
+                    visdict, grid_image = reconstruction_net._visualization_checkpoint(codedict['verts'],
+                                                                                codedict['trans_verts'],
+                                                                                codedict['ops'],
+                                                           uv_detail_normals, codedict, 0, "train", "")
+                else:
+                    visdict = reconstruction_net._visualization_checkpoint(batch_size, batch_, codedict, i, "", "")
                 values = util.dict_tensor2npy(codedict)
                 #TODO: verify axis
                 # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
@@ -673,7 +811,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
                         vis_folder.mkdir(exist_ok=True, parents=True)
                         vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
                         with torch.no_grad():
-                            vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None, catdim=2)
+                            # vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None, catdim=2)
+                            vis_im = reconstruction_net.visualize(vis_dict_j, savepath=None, catdim=2)
                         if save_vis:
                             # cv2.imwrite(str(vis_folder / (name + '.jpg')), vis_im)
                             cv2.imwrite(str(vis_folder / (name + '.png')), vis_im)
@@ -837,8 +976,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
-    def _get_reconstructions_for_sequence(self, sid, version=1):
-        out_folder = self._get_path_to_sequence_reconstructions(sid, version=version)
+    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca'):
+        out_folder = self._get_path_to_sequence_reconstructions(sid, rec_method=rec_method)
         vis_fnames = sorted(list((out_folder / "vis").glob("*.png")))
         if len(vis_fnames) == 0:
             vis_fnames = sorted(list((out_folder / "vis").glob("*.jpg")))
@@ -871,17 +1010,23 @@ class FaceVideoDataModule(FaceDataModuleBase):
         indices, labels, mean, cov, fnames = FaceVideoDataModule._load_recognitions(recognition_path)
         return indices, labels, mean, cov, fnames
 
-    def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5, version=1):
+    def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5,
+                                    rec_method='emoca', image_type=None):
         from PIL import Image, ImageDraw
         # fid = 0
+        image_type = image_type or "detail"
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
-        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, version=version)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method)
+
         vid_frames = self._get_frames_for_sequence(sequence_id)
 
         vis_fnames.sort()
         vid_frames.sort()
 
-        outfile = vis_fnames[0].parents[1] / "video.mp4"
+        if image_type == "detail":
+            outfile = vis_fnames[0].parents[1] / "video.mp4"
+        else:
+            outfile = vis_fnames[0].parents[1] / "video_" + image_type + ".mp4"
 
         print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
         if outfile.exists() and not overwrite:
@@ -933,8 +1078,10 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 im_c = vis_im.shape[1]
                 num_ims = im_c // im_r
 
-                # vis_im = vis_im[:, r*3:r*4, ...] # coarse
-                vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
+                if image_type == "coarse":
+                    vis_im = vis_im[:, im_r*3:im_r*4, ...] # coarse
+                else:
+                    vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
                 # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
@@ -2484,8 +2631,12 @@ def main():
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
     # dm._reconstruct_faces_in_sequence(fj)
+    # dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False)
-    dm.create_reconstruction_video(fj, overwrite=False, version=0)
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca')
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', image_type="coarse")
+    dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True)
     # dm._identify_recognitions_for_sequence(fj)
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)

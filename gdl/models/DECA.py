@@ -209,6 +209,9 @@ class DecaModule(LightningModule):
         if shape_constraint is not None and expression_constraint is not None:
             raise ValueError("Both shape constraint and expression constraint are active. This is probably not what we want.")
 
+    def visualize(self, visdict, savepath, catdim=1):
+        return self.deca.visualize(visdict, savepath, catdim)
+
     def train(self, mode: bool = True):
         # super().train(mode) # not necessary
         self.deca.train(mode)
@@ -711,7 +714,7 @@ class DecaModule(LightningModule):
         return detail_conditioning_list
 
 
-    def decode(self, codedict, training=True) -> dict:
+    def decode(self, codedict, training=True, **kwargs) -> dict:
         shapecode = codedict['shapecode']
         expcode = codedict['expcode']
         posecode = codedict['posecode']

@@ -65,11 +65,11 @@ class Face3DDFAModule(pl.LightningModule):
             self.stage_name += "_"
         self.tddfa = Face3DDFAv2Wrapper(cfg=model_params.tddfa)
 
-    def encode(self, batch):
+    def encode(self, batch, **kwargs):
         return self.tddfa.encode(batch)
 
-    def decode(self, batch, values):
-        return self.tddfa.decode(batch, values)
+    def decode(self, values, **kwargs):
+        return self.tddfa.decode(values)
 
     def training_step(self):
         raise NotImplementedError()
@@ -93,7 +93,7 @@ class Face3DDFAModule(pl.LightningModule):
             # training = False
             # testing = True
             values = self.encode(batch)
-            values = self.decode(batch, values)
+            values = self.decode( values)
             # if 'mask' in batch.keys():
             #     losses_and_metrics = self.compute_loss(values, batch, training=False, testing=testing)
             #     # losses_and_metrics_to_log = {prefix + '_' + stage_str + key: value.detach().cpu() for key, value in losses_and_metrics.items()}
@@ -142,6 +142,30 @@ class Face3DDFAModule(pl.LightningModule):
                 if self.logger is not None:
                     self.logger.log_metrics(visdict)
         return None
+
+
+    def visualize(self, visdict, savepath, catdim=1):
+        import cv2
+
+        grids = {}
+        for key in visdict:
+            # print(key)
+            if visdict[key] is None:
+                continue
+            # grids[key] = torchvision.utils.make_grid(
+            #     F.interpolate(visdict[key], [self.model_params.image_size, self.model_params.image_size])).detach().cpu()
+            grids[key] = np.concatenate(list(visdict[key]), 0)
+            if len(grids[key].shape) == 2:
+                grids[key] = np.stack([grids[key], grids[key], grids[key]], 2)
+            elif grids[key].shape[2] == 1:
+                grids[key] = np.concatenate([grids[key], grids[key], grids[key]], 2)
+
+        grid = np.concatenate(list(grids.values()), catdim-1)
+        grid_image = (grid * 255)[:, :, [2, 1, 0]]
+        grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
+        if savepath is not None:
+            cv2.imwrite(savepath, grid_image)
+        return grid_image
 
 
     def _visualization_checkpoint(self, batch_size, batch, values, batch_idx, stage, prefix):
@@ -299,7 +323,7 @@ class Face3DDFAv2Wrapper(torch.nn.Module):
 
     def forward(self, batch):
         values = self.encode(batch)
-        values = self.decode(batch, values)
+        values = self.decode(values)
         return values
 
     def encode(self, batch):
@@ -368,12 +392,13 @@ class Face3DDFAv2Wrapper(torch.nn.Module):
                 "expcode" : torch.from_numpy(np.hstack(expcodes).T).to(self.param_mean.device),
                 "posecode" : torch.from_numpy(np.hstack(posecodes).T).to(self.param_mean.device),
                 "offset": torch.from_numpy(np.hstack(offsets).T).to(self.param_mean.device),
+                "image": img,
             }
 
         return values
 
-    def decode(self, batch, values):
-        image = batch["image"]
+    def decode(self, values):
+        image = values["image"]
         # image = values["image"]
         # param_lst = values["param_lst"]
         # roi_box_lst = values["roi_box_lst"]

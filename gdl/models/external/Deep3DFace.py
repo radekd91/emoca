@@ -32,6 +32,7 @@ from pytorch_lightning.loggers import WandbLogger
 from models import create_model
 import gdl.utils.DecaUtils as dutil
 
+
 class Deep3DFaceModule(pl.LightningModule):
 
     def __init__(self, model_params, learning_params, inout_params, stage_name=""):
@@ -44,11 +45,34 @@ class Deep3DFaceModule(pl.LightningModule):
             self.stage_name += "_"
         self.deepface3d = Deep3DFaceWrapper(cfg=model_params.deep3dface)
 
-    def encode(self, batch):
+    def encode(self, batch, **kwargs):
         return self.deepface3d.encode(batch)
 
-    def decode(self, batch, values):
-        return self.deepface3d.decode(batch, values)
+    def decode(self, values, **kwargs):
+        return self.deepface3d.decode(values)
+
+    def visualize(self, visdict, savepath, catdim=1):
+        import cv2
+
+        grids = {}
+        for key in visdict:
+            # print(key)
+            if visdict[key] is None:
+                continue
+            # grids[key] = torchvision.utils.make_grid(
+            #     F.interpolate(visdict[key], [self.model_params.image_size, self.model_params.image_size])).detach().cpu()
+            grids[key] = np.concatenate(list(visdict[key]), 0)
+            if len(grids[key].shape) == 2:
+                grids[key] = np.stack([grids[key], grids[key], grids[key]], 2)
+            elif grids[key].shape[2] == 1:
+                grids[key] = np.concatenate([grids[key], grids[key], grids[key]], 2)
+
+        grid = np.concatenate(list(grids.values()), catdim-1)
+        grid_image = (grid * 255)[:, :, [2, 1, 0]]
+        grid_image = np.minimum(np.maximum(grid_image, 0), 255).astype(np.uint8)
+        if savepath is not None:
+            cv2.imwrite(savepath, grid_image)
+        return grid_image
 
     def training_step(self):
         raise NotImplementedError()
@@ -56,6 +80,7 @@ class Deep3DFaceModule(pl.LightningModule):
 
     def validation_step(self):
         raise NotImplementedError()
+
 
 
     def test_step(self, batch, batch_idx, dataloader_idx=None):
@@ -325,7 +350,7 @@ class Deep3DFaceWrapper(torch.nn.Module):
         }
         return values
 
-    def decode(self, batch, values):
+    def decode(self, values):
         self.model.compute_visuals()
         visuals = self.model.get_current_visuals()  #
 
@@ -422,3 +447,21 @@ class Deep3DFaceWrapper(torch.nn.Module):
         mask_im, depth_im, unlit_im = self.model.renderer(
             face_vertex, self.model.facemodel.face_buf, feat=face_texture.contiguous())
         return unlit_im
+
+
+
+def instantiate_other_face_models(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None):
+    module_class = Deep3DFaceModule
+
+    if checkpoint is None:
+        face_model = module_class(cfg.model, cfg.learning, cfg.inout, prefix)
+
+    else:
+        checkpoint_kwargs = checkpoint_kwargs or {}
+        face_model = module_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
+        # if stage == 'train':
+        #     mode = True
+        # else:
+        #     mode = False
+        # face_model.reconfigure(cfg.model, cfg.inout, cfg.learning, prefix, train=mode)
+    return face_model
