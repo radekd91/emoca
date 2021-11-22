@@ -777,8 +777,6 @@ class FaceVideoDataModule(FaceDataModuleBase):
         loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
         for i, batch in enumerate(tqdm(loader)):
-            if i != len(loader) - 1:
-                continue
             with torch.no_grad():
                 images = fixed_image_standardization(batch['image'].to(device))#[None, ...]
                 batch_ = {}
