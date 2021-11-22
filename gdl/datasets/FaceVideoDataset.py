@@ -636,7 +636,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         for i, batch in enumerate(tqdm(loader)):
             with torch.no_grad():
-                images = fixed_image_standardization(batch['image'].to(device))[None, ...]
+                images = fixed_image_standardization(batch['image'].to(device))#[None, ...]
                 batch_ = {}
                 batch_["image"] = images
                 codedict = reconstruction_net.encode(batch_, training=False)
@@ -658,19 +658,19 @@ class FaceVideoDataModule(FaceDataModuleBase):
                     name = path.stem
 
                     if save_obj:
-                        if i*j == 0:
-                            mesh_folder = out_folder / 'meshes'
-                            mesh_folder.mkdir(exist_ok=True, parents=True)
+                        # if i*j == 0:
+                        mesh_folder = out_folder / 'meshes'
+                        mesh_folder.mkdir(exist_ok=True, parents=True)
                         reconstruction_net.deca.save_obj(str(mesh_folder / (name + '.obj')), values)
                     if save_mat:
-                        if i*j == 0:
-                            mat_folder = out_folder / 'mat'
-                            mat_folder.mkdir(exist_ok=True, parents=True)
+                        # if i*j == 0:
+                        mat_folder = out_folder / 'mat'
+                        mat_folder.mkdir(exist_ok=True, parents=True)
                         savemat(str(mat_folder / (name + '.mat')), values)
                     if save_vis or save_video:
-                        if i*j == 0:
-                            vis_folder = out_folder / 'vis'
-                            vis_folder.mkdir(exist_ok=True, parents=True)
+                        # if i*j == 0:
+                        vis_folder = out_folder / 'vis'
+                        vis_folder.mkdir(exist_ok=True, parents=True)
                         vis_dict_j = {key: value[j:j+1, ...] for key,value in visdict.items()}
                         with torch.no_grad():
                             vis_im = reconstruction_net.deca.visualize(vis_dict_j, savepath=None, catdim=2)
@@ -687,9 +687,9 @@ class FaceVideoDataModule(FaceDataModuleBase):
                         if save_video:
                             video_writer.write(vis_im)
                     if save_images:
-                        if i*j == 0:
-                            ims_folder = out_folder / 'ims'
-                            ims_folder.mkdir(exist_ok=True, parents=True)
+                        # if i*j == 0:
+                        ims_folder = out_folder / 'ims'
+                        ims_folder.mkdir(exist_ok=True, parents=True)
                         for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images']:
                             if vis_name not in visdict.keys():
                                 continue
@@ -877,6 +877,9 @@ class FaceVideoDataModule(FaceDataModuleBase):
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
         vis_fnames = self._get_reconstructions_for_sequence(sequence_id)
         vid_frames = self._get_frames_for_sequence(sequence_id)
+
+        vis_fnames.sort()
+        vid_frames.sort()
 
         outfile = vis_fnames[0].parents[1] / "video.mp4"
 
@@ -2468,6 +2471,7 @@ def main():
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
     dm._reconstruct_faces_in_sequence(fj)
+    # dm.create_reconstruction_video(fj, overwrite=True)
     # dm._identify_recognitions_for_sequence(fj)
     # dm.create_reconstruction_video_with_recognition(fj, overwrite=True, distance_threshold=0.6)
 
