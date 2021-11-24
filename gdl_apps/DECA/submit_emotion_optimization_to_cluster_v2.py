@@ -177,7 +177,8 @@ def main():
     replace_root_path = None
     out_folder = '/is/cluster/work/rdanecek/emoca/optimize_emotion_v2'
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    # target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
+    target_image_path = Path("/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     submit = True
     # submit = False
 
@@ -192,28 +193,44 @@ def main():
     # start_image = target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png" # Rachel 2
 
     deca_models = {}
-    deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
-        ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
-         'detail', start_image]
-    # deca_models["Original_DECA"] = \
-    #     ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
+    # deca_models["2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early"] = \
+    #     ['2021_09_07_19-19-36_ExpDECA_Affec_balanced_expr_para_Jaw_NoRing_EmoB_EmoCnn_vgg_du_F2VAE_DeSegrend_Aug_DwC_early',
     #      'detail', start_image]
+    deca_models["Original_DECA"] = \
+        ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
+         'detail', start_image]
     # deca_models["DECA_DecaD_VGGl_DeSegrend_Deex_early"] = \
     #     ['2021_08_29_10-28-11_DECA_DecaD_VGGl_DeSegrend_Deex_early',
     #      'detail', start_image]
 
 
+    # target_images = [
+    #     target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
+    #     ## target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
+    #     target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
+    #     target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
+    #     target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
+    #     target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
+    #     target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
+    #     target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
+    #     target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
+    #     target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
+    # ]
+    target_image_path = Path("/is/cluster/work/rdanecek/emoca/finetune_deca/") / \
+                        "2021_11_09_19-05-01_5101174495546322475_ExpDECA_Affec_clone_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early" / \
+                        "detail" / "affect_net_mturk_detail_test" / "inputs"
     target_images = [
-        target_image_path / "VA_Set/detections/Train_Set/119-30-848x480/000640_000.png", # Octavia
-        ## target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/000480_000.png", # Rachel 1
-        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/002805_000.png", # Rachel 1
-        target_image_path / "VA_Set/detections/Train_Set/82-25-854x480/003899_000.png", # Rachel 2
-        target_image_path / "VA_Set/detections/Train_Set/111-25-1920x1080/000685_000.png", # disgusted guy
-        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001739_000.png", # crazy youtuber
-        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/001644_000.png", # crazy youtuber
-        target_image_path / "VA_Set/detections/Train_Set/122-60-1920x1080-1/000048_000.png", # crazy youtuber
-        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000001_000.png", # couple
-        target_image_path / "VA_Set/detections/Train_Set/135-24-1920x1080/000080_001.png", # couple
+        target_image_path / "0000_0006_00.png",
+        target_image_path / "0000_0008_00.png",
+        target_image_path / "0000_0028_00.png",
+        target_image_path / "0000_0059_00.png",
+        target_image_path / "0000_0097_00.png",
+        target_image_path / "0000_00241_00.png",
+        target_image_path / "0000_00267_00.png",
+        target_image_path / "0000_00326_00.png",
+        target_image_path / "0000_00414_00.png",
+        target_image_path / "0000_00486_00.png",
+        target_image_path / "0000_00490_00.png",
     ]
 
     for t in target_images:
@@ -233,7 +250,8 @@ def main():
     # kw["emonet"]["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_24_00-17-40_EmoCnn_vgg19_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_23-50-06_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/ps/scratch/rdanecek/emoca/emodeca/2021_08_20_09-43-26_EmoNet_shake_samp-balanced_expr_Aug_early_d0.9000"
-    emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
+    # emonet["path"] = '/ps/scratch/rdanecek/emoca/emodeca/2021_08_22_13-06-58_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early'
     # kw["emonet"]["path"] = "Synth"
     # emonet["feature_metric"] = "l1_loss"
     emonet["feature_metric"] = "mse_loss"
@@ -251,14 +269,16 @@ def main():
         "optimize_cam": False,
         "optimize_light": False,
         # "lr": 1.0,
-        # "lr": 0.1,
-        "lr": 0.01,
+        "lr": 0.1,
+        # "lr": 0.01,
         # "lr": 0.001,
         # "optimizer_type" : "LBFGS",
         "optimizer_type" : "SGD",
-        "max_iters": 1000,
+        # "max_iters": 1000,
         # "max_iters": 100,
-        "patience": 100,
+        "max_iters": 200,
+        # "patience": 100,
+        "patience": 20,
         "visualize_progress" : False,
         "visualize_result" : False,
     }
@@ -454,24 +474,24 @@ def main():
     jaw_lrs = [0.01]
     # jaw_lrs = [0.05]
     # jaw_lrs = [0.1]
-    for jaw_lr in jaw_lrs:
-        kw["jaw_lr"] = kw["lr"] * jaw_lr
-        for name, cfg in deca_models.items():
-            time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+    # for jaw_lr in jaw_lrs:
+    #     kw["jaw_lr"] = kw["lr"] * jaw_lr
+    for name, cfg in deca_models.items():
+        time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
-            experiment_name_ = time + "_" + experiment_name
-            print("Running experiment: " + experiment_name_)
-            out_folder = str(Path(out_folder) / experiment_name_)
+        experiment_name_ = time + "_" + experiment_name
+        print("Running experiment: " + experiment_name_)
+        out_folder = str(Path(out_folder) / experiment_name_)
 
-            model_folder = cfg[0]
-            stage = cfg[1]
-            starting_image_index = cfg[2]
-            optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
-                                                  out_folder, name,
-                                               model_folder, stage, starting_image_index,
-                                               target_images,
-                                               # loss_keywords,
-                                               num_repeats, kw, submit)
+        model_folder = cfg[0]
+        stage = cfg[1]
+        starting_image_index = cfg[2]
+        optimization_for_different_targets_v2(path_to_models, relative_to_path, replace_root_path,
+                                              out_folder, name,
+                                           model_folder, stage, starting_image_index,
+                                           target_images,
+                                           # loss_keywords,
+                                           num_repeats, kw, submit)
 
 if __name__ == "__main__":
     main()
