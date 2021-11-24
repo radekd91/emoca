@@ -1566,13 +1566,18 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     cfg["deca_stage"] = str(stage)
     cfg["output_image_key"] = str(output_image_key)
     cfg["losses"] = losses_to_use_dict
+    tags = cfg["tags"] if "tags" in cfg.keys() else None
+    if "tags" in cfg.keys():
+        del kwargs["tags"]
 
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
     logger = WandbLogger(name=Path(out_folder).name,
                      project="EmotionOptimization",
                      config=cfg,
                      version=time + "_" + str(hash(time)) + "_" + Path(out_folder).name,
-                     save_dir=out_folder)
+                     save_dir=out_folder,
+                     tags=tags,
+                         )
 
     for key, vals in initializations.items():
         values, visdict = vals[0], vals[1]
