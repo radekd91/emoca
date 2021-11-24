@@ -754,7 +754,8 @@ def optimize(deca,
                                    title=f"Iter {i:04d}, loss={current_loss:.10f}",
                                    show=visualize_progress,
                                    detail=deca.mode == DecaMode.DETAIL,
-                                   with_input=False)
+                                   with_input=False,
+                                   save_images=True)
                 if logger is not None:
                     logger.log_metrics({f"{log_prefix}/init":
                                    wandb.Image(str(save_path / f"step_{i:04d}.png"))})
