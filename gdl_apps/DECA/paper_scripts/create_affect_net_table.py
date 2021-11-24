@@ -155,17 +155,17 @@ def main():
         if id in final_model_nicknames.keys():
             entry_dict["run_name"] = final_model_nicknames[id]
 
-            print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
+            # print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
         elif not leave_out_not_metioned_runs:
             entry_dict["run_name"] = run.name
 
-            print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
+            # print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
         else:
             continue
         #
-        # if 'deca_cfg' in cfg.model.value.keys():
-        #     print(f"run_name: {entry_dict['run_name']}: ")
-        #     print(cfg.model.value.deca_cfg.inout.full_run_dir)
+        if 'deca_cfg' in cfg.model.value.keys():
+            print(f"run_name: {entry_dict['run_name']}: ")
+            print(cfg.model.value.deca_cfg.inout.full_run_dir)
 
         for ki, key in enumerate(keys_to_recover):
             entry_dict[metrics_columns[ki]] = run.summary_metrics[key]
@@ -186,7 +186,7 @@ def main():
     #         table_ordered = table_ordered.append(table.iloc[ind], ignore_index=True)
     #     table = table_ordered
     print(table)
-    table.to_csv("affectnet_test_metrics_.csv")
+    # table.to_csv("affectnet_test_metrics_.csv")
 
 
 

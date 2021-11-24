@@ -211,14 +211,16 @@ class FaceVideoDataModule(FaceDataModuleBase):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
-    def _get_path_to_sequence_reconstructions(self, sequence_id, rec_method='emoca'):
+    def _get_path_to_sequence_reconstructions(self, sequence_id, rec_method='emoca', suffix=''):
+        if suffix is None:
+            suffix = ''
         video_file = self.video_list[sequence_id]
         if rec_method == 'deca':
-            suffix = Path(video_file.parts[-4]) / 'reconstructions' / video_file.parts[-2] / video_file.stem
+            suffix = Path(video_file.parts[-4]) / f'reconstructions{suffix}' / video_file.parts[-2] / video_file.stem
         elif rec_method == 'emoca':
-            suffix = Path(video_file.parts[-4]) / 'reconstructions_emoca' / video_file.parts[-2] / video_file.stem
+            suffix = Path(video_file.parts[-4]) / f'reconstructions_emoca{suffix}' / video_file.parts[-2] / video_file.stem
         elif rec_method == 'deep3dface':
-            suffix = Path(video_file.parts[-4]) / 'reconstructions_deep3dface' / video_file.parts[-2] / video_file.stem
+            suffix = Path(video_file.parts[-4]) / f'reconstructions_deep3dface{suffix}' / video_file.parts[-2] / video_file.stem
         else:
             raise ValueError("Unknown reconstruction method '%s'" % rec_method)
         out_folder = Path(self.output_dir) / suffix
@@ -746,16 +748,20 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
-                                       save_video=True, rec_method='emoca', retarget_from=None,):
+                                       save_video=True, rec_method='emoca', retarget_from=None, retarget_suffix=None):
         # add_pretrained_deca_to_path()
         # from decalib.utils import util
         import gdl.utils.DecaUtils as util
         from scipy.io.matlab import savemat, loadmat
 
         if retarget_from is not None:
-            codedict_retarget = loadmat(retarget_from)
+            import datetime
+            t = datetime.datetime.now()
+            t_str = t.strftime("%Y_%m_%d_%H-%M-%S")
+            suffix = f"_retarget_{t_str}_{str(hash(t_str))}" if retarget_suffix is None else retarget_suffix
         else:
             codedict_retarget = None
+            suffix = None
 
 
 
@@ -764,15 +770,30 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         print("Running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
         in_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_folder = self._get_path_to_sequence_reconstructions(sequence_id, rec_method=rec_method)
+        out_folder = self._get_path_to_sequence_reconstructions(sequence_id, rec_method=rec_method, suffix=suffix)
+
+        if retarget_from is not None:
+            out_folder.mkdir(exist_ok=True, parents=True)
 
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         reconstruction_net = reconstruction_net or self._get_reconstruction_net(device, rec_method=rec_method)
 
+        if retarget_from is not None:
+            image = imread(retarget_from)
+            batch_r = {}
+            batch_r["image"] = torch.from_numpy(image).float().unsqueeze(0).to(device)
+            # to torch channel format
+            batch_r["image"] = batch_r["image"].permute(0, 3, 1, 2)
+            batch_r["image"] = fixed_image_standardization(batch_r["image"])
+            with torch.no_grad():
+                codedict_retarget = reconstruction_net.encode(batch_r, training=False)
+
+
         video_writer = None
         detections_fnames = sorted(list(in_folder.glob("*.png")))
         dataset = UnsupervisedImageDataset(detections_fnames)
-        batch_size = 64
+        batch_size = 32
+        # batch_size = 64
         # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
         loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
@@ -784,8 +805,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 codedict = reconstruction_net.encode(batch_, training=False)
                 # opdict, visdict = reconstruction_net.decode(codedict)
                 if codedict_retarget is not None:
-                    codedict["shapecode"] = codedict_retarget["shapecode"]
-                    codedict["detailcode"] = codedict_retarget["detailcode"]
+                    codedict["shapecode"] = codedict_retarget["shapecode"].repeat(batch_["image"].shape[0], 1,)
+                    codedict["detailcode"] = codedict_retarget["detailcode"].repeat(batch_["image"].shape[0], 1,)
                 codedict = reconstruction_net.decode(codedict, training=False)
 
                 uv_detail_normals = None
@@ -986,8 +1007,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         return detection_fnames, annotations, recognition_labels, discarded_annotations, detection_not_found
 
-    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca'):
-        out_folder = self._get_path_to_sequence_reconstructions(sid, rec_method=rec_method)
+    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca', retarget_suffix=None):
+        out_folder = self._get_path_to_sequence_reconstructions(sid, rec_method=rec_method, suffix=retarget_suffix)
         vis_fnames = sorted(list((out_folder / "vis").glob("*.png")))
         if len(vis_fnames) == 0:
             vis_fnames = sorted(list((out_folder / "vis").glob("*.jpg")))
@@ -1021,12 +1042,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
         return indices, labels, mean, cov, fnames
 
     def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5,
-                                    rec_method='emoca', image_type=None):
+                                    rec_method='emoca', image_type=None, retarget_suffix=None):
         from PIL import Image, ImageDraw
         # fid = 0
         image_type = image_type or "detail"
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
-        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method, retarget_suffix=retarget_suffix)
 
         vid_frames = self._get_frames_for_sequence(sequence_id)
 
@@ -2640,11 +2661,21 @@ def main():
     fj = 9
     # dm._detect_faces_in_sequence(fj)
     # dm._recognize_faces_in_sequence(fj)
-    # retarget_from = ""
-    # dm._reconstruct_faces_in_sequence(fj)
-    dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
+    # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/" \
+    #                 "processed_2021_Jan_19_20-25-10/AU_Set/detections/Test_Set/82-25-854x480/000001_000.png" ## Rachel McAdams
+    # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Test_Set/30-30-1920x1080/000880_000.png" # benedict
+    retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/11-24-1920x1080/000485_000.png" # john cena
+    # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/26-60-1280x720/000200_000.png" # obama
+    # retarget_from = "/ps/project/EmotionalFacialAnimation/data/random_images/soubhik.jpg" # obama
+    # dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="soubhik")
+    dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="_retarget_cena")
+    # dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False)
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca')
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_soubhik")
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_obama")
+    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_cumberbatch")
+    dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_cena")
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', image_type="coarse")
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')

@@ -216,6 +216,9 @@ mapping = {
     7: "anger",
 }
 
+inv_mapping = dict(zip(mapping.values(), mapping.keys()))
+
+
 # catch_labels = {
 #     "0000_0480_00_happy": 2,
 #     "0000_0077_00_sad" : 3,
@@ -232,6 +235,22 @@ catch_labels = {
     "0000_0238_00": 7,
 }
 
+
+def fname2gt(fname):
+    fname_idx = int(fname.split('_')[1])
+    if fname_idx in Happy:
+        return inv_mapping["happy"]
+    if fname_idx in Sad:
+        return inv_mapping["sad"]
+    if fname_idx in Fear:
+        return inv_mapping["fear"]
+    if fname_idx in Disgust:
+        return inv_mapping["disgust"]
+    if fname_idx in Anger:
+        return inv_mapping["anger"]
+    if fname_idx in Surprise:
+        return inv_mapping["surprise"]
+    raise Exception(f"{fname} not found in any class")
 
 
 
@@ -260,7 +279,6 @@ def analyze_response(method, answers, image_list, num_repeats=10):
             catch_responses[key] = answers[i]
     if len(rec_lables) == 0:
         print(method)
-        # sys.exit()
 
 
     num_correct_catches = 0
@@ -289,9 +307,19 @@ def analyze_response(method, answers, image_list, num_repeats=10):
     correct_scores = {}
     incorrect_scores = {}
 
+    gt_im_confusion_matrix = np.zeros((7, 6))
+    gt_rec_confusion_matrix = np.zeros((7, 6))
+    gt_class_counts = np.zeros(6)
+
+    confusion_matrix = np.zeros((7, 7))
+    class_counts = np.zeros(7)
+
     for i in range(1,8):
         correct_scores[i] = 0
         incorrect_scores[i] = 0
+
+    used_fnames_im = set()
+    used_fnames_rec = set()
 
     for key, value in image_labels.items():
         if key in rec_lables.keys():
@@ -301,9 +329,130 @@ def analyze_response(method, answers, image_list, num_repeats=10):
             else:
                 correct_scores[int(value)] += 1
                 total_score += 1
+            confusion_matrix[int(value)-1, int(rec_lables[key])-1] += 1
+            class_counts[int(value)-1] += 1
+
+            gt_label = fname2gt(key)
+
+            if key not in used_fnames_im:
+                gt_im_confusion_matrix[int(value)-1, gt_label-2] += 1
+                used_fnames_im = used_fnames_rec.union(set([key]))
+                gt_class_counts[gt_label - 2] += 1
+            if key not in used_fnames_rec:
+                gt_rec_confusion_matrix[int(rec_lables[key])-1, gt_label-2] += 1
+                used_fnames_rec = used_fnames_rec.union(set([key]))
 
 
-    return discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores
+    return discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores, \
+           confusion_matrix, class_counts, gt_im_confusion_matrix, gt_rec_confusion_matrix, gt_class_counts
+
+
+def plot_confusion_matrix(method_list, confusion_matrix, num_classes, class_labels,
+                          abs_conf_matrix=None, abs_class_counts=None):
+    if isinstance(num_classes, int):
+        num_classes_1 = num_classes
+        num_classes_2 = num_classes
+    else:
+        num_classes_1 = num_classes[0]
+        num_classes_2 = num_classes[1]
+
+    if not isinstance(class_labels, list):
+        class_labels_1 = class_labels
+        class_labels_2 = class_labels
+    else:
+        class_labels_1 = class_labels[0]
+        class_labels_2 = class_labels[1]
+
+
+    fig, axes = plt.subplots(num_classes_1, num_classes_2, figsize=(20, 20))
+    colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k']
+    # for each row and column
+    for i in range(num_classes_1):
+        # for each column
+        for j in range(num_classes_2):
+            # for each method, get the confusion matrix score
+            scores = []
+            names = []
+            for method in method_list:
+                # get the score for the current method
+                # score = total_rel_confusion_matrices[method][i, j]
+                score = confusion_matrix[method][i, j]
+                # append the score to the list
+                scores.append(score)
+                # append the method name to the list
+                # if j != 0:
+                #     names.append("")
+                # else:
+                names.append(method)
+
+            if i == 0:
+                # set the subtitle to the emotion label
+                if class_labels_1 is class_labels_2:
+                    axes[i, j].set_title(class_labels_2[j+1], fontsize=20)
+                else:
+                    # [WARNING] UGLY LABEL HACK
+                    # axes[i, j].set_title(class_labels_2[j+2], fontsize=20)
+                    # axes[i, j].set_title(class_labels_1[j+1], fontsize=20)
+                    axes[i, j].set_title(class_labels_2[j+1], fontsize=20)
+
+            # create a bar plot, each bar has a unique color
+            # and the width is the score
+            # the y-axis is the method name
+            # the x-axis is the score
+            # create the bar plot
+            ax = axes[i, j]
+            barlist = ax.barh(names, scores)
+
+            # if j > 0, disable y-tick labels
+            if j > 0:
+                ax.set_yticklabels([])
+            else:
+                # set y label to the emotion label with a large font
+                # ax.set_ylabel(class_labels_1[i+1], fontsize=20)
+                if class_labels_1 is class_labels_2:
+                    ax.set_ylabel(class_labels_1[i+1], fontsize=20)
+                else:
+                    # [WARNING] UGLY LABEL HACK
+                    ax.set_ylabel(class_labels_1[i+2], fontsize=20)
+                # ax.set_ylabel(mapping[i+1])
+
+            # set x axis range to [0, 1]
+            ax.set_xlim([0, 1.25])
+
+            # set a unique color for each bar
+            for bi, bar in enumerate( barlist):
+                bar.set_color(colors[bi % len(colors)])
+                # add a text label to the right end of each bar
+                # with the score as its value
+                # ax.text(bar.get_width() + 0.01, bar.get_y() + 0.5,
+
+                # height = bar.get_height()
+                width = bar.get_width()
+                # plt.text(bar.get_y() + bar.get_width() / 2.0, height, f'{height:.0f}', ha='center', va='bottom')
+                # plt.text(bar.get_y() + bar.get_width() / 2.0, height, f'ha', ha='center', va='bottom')
+                # plt.text(width, bar.get_x() + bar.get_height() / 2.0, f'ha', ha='center', va='bottom')
+                # ax.text(bar.get_x() + bar.get_height() / 2.0, width, f'ha', ha='center', va='bottom')
+
+                if abs_conf_matrix is not None:
+                    if not (class_labels_1 is class_labels_2):
+                        bar_label = f"{int(abs_conf_matrix[method_list[bi]][i, j])}/{int(abs_class_counts[method_list[bi]][i+1])}"
+                    else:
+                        bar_label = f"{int(abs_conf_matrix[method_list[bi]][i,j])}/{int(abs_class_counts[method_list[bi]][i])}"
+                    ax.text(bar.get_width() + 0.15, bar.get_y(), bar_label, ha='center', va='bottom')
+                # ax.text(bar.get_width() + 0.05, bar.get_y(), f'ha', ha='center', va='bottom')
+
+            if class_labels_1 is class_labels_2:
+                if i == j:
+                    #make the backround beige
+                    ax.set_facecolor('#f5f5dc')
+            else:
+                if i == j-1:
+                    #make the backround beige
+                    ax.set_facecolor('#f5f5dc')
+
+    # set the title of the figure
+    # fig.suptitle("Relative Confusion Matrix Scores")
+    return fig
 
 
 def analyze_results():
@@ -317,6 +466,11 @@ def analyze_results():
 
     method_total_scores = {}
     method_scores = {}
+    method_confusion_matrices = {}
+    method_confusion_matrices_rec_gt = {}
+    method_confusion_matrices_im_gt = {}
+    method_class_counts = {}
+    method_gt_class_counts = {}
     method_correct_scores = {}
     method_incorrect_scores = {}
     method_num_discarded = {}
@@ -352,7 +506,8 @@ def analyze_results():
         if method == "":
             raise Exception("Method not found")
 
-        discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores = \
+        discard_by_mislabel, discard_by_incosistency, total_score, correct_scores, incorrect_scores, \
+        confusion_matrix, class_counts, gt_im_confusion_matrix, gt_rec_confusion_matrix, gt_class_counts = \
             analyze_response(method, answers, image_list)
 
         if method not in method_scores.keys():
@@ -362,6 +517,12 @@ def analyze_results():
             method_num_discarded[method] = 0
             method_total_scores[method] = 0
             method_num_valid[method] = 0
+            method_confusion_matrices[method] = []
+            method_class_counts[method] = []
+            method_gt_class_counts[method] = []
+            method_confusion_matrices_rec_gt[method] = []
+            method_confusion_matrices_im_gt[method] = []
+
 
         if not (discard_by_mislabel or discard_by_incosistency):
             method_scores[method] += [total_score]
@@ -369,12 +530,148 @@ def analyze_results():
             method_correct_scores[method] += [correct_scores]
             method_scores[method] += [incorrect_scores]
             method_num_valid[method] += 1
+            method_confusion_matrices[method] += [confusion_matrix]
+            method_class_counts[method] += [class_counts]
+            method_gt_class_counts[method] += [gt_class_counts]
+            method_confusion_matrices_rec_gt[method] += [gt_rec_confusion_matrix]
+            method_confusion_matrices_im_gt[method] += [gt_im_confusion_matrix]
         else:
             method_num_discarded[method] += 1
 
+
+    total_confusion_matrices = {}
+    total_rel_confusion_matrices = {}
+    total_rel_gt_rec_confusion_matrices = {}
+    total_gt_rec_confusion_matrices = {}
+
+    total_rel_gt_im_confusion_matrices = {}
+    total_gt_im_confusion_matrices = {}
+
+    # total_rel2_confusion_matrices = {}
+    total_class_counts = {}
+    total_gt_class_counts = {}
     for method in method_scores.keys():
         method_total_scores[method] /= method_num_valid[method]
         method_total_scores[method] /= 30
+        total_confusion_matrices[method] = np.stack(method_confusion_matrices[method]).sum(axis=0)
+        total_class_counts[method] = np.stack(method_class_counts[method]).sum(axis=0)
+        # total_rel2_confusion_matrices[method] = np.stack(method_class_counts[method]).sum(axis=0)
+        total_rel_confusion_matrices[method] = total_confusion_matrices[method] / total_class_counts[method].reshape(-1, 1)
+
+        total_rel_gt_rec_confusion_matrices[method] = np.stack(method_confusion_matrices_rec_gt[method]).sum(axis=0)
+        total_gt_rec_confusion_matrices[method] = np.stack(method_confusion_matrices_rec_gt[method]).sum(axis=0)
+        total_gt_class_counts[method] = np.stack( len(method_gt_class_counts[method]) *
+                                                  np.array( [0, *(method_gt_class_counts[method][0].tolist())]))#.sum(axis=0)
+
+        # total_gt_class_counts[method] = np.stack( len(method_gt_class_counts[method]) *
+        #                                           method_gt_class_counts[method][0]
+        #                                           )#.sum(axis=0)
+
+        total_rel_gt_rec_confusion_matrices[method] /= total_gt_class_counts[method][1:].reshape(1, -1)
+
+        total_rel_gt_im_confusion_matrices[method] = np.stack(method_confusion_matrices_im_gt[method]).sum(axis=0)
+        total_gt_im_confusion_matrices[method] = np.stack(method_confusion_matrices_im_gt[method]).sum(axis=0)
+        total_rel_gt_im_confusion_matrices[method] /= total_gt_class_counts[method][1:].reshape(1, -1)
+
+    # labels
+    #
+    # colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k']
+    #
+    # #create a figure with 7x7 subfigures
+    # fig, axes = plt.subplots(7, 7, figsize=(20, 20))
+    # # for each row and column
+    # for i in range(7):
+    #     # for each column
+    #     for j in range(7):
+    #         # get the index of the subplot
+    #         index = i * 7 + j
+    #         # for each method, get the confusion matrix score
+    #         scores = []
+    #         names = []
+    #         for method in method_scores.keys():
+    #             # get the score for the current method
+    #             # score = total_rel_confusion_matrices[method][i, j]
+    #             score = total_confusion_matrices[method][i, j]
+    #             # append the score to the list
+    #             scores.append(score)
+    #             # append the method name to the list
+    #             # if j != 0:
+    #             #     names.append("")
+    #             # else:
+    #             names.append(method)
+    #
+    #         if i == 0:
+    #             # set the subtitle to the emotion label
+    #             axes[i, j].set_title(mapping[j+1], fontsize=20)
+    #
+    #         # create a bar plot, each bar has a unique color
+    #         # and the width is the score
+    #         # the y-axis is the method name
+    #         # the x-axis is the score
+    #         # create the bar plot
+    #         ax = axes[i, j]
+    #         barlist = ax.barh(names, scores)
+    #
+    #         # if j > 0, disable y-tick labels
+    #         if j > 0:
+    #             ax.set_yticklabels([])
+    #         else:
+    #             # set y label to the emotion label with a large font
+    #             ax.set_ylabel(mapping[i+1], fontsize=20)
+    #             # ax.set_ylabel(mapping[i+1])
+    #
+    #         # set the x-axis label
+    #         # ax.set_xlabel("Relative Confusion Matrix Score")
+    #         # set a unique color for each bar
+    #         print(len(barlist))
+    #         for bi, bar in enumerate( barlist):
+    #             bar.set_color(colors[bi])
+    #
+    #
+    # # set the title of the figure
+    # fig.suptitle("Relative Confusion Matrix Scores")
+    # # show the figure
+    # plt.show()
+
+    fig1 = plot_confusion_matrix(list(method_scores.keys()), total_rel_confusion_matrices, 7, mapping,
+                                 abs_conf_matrix=total_confusion_matrices, abs_class_counts=total_class_counts,
+                                 )
+    # fig2 = plot_confusion_matrix(list(method_scores.keys()), total_confusion_matrices, 7, mapping)
+
+    mapping_copy = mapping.copy()
+    del mapping_copy[1]
+    mapping_list = [mapping, mapping_copy]
+
+    # fig2 = plot_confusion_matrix(list(method_scores.keys()), total_rel_gt_rec_confusion_matrices, (7, 6), mapping_list,
+    #                              abs_conf_matrix=total_gt_rec_confusion_matrices,
+    #                              abs_class_counts=total_gt_class_counts,
+    #                              )
+
+
+    mapping_list = [mapping_copy, mapping, ]
+    for key in total_rel_gt_rec_confusion_matrices.keys():
+        total_rel_gt_rec_confusion_matrices[key] = total_rel_gt_rec_confusion_matrices[key].T
+        total_gt_rec_confusion_matrices[key] = total_gt_rec_confusion_matrices[key].T
+        total_rel_gt_im_confusion_matrices[key] = total_rel_gt_im_confusion_matrices[key].T
+        total_gt_im_confusion_matrices[key] = total_gt_im_confusion_matrices[key].T
+        # total_rel_gt_rec_confusion_matrices[key] = total_rel_gt_rec_confusion_matrices[key].T
+
+    fig2 = plot_confusion_matrix(list(method_scores.keys()), total_rel_gt_rec_confusion_matrices, (6, 7), mapping_list,
+                                 abs_conf_matrix=total_gt_rec_confusion_matrices,
+                                 abs_class_counts=total_gt_class_counts,
+                                 )
+
+    fig3 = plot_confusion_matrix(list(method_scores.keys()), total_rel_gt_im_confusion_matrices, (6, 7), mapping_list,
+                                 abs_conf_matrix=total_gt_im_confusion_matrices,
+                                 abs_class_counts=total_gt_class_counts,
+                                 )
+    # show the figure
+    plt.show()
+
+    fig1.savefig("user_label_confusion_matrix.pdf")
+    fig2.savefig("gt_label_confusion_matrix_rec.pdf")
+    fig3.savefig("gt_label_confusion_matrix_im.pdf")
+
 
     print("Method scores:")
     print(method_total_scores)
