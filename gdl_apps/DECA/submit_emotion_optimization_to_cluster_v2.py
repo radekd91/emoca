@@ -29,7 +29,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
                           / local_script_path.parents[0].name / local_script_path.name
 
     submission_folder_local.mkdir(parents=True)
-    t.sleep(3)
+    t.sleep(1)
 
     cgf_name = "optim_kwargs.yaml"
     with open(submission_folder_local / cgf_name, 'w') as outfile:
@@ -179,8 +179,8 @@ def main():
     # target_image_path = Path("/ps/scratch/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     # target_image_path = Path("/is/cluster/work/rdanecek/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
     target_image_path = Path("/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10")
-    # submit = True
-    submit = False
+    submit = True
+    # submit = False
 
     # # not on cluster
     # path_to_models = '/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca'
@@ -256,9 +256,9 @@ def main():
 
     # NEW nets
     # emonet["path"] = "None"
-    emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
+    # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"
-    # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"
+    emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"
 
     # kw["emonet"]["path"] = "Synth"
     # emonet["feature_metric"] = "l1_loss"

@@ -1603,7 +1603,7 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
                      logger=logger,
                      **kwargs)
 
-            logger.log_metrics({f"{key}/{i:02d}/optimization_vid": wandb.Video(str(Path(save_path / "video.mp4")))})
+            # logger.log_metrics({f"{key}/{i:02d}/optimization_vid": wandb.Video(str(Path(save_path / "video.mp4")))})
 
 
 def optimization_with_different_losses(path_to_models,
