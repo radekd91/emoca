@@ -1265,8 +1265,9 @@ def single_optimization_v2(path_to_models, relative_to_path, replace_root_path, 
     if model_name == "Original_DECA":
         # remember, this is the hacky way to load old Yao's model
         deca.deca.config.resume_training = True
-        deca.deca.config.pretrained_modelpath = '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
+        # deca.deca.config.pretrained_modelpath = '/home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar'
         deca.deca._load_old_checkpoint()
+
         run_name = "Original_DECA"
 
     deca.eval()
