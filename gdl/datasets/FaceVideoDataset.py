@@ -21,6 +21,7 @@ from gdl.datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
 from gdl.datasets.IO import save_emotion
+from skimage.transform import resize, rescale
 import hashlib
 # import zlib
 
@@ -2469,7 +2470,8 @@ def video2sequence(video_path):
 
 
 class TestData(Dataset):
-    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='mtcnn'):
+    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='fan',
+                 scaling_factor=1.0):
         '''
             testpath: folder, imagepath_list, image path, video path
         '''
@@ -2486,6 +2488,7 @@ class TestData(Dataset):
             exit()
         print('total {} images'.format(len(self.imagepath_list)))
         self.imagepath_list = sorted(self.imagepath_list)
+        self.scaling_factor = scaling_factor
         self.crop_size = crop_size
         self.scale = scale
         self.iscrop = iscrop
@@ -2512,6 +2515,9 @@ class TestData(Dataset):
             image = image[:, :, None].repeat(1, 1, 3)
         if len(image.shape) == 3 and image.shape[2] > 3:
             image = image[:, :, :3]
+
+        if self.scaling_factor != 1.:
+            image = rescale(image, (self.scaling_factor, self.scaling_factor, 1))*255.
 
         h, w, _ = image.shape
         if self.iscrop:
@@ -2672,7 +2678,7 @@ def main():
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/26-60-1280x720/000200_000.png" # obama
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/random_images/soubhik.jpg" # obama
     # dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="soubhik")
-    # dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="_retarget_cena")
+    dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="_retarget_cena")
     # dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False)
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca')
