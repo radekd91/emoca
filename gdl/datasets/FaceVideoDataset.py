@@ -1081,8 +1081,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
 
             frame_pill_bb = Image.fromarray(frame)
-            frame_deca_full = Image.fromarray(frame)
-            frame_deca_trans = Image.fromarray(frame)
+            if retarget_suffix is None:
+                frame_deca_full = Image.fromarray(frame)
+                frame_deca_trans = Image.fromarray(frame)
+            else:
+                frame_deca_full = Image.fromarray(np.zeros_like( frame))
+                frame_deca_trans = Image.fromarray(np.zeros_like( frame))
 
             frame_draw = ImageDraw.Draw(frame_pill_bb)
 
@@ -2664,18 +2668,18 @@ def main():
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/" \
     #                 "processed_2021_Jan_19_20-25-10/AU_Set/detections/Test_Set/82-25-854x480/000001_000.png" ## Rachel McAdams
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Test_Set/30-30-1920x1080/000880_000.png" # benedict
-    retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/11-24-1920x1080/000485_000.png" # john cena
+    # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/11-24-1920x1080/000485_000.png" # john cena
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/aff-wild2/processed/processed_2021_Jan_19_20-25-10/AU_Set/detections/Train_Set/26-60-1280x720/000200_000.png" # obama
     # retarget_from = "/ps/project/EmotionalFacialAnimation/data/random_images/soubhik.jpg" # obama
     # dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="soubhik")
-    dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="_retarget_cena")
+    # dm._reconstruct_faces_in_sequence(fj, rec_method="emoca", retarget_from=retarget_from, retarget_suffix="_retarget_cena")
     # dm._reconstruct_faces_in_sequence(fj, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False)
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca')
-    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_soubhik")
-    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_obama")
-    # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_cumberbatch")
-    dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', retarget_suffix="_retarget_cena")
+    dm.create_reconstruction_video(fj, overwrite=True, rec_method='emoca', retarget_suffix="_retarget_soubhik")
+    dm.create_reconstruction_video(fj, overwrite=True, rec_method='emoca', retarget_suffix="_retarget_obama")
+    dm.create_reconstruction_video(fj, overwrite=True, rec_method='emoca', retarget_suffix="_retarget_cumberbatch")
+    dm.create_reconstruction_video(fj, overwrite=True, rec_method='emoca', retarget_suffix="_retarget_cena")
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='emoca', image_type="coarse")
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')
     # dm.create_reconstruction_video(fj, overwrite=False, rec_method='deep3dface')

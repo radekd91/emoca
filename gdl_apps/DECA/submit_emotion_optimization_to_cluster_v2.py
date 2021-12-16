@@ -20,7 +20,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
     submission_dir_local_mount = "/is/cluster/work/rdanecek/emoca/optimize_emotion_v2/submission"
     submission_dir_cluster_side = "/is/cluster/work/rdanecek/emoca/optimize_emotion_v2/submission"
     time = datetime.datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-    submission_folder_name = time + "_" + "submission_%.3d" % random.randint(0,100)
+    submission_folder_name = time + "_" + "submission_%04d" % random.randint(0,1000)
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
@@ -29,7 +29,7 @@ def submit_single_optimization(path_to_models, relative_to_path, replace_root_pa
                           / local_script_path.parents[0].name / local_script_path.name
 
     submission_folder_local.mkdir(parents=True)
-    t.sleep(1)
+    # t.sleep(1)
 
     cgf_name = "optim_kwargs.yaml"
     with open(submission_folder_local / cgf_name, 'w') as outfile:
@@ -256,8 +256,8 @@ def main():
 
     # NEW nets
     # emonet["path"] = "None"
-    # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
-    emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"
+    # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-12-56_7559763461347220097_EmoNet_shake_samp-balanced_expr_Aug_early"
+    emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
     # emonet["path"] = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-04-01_-3592833751800073730_EmoSwin_swin_base_patch4_window7_224_shake_samp-balanced_expr_Aug_early"
 
     # kw["emonet"]["path"] = "Synth"
@@ -277,8 +277,8 @@ def main():
         "optimize_cam": False,
         "optimize_light": False,
         # "tags": ["FINAL_SUPMAT_OPT_OLD_EMONET"],
-        "tags": ["FINAL_SUPMAT_OPT_NEW_EMONET"],
-        # "tags": ["FINAL_SUPMAT_OPT_RESNET"],
+        # "tags": ["FINAL_SUPMAT_OPT_NEW_EMONET"],
+        "tags": ["FINAL_SUPMAT_OPT_RESNET"],
         # "tags": ["FINAL_SUPMAT_OPT_SWIN"],
         "lr": 5.0,
         # "lr": 1.0,
