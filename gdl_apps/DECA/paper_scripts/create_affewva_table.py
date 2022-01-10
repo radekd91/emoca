@@ -113,10 +113,10 @@ def main():
         entry_dict = {}
         # entry_dict["run_id"] = cfg.inout.value.name
         id = cfg.inout.value.random_id
-        print(f"random_id: {id}")
-        print(f"name: {cfg.inout.value.name}" )
-        print(f"link: {run.url}")
-        print("--------------------------")
+        # print(f"random_id: {id}")
+        # print(f"name: {cfg.inout.value.name}" )
+        # print(f"link: {run.url}")
+        # print("--------------------------")
 
 
         if id in final_model_nicknames.keys():
@@ -126,9 +126,14 @@ def main():
         else:
             continue
 
-
         for ki, key in enumerate(keys_to_recover):
             entry_dict[metrics_columns[ki]] = run.summary_metrics[key]
+
+        # if 'deca_cfg' in cfg.model.value.keys():
+        #     print(f"deca run name: {entry_dict['run_name']}: ")
+        #     print(cfg.model.value.deca_cfg.inout.full_run_dir)
+        # # print(f"run_name: {entry_dict['run_name']}: ")
+        # # print(cfg.inout.value.full_run_dir)
 
         table = table.append(entry_dict, ignore_index=True)
 
@@ -139,16 +144,16 @@ def main():
         table.rename(index=dict(zip(list(range(len(table))), new_order)), inplace=True)
         table = table.sort_index(ascending=True)
 
-    print(table)
-    table.to_csv("affewva_test_metrics_.csv")
-
-    with open("affewva_test_metrics_.tex", "w") as f:
-        table.to_latex(f,
-                       index_names=False,
-                       # float_format="{:0.2f}",
-                       float_format=format,
-                       # column_formatstr=len(table.colums) * "l" + "r",
-                       )
+    # print(table)
+    # table.to_csv("affewva_test_metrics_.csv")
+    #
+    # with open("affewva_test_metrics_.tex", "w") as f:
+    #     table.to_latex(f,
+    #                    index_names=False,
+    #                    # float_format="{:0.2f}",
+    #                    float_format=format,
+    #                    # column_formatstr=len(table.colums) * "l" + "r",
+    #                    )
 
 
 def format(num):
