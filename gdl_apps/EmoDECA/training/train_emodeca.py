@@ -12,7 +12,7 @@ except ImportError as e:
 import os, sys
 from pathlib import Path
 from omegaconf import OmegaConf
-from gdl_apps.DECA.train_expdeca import prepare_data, create_logger
+from gdl_apps.DECA.training.train_expdeca import prepare_data, create_logger
 from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
@@ -25,7 +25,7 @@ from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from gdl_apps.DECA.interactive_deca_decoder import hack_paths
+from gdl_apps.DECA.utils.load import hack_paths
 
 
 # project_name = 'EmoDECA'
