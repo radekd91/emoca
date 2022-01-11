@@ -17,7 +17,7 @@ import torch
 import wandb
 from tqdm import auto
 
-project_name = 'EmoDECA'
+project_name = 'EmotionRecognition'
 
 
 def validation_set_pass(cfg,

@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import gdl_apps.EmoDECA.training.train_emodeca as script
+import gdl_apps.EmotionRecognition.training.train_emodeca as script
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -189,7 +189,7 @@ def train_emodeca_on_cluster():
         name = str(Path(model_path).name)
         idx = name.find("Emo")
         run_id = name[:idx-1]
-        run = api.run("rdanecek/EmoDECA/" + run_id)
+        run = api.run("rdanecek/EmotionRecognition/" + run_id)
         tags = set(run.tags)
 
         allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
@@ -202,14 +202,14 @@ def train_emodeca_on_cluster():
         deca_conf = None
         fixed_overrides_deca = None
 
-        augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
+        augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" /
                                    "data" / "augmentations" / "default.yaml"))#["augmentation"]
-        dataset =  yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
+        dataset =  yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" /
                                "data" / "datasets" / "afew_va.yaml"))
 
-        augmenter = OmegaConf.load(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
+        augmenter = OmegaConf.load(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" /
                                    "data" / "augmentations" / "default.yaml")#["augmentation"]
-        dataset =  OmegaConf.load(Path(__file__).parents[2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" /
+        dataset =  OmegaConf.load(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" /
                                "data" / "datasets" / "afew_va.yaml")
 
 

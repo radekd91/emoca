@@ -33,7 +33,7 @@ from gdl_apps.DECA.utils.load import hack_paths
 
 def create_experiment_name(cfg, version=1):
     if cfg.model.emodeca_type == "EmoDECA":
-        experiment_name = "EmoDECA"
+        experiment_name = "EmotionRecognition"
         if cfg.data.data_class:
             experiment_name += '_' + cfg.data.data_class[:5]
 
@@ -514,7 +514,8 @@ def main():
         deca_overrides = None
         # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
         # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-        deca_conf_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_21-30-28_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"
+        # deca_conf_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_21-30-28_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"
+        deca_conf_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"
         # # deca_conf = None
         stage = 'detail'
         #
@@ -603,7 +604,7 @@ def main():
     if len(sys.argv) > 5:
         project_name_ = sys.argv[5]
     else:
-        project_name_ = "EmoDECA"
+        project_name_ = "EmotionRecognition"
 
     train_emodeca(cfg, start_stage, project_name_=project_name_, resume_from_previous=start_from_previous,
                   force_new_location=force_new_location)

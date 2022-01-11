@@ -260,7 +260,7 @@ if __name__ == '__main__':
     deca_dm = DecaDataModule(cfg)
 
     augmenter = yaml.load(open(Path(__file__).parents[
-                                   2] / "gdl_apps" / "EmoDECA" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))[
+                                   2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))[
         "augmentation"]
     affn_dm = AffectNetEmoNetSplitModuleValTest(
     # dm = AffectNetDataModule(

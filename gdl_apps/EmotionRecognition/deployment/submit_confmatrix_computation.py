@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import gdl_apps.EmoDECA.evaluation.compute_confusion_matrix as script
+import gdl_apps.EmotionRecognition.evaluation.compute_confusion_matrix as script
 import datetime
 from omegaconf import OmegaConf
 import time as t

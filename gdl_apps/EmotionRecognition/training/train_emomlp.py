@@ -1,6 +1,6 @@
 from train_emodeca import *
 
-project_name = 'EmoDECA'
+project_name = 'EmotionRecognition'
 
 
 
@@ -15,23 +15,36 @@ def main():
         # # deca_conf = None
         stage = 'detail'
         #
-        relative_to_path = '/ps/scratch/'
-        # # # replace_root_path = '/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/'
-        replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        # relative_to_path = '/ps/scratch/'
+        # replace_root_path = '/home/rdanecek/Workspace/mount/scratch/'
+        relative_to_path = None
+        replace_root_path = None
 
 
-        ## 4) Emo 3DDFA_V2
-        emodeca_default = "emo3ddfa_v2"
+        ## EmoMGCNET
+        emodeca_default = "emomgcnet"
         emodeca_overrides = [
-            'model/backbone=3ddfa_v2',
-            # 'model/backbone=3ddfa_v2_resnet',
-            'model.mlp_dim=2048',
+            # 'model.mlp_dim=2048',
             # 'data/datasets=emotionet_desktop',
-            'data.data_class=AffectNetDataModuleValTest',
-            'data/augmentations=default_with_resize',
+            # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
+            '+data.dataset_type=AffectNetWithMGCNetPredictions',
             'data.num_workers=0',
+            # 'data.num_workers=16',
             'learning/logging=none',
         ]
+
+        ## EmoExpNET
+        # emodeca_default = "emoexpnet"
+        # emodeca_overrides = [
+        #     # 'model.mlp_dim=2048',
+        #     # 'data/datasets=emotionet_desktop',
+        #     # 'data.data_class=AffectNetEmoNetSplitModuleValTest',
+        #     # '+data.dataset_type=AffectNetWithExpNetPredictions',
+        #     '+data.dataset_type=AffectNetWithExpNetPredictionsMyCrop',
+        #     'data.num_workers=0',
+        #     # 'data.num_workers=16',
+        #     'learning/logging=none',
+        # ]
         deca_conf = None
         deca_conf_path = None
         fixed_overrides_deca = None

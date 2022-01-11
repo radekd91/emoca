@@ -1,6 +1,6 @@
 from train_emodeca import *
 
-project_name = 'EmoDECA'
+project_name = 'EmotionRecognition'
 
 
 

@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import gdl_apps.EmoDECA.training.train_emodeca as script
+import gdl_apps.EmotionRecognition.training.train_emodeca as script
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -705,7 +705,7 @@ def train_emodeca_on_cluster():
             if sub:
                 submit(cfg, bid=100)
             else:
-                train_emodeca.train_emodeca(cfg, project_name_="EmoDECA")
+                script.train_emodeca(cfg, project_name_="EmotionRecognition")
 
 
 if __name__ == "__main__":

@@ -288,7 +288,7 @@ def train_emodeca_on_cluster():
         name = str(Path(resume_folder).name)
         idx = name.find("Emo")
         run_id = name[:idx-1]
-        run = api.run("rdanecek/EmoDECA/" + run_id)
+        run = api.run("rdanecek/EmotionRecognition/" + run_id)
         tags = set(run.tags)
 
         allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
