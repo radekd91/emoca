@@ -12,7 +12,7 @@ except ImportError as e:
 import os, sys
 from pathlib import Path
 from omegaconf import OmegaConf
-from gdl_apps.DECA.training.train_expdeca import prepare_data, create_logger
+from gdl_apps.EMOCA.training.train_expdeca import prepare_data, create_logger
 from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
@@ -25,7 +25,7 @@ from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from gdl_apps.DECA.utils.load import hack_paths
+from gdl_apps.EMOCA.utils.load import hack_paths
 
 
 # project_name = 'EmoDECA'
@@ -378,7 +378,7 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
     if deca_default is not None or deca_conf_path is not None:
         if deca_conf_path is None:
             GlobalHydra.instance().clear()
-            initialize(config_path="../DECA/deca_conf", job_name="train_deca")
+            initialize(config_path="../EMOCA/emoca_conf", job_name="train_deca")
             deca_cfg = compose(config_name=deca_default, overrides=deca_overrides)
             cfg.model.deca_checkpoint = None
         else:
@@ -409,7 +409,7 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
         cfg.model.deca_cfg = deca_cfg
         cfg.model.deca_stage = deca_stage
 
-        # take DECA's tags (if any) and add them to the emodeca config
+        # take EMOCA's tags (if any) and add them to the emodeca config
         if 'tags' in deca_cfg.learning.keys():
             cfg.model.tags += [deca_cfg.learning.tags]
 
@@ -460,7 +460,7 @@ def main():
         #     # 'data.sampler=balanced_va',
         #
         # ]
-        # deca_conf = None
+        # emoca_conf = None
         # deca_conf_path = None
         # fixed_overrides_deca = None
         # stage = None
@@ -496,7 +496,7 @@ def main():
         #     'model/settings=detail_train',
         #     'model/paths=desktop',
         #     'model/flame_tex=bfm_desktop',
-        #     'model.resume_training=True',  # load the original DECA model
+        #     'model.resume_training=True',  # load the original EMOCA model
         #     'model.useSeg=rend', 'model.idw=0',
         #     'learning/batching=single_gpu_coarse',
         #     'learning/logging=none',
@@ -516,7 +516,7 @@ def main():
         # # deca_conf_path = "/run/user/1001/gvfs/smb-share:server=ps-access.is.localnet,share=scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
         # deca_conf_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_10_29_21-30-28_ExpDECA_Affec_para_NoRing_EmoB_F2_DeSegrend_BlackB_Aug_early"
         deca_conf_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"
-        # # deca_conf = None
+        # # emoca_conf = None
         stage = 'detail'
         #
         relative_to_path = '/ps/scratch/'
@@ -565,7 +565,7 @@ def main():
         #     'data/augmentations=default_with_resize',
         #     'data.num_workers=0'
         # ]
-        # deca_conf = None
+        # emoca_conf = None
         # deca_conf_path = None
         # fixed_overrides_deca = None
         # stage = None

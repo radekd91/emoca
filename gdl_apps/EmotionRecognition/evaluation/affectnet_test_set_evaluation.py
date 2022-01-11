@@ -149,7 +149,7 @@ def train_emodeca_on_cluster():
     # resume_folders += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-32-49_-6879167987895418873_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
 
-    # TODO: some of the DECA dataset trained ExpDECAs are missing ablations are missing
+    # TODO: some of the EMOCA dataset trained ExpDECAs are missing ablations are missing
     # resume_folders += [""]
     # resume_folders += [""]
     # resume_folders += [""]
@@ -172,7 +172,7 @@ def train_emodeca_on_cluster():
     # run_names += [
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_14_17-32-57_5584855956880651498_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
 
-    # original DECA
+    # original EMOCA
 
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_3882362656686027659_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"]
     # resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_04-14-55_-6806554933314077525_EmoDECA_Affec_Orig_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]

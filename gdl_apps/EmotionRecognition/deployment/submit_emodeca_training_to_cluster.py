@@ -220,7 +220,7 @@ def train_emodeca_on_cluster():
     #     'data/datasets=affectnet_cluster_emonet_cleaned',
     #     'data/augmentations=default',
     # ]
-    # deca_conf = None
+    # emoca_conf = None
     # deca_conf_path = None
     # fixed_overrides_deca = None
     # stage = None
@@ -290,12 +290,12 @@ def train_emodeca_on_cluster():
     # ]
     #
     # deca_conf_path = None
-    # deca_conf = "deca_train_detail_cluster"
+    # emoca_conf = "deca_train_detail_cluster"
     # stage = None
     # fixed_overrides_deca = [
     #     # 'model/settings=coarse_train',
     #     'model/settings=detail_train',
-    #     'model.resume_training=True',  # load the original DECA model
+    #     'model.resume_training=True',  # load the original EMOCA model
     #     'model.useSeg=rend', 'model.idw=0',
     #     'learning/batching=single_gpu_coarse',
     #     # 'learning/batching=single_gpu_detail',
@@ -311,7 +311,7 @@ def train_emodeca_on_cluster():
 
     # # # EMOEXPDECA
     # deca_conf_path = "/home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/finetune_deca/2021_04_19_18-59-19_ExpDECA_Affec_para_Jaw_NoRing_EmoLossB_F2VAEw-0.00150_DeSegrend_DwC_early"
-    # deca_conf = None
+    # emoca_conf = None
     # fixed_overrides_deca = None
     # stage = 'detail'
 

@@ -34,7 +34,7 @@ class KeypointNormalization(KeypointTransform):
         super().__init__(scale_x, scale_y)
 
     def forward(self, points):
-        # normalization the way DECA uses it.
+        # normalization the way EMOCA uses it.
         # the keypoints are not used in image space but in normalized space
         # for loss computation
         # the normalization is as follows:

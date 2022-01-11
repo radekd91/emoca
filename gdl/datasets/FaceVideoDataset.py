@@ -31,7 +31,7 @@ from enum import Enum
 
 
 def add_pretrained_deca_to_path():
-    deca_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DECA'))
+    deca_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'EMOCA'))
     if deca_path not in sys.path:
         sys.path.insert(0, deca_path)
 
@@ -562,11 +562,11 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     # def _get_reconstruction_net(self, device):
     #     add_pretrained_deca_to_path()
-    #     from decalib.deca import DECA
+    #     from decalib.deca import EMOCA
     #     from decalib.utils.config import cfg as deca_cfg
     #     # deca_cfg.model.use_tex = args.useTex
     #     deca_cfg.model.use_tex = False
-    #     deca = DECA(config=deca_cfg, device=device)
+    #     deca = EMOCA(config=deca_cfg, device=device)
     #     return deca
 
     def _get_reconstruction_net(self, device, rec_method='deca'):
@@ -590,7 +590,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
             checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, mode, checkpoint_mode=checkpoint_mode,
                                                                        replace_root = None, relative_to = None)
             # make sure you use the deca class of the target (for instance, if target is ExpDECA but we're starting from
-            # pretrained DECA)
+            # pretrained EMOCA)
 
             # cfg_pretrain_.model.deca_class = cfg_coarse.model.deca_class
             # checkpoint_kwargs["config"]["model"]["deca_class"] = cfg_coarse.model.deca_class
@@ -624,7 +624,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
             #     'learning.batch_size_train=4',
             # ]
             #
-            # initialize(config_path="../deca_conf", job_name="test_face_model")
+            # initialize(config_path="../emoca_conf", job_name="test_face_model")
             # conf = compose(config_name=default, overrides=overrides)
 
             from gdl.models.external.Deep3DFace import Deep3DFaceModule

@@ -1,4 +1,4 @@
-# from .DECA import DecaModule, instantiate_deca, DecaMode
+# from .EMOCA import DecaModule, instantiate_deca, DecaMode
 from .EmotionRecognitionModuleBase import \
     EmotionRecognitionBaseModule, loss_from_cfg, _get_step_loss_weights, va_loss, v_or_a_loss, exp_loss
 from .MLP import MLP

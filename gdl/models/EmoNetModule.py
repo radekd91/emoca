@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-# from gdl_apps.DECA.train_deca_modular import get_checkpoint
+# from gdl_apps.EMOCA.train_deca_modular import get_checkpoint
 from pytorch_lightning.loggers import WandbLogger
 from gdl.layers.losses.EmonetLoader import get_emonet
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions

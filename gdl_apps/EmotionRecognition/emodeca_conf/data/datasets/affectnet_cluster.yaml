@@ -1,6 +1,6 @@
 # @package data
 
-## OLD version of AffectNet, using their bounding boxes which are not the most suitable for DECA as they often
+## OLD version of AffectNet, using their bounding boxes which are not the most suitable for EMOCA as they often
 ## crop away whole or part of forehead.
 
 #dm = AffectNetDataModule(

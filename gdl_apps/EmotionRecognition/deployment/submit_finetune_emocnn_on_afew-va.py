@@ -97,7 +97,7 @@ def train_emodeca_on_cluster():
     #     # 'learning/optimizer=adabound',
     #     'data/augmentations=default',
     # ]
-    # deca_conf = None
+    # emoca_conf = None
     # deca_conf_path = None
     # fixed_overrides_deca = None
     # stage = None
@@ -136,7 +136,7 @@ def train_emodeca_on_cluster():
     #     # 'data/augmentations=default',
     #     'data/augmentations=default_with_resize',
     # ]
-    # deca_conf = None
+    # emoca_conf = None
     # deca_conf_path = None
     # fixed_overrides_deca = None
     # stage = None
@@ -227,7 +227,7 @@ def train_emodeca_on_cluster():
 
         # cfg = train_emodeca.configure(
         #     conf, conf_overrides,
-        #     deca_default=deca_conf, deca_overrides=deca_overrides,
+        #     deca_default=emoca_conf, deca_overrides=deca_overrides,
         #     deca_conf_path=model_path ,
         #     deca_stage=stage
         # )

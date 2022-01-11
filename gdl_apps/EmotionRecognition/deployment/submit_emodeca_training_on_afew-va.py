@@ -158,7 +158,7 @@ def train_emodeca_on_cluster():
     #     # 'data/augmentations=default',
     #     'data/augmentations=default_with_resize',
     # ]
-    # deca_conf = None
+    # emoca_conf = None
     # deca_conf_path = None
     # fixed_overrides_deca = None
     # stage = None
@@ -188,12 +188,12 @@ def train_emodeca_on_cluster():
     # ]
     #
     # deca_conf_path = None
-    # deca_conf = "deca_train_detail_cluster"
+    # emoca_conf = "deca_train_detail_cluster"
     # stage = None
     # fixed_overrides_deca = [
     #     # 'model/settings=coarse_train',
     #     'model/settings=detail_train',
-    #     'model.resume_training=True',  # load the original DECA model
+    #     'model.resume_training=True',  # load the original EMOCA model
     #     'model.useSeg=rend', 'model.idw=0',
     #     'learning/batching=single_gpu_coarse',
     #     # 'learning/batching=single_gpu_detail',

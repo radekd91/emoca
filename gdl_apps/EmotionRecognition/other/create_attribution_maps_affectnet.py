@@ -30,10 +30,10 @@ from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
 from gdl.layers.losses.EmoNetLoss import emo_network_from_path
 from gdl.models.DECA import DECA, DecaModule
 from gdl.models.IO import locate_checkpoint
-from gdl_apps.DECA.load_data import hack_paths
+from gdl_apps.EMOCA.load_data import hack_paths
 
 from tqdm.auto import tqdm
-from gdl_apps.DECA.test_and_finetune_deca import create_logger
+from gdl_apps.EMOCA.test_and_finetune_deca import create_logger
 
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path

@@ -158,7 +158,7 @@ class DecaModule(LightningModule):
 
     def reconfigure(self, model_params, inout_params, learning_params, stage_name="", downgrade_ok=False, train=True):
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
-            raise RuntimeError("You're switching the DECA mode from DETAIL to COARSE. Is this really what you want?!")
+            raise RuntimeError("You're switching the EMOCA mode from DETAIL to COARSE. Is this really what you want?!")
         self.inout_params = inout_params
         self.learning_params = learning_params
 
@@ -195,7 +195,7 @@ class DecaModule(LightningModule):
             self.stage_name += "_"
         self.mode = DecaMode[str(model_params.mode).upper()]
         self.train(mode=train)
-        print(f"DECA MODE RECONFIGURED TO: {self.mode}")
+        print(f"EMOCA MODE RECONFIGURED TO: {self.mode}")
 
         if 'shape_contrain_type' in self.deca.config.keys() and str(self.deca.config.shape_constrain_type).lower() != 'none':
             shape_constraint = self.deca.config.shape_constrain_type
@@ -254,7 +254,7 @@ class DecaModule(LightningModule):
             with torch.no_grad():
                 parameters = self.deca._encode_flame(images)
         else:
-            raise ValueError(f"Invalid DECA Mode {self.mode}")
+            raise ValueError(f"Invalid EMOCA Mode {self.mode}")
         code_list = self.deca.decompose_code(parameters)
         shapecode, texcode, expcode, posecode, cam, lightcode = code_list
         return shapecode, texcode, expcode, posecode, cam, lightcode
@@ -526,11 +526,14 @@ class DecaModule(LightningModule):
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
-                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, exprw = \
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, _, exprw = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, affectnetexp, None, exprw)
-
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, None, None, exprw)
+                    # (self, original_batch_size, K,
+                    #                                   expcode, posecode, shapecode, lightcode, texcode,
+                    #                                   images, cam, lmk, masks, va, expr7, affectnetexp,
+                    #                                   detailcode=None, detailemocode=None, exprw=None):
 
         # -- detail
         if self.mode == DecaMode.DETAIL:
@@ -1258,7 +1261,7 @@ class DecaModule(LightningModule):
                         if not isinstance(self.deca, ExpDECA):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
                                                       "expression based, not identity based. This is not guaranteed "
-                                                      "for vanilla DECA (or its datasets).")
+                                                      "for vanilla EMOCA (or its datasets).")
                         # we are taking this from the original batch dict because we do not care about the
                         # shuffled, duplicated samples (they don't have to be doubled)
                         images_0 = batch["image"][:, 0, ...]
@@ -1294,7 +1297,7 @@ class DecaModule(LightningModule):
                         if not isinstance(self.deca, ExpDECA):
                             raise NotImplementedError("Cross-ring emotion contrast means the ring has to be "
                                                       "expression based, not identity based. This is not guaranteed "
-                                                      "for vanilla DECA.")
+                                                      "for vanilla EMOCA.")
 
                         self._compute_emotion_loss(predicted_images_0,
                                                    # rec images of first expressions in the ring
@@ -2611,7 +2614,7 @@ class ExpDECA(DECA):
 
     def _create_model(self):
         super()._create_model()
-        # E_flame should be fixed for expression DECA
+        # E_flame should be fixed for expression EMOCA
         self.E_flame.requires_grad_(False)
         if self.config.expression_backbone == 'deca_parallel':
             ## Attach a parallel flow of FCs onto deca coarse backbone
@@ -2666,14 +2669,14 @@ class ExpDECA(DECA):
             deca_code_list[exp_idx] = exp_code
             deca_code_list[pose_idx] = pose_code
         elif self.config.exp_deca_global_pose:
-            # global pose from ExpDeca, jaw pose from DECA
+            # global pose from ExpDeca, jaw pose from EMOCA
             pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
             pose_code_deca = deca_code_list[pose_idx]
             deca_code_list[pose_idx] = torch.cat([pose_code_exp_deca, pose_code_deca[:,3:]], dim=1)
             exp_code = expdeca_code[:, :self.config.n_exp]
             deca_code_list[exp_idx] = exp_code
         elif self.config.exp_deca_jaw_pose:
-            # global pose from DECA, jaw pose from ExpDeca
+            # global pose from EMOCA, jaw pose from ExpDeca
             pose_code_exp_deca = expdeca_code[:, self.config.n_exp:]
             pose_code_deca = deca_code_list[pose_idx]
             deca_code_list[pose_idx] = torch.cat([pose_code_deca[:, :3], pose_code_exp_deca], dim=1)
@@ -2722,7 +2725,7 @@ def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None
     if checkpoint is None:
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
         if cfg.model.resume_training:
-            print("[WARNING] Loading DECA checkpoint pretrained by the old code")
+            print("[WARNING] Loading EMOCA checkpoint pretrained by the old code")
             deca.deca._load_old_checkpoint()
     else:
         checkpoint_kwargs = checkpoint_kwargs or {}

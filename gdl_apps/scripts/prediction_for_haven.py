@@ -20,7 +20,7 @@ def from_tensor(tensor):
 
 def main(input_folder, output_folder ):
 
-    cfg = OmegaConf.load("../DECA/deca_conf/model/settings/deep3dface.yaml")
+    cfg = OmegaConf.load("../EMOCA/emoca_conf/model/settings/deep3dface.yaml")
     model = Deep3DFaceWrapper(cfg.deep3dface)
 
     dataset = HavenSet(input_folder)
