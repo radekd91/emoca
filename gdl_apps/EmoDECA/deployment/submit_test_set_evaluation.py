@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import gdl_apps.EmoDECA.training.train_emodeca as scriot
+import gdl_apps.EmoDECA.training.train_emodeca as script
 import datetime
 from omegaconf import OmegaConf
 import time as t

@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import resume_emodeca_training as script
+import gdl_apps.EmoDECA.training.resume_emodeca_training as script
 import datetime
 from omegaconf import OmegaConf
 import time as t

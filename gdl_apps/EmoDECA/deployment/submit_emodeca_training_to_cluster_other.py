@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import gdl_apps.EmoDECA.training.train_emodeca as scriot
+import gdl_apps.EmoDECA.training.train_emodeca as script
 # import train_emo3ddfa
 import datetime
 from omegaconf import OmegaConf
@@ -20,7 +20,7 @@ def submit(cfg, bid=10):
     submission_folder_local = Path(submission_dir_local_mount) / submission_folder_name
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
-    local_script_path = Path(scriot.__file__).absolute()
+    local_script_path = Path(script.__file__).absolute()
     # local_script_path = Path(train_emo3ddfa.__file__).absolute()
     cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
                           / local_script_path.parents[0].name / local_script_path.name
