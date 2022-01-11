@@ -624,7 +624,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
             #     'learning.batch_size_train=4',
             # ]
             #
-            # initialize(config_path="deca_conf", job_name="test_face_model")
+            # initialize(config_path="../deca_conf", job_name="test_face_model")
             # conf = compose(config_name=default, overrides=overrides)
 
             from gdl.models.external.Deep3DFace import Deep3DFaceModule
