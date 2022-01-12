@@ -1,6 +1,6 @@
 from gdl_apps.EMOCA.utils.load import load_model
 from gdl.utils.FaceDetector import FAN
-from gdl.datasets.FaceVideoDataset import TestData
+from gdl.datasets.ImageTestDataset import TestData
 import matplotlib.pyplot as plt
 import gdl.utils.DecaUtils as util
 import numpy as np

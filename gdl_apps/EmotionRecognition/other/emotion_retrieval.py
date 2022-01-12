@@ -2,7 +2,7 @@ import os, sys
 from pathlib import Path
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule
 from gdl.datasets.IO import load_emotion
 from tqdm import auto
 import pickle as pkl

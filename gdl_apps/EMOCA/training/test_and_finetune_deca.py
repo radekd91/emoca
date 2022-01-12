@@ -2,8 +2,9 @@ import os, sys
 from pathlib import Path
 sys.path += [str(Path(__file__).parent.parent)]
 
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule
-from gdl.datasets.EmotionalDataModule import EmotionDataModule
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule
+from gdl.datasets.AffWild2Dataset import AffWild2DMBase
+from gdl.datasets.EmotionalDataModule import AffWild2DataModule
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
@@ -86,7 +87,7 @@ def locate_checkpoint(cfg, mode='latest'):
 
 def prepare_data(cfg):
     print(f"The data will be loaded from: '{cfg.data.data_root}'")
-    fvdm = FaceVideoDataModule(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
+    fvdm = AffWild2DMBase(Path(cfg.data.data_root), Path(cfg.data.data_root) / "processed",
                                cfg.data.processed_subfolder)
     fvdm.prepare_data()
     fvdm.setup()
@@ -139,26 +140,26 @@ def prepare_data(cfg):
     else:
         augmentation = None
 
-    dm = EmotionDataModule(fvdm,
-                           image_size=cfg.model.image_size,
-                           augmentation=augmentation,
-                           with_landmarks=True,
-                           with_segmentations=True,
-                           split_ratio=cfg.data.split_ratio,
-                           split_style=cfg.data.split_style,
-                           train_K=cfg.learning.train_K,
-                           train_K_policy=cfg.learning.train_K_policy,
-                           val_K=cfg.learning.val_K,
-                           val_K_policy=cfg.learning.val_K_policy,
-                           test_K=cfg.learning.test_K,
-                           test_K_policy=cfg.learning.test_K_policy,
-                           annotation_list= copy.deepcopy(annotation_list),
-                           filter_pattern=filter_pattern,
-                           num_workers=cfg.data.num_workers,
-                           train_batch_size=cfg.learning.batch_size_train,
-                           val_batch_size=cfg.learning.batch_size_val,
-                           test_batch_size=cfg.learning.batch_size_test
-                           )
+    dm = AffWild2DataModule(fvdm,
+                            image_size=cfg.model.image_size,
+                            augmentation=augmentation,
+                            with_landmarks=True,
+                            with_segmentations=True,
+                            split_ratio=cfg.data.split_ratio,
+                            split_style=cfg.data.split_style,
+                            train_K=cfg.learning.train_K,
+                            train_K_policy=cfg.learning.train_K_policy,
+                            val_K=cfg.learning.val_K,
+                            val_K_policy=cfg.learning.val_K_policy,
+                            test_K=cfg.learning.test_K,
+                            test_K_policy=cfg.learning.test_K_policy,
+                            annotation_list= copy.deepcopy(annotation_list),
+                            filter_pattern=filter_pattern,
+                            num_workers=cfg.data.num_workers,
+                            train_batch_size=cfg.learning.batch_size_train,
+                            val_batch_size=cfg.learning.batch_size_val,
+                            test_batch_size=cfg.learning.batch_size_test
+                            )
     return dm, sequence_name
 
 

@@ -1,5 +1,5 @@
 from pathlib import Path
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule
 from gdl.datasets.ImageDatasetHelpers import point2bbox, bbpoint_warp
 import sys
 import argparse

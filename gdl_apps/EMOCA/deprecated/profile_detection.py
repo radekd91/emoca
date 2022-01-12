@@ -3,7 +3,7 @@ import os, sys
 sys.path = [os.path.abspath(os.path.join(__file__, "..", "..", ".."))] + sys.path
 from pathlib import Path
 
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule
 
 def main():
     root = Path("/home/rdanecek/Workspace/mount/scratch/rdanecek/data/aff-wild2/")

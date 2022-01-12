@@ -3,10 +3,10 @@ from pathlib import Path
 sys.path += [str(Path(__file__).parent.parent)]
 
 import numpy as np
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule, \
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule, \
     Expression7, AU8, expr7_to_affect_net
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
-from gdl.datasets.EmotionalDataModule import EmotionDataModule
+from gdl.datasets.EmotionalDataModule import AffWild2DataModule
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.loggers import WandbLogger
 import wandb

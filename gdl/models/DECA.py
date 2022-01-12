@@ -21,7 +21,7 @@ from .EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
 import gdl.utils.DecaUtils as util
-from gdl.datasets.FaceVideoDataset import Expression7
+from gdl.datasets.FaceVideoDataModule import Expression7
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 

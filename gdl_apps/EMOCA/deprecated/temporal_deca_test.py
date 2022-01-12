@@ -1,5 +1,5 @@
 from pathlib import Path
-from gdl.datasets.FaceVideoDataset import FaceVideoDataModule
+from gdl.datasets.FaceVideoDataModule import FaceVideoDataModule
 import sys
 import argparse
 import os
