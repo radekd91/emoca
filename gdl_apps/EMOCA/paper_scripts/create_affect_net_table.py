@@ -154,8 +154,8 @@ def main():
 
         if id in final_model_nicknames.keys():
             entry_dict["run_name"] = final_model_nicknames[id]
-
-            # print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
+            print(final_model_nicknames[id])
+            print(f"run_names += ['{cfg.inout.value.previous_run_dir}']")
         elif not leave_out_not_metioned_runs:
             entry_dict["run_name"] = run.name
 
@@ -191,17 +191,17 @@ def main():
     # table.to_csv("affectnet_test_metrics_.csv")
 
 
-
-    with open("affectnet_test_metrics_.tex", "w") as f:
-        table.to_latex(f,
-                       index_names=False,
-                       # float_format="{:0.2f}",
-                       float_format=format,
-                       # column_formatstr=len(table.colums) * "l" + "r",
-                       )
-        # f.write(
-        #         )
-
+    #
+    # with open("affectnet_test_metrics_.tex", "w") as f:
+    #     table.to_latex(f,
+    #                    index_names=False,
+    #                    # float_format="{:0.2f}",
+    #                    float_format=format,
+    #                    # column_formatstr=len(table.colums) * "l" + "r",
+    #                    )
+    #     # f.write(
+    #     #         )
+    #
 
 def format(num):
     return f"{num:.02f}"

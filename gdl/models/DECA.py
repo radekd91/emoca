@@ -12,16 +12,16 @@ from skimage.io import imread
 import cv2
 from pathlib import Path
 
-from .Renderer import SRenderY
-from .DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
-from .DecaDecoder import Generator, GeneratorAdaIn
-from .DecaFLAME import FLAME, FLAMETex
+from gdl.models.Renderer import SRenderY
+from gdl.models.DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
+from gdl.models.DecaDecoder import Generator, GeneratorAdaIn
+from gdl.models.DecaFLAME import FLAME, FLAMETex
 # from .MLP import MLP
-from .EmotionMLP import EmotionMLP
+from gdl.models.EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
 import gdl.utils.DecaUtils as util
-from gdl.datasets.FaceVideoDataModule import Expression7
+from gdl.datasets.AffWild2Dataset import Expression7
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 
@@ -98,7 +98,7 @@ class DecaModule(LightningModule):
             self.emotion_mlp = None
 
     def _init_emotion_loss(self):
-        if 'emonet_weight' in self.deca.config.keys():
+        if 'emonet_weight' in self.deca.config.keys() and bool(self.deca.config.emonet_model_path):
             if self.emonet_loss is not None:
                 emoloss_force_override = True if 'emoloss_force_override' in self.deca.config.keys() and self.deca.config.emoloss_force_override else False
                 if self.emonet_loss.is_trainable():

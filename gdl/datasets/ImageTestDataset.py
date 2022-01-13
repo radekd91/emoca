@@ -9,7 +9,7 @@ from skimage.io import imread
 from skimage.transform import rescale, estimate_transform, warp
 from torch.utils.data import Dataset
 
-from gdl.datasets.FaceVideoDataModule import add_pretrained_deca_to_path
+# from gdl.datasets.FaceVideoDataModule import add_pretrained_deca_to_path
 from gdl.datasets.ImageDatasetHelpers import bbox2point
 from gdl.utils.FaceDetector import FAN
 
@@ -38,7 +38,7 @@ class TestData(Dataset):
         self.scale = scale
         self.iscrop = iscrop
         self.resolution_inp = crop_size
-        add_pretrained_deca_to_path()
+        # add_pretrained_deca_to_path()
         # from decalib.datasets import detectors
         if face_detector == 'fan':
             self.face_detector = FAN()

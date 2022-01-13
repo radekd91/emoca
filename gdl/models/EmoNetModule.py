@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from pytorch_lightning.loggers import WandbLogger
 from gdl.layers.losses.EmonetLoader import get_emonet
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
-from gdl.datasets.FaceVideoDataModule import Expression7
+from gdl.datasets.AffWild2Dataset import Expression7
 from pathlib import Path
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule

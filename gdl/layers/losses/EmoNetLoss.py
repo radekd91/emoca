@@ -20,9 +20,17 @@ def emo_network_from_path(path):
         from omegaconf import OmegaConf
         with open(Path(run_path) / "cfg.yaml", "r") as f:
             conf = OmegaConf.load(f)
+        if run_path != conf.inout.full_run_dir: 
+            conf.inout.output_dir = str(Path(run_path).parent)
+            conf.inout.full_run_dir = str(run_path)
+            conf.inout.checkpoint_dir = str(Path(run_path) / "checkpoints")
         return conf
 
     cfg = load_configs(path)
+
+    if not bool(cfg.inout.checkpoint_dir):
+        cfg.inout.checkpoint_dir = str(Path(path) / "checkpoints")
+
     checkpoint_mode = 'best'
     stages_prefixes = ""
 
