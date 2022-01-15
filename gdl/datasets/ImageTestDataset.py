@@ -1,7 +1,5 @@
 import glob
 from glob import glob
-import os
-
 import cv2
 import numpy as np
 import scipy
@@ -14,13 +12,12 @@ from torch.utils.data import Dataset
 from gdl.datasets.ImageDatasetHelpers import bbox2point
 from gdl.utils.FaceDetector import FAN
 
+import os
 
 class TestData(Dataset):
     def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='fan',
-                 scaling_factor=1.0):
-        '''
-            testpath: folder, imagepath_list, image path, video path
-        '''
+                 scaling_factor=1.0, max_detection=None):
+        self.max_detection = max_detection
         if isinstance(testpath, list):
             self.imagepath_list = testpath
         elif os.path.isdir(testpath):
@@ -94,32 +91,73 @@ class TestData(Dataset):
                     top = 0
                     bottom = w - 1
                 else:
-                    bbox = bbox[0]
-                    left = bbox[0]
-                    right = bbox[2]
-                    top = bbox[1]
-                    bottom = bbox[3]
-                old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
-            size = int(old_size * self.scale)
-            src_pts = np.array(
-                [[center[0] - size / 2, center[1] - size / 2], [center[0] - size / 2, center[1] + size / 2],
-                 [center[0] + size / 2, center[1] - size / 2]])
+                    if self.max_detection is None:
+                        bbox = bbox[0]
+                        left = bbox[0]
+                        right = bbox[2]
+                        top = bbox[1]
+                        bottom = bbox[3]
+                        old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
+                    else: 
+                        old_size, center = [], []
+                        num_det = min(self.max_detection, len(bbox))
+                        for bbi in range(num_det):
+                            bb = bbox[0]
+                            left = bb[0]
+                            right = bb[2]
+                            top = bb[1]
+                            bottom = bb[3]
+                            osz, c = bbox2point(left, right, top, bottom, type=bbox_type)
+                        old_size += [osz]
+                        center += [c]
+            
+            if isinstance(old_size, list):
+                size = []
+                src_pts = []
+                for i in range(len(old_size)):
+                    size += [int(old_size[i] * self.scale)]
+                    src_pts += [np.array(
+                        [[center[i][0] - size[i] / 2, center[i][1] - size[i] / 2], [center[i][0] - size[i] / 2, center[i][1] + size[i] / 2],
+                        [center[i][0] + size[i] / 2, center[i][1] - size[i] / 2]])]
+            else:
+                size = int(old_size * self.scale)
+                src_pts = np.array(
+                    [[center[0] - size / 2, center[1] - size / 2], [center[0] - size / 2, center[1] + size / 2],
+                    [center[0] + size / 2, center[1] - size / 2]])
         else:
             src_pts = np.array([[0, 0], [0, h - 1], [w - 1, 0]])
-
-        DST_PTS = np.array([[0, 0], [0, self.resolution_inp - 1], [self.resolution_inp - 1, 0]])
-        tform = estimate_transform('similarity', src_pts, DST_PTS)
-
+        
         image = image / 255.
+        if not isinstance(src_pts, list):
+            DST_PTS = np.array([[0, 0], [0, self.resolution_inp - 1], [self.resolution_inp - 1, 0]])
+            tform = estimate_transform('similarity', src_pts, DST_PTS)
+            dst_image = warp(image, tform.inverse, output_shape=(self.resolution_inp, self.resolution_inp))
+            dst_image = dst_image.transpose(2, 0, 1)
+            return {'image': torch.tensor(dst_image).float(),
+                    'image_name': imagename,
+                    'image_path': imagepath,
+                    # 'tform': tform,
+                    # 'original_image': torch.tensor(image.transpose(2,0,1)).float(),
+                    }
+        else:
+            DST_PTS = np.array([[0, 0], [0, self.resolution_inp - 1], [self.resolution_inp - 1, 0]])
+            dst_images = []
+            for i in range(len(src_pts)):
+                tform = estimate_transform('similarity', src_pts[i], DST_PTS)
+                dst_image = warp(image, tform.inverse, output_shape=(self.resolution_inp, self.resolution_inp))
+                dst_image = dst_image.transpose(2, 0, 1)
+                dst_images += [dst_image]
+            dst_images = np.stack(dst_images, axis=0)
+            
+            imagenames = [imagename + f"{j:02d}" for j in range(dst_images.shape[0])]
+            imagepaths = [imagepath]* dst_images.shape[0]
+            return {'image': torch.tensor(dst_images).float(),
+                    'image_name': imagenames,
+                    'image_path': imagepaths,
+                    # 'tform': tform,
+                    # 'original_image': torch.tensor(image.transpose(2,0,1)).float(),
+                    }
 
-        dst_image = warp(image, tform.inverse, output_shape=(self.resolution_inp, self.resolution_inp))
-        dst_image = dst_image.transpose(2, 0, 1)
-        return {'image': torch.tensor(dst_image).float(),
-                'image_name': imagename,
-                'image_path': imagepath,
-                # 'tform': tform,
-                # 'original_image': torch.tensor(image.transpose(2,0,1)).float(),
-                }
 
 
 def video2sequence(video_path):
