@@ -1,6 +1,7 @@
 from gdl_apps.EMOCA.utils.load import load_model
 from gdl.utils.FaceDetector import FAN
 from gdl.datasets.ImageTestDataset import TestData
+import gdl
 import matplotlib.pyplot as plt
 import gdl.utils.DecaUtils as util
 import numpy as np
@@ -10,6 +11,7 @@ import torch
 from skimage.io import imsave
 from pathlib import Path
 from tqdm import auto
+import argparse
 
 
 def save_obj(deca, filename, opdict):
@@ -117,32 +119,47 @@ def decode(deca, values, training=False):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    # add the input folder arg 
+    parser.add_argument('--input_folder', type=str, default="/ps/data/SignLanguage/SignLanguage_210805_03586_GH/IOI/2021-08-05_ASL_PNG_MH/SignLanguage_210805_03586_GH_LiebBitte_2/Cam_0_35mm_90CW")
+    # add the output folder arg 
+    parser.add_argument('--output_folder', type=str, default="/ps/scratch/rdanecek/For_Nima/SignLanguage_210805_03586_GH/IOI/2021-08-05_ASL_PNG_MH/SignLanguage_210805_03586_GH_LiebBitte_2/Cam_0_35mm_90CW")
+    # add the model name arg
+    parser.add_argument('--model_name', type=str, default='EMOCA')
+
+    parser.add_argument('--path_to_models', type=str, default=Path(gdl.__file__).parents[1] / "assets/EMOCA/models")
+
+    args = parser.parse_args()
+
+
     # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
+    # path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
+    path_to_models = args.path_to_models
+    input_folder = args.input_folder
+    output_folder = args.output_folder
+    model_name = args.model_name
 
     mode = 'detail'
     # mode = 'coarse'
-    model_name = '2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early'
+    # model_name = '2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early'
 
-    deca, conf = load_model(path_to_models, model_name, mode)
-    deca.cuda()
-    deca.eval()
+    emoca, conf = load_model(path_to_models, model_name, mode)
+    emoca.cuda()
+    emoca.eval()
 
-    input_folder = "/ps/data/SignLanguage/SignLanguage_210805_03586_GH/IOI/2021-08-05_ASL_PNG_MH/SignLanguage_210805_03586_GH_LiebBitte_2/Cam_0_35mm_90CW"
-    output_folder = "/ps/scratch/rdanecek/For_Nima/SignLanguage_210805_03586_GH/IOI/2021-08-05_ASL_PNG_MH/SignLanguage_210805_03586_GH_LiebBitte_2/Cam_0_35mm_90CW"
-
+  
     dataset = TestData(input_folder, face_detector="fan", scaling_factor=0.25)
 
 
     for i in auto.tqdm( range(len(dataset))):
         img = dataset[i]
-        vals, visdict = test(deca, img)
+        vals, visdict = test(emoca, img)
         name = f"{i:02d}"
 
         sample_output_folder = Path(output_folder) / name
         sample_output_folder.mkdir(parents=True, exist_ok=True)
 
-        save_obj(deca, str(sample_output_folder / "mesh_coarse.obj"), vals)
+        save_obj(emoca, str(sample_output_folder / "mesh_coarse.obj"), vals)
         save_images(output_folder, name, visdict)
         save_codes(Path(output_folder), name, vals)
 

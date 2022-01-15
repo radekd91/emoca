@@ -142,8 +142,10 @@ class FaceDataModuleBase(pl.LightningDataModule):
             stem = frame_fname.stem + "_%.03d" % di
             out_detection_fname = out_detection_folder / (stem + self.processed_ext)
             detection_fnames += [out_detection_fname.relative_to(self.output_dir)]
-            imsave(out_detection_fname, detection, quality=100 if self.processed_ext in [".jpg", ".JPG"] else None)
-
+            if self.processed_ext in ['.JPG', '.jpg', ".jpeg", ".JPEG"]:
+                imsave(out_detection_fname, detection, quality=100)
+            else:
+                imsave(out_detection_fname, detection)
             # save landmarks
             out_landmark_fname = out_landmark_folder / (stem + ".pkl")
             landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]

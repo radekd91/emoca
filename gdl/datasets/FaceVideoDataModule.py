@@ -10,7 +10,7 @@ import pickle as pkl
 from tqdm import tqdm, auto
 # import subprocess
 from torchvision.transforms import Resize, Compose
-
+import gdl
 from gdl.datasets.ImageTestDataset import TestData
 from gdl.datasets.FaceDataModuleBase import FaceDataModuleBase
 from gdl.datasets.ImageDatasetHelpers import point2bbox, bbpoint_warp
@@ -92,10 +92,14 @@ class FaceVideoDataModule(FaceDataModuleBase):
     def get_frame_number_format(self):
         return "%06d"
 
+    # def _get_unpacked_video_subfolder(self, video_idx):
+        # return  Path(self._video_category(video_idx)) / video_file.parts[-3] /self._video_set(video_idx) / video_file.stem
+
     def _unpack_video(self, video_idx, overwrite=False):
         video_file = Path(self.root_dir) / self.video_list[video_idx]
-        suffix = Path(video_file.parts[-4]) / video_file.parts[-3] / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
+        # suffix = self._get_unpacked_video_subfolder(video_idx)
+        # out_folder = Path(self.output_dir) / suffix
+        out_folder = self._get_path_to_sequence_frames(video_idx)
 
         if not out_folder.exists() or overwrite:
             print("Unpacking video to '%s'" % str(out_folder))
@@ -129,52 +133,87 @@ class FaceVideoDataModule(FaceDataModuleBase):
         for sid in range(self.num_sequences):
             self._detect_faces_in_sequence(sid)
 
-    def _get_path_to_sequence_frames(self, sequence_id):
+    def _get_path_to_sequence_files(self, sequence_id, file_type, method="", suffix=""): 
+        assert file_type in ['videos', 'detections', "landmarks", "segmentations", 
+            "emotions", "reconstructions"]
         video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'videos' / video_file.parts[-2] / video_file.stem
+        if len(method) > 0:
+            file_type += "_" + method 
+        if len(suffix) > 0:
+            file_type += suffix
+
+        suffix = Path(self._video_category(sequence_id)) / file_type /self._video_set(sequence_id) / video_file.stem
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
-    def _get_path_to_sequence_detections(self, sequence_id):
-        video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
-        return out_folder
+
+    def _get_path_to_sequence_frames(self, sequence_id):
+        return self._get_path_to_sequence_files(sequence_id, "videos")
+        # video_file = self.video_list[sequence_id]
+        # suffix = Path(self._video_category(sequence_id)) / 'videos' /self._video_set(sequence_id) / video_file.stem
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
+
+    def _get_path_to_sequence_detections(self, sequence_id): 
+        return self._get_path_to_sequence_files(sequence_id, "detections")
+        # video_file = self.video_list[sequence_id]
+        # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
 
     def _get_path_to_sequence_landmarks(self, sequence_id):
-        video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'landmarks' / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
-        return out_folder
+        return self._get_path_to_sequence_files(sequence_id, "landmarks")
+        # video_file = self.video_list[sequence_id]
+        # suffix = Path(self._video_category(sequence_id)) / 'landmarks' /self._video_set(sequence_id) / video_file.stem
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
 
     def _get_path_to_sequence_segmentations(self, sequence_id):
-        video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'segmentations' / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
-        return out_folder
+        return self._get_path_to_sequence_files(sequence_id, "segmentations")
+        # video_file = self.video_list[sequence_id]
+        # suffix = Path(self._video_category(sequence_id)) / 'segmentations' /self._video_set(sequence_id) / video_file.stem
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
 
     def _get_path_to_sequence_emotions(self, sequence_id):
+        return self._get_path_to_sequence_files(sequence_id, "emotions")
+        # video_file = self.video_list[sequence_id]
+        # suffix = Path(self._video_category(sequence_id)) / 'emotions' /self._video_set(sequence_id) / video_file.stem
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
+
+    def _video_category(self, sequence_id):
         video_file = self.video_list[sequence_id]
-        suffix = Path(video_file.parts[-4]) / 'emotions' / video_file.parts[-2] / video_file.stem
-        out_folder = Path(self.output_dir) / suffix
+        out_folder = video_file.parts[-4]
+        return out_folder
+
+    def _video_set(self, sequence_id):
+        video_file = self.video_list[sequence_id]
+        out_folder = video_file.parts[-2]
         return out_folder
 
     def _get_path_to_sequence_reconstructions(self, sequence_id, rec_method='emoca', suffix=''):
         if suffix is None:
             suffix = ''
-        video_file = self.video_list[sequence_id]
+        
         if rec_method == 'deca':
-            suffix = Path(video_file.parts[-4]) / f'reconstructions{suffix}' / video_file.parts[-2] / video_file.stem
-        elif rec_method == 'emoca':
-            suffix = Path(video_file.parts[-4]) / f'reconstructions_emoca{suffix}' / video_file.parts[-2] / video_file.stem
-        elif rec_method == 'deep3dface':
-            suffix = Path(video_file.parts[-4]) / f'reconstructions_deep3dface{suffix}' / video_file.parts[-2] / video_file.stem
+            return self._get_path_to_sequence_files(sequence_id, "reconstructions", "", suffix)
         else:
-            raise ValueError("Unknown reconstruction method '%s'" % rec_method)
-        out_folder = Path(self.output_dir) / suffix
-        return out_folder
+            assert rec_method in ['emoca', 'deep3dface']
+            return self._get_path_to_sequence_files(sequence_id, "reconstructions", rec_method, suffix)
+        # video_file = self.video_list[sequence_id]
+        # if rec_method == 'deca':
+        #     suffix = Path(self._video_category(sequence_id)) / f'reconstructions{suffix}' /self._video_set(sequence_id) / video_file.stem
+        # elif rec_method == 'emoca':
+        #     suffix = Path(self._video_category(sequence_id)) / f'reconstructions_emoca{suffix}' /self._video_set(sequence_id) / video_file.stem
+        # elif rec_method == 'deep3dface':
+        #     suffix = Path(self._video_category(sequence_id)) / f'reconstructions_deep3dface{suffix}' /self._video_set(sequence_id) / video_file.stem
+        # else:
+        #     raise ValueError("Unknown reconstruction method '%s'" % rec_method)
+        # out_folder = Path(self.output_dir) / suffix
+        # return out_folder
 
-
+    
 
     # @profile
     def _detect_faces_in_sequence(self, sequence_id):
@@ -182,7 +221,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
         #     self.detection_lists = [ [] for i in range(self.num_sequences)]
         video_file = self.video_list[sequence_id]
         print("Detecting faces in sequence: '%s'" % video_file)
-        suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+        # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
         out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
         out_detection_folder.mkdir(exist_ok=True, parents=True)
         out_file = out_detection_folder / "bboxes.pkl"
@@ -239,7 +278,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
     def _segment_faces_in_sequence(self, sequence_id):
         video_file = self.video_list[sequence_id]
         print("Segmenting faces in sequence: '%s'" % video_file)
-        # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+        # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
 
         out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
         out_segmentation_folder = self._get_path_to_sequence_segmentations(sequence_id)
@@ -254,7 +293,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         video_file = self.video_list[sequence_id]
         print("Extracting emotion fetures from faces in sequence: '%s'" % video_file)
-        # suffix = Path(video_file.parts[-4]) / 'detections' / video_file.parts[-2] / video_file.stem
+        # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
 
         in_detection_folder = self._get_path_to_sequence_detections(sequence_id)
         out_emotion_folder = self._get_path_to_sequence_emotions(sequence_id)
@@ -526,7 +565,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
             mode = "test"
             from gdl.models.IO import get_checkpoint_with_kwargs
             from omegaconf import OmegaConf
-            model_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
+            # model_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
+            model_path = Path(gdl.__file__).parents[1] / "assets" / "EMOCA" / "models" / "EMOCA"
             cfg = OmegaConf.load(Path(model_path) / "cfg.yaml")
             stage = 'detail'
             cfg = cfg[stage]
@@ -824,8 +864,11 @@ class FaceVideoDataModule(FaceDataModuleBase):
         annotation_list = sorted(Path(self.root_dir).rglob("*.txt"))
         self.annotation_list = [path.relative_to(self.root_dir) for path in annotation_list]
 
-        import ffmpeg
+        self._gather_video_metadata()
+        print("Found %d video files." % len(self.video_list))
 
+    def _gather_video_metadata(self):
+        import ffmpeg
         self.video_metas = []
         for vi, vid_file in enumerate(tqdm(self.video_list)):
             vid = ffmpeg.probe(str( Path(self.root_dir) / vid_file))
@@ -839,10 +882,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
             vid_meta['width'] = int(vid_info['width'])
             vid_meta['height'] = int(vid_info['height'])
             vid_meta['num_frames'] = int(vid_info['nb_frames'])
-
             self.video_metas += [vid_meta]
-        print("Found %d video files." % len(self.video_list))
-
 
     def _loadMeta(self):
         if self.loaded:
@@ -965,7 +1005,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def _get_annotations_for_sequence(self, sid):
         video_file = self.video_list[sid]
-        suffix = Path(video_file.parts[-4]) / 'annotations' / video_file.parts[-2]
+        suffix = Path(self._video_category(sid)) / 'annotations' /self._video_set(sequence_id)
         annotation_prefix = Path(self.root_dir / suffix)
         annotation = sorted(annotation_prefix.glob(video_file.stem + "*.txt"))
         return annotation
@@ -982,12 +1022,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
         return indices, labels, mean, cov, fnames
 
     def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5,
-                                    rec_method='emoca', image_type=None, retarget_suffix=None):
+                                    rec_method='emoca', image_type=None, retarget_suffix=None, cat_dim=0, include_transparent=True):
         from PIL import Image, ImageDraw
         # fid = 0
         image_type = image_type or "detail"
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
-        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method, retarget_suffix=retarget_suffix)
+        vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method, 
+            retarget_suffix=retarget_suffix, image_type=image_type)
 
         vid_frames = self._get_frames_for_sequence(sequence_id)
 
@@ -997,7 +1038,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
         if image_type == "detail":
             outfile = vis_fnames[0].parents[1] / "video.mp4"
         else:
-            outfile = vis_fnames[0].parents[1] / "video_" + image_type + ".mp4"
+            outfile = vis_fnames[0].parents[1] /( "video_" + image_type + ".mp4")
 
         print("Creating reconstruction video for sequence num %d: '%s' " % (sequence_id, self.video_list[sequence_id]))
         if outfile.exists() and not overwrite:
@@ -1039,11 +1080,15 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
                 vis_name = vis_fnames[did]
 
-                if detection_name.stem != vis_name.stem:
+                if detection_name.stem not in str(vis_name):
                     print("%s != %s" % (detection_name.stem, vis_name.stem))
                     raise RuntimeError("Detection and visualization filenames should match but they don't.")
 
-                detection_im = imread(self.output_dir / detection_name.relative_to(detection_name.parents[4]))
+                try:
+                    detection_im = imread(self.output_dir / detection_name)
+                except:
+                    # ugly hack to deal with the old AffWild2 dataset
+                    detection_im = imread(self.output_dir / detection_name.relative_to(detection_name.parents[4]))
                 try:
                     vis_im = imread(vis_name)
                 except ValueError as e:
@@ -1055,8 +1100,10 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
                 if image_type == "coarse":
                     vis_im = vis_im[:, im_r*3:im_r*4, ...] # coarse
-                else:
+                elif image_type == "detail":
                     vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
+
+                    
                 # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
@@ -1078,26 +1125,34 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 # frame_pil2 = Image.fromarray(frame)
                 vis_pil = Image.fromarray((warped_im * 255).astype(np.uint8))
                 mask_pil = Image.fromarray((warped_mask * 255).astype(np.uint8))
-                mask_pil_transparent = Image.fromarray((warped_mask * 196).astype(np.uint8))
+                if include_transparent:
+                    mask_pil_transparent = Image.fromarray((warped_mask * 196).astype(np.uint8))
 
                 bb = point2bbox(c[nd], s[nd])
 
                 frame_draw.rectangle(((bb[0, 0], bb[0, 1],), (bb[2, 0], bb[1, 1],)),
                                      outline='green', width=5)
                 frame_deca_full.paste(vis_pil, (0, 0), mask_pil)
-                frame_deca_trans.paste(vis_pil, (0, 0), mask_pil_transparent)
+                if include_transparent:
+                    frame_deca_trans.paste(vis_pil, (0, 0), mask_pil_transparent)
                 # tform =
                 did += 1
 
             final_im = np.array(frame_pill_bb)
             final_im2 = np.array(frame_deca_full)
-            final_im3 = np.array(frame_deca_trans)
+            if include_transparent:
+                final_im3 = np.array(frame_deca_trans)
 
-            if final_im.shape[0] > final_im.shape[1]:
-                cat_dim = 1
-            else:
-                cat_dim = 0
-            im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
+            if cat_dim is None:
+                if final_im.shape[0] > final_im.shape[1]:
+                    cat_dim = 1
+                else:
+                    cat_dim = 0
+            
+            if include_transparent:
+                im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
+            else: 
+                im = np.concatenate([final_im, final_im2,], axis=cat_dim)
 
             if writer is None:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -2361,3 +2416,93 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     cmd = "ffmpeg -y -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s" \
           % (input_video, input_video_with_audio, output_video)
     os.system(cmd)
+
+
+
+class TestFaceVideoDM(FaceVideoDataModule): 
+
+    def __init__(self, video_path, output_dir, processed_subfolder="processed",
+                 face_detector='fan',
+                 face_detector_threshold=0.9,
+                 image_size=224,
+                 scale=1.25,
+                 batch_size=8,
+                 num_workers=4,
+                 device=None):
+        self.video_path = Path(video_path)
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        super().__init__(self.video_path.parent, output_dir, 
+                processed_subfolder,
+                 face_detector,
+                 face_detector_threshold,
+                 image_size,
+                 scale,
+                 device)
+        
+    
+    def prepare_data(self, *args, **kwargs):
+        outdir = Path(self.output_dir)
+
+        # is dataset already processed?
+        # if outdir.is_dir():
+        if Path(self.metadata_path).is_file():
+            print("The dataset is already processed. Loading")
+            self._loadMeta()
+            return
+        # else:
+        self._gather_data()
+        self._unpack_videos() 
+        self._detect_faces()
+        self._saveMeta()
+
+    # def _get_unpacked_video_subfolder(self, video_idx):
+    #     return  self.video_path.stem
+
+    def _gather_data(self, exist_ok=False):
+        print("Processing dataset")
+        Path(self.output_dir).mkdir(parents=True, exist_ok=exist_ok)
+
+        # video_list = sorted(Path(self.root_dir).rglob("*.mp4"))
+        self.video_list = [self.video_path.relative_to(self.root_dir)]
+
+        self.annotation_list = []
+        self._gather_video_metadata()
+
+
+    def _get_path_to_sequence_results(self, sequence_id, rec_method='EMOCA', suffix=''):
+        return self._get_path_to_sequence_files(sequence_id, "results", rec_method, suffix)
+
+    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca', retarget_suffix=None, image_type=None):
+        out_folder = self._get_path_to_sequence_results(sid, rec_method=rec_method, 
+            suffix=retarget_suffix)
+        if image_type is None:
+            image_type = "geometry_detail"
+        vis_fnames = sorted(list(out_folder.glob(f"**/{image_type}.png")))
+        return vis_fnames
+
+
+    def _get_path_to_sequence_files(self, sequence_id, file_type, method="", suffix=""): 
+        assert file_type in ['videos', 'detections', "landmarks", "segmentations", 
+            "emotions", "reconstructions", "results"]
+        video_file = self.video_list[sequence_id]
+        if len(method) > 0:
+            file_type += "/" + method 
+        if suffix is not None and len(suffix) > 0:
+            file_type += "/" + suffix
+
+        suffix = Path( video_file.stem) / file_type  
+        out_folder = Path(self.output_dir) / suffix
+        return out_folder
+
+    def setup(self, stage: Optional[str] = None):
+        sequence_ids = [0]
+        images = []
+        for sid in sequence_ids:
+            detection_path = self._get_path_to_sequence_detections(sid)
+            images += sorted(list(detection_path.glob("*.png")))
+        self.testdata = TestData(images, iscrop=False)
+
+
+    def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
+        return DataLoader(self.testdata, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)

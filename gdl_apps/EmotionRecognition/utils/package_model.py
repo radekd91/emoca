@@ -83,7 +83,7 @@ def main():
             "/2021_11_09_04-04-52_-2546023918050637211_EmoSwin_swin_small_patch4_window7_224_shake_samp-balanced_expr_Aug_early" 
         output_dir = "/ps/project/EmotionalFacialAnimation/emoca/emotion_network_models/new_affectnet_split/image_based_networks/packaged/SWIN-S"
 
-        asset_dir = "/home/rdanecek/Workspace/Repos/gdl/assets"
+        asset_dir = "/home/rdanecek/Workspace/Repos/gdl/assets/"
 
 
     # input_dir = sys.argv[1]

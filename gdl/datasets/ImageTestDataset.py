@@ -1,4 +1,5 @@
 import glob
+from glob import glob
 import os
 
 import cv2
@@ -52,7 +53,7 @@ class TestData(Dataset):
         return len(self.imagepath_list)
 
     def __getitem__(self, index):
-        imagepath = self.imagepath_list[index]
+        imagepath = str(self.imagepath_list[index])
         imagename = imagepath.split('/')[-1].split('.')[0]
 
         image = np.array(imread(imagepath))
