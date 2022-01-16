@@ -1,12 +1,13 @@
 from gdl_apps.EmotionRecognition.utils.package_model import package_model, test_loading
 import gdl
 from pathlib import Path
+from gdl.utils.other import get_path_to_assets
 
 
 def main():
-    asset_dir =  Path(gdl.__file__).parents[1] / "assets"
+    asset_dir =  get_path_to_assets()
     input_dir = Path("/ps/project/EmotionalFacialAnimation/emoca/emotion_network_models/new_affectnet_split/image_based_networks") 
-    output_dir = Path(gdl.__file__).parents[1] / "assets" / "EmotionRecognition" / "image_based_models"
+    output_dir = get_path_to_assets() / "EmotionRecognition" / "image_based_models"
     output_dir.mkdir(exist_ok=True, parents=True)
     model_dirs = {
         "2021_11_09_04-02-49_-1360894345964690046_EmoCnn_vgg19_bn_shake_samp-balanced_expr_Aug_early": "VGG19BN",  

@@ -29,9 +29,6 @@ def main():
             "the subfolder where the got unpacked. It will be in format 'processed_%Y_%b_%d_%H-%M-%S'")
     args = parser.parse_args()
 
-
-    # path_to_models = '/ps/scratch/rdanecek/emoca/finetune_deca'
-    # path_to_models = '/is/cluster/work/rdanecek/emoca/finetune_deca'
     path_to_models = args.path_to_models
     input_video = args.input_video
     output_folder = args.output_folder
@@ -62,7 +59,7 @@ def main():
     ## 3) Get the data loadeer with the detected faces
     dl = dm.test_dataloader()
 
-    # ## 4) Run the model on the data
+    ## 4) Run the model on the data
     for j, batch in enumerate (auto.tqdm( dl)):
 
         current_bs = batch["image"].shape[0]

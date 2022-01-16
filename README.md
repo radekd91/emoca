@@ -1,8 +1,7 @@
 # GDL - Generally Dumb Learning 
+This repository full of research code is developed and "maintained" by Radek Danecek. 
 
-Welcome to the GDL repository. This repository is developed and "maintained" by Radek Danecek. 
-
-By using the following code, you hereby agree to sell your sould and pledge allegiance to the underworld. 
+By using the following code, you hereby agree to sell your soul and pledge allegiance to the underworld. 
 
 
 ## Structure 
@@ -14,16 +13,20 @@ This repo has two subpackages. `gdl` and `gdl_apps`
 - `models` is a module with deep learning modules (pytorch based) 
 - `layers` contains individual deep learning layers 
 - `datasets` contains base classes and their implementations for various datasets I had to use at some points. It's mostly image-based datasets with various forms of GT if any
-- `optimizers` 
-- `transforms` 
+<!-- - `optimizers`  -->
+<!-- - `transforms`  -->
 - `utils` - various tools
 
 The repo is heavily based on PyTorch and Pytorch Lightning. 
 
 ### GDL_APPS 
-`gdl_apps` contain prototypes (finished and not finished). These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
+`gdl_apps` contains prototypes (finished and not finished). These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
 
 Look for individual READMEs in each sub-projects. 
+
+Projects with a certain level of usability: 
+- [EMOCA](gdl_apps/EMOCA) 
+- [EmotionRecognition](gdl_apps/EmotionRecognition)
 
 
 ## Installation 
