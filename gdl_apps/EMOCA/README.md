@@ -11,8 +11,8 @@ Follow the steps at the root of this repo. If for some reason the environment fr
 
 
 ## Demos 
-In order to run the demos you'll need to download and unzip the following assets into the `asset` folder at the root of the repo: 
-- [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/ryLKPH3ZyGwimXn)  
+In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that. Alternatively, manually download and unzip the following assets into the `asset` folder at the root of the repo: 
+- [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/NaGoq8Jt4BXcTDN)  
 - [DECA related assets](https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46)  
 - [FLAME related assets](https://owncloud.tuebingen.mpg.de/index.php/s/yZiYCGZjNw37jYw)
 
