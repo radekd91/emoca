@@ -1,0 +1,34 @@
+# @package model
+emodeca_type: EmoDECA
+
+predict_expression: true
+predict_valence: true
+predict_arousal: true
+
+
+use_mlp: false
+use_emonet: true
+load_pretrained_emonet: false
+unpose_global_emonet: true
+use_coarse_image_emonet: true
+use_detail_image_emonet: true
+static_cam_emonet:
+  - 10.0
+  - 0.0
+  - 0.0
+static_light: 3.0
+
+expression_balancing: false
+use_identity: false
+use_expression: true
+use_global_pose: false
+use_jaw_pose: true
+use_detail_code: false
+deca_checkpoint: todo
+deca_cfg: todo
+deca_stage: todo
+num_mlp_layers: 4
+#mlp_dimension_factor: 1
+mlp_dim: 2048
+finetune_deca: false
+

@@ -1,0 +1,10 @@
+# @package _group_
+#output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/emoca/emodeca
+#output_dir: /ps/scratch/rdanecek/emoca/emodeca
+output_dir: /is/cluster/work/rdanecek/emoca/emodeca
+full_run_dir: todo
+checkpoint_dir: todo
+name: todo
+time: todo
+random_id: todo
+

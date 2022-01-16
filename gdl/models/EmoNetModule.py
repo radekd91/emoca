@@ -1,14 +1,15 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-# from gdl_apps.DECA.train_deca_modular import get_checkpoint
+# from gdl_apps.EMOCA.train_deca_modular import get_checkpoint
 from pytorch_lightning.loggers import WandbLogger
 from gdl.layers.losses.EmonetLoader import get_emonet
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
-from gdl.datasets.FaceVideoDataset import Expression7
+from gdl.datasets.AffWild2Dataset import Expression7
 from pathlib import Path
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
+import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoNetModule(EmotionRecognitionBaseModule):
@@ -17,8 +18,9 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         super().__init__(config)
         self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
         if not config.model.load_pretrained_emonet:
-            self.emonet.n_expression = 9 # we use all affectnet classes (included none) for now
-            self.n_expression = 9 # we use all affectnet classes (included none) for now
+            n_expression = config.data.n_expression if 'n_expression' in config.data.keys() else 9
+            self.emonet.n_expression = n_expression # we use all affectnet classes (included none) for now
+            self.n_expression = n_expression# we use all affectnet classes (included none) for now
             self.emonet._create_Emo() # reinitialize
         else:
             self.n_expression = 8
@@ -59,11 +61,12 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         values['expr_classification'] = expression
 
         # TODO: WARNING: HACK
-        if self.n_expression == 8:
-            values['expr_classification'] = torch.cat([
-                values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
-                                               + 2*values['expr_classification'].min()],
-                dim=1)
+        if 'n_expression' not in self.config.data:
+            if self.n_expression == 8:
+                values['expr_classification'] = torch.cat([
+                    values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
+                                                   + 2*values['expr_classification'].min()],
+                    dim=1)
 
         return values
 
@@ -94,6 +97,7 @@ class EmoNetModule(EmotionRecognitionBaseModule):
         return caption
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        return None
         batch_size = input_batch['image'].shape[0]
 
         visdict = {}
@@ -113,38 +117,39 @@ class EmoNetModule(EmotionRecognitionBaseModule):
 
         if isinstance(self.logger, WandbLogger):
             caption = self._vae_2_str(
-                valence=valence_pred.detach().cpu().numpy(),
-                arousal=arousal_pred.detach().cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
+                valence=valence_pred.detach().cpu().numpy()[0],
+                arousal=arousal_pred.detach().cpu().numpy()[0],
+                affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[0],
                 expr7=None, prefix="pred")
             caption += self._vae_2_str(
-                valence=valence_gt.cpu().numpy(),
-                arousal=arousal_gt.cpu().numpy(),
-                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
+                valence=valence_gt.cpu().numpy()[0],
+                arousal=arousal_gt.cpu().numpy()[0],
+                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32)[0],
                 expr7=None, prefix="gt")
 
 
         stage = "test"
         vis_dict = {}
+        if self.trainer.is_global_zero:
+            i = 0 # index of sample in batch to log
+            for key in visdict.keys():
+                images = _torch_image2np(visdict[key])
+                savepath = Path(
+                    f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
+                image = images[i]
+                # im2log = Image(image, caption=caption)
+                if isinstance(self.logger, WandbLogger):
+                    im2log = _log_wandb_image(savepath, image, caption)
+                elif self.logger is not None:
+                    im2log = _log_array_image(savepath, image, caption)
+                else:
+                    im2log = _log_array_image(None, image, caption)
+                name = stage + "_" + key
+                if dataloader_idx is not None:
+                    name += "/dataloader_idx_" + str(dataloader_idx)
+                vis_dict[name] = im2log
 
-        i = 0 # index of sample in batch to log
-        for key in visdict.keys():
-            images = _torch_image2np(visdict[key])
-            savepath = Path(
-                f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
-            image = images[i]
-            # im2log = Image(image, caption=caption)
             if isinstance(self.logger, WandbLogger):
-                im2log = _log_wandb_image(savepath, image, caption)
-            elif self.logger is not None:
-                im2log = _log_array_image(savepath, image, caption)
-            else:
-                im2log = _log_array_image(None, image, caption)
-            name = stage + "_" + key
-            if dataloader_idx is not None:
-                name += "/dataloader_idx_" + str(dataloader_idx)
-            vis_dict[name] = im2log
-
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(vis_dict)
+                self.logger.log_metrics(vis_dict)
+            #     # self.log_dict(visdict, sync_dist=True)
         return vis_dict

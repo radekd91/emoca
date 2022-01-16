@@ -1,0 +1,9 @@
+# @package model
+emodeca_type: EmoCnnModule
+backbone: resnet50
+#backbone: vgg19
+load_pretrained: True
+#pretrained_weights: /home/rdanecek/Workspace/mount/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl
+pretrained_weights: /ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl
+
+

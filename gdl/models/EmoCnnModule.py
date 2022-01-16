@@ -8,20 +8,22 @@ import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
-from gdl.datasets.FaceVideoDataset import Expression7
+from gdl.datasets.AffWild2Dataset import Expression7
 from pathlib import Path
 from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _torch_image2np
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
 import torchvision.models.vgg as vgg # vgg19, vgg11, vgg13, vgg16, vgg11_bn, vgg13_bn, vgg16_bn, vgg19_bn
 from gdl.layers.losses.FRNet import resnet50, load_state_dict
 from torch.nn import Linear
+import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoCnnModule(EmotionRecognitionBaseModule):
 
     def __init__(self, config):
         super().__init__(config)
-        self.n_expression = 9  # we use all affectnet classes (included none) for now
+        # self.n_expression = 9  # we use all affectnet classes (included none) for now
+        self.n_expression = config.data.n_expression if 'n_expression' in config.data.keys() else 9
 
         self.num_outputs = 0
         if self.config.model.predict_expression:
@@ -42,14 +44,18 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
             if config.model.load_pretrained:
                 # checkpoint = '/ps/scratch/face2d3d/ringnetpp/eccv/data/resnet50_ft_weight.pkl'
                 load_state_dict(self.backbone, config.model.pretrained_weights)
-                self.linear = Linear(2048, self.num_outputs) # 2048 is the output of  the resnet50 backbone without the MLP "top"
+            self.last_feature_size = 2048
+            self.linear = Linear(self.last_feature_size, self.num_outputs) # 2048 is the output of  the resnet50 backbone without the MLP "top"
         elif config.model.backbone[:3] == "vgg":
             vgg_constructor = getattr(vgg, config.model.backbone)
             self.backbone = vgg_constructor(pretrained=bool(config.model.load_pretrained), progress=True)
-            self.linear = Linear(1000, self.num_outputs) #1000 is the number of imagenet classes so the dim of the output of the vgg backbone
+            self.last_feature_size = 1000
+            self.linear = Linear(self.last_feature_size, self.num_outputs) #1000 is the number of imagenet classes so the dim of the output of the vgg backbone
         else:
             raise ValueError(f"Invalid backbone: '{self.config.model.backbone}'")
 
+    def get_last_feature_size(self):
+        return self.last_feature_size
 
     def _forward(self, images):
         output = self.backbone(images)
@@ -136,12 +142,13 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
             values['AUs'] = emotion['AUs']
 
         # TODO: WARNING: HACK
-        if self.n_expression == 8:
-            raise NotImplementedError("This here should not be called")
-            values['expr_classification'] = torch.cat([
-                values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
-                                               + 2*values['expr_classification'].min()],
-                dim=1)
+        if 'n_expression' not in self.config.data:
+            if self.n_expression == 8:
+                raise NotImplementedError("This here should not be called")
+                values['expr_classification'] = torch.cat([
+                    values['expr_classification'], torch.zeros_like(values['expr_classification'][:, 0:1])
+                                                   + 2*values['expr_classification'].min()],
+                    dim=1)
 
         return values
 
@@ -167,6 +174,7 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
         return caption
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        return None
         batch_size = input_batch['image'].shape[0]
 
         visdict = {}
@@ -183,41 +191,41 @@ class EmoCnnModule(EmotionRecognitionBaseModule):
 
         # visdict = self.deca._create_visualizations_to_log("test", visdict, output_values, batch_idx,
         #                                                   indices=0, dataloader_idx=dataloader_idx)
-
-        if isinstance(self.logger, WandbLogger):
-            caption = self._vae_2_str(
-                valence=valence_pred.detach().cpu().numpy(),
-                arousal=arousal_pred.detach().cpu().numpy(),
-                affnet_expr=torch.argmax(expr_classification_pred).detach().cpu().numpy().astype(np.int32),
-                expr7=None, prefix="pred")
-            caption += self._vae_2_str(
-                valence=valence_gt.cpu().numpy(),
-                arousal=arousal_gt.cpu().numpy(),
-                affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32),
-                expr7=None, prefix="gt")
-
-
         stage = "test"
         vis_dict = {}
 
-        i = 0 # index of sample in batch to log
-        for key in visdict.keys():
-            images = _torch_image2np(visdict[key])
-            savepath = Path(
-                f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
-            image = images[i]
-            # im2log = Image(image, caption=caption)
+        if self.trainer.is_global_zero:
             if isinstance(self.logger, WandbLogger):
-                im2log = _log_wandb_image(savepath, image, caption)
-            elif self.logger is not None:
-                im2log = _log_array_image(savepath, image, caption)
-            else:
-                im2log = _log_array_image(None, image, caption)
-            name = stage + "_" + key
-            if dataloader_idx is not None:
-                name += "/dataloader_idx_" + str(dataloader_idx)
-            vis_dict[name] = im2log
+                caption = self._vae_2_str(
+                    valence=valence_pred.detach().cpu().numpy()[0],
+                    arousal=arousal_pred.detach().cpu().numpy()[0],
+                    affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[0],
+                    expr7=None, prefix="pred")
+                caption += self._vae_2_str(
+                    valence=valence_gt.cpu().numpy()[0],
+                    arousal=arousal_gt.cpu().numpy()[0],
+                    affnet_expr=expr_classification_gt.cpu().numpy().astype(np.int32)[0],
+                    expr7=None, prefix="gt")
 
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(vis_dict)
+            i = 0 # index of sample in batch to log
+            for key in visdict.keys():
+                images = _torch_image2np(visdict[key])
+                savepath = Path(
+                    f'{self.config.inout.full_run_dir}/{stage}/{key}/{self.current_epoch:04d}_{batch_idx:04d}_{i:02d}.png')
+                image = images[i]
+                # im2log = Image(image, caption=caption)
+                if isinstance(self.logger, WandbLogger):
+                    im2log = _log_wandb_image(savepath, image, caption)
+                elif self.logger is not None:
+                    im2log = _log_array_image(savepath, image, caption)
+                else:
+                    im2log = _log_array_image(None, image, caption)
+                name = stage + "_" + key
+                if dataloader_idx is not None:
+                    name += "/dataloader_idx_" + str(dataloader_idx)
+                vis_dict[name] = im2log
+
+            if isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics(vis_dict)
+                # self.log_dict(vis_dict, sync_dist=True)
         return vis_dict

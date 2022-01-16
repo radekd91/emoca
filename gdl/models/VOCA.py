@@ -124,7 +124,7 @@ class Voca(LightningModule):
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=1e-3)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, *args, **kwargs):
         ds = batch["deep_speech"]
         gt_verts = batch["vertices"]
         template_verts = batch["template_vertices"]

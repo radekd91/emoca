@@ -1,0 +1,17 @@
+defaults:
+  - data/datasets: affectnet_cluster_emonet_cleaned
+  - data/augmentations: none
+#  - model/paths : desktop
+  - model/backbone : deep3dface
+  - model/settings : vae_affectnet
+#  - model/sizes : default
+#  - model/neural_rendering : none
+#  - model/flame_tex: bfm_desktop
+  - learning/optimizer: adam
+  - learning/batching: single_gpu_coarse
+  - learning/callbacks: early_stopping
+  - learning/logging: wandb
+#  - learning/logging: none
+  - learning/training: default
+  - inout: desktop
+

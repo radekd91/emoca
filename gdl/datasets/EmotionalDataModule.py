@@ -17,7 +17,7 @@ import copy
 from gdl.transforms.imgaug import create_image_augmenter
 
 
-class EmotionDataModule(pl.LightningDataModule):
+class AffWild2DataModule(pl.LightningDataModule):
 
     def __init__(self, dm,
                  image_size=256,

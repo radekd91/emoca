@@ -1,0 +1,45 @@
+# @package model
+neural_renderer:
+  class_: StarGAN
+
+  ### NEWER GENERATION, rendered mask, background from the input
+  # combined:
+  cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_23_22-33-47_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_combined_input_rend/config.yaml
+
+  # AffectNet
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_23_22-34-43_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_affectnet_input_rend/config.yaml
+
+  # DecaD
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_23_22-36-59_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_decad_input_rend/config.yaml
+
+
+  ### OLDER GENERATION
+
+  # # trained on CelebAHQDataset, looks good but will mostly work only for frontal faces
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_07_29_16-23-26_DualStarGAN_input-out_im_detail_SupRec_VGG_FR/config.yaml
+  
+#  #this one looks good, trained on AffectNet
+#  cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_06_14-55-12_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_hpf0.0_affectnet/config.yaml
+
+  #this one looks good, trained on AffectNet
+#  cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-12-20_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_affectnet/config.yaml
+
+  # #this one also looks good, trained on AffectNet
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_01_18-27-39_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_hpf0.0/config.yaml
+  
+  # # not great but ok, trained on Deca datasets
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_06_14-56-19_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_decad/config.yaml
+  
+  # # hopefully converges into usefulness, trained on EMOCA datasets
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-12-27_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_decad/config.yaml
+  
+  # # hopefully converges into usefulness, trained on EMOCA datasets
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-12-27_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_decad/config.yaml
+  
+  # # hopefully converges into usefulness, trained on combined datasets
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-18-42_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_combined/config.yaml
+  
+  # # hopefully converges into usefulness, trained on combined datasets
+  # cfg: /is/cluster/work/rdanecek/stargan-v2/experiments/2021_08_09_16-19-00_DualStarDecaGAN_input-image_detail_SupRec_VGG_FR_combined/config.yaml
+  
+  stargan_repo: /home/rdanecek/Workspace/Repos/stargan-v2

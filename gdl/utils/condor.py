@@ -12,6 +12,7 @@ request_memory = <<MEMORYMBS>>
 request_cpus = <<CPU_COUNT>>
 request_gpus = <<GPU_COUNT>>
 <<REQUIREMENTS>>
+<<CONCURRENCY>>
 +MaxRunningPrice = <<MAX_PRICE>>
 +RunningPriceExceededAction = "kill"
 queue <<NJOBS>>
@@ -37,6 +38,7 @@ source /home/rdanecek/anaconda3/etc/profile.d/conda.sh
 #source activate <<ENV>>
 conda activate <<ENV>>
 export PYTHONPATH=$PYTHONPATH:<<REPO_ROOT>>
+<<MODULES>>
 <<PYTHON_BIN>> <<SCRIPT_NAME>> $@
 OUTFOLDER=$(cat out_folder.txt)
 ln -s $PWD $OUTFOLDER/submission 
@@ -66,11 +68,17 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
                        max_price=5000,
                        job_name="skynet",
                        python_bin='python',
-                       env='work36',
+                       #env='work36',
+                       env='work36_cu11',
                        username='rdanecek',
                        gpu_mem_requirement_mb=None,
+                       gpu_mem_requirement_mb_max=None,
                        cuda_capability_requirement=None,
+                       max_concurrent_jobs=None,
+                       concurrency_tag = None,
+                       modules_to_load = None,
                        chmod=True):
+    modules_to_load = modules_to_load or []
     submission_dir_cluster_side = submission_dir_cluster_side or submission_dir_local_mount
     logdir = 'logs'
 
@@ -80,6 +88,10 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     st = st.replace('<<PYTHON_BIN>>', python_bin)
     st = st.replace('<<SCRIPT_NAME>>', cluster_script_path)
     st = st.replace('<<ENV>>', env)
+    modules = ""
+    if len(modules_to_load) > 0:
+        modules = f"module load {' '.join(modules_to_load)}"
+    st = st.replace('<<MODULES>>', modules)
     script_fname = os.path.join(submission_dir_local_mount, 'run.sh')
 
 
@@ -95,25 +107,34 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
     cs = cs.replace('<<MAX_PRICE>>', str(int(max_price)))
     cs = cs.replace('<<NJOBS>>', str(num_jobs))
 
+
     if num_jobs>1:
         cs = cs.replace('<<PROCESS_ID>>', ".$(Process)")
     else:
         cs = cs.replace('<<PROCESS_ID>>', "")
 
-    requirements = ""
+    requirements = []
 
     if cuda_capability_requirement:
         if isinstance(cuda_capability_requirement, int):
             cuda_capability_requirement = str(cuda_capability_requirement) + ".0"
-        requirements += f"requirements=TARGET.CUDACapability>={cuda_capability_requirement}\n"
+        requirements += [f"( TARGET.CUDACapability>={cuda_capability_requirement} )"]
     if gpu_mem_requirement_mb:
-        requirements += f"requirements=TARGET.CUDAGlobalMemoryMb>={gpu_mem_requirement_mb}\n"
+        requirements += [f"( TARGET.CUDAGlobalMemoryMb>={gpu_mem_requirement_mb} )"]
+    if gpu_mem_requirement_mb_max:
+        requirements += [f"( TARGET.CUDAGlobalMemoryMb<={gpu_mem_requirement_mb_max} )"]
     if len(requirements) > 0:
-        requirements = requirements[:-1]
+        requirements = " && ".join(requirements)
+        requirements = "requirements=" + requirements
 
     cs = cs.replace('<<REQUIREMENTS>>', requirements)
     condor_fname = os.path.join(submission_dir_local_mount, 'run.condor')
 
+    concurrency_string = ""
+    if concurrency_tag is not None and max_concurrent_jobs is not None:
+        concurrency_limits = 10000 // max_concurrent_jobs
+        concurrency_string += f"concurrency_limits = user.{concurrency_tag}:{concurrency_limits}"
+    cs = cs.replace('<<CONCURRENCY>>', concurrency_string)
 
     # write files
     with open(script_fname, 'w') as fp:
@@ -136,7 +157,7 @@ def execute_on_cluster(cluster_script_path, args, submission_dir_local_mount,
 
     print("Called the following on the cluster: ")
     print(cmd)
-    subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
+    # subprocess.call(["ssh", "%s@login.cluster.is.localnet" % (username,)] + [cmd])
     # subprocess.call(["ssh", "%s@login1.cluster.is.localnet" % (username,)] + [cmd])
-    # subprocess.call(["ssh", "%s@login2.cluster.is.localnet" % (username,)] + [cmd])
+    subprocess.call(["ssh", "%s@login2.cluster.is.localnet" % (username,)] + [cmd])
     print("Done")

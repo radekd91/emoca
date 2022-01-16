@@ -1,4 +1,4 @@
-# THIS FILE HAS BEEN COPIED FROM THE DECA TRAINING REPOSITORY
+# THIS FILE HAS BEEN COPIED FROM THE EMOCA TRAINING REPOSITORY
 
 # -*- coding: utf-8 -*-
 
@@ -140,7 +140,7 @@ def vertices2landmarks(vertices, faces, lmk_faces_idx, lmk_bary_coords):
 
 
 def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
-        lbs_weights, pose2rot=True, dtype=torch.float32):
+        lbs_weights, pose2rot=True, dtype=torch.float32, detach_pose_correctives=True):
     ''' Performs Linear Blend Skinning with the given shape and pose parameters
 
         Parameters
@@ -206,6 +206,9 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
 
         pose_offsets = torch.matmul(pose_feature.view(batch_size, -1),
                                     posedirs).view(batch_size, -1, 3)
+
+    if detach_pose_correctives:
+        pose_offsets = pose_offsets.detach()
 
     v_posed = pose_offsets + v_shaped
     # 4. Get the global joint location

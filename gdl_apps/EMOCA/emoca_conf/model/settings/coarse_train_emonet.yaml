@@ -1,0 +1,45 @@
+# @package model
+deca_class: EMOCA
+max_epochs: 3
+#max_epochs: 2 TODO: it seems 2 or maybe even less, like 1.5 is more than enough, verify this and then change the default
+val_check_interval: 0.2
+
+test_vis_frequency: 1
+val_vis_frequency: 200
+train_vis_frequency: 1000
+
+mode: coarse
+resume_training: False # this loads a pretrained model
+#useSeg: false
+useSeg: true
+background_from_input: true
+use_landmarks: True
+useWlmk: True
+#useWlmk: False
+lmk_weight: 1
+#eyed: 1.0
+#lipd: 0.1
+eyed: 0.5
+lipd: 0.5
+#idw: 0.15 # from Yao's code
+idw: 0.2 # value written in the paper
+exp_reg: 1e-4
+shape_reg: 1e-4
+tex_reg: 1e-5
+light_reg: 12
+use_photometric: True
+photow: 2.
+shape_constrain_type: 'exchange' # None
+
+use_emonet_loss: True # if this one is false, the following are considered false as well
+#use_emonet_feat_1: True
+use_emonet_feat_1: False
+use_emonet_feat_2: True
+use_emonet_valence: True
+use_emonet_arousal: True
+use_emonet_expression: True
+use_emonet_combined: False
+
+emonet_weight: 0.0015
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.0

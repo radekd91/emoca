@@ -1,0 +1,28 @@
+# @package model
+emodeca_type: Emo3DDFA_v2
+
+predict_expression: true
+predict_valence: true
+predict_arousal: true
+
+expression_balancing: false
+
+use_identity: false
+use_expression: true
+use_global_pose: false
+use_jaw_pose: true
+mlp_norm_layer: BatchNorm1d
+num_mlp_layers: 4
+#mlp_dimension_factor: 1
+mlp_dim: 2048
+finetune_deca: false
+
+tddfa:
+    gpu_mode: True
+    arch: mobilenet
+    widen_factor: 1.0
+    checkpoint_fp: weights/mb1_120x120.pth
+    bfm_fp: configs/bfm_noneck_v3.pkl
+    size: 120
+    num_params: 62
+    param_mean_std_fp: configs/param_mean_std_62d_120x120.pkl

@@ -1,0 +1,20 @@
+# @package data
+data_class: AffectNetEmoNetSplitModule
+input_dir: /ps/project/EmotionalFacialAnimation/data/affectnet
+output_dir: /is/cluster/work/rdanecek/data/affectnet/
+processed_subfolder: processed_2021_Apr_05_15-22-18
+num_workers: 6
+
+ignore_invalid: true
+n_expression: 8
+mode: manual
+image_size: 224
+scale: 1.25
+face_detector: 'fan'
+face_detector_threshold: 0.9
+
+ring_type: none
+ring_size: none
+
+drop_last: true
+sampler: uniform

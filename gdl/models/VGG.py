@@ -27,6 +27,12 @@ class VGG19(nn.Module):
         self.net.eval()
         self.net.requires_grad_(False)
 
+    def requires_grad_(self, requires_grad: bool = True):
+        return super().requires_grad_(False)
+
+    def train(self, mode: bool = True):
+        return super().train(False)
+
     def forward(self, x):
         layer_outputs = {}
         for bi, block in enumerate(self.blocks):
@@ -43,15 +49,15 @@ def make_layers(cfg, batch_norm=False):
     in_channels = 3
     for v in cfg:
         if v == 'M':
-            layers += [[nn.MaxPool2d(kernel_size=2, stride=2)]]
+            layers += [ nn.ModuleList([nn.MaxPool2d(kernel_size=2, stride=2)])]
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [[conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]]
+                layers += [ nn.ModuleList([conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)])]
             else:
-                layers += [[conv2d, nn.ReLU(inplace=True)]]
+                layers += [ nn.ModuleList([conv2d, nn.ReLU(inplace=True)])]
             in_channels = v
-    return layers
+    return nn.ModuleList(layers)
 
 
 cfgs = {

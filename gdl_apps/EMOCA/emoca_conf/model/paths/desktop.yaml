@@ -1,0 +1,20 @@
+# @package model
+# paths
+#topology_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/geometry/head_template.obj
+topology_path: /ps/scratch/rdanecek/data/FLAME/geometry/head_template.obj
+#fixed_displacement_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy
+fixed_displacement_path: /ps/scratch/rdanecek/data/FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy
+displacement_mask: /ps/scratch/rdanecek/data/FLAME/geometry/fixed_uv_displacements/EMOCA_mask_mouth2_nostrils_eyes__blur.npy
+#displacement_mask: /ps/scratch/rdanecek/data/FLAME/geometry/fixed_uv_displacements/EMOCA_mask_mouth2_nostrils_eyes.npy
+#flame_model_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/geometry/generic_model.pkl
+flame_model_path: /ps/scratch/rdanecek/data/FLAME/geometry/generic_model.pkl
+#flame_lmk_embedding_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/geometry/landmark_embedding.npy
+flame_lmk_embedding_path: /ps/scratch/rdanecek/data/FLAME/geometry/landmark_embedding.npy
+#face_mask_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/mask/uv_face_mask.png
+face_mask_path: /ps/scratch/rdanecek/data/FLAME/mask/uv_face_mask.png
+#face_eye_mask_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/mask/uv_face_eye_mask.png
+face_eye_mask_path: /ps/scratch/rdanecek/data/FLAME/mask/uv_face_eye_mask.png
+#tex_path: /home/rdanecek/Workspace/mount/scratch/yfeng/Data/FLAME/flame_tex/FLAME_albedo_from_BFM.npz
+pretrained_modelpath: /home/rdanecek/Workspace/Repos/DECA/data/deca_model.tar
+#pretrained_vgg_face_path: /home/rdanecek/Workspace/mount/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl
+pretrained_vgg_face_path: /ps/scratch/rdanecek/pretrained_vggfaceresnet/resnet50_ft_weight.pkl

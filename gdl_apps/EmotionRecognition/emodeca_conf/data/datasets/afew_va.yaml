@@ -1,0 +1,23 @@
+# @package data
+data_class: AfewVaDataModule
+input_dir: /is/cluster/work/rdanecek/data/afew-va_not_processed/
+#input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/afew-va/
+output_dir: /is/cluster/work/rdanecek/data/afew-va/
+processed_subfolder: processed_2021_Nov_07_23-37-18
+num_workers: 6
+
+
+n_expression: 8
+mode: manual
+image_size: 224
+scale: 1.25
+face_detector: 'fan'
+face_detector_threshold: 0.9
+
+split_seed: 0
+train_fraction: 0.6
+val_fraction: 0.2
+test_fraction: 0.2
+
+drop_last: true
+sampler: uniform

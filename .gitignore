@@ -1,6 +1,9 @@
 results/
 */wandb/*
+.idea*
 .idea/
+.idea_backup/
 *.pyc
 #data/
 *.wandb_auth
+assets/

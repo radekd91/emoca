@@ -1,0 +1,13 @@
+# @package data
+data_class: AffWild2DataModule
+data_root: /ps/scratch/rdanecek/data/aff-wild2/
+processed_subfolder: processed_2021_Jan_19_20-25-10
+num_workers: 6
+split_style: sequential_by_label
+split_ratio: 0.9
+sequence_index: -1
+annotation_list:
+  - va
+  - expr7
+  - au8
+

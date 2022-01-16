@@ -13,11 +13,12 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
     print(f"Looking for checkpoint in '{checkpoint_dir}'")
     checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
     if len(checkpoints) == 0:
-        print(f"Did not found checkpoints. Looking in subfolders")
+        print(f"Did not find checkpoints. Looking in subfolders")
         checkpoints = sorted(list(Path(checkpoint_dir).rglob("*.ckpt")))
         if len(checkpoints) == 0:
-            print(f"Did not find checkpoints to resume from. Terminating")
-            sys.exit()
+            print(f"Did not find checkpoints to resume from. Returning None")
+            # sys.exit()
+            return None
         print(f"Found {len(checkpoints)} checkpoints")
     else:
         print(f"Found {len(checkpoints)} checkpoints")
@@ -45,7 +46,7 @@ def locate_checkpoint(cfg, replace_root = None, relative_to = None, mode=None):
                 min_value = loss_value
                 min_idx = idx
         if min_idx == -1:
-            raise RuntimeError("Finding the best checkpoint failed")
+            raise FileNotFoundError("Finding the best checkpoint failed")
         checkpoint = str(checkpoints[min_idx])
     else:
         raise ValueError(f"Invalid checkpoint loading mode '{mode}'")

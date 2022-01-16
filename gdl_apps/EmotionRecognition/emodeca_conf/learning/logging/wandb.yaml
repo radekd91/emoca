@@ -1,0 +1,3 @@
+# @package learning
+logger_type: WandbLogger
+test_vis_frequency: 100

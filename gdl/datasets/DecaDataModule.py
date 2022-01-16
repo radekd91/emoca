@@ -1,5 +1,6 @@
 import os, sys
 import torch
+from omegaconf import DictConfig
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import torchvision.transforms as transforms
 import numpy as np
@@ -62,20 +63,40 @@ class DecaDataModule(LightningDataModule):
         self.split_ratio = config.data.split_ratio
         self.split_style = config.data.split_style
 
+    def train_sampler(self):
+        return None
+
+    @property
+    def train_batch_size(self):
+        return self.config.learning.batch_size_train
+
+    @property
+    def val_batch_size(self):
+        return self.config.learning.batch_size_val
+
+    @property
+    def test_batch_size(self):
+        return self.config.learning.batch_size_test
+
+    @property
+    def num_workers(self):
+        return self.config.data.num_workers
+
     def setup(self, stage=None):
         dataset = build_dataset(self.config, self.config.data.training_datasets, concat=True)
-        self.train_dataset = DatasetSplitter(dataset, self.split_ratio, self.split_style)
-        self.validation_dataset = []
+        self.training_set = DatasetSplitter(dataset, self.split_ratio, self.split_style)
+        self.validation_set = []
         if self.split_ratio < 1.:
-            self.validation_dataset += [self.train_dataset.complementary_set(), ]
-        self.validation_dataset += build_dataset(self.config, self.config.data.validation_datasets, concat=False)
-        self.test_dataset = build_dataset(self.config, self.config.data.testing_datasets, concat=False)
+            self.validation_set += [self.training_set.complementary_set(), ]
+        self.validation_set += build_dataset(self.config, self.config.data.validation_datasets, concat=False)
+        self.test_set = build_dataset(self.config, self.config.data.testing_datasets, concat=False)
 
     def train_dataloader(self, *args, **kwargs):
-        train_loader = DataLoader(self.train_dataset,
+        train_loader = DataLoader(self.training_set,
                                   batch_size=self.config.learning.batch_size_train, shuffle=True,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True)
+                                  pin_memory=True
+                                  )
                                   # drop_last=drop_last)
         # print('---- data length: ', len(train_dataset))
         return train_loader
@@ -84,14 +105,16 @@ class DecaDataModule(LightningDataModule):
         val_loaders = [DataLoader(val_set,
                                   batch_size=self.config.learning.batch_size_val, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for val_set in self.validation_dataset]
+                                  pin_memory=True
+                                  ) for val_set in self.validation_set]
         return val_loaders
 
     def test_dataloader(self):
         test_loaders = [DataLoader(test_set,
                                   batch_size=self.config.learning.batch_size_test, shuffle=False,
                                   num_workers=self.config.data.num_workers,
-                                  pin_memory=True) for test_set in self.test_dataset]
+                                  pin_memory=True
+                                   ) for test_set in self.test_set]
         return test_loaders
 
 
@@ -146,8 +169,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'now-val' in dataset_list:
         now = NoWVal(
             # data_path='/ps/scratch/face2d3d/texture_in_the_wild_code/NoW_validation/image_paths_ring_6_elements.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -156,8 +179,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     # if data_set_name == 'ffhq-val':
     if 'ffhq-val' in dataset_list:
         ffhq = FFHQ_val(
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -167,8 +190,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'gif-val' in dataset_list:
         gif = GIF_val(
             # data_path='/is/cluster/scratch/partha/gif_eval_data_toheiven/gif_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path = config.data.path
         )
@@ -178,8 +201,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'now-test' in dataset_list:
         now = NoWTest(
             # data_path='/ps/scratch/face2d3d/ringnetpp/eccv/test_data/evaluation/NoW_Dataset/final_release_version/test_image_paths_ring_6_elements.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.test_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path,
         )
@@ -188,8 +211,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'papers-val' in dataset_list:
         papers = PaperVal(
             # data_path='/ps/scratch/face2d3d/ringnetpp/eccv(haven)/test_data/papers/papers_ring_6_elements_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path
         )
@@ -199,8 +222,8 @@ def build_dataset(config, dataset_list=None, concat=True):
     if 'celeb-val' in dataset_list:
         celeb = CelebVal(
             # data_path='/ps/scratch/face2d3d/texture_in_the_wild_code/celeb_ring_6_elements_loadinglist.npy',
-            # ring_elements=config.ring_elements,
-            ring_elements=1,
+            ring_elements=config.learning.val_K,
+            # ring_elements=1,
             crop_size=config.model.image_size,
             path=config.data.path
         )
@@ -241,6 +264,7 @@ class VoxelDataset(Dataset):
         self.path = path or '/ps/scratch/face2d3d'
         self.K = K
         self.image_size = image_size
+        self.drop_last = False
         if dataname == 'vox1':
             self.kpt_suffix = '.txt'
             self.imagefolder = '/ps/project/face2d3d/VoxCeleb/vox1/dev/images_cropped'
@@ -295,11 +319,19 @@ class VoxelDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
 
     def __len__(self):
+        leng = len(self.face_list)
+        # leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.face_list)
+
+    # def __len__(self):
+    #     return 11
+        # return len(self.face_list)
 
     def __getitem__(self, idx):
         key = self.face_list[idx]
@@ -356,13 +388,15 @@ class VoxelDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
         if self.include_image_path:
             data_dict['path'] = image_path_list
 
+        # print("VoxelDataset")
+        # print(data_dict['image'].shape)
         return data_dict
 
     def crop(self, image, kpt):
@@ -431,10 +465,17 @@ class VGGFace2Dataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        self.drop_last = False
+        # self.include_image_path = False
 
+    # def __len__(self):
+    #     return len(self.data_lines)
     def __len__(self):
+        leng = len(self.data_lines)
+        # leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
 
     def __getitem__(self, idx):
@@ -481,10 +522,9 @@ class VGGFace2Dataset(Dataset):
         #     images_array = images_array.squeeze()
         #     kpt_array = kpt_array.squeeze()
         #     mask_array = mask_array.squeeze()
-
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
@@ -560,12 +600,18 @@ class VGGFace2HQDataset(Dataset):
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
+        self.drop_last = False
 
 
     def __len__(self):
+        # leng = len(self.data_lines)
+        leng = 11
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
+
 
     def __getitem__(self, idx):
         images_list = []
@@ -611,12 +657,14 @@ class VGGFace2HQDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array
         }
 
         if self.include_image_path:
             data_dict['path'] = image_path_list
+        # print("VGGFace2 ")
+        # print(data_dict['image'].shape)
         return data_dict
 
     def crop(self, image, kpt):
@@ -681,13 +729,17 @@ class EthnicityDataset(Dataset):
         self.isTemporal = isTemporal
         self.scale = scale  # [scale_min, scale_max]
         self.trans_scale = trans_scale  # [dx, dy]
-        # self.include_image_path = True
-        self.include_image_path = False
+        self.include_image_path = True
+        # self.include_image_path = False
         # self.isSingle = isSingle
         # if isSingle:
         #     self.K = 1
+        self.drop_last = False
 
     def __len__(self):
+        leng = len(self.data_lines)
+        if self.drop_last:
+            return leng - leng % self.drop_last
         return len(self.data_lines)
 
     def __getitem__(self, idx):
@@ -742,7 +794,7 @@ class EthnicityDataset(Dataset):
 
         data_dict = {
             'image': images_array,
-            'landmark': kpt_array,
+            'landmark': kpt_array[:,:,:2],
             'mask': mask_array,
         }
 
@@ -845,7 +897,7 @@ class COCODataset(Dataset):
 
             data_dict = {
                 'image': images_array * 2. - 1,
-                'landmark': kpt_array,
+                'landmark': kpt_array[:,:,:2],
                 # 'mask': mask_array
             }
 
@@ -942,7 +994,7 @@ class CelebAHQDataset(Dataset):
 
             data_dict = {
                 'image': images_array,
-                'landmark': kpt_array,
+                'landmark': kpt_array[:,:,:2],
                 # 'mask': mask_array
             }
 
@@ -1597,3 +1649,73 @@ class CelebVal(Dataset):
         return {'image': image_th,
                 'imagenames': image_names
                 }
+
+if __name__ == "__main__":
+    cfg = {"data": {
+        "path": "/ps/scratch/face2d3d/",
+        "n_train": 10000000,
+        "sampler": False,
+        # "scale_max": 2.8,
+        # "scale_min": 2,
+        "scale_max": 1.6,
+        "scale_min": 1.2,
+        "data_class": "DecaDataModule",
+        "num_workers": 4,
+        "split_ratio": 0.9,
+        "split_style": "random",
+        # "trans_scale": 0.2,
+        "trans_scale": 0.1,
+        "testing_datasets": [
+            "now-test",
+            "now-val",
+            "celeb-val"
+        ],
+        "training_datasets": [
+            "vggface2",
+            "ethnicity"
+        ],
+        "validation_datasets": [
+            "now-val",
+            "celeb-val"
+        ]
+    },
+                "learning": {
+                "val_K": 1,
+                "test_K": 1,
+                "train_K": 1,
+                "num_gpus": 1,
+                "optimizer": "Adam",
+                "logger_type": "WandbLogger",
+                "val_K_policy": "sequential",
+                "learning_rate": 0.0001,
+                "test_K_policy": "sequential",
+                "batch_size_val": 32,
+                "early_stopping": {
+                    "patience": 15
+                },
+                "train_K_policy": "random",
+                "batch_size_test": 1,
+                "batch_size_train": 32,
+                "gpu_memory_min_gb": 30,
+                "checkpoint_after_training": "best"
+            },
+        "model": {
+            "image_size": 224
+        }
+    }
+    cfg = DictConfig(cfg)
+    dm = DecaDataModule(cfg)
+    dm.prepare_data()
+    dm.setup()
+    # dataset = dm.train_dataloader()
+    dataset = dm.training_set
+
+    import matplotlib.pyplot as plt
+
+    for i in range(len(dataset)):
+        batch = dataset[i]
+        im = batch["image"][0].cpu().numpy().transpose([1, 2, 0])
+        plt.figure()
+        plt.imshow(im)
+        plt.show()
+

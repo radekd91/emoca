@@ -1,0 +1,19 @@
+# @package learning
+
+#batch_size_train: 4
+#batch_size_test: 1
+#batch_size_val: 16
+batch_size_train: 32
+batch_size_test: 1
+batch_size_val: 24
+
+train_K: 4 # num pictures of an identity per batch
+val_K: 1 # num pictures of an identity per batch
+test_K: 1 # num pictures of an identity per batch
+train_K_policy: random
+val_K_policy: sequential
+test_K_policy: sequential
+
+#K_policy: sequential
+num_gpus: 4
+gpu_memory_min_gb: 30

@@ -1,0 +1,30 @@
+# @package data
+data_class: DecaDataModule
+path: /ps/scratch/face2d3d/
+#path: /home/rdanecek/Workspace/mount/scratch/face2d3d/
+training_datasets:
+  - vggface2
+#  - vox2
+  - ethnicity
+validation_datasets:
+  - now-val
+#  - papers-val # won't load
+  - celeb-val
+testing_datasets:
+  - now-test
+  - now-val
+#  - papers-val # won't load
+  - celeb-val
+#  - aflw2000
+scale_min: 1.4
+scale_max: 1.8
+#scale_max: 2.
+#scale_min: 2.0
+#scale_max: 2.8
+trans_scale: 0.2
+#trans_scale: 0.4
+n_train: 10000000
+split_ratio: 0.9
+#split_ratio: 0.8
+split_style: random
+num_workers: 4

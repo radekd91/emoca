@@ -11,6 +11,7 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
 from gdl.layers.losses.EmonetLoader import get_emonet
 import sys
+import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoDECA(EmotionRecognitionBaseModule):
@@ -44,17 +45,24 @@ class EmoDECA(EmotionRecognitionBaseModule):
             in_size += 3
         if self.config.model.use_detail_code:
             in_size += config.model.deca_cfg.model.n_detail
+        if 'use_detail_emo_code' in self.config.model.keys() and self.config.model.use_detail_emo_code:
+            in_size += config.model.deca_cfg.model.n_detail_emo
 
         if 'mlp_dimension_factor' in self.config.model.keys():
             dim_factor = self.config.model.mlp_dimension_factor
+            dimension = in_size * dim_factor
+        elif 'mlp_dim' in self.config.model.keys():
+            dimension = self.config.model.mlp_dim
         else:
-            dim_factor = 1
+            dimension = in_size
+
             
-        hidden_layer_sizes = config.model.num_mlp_layers * [in_size * dim_factor]
+        hidden_layer_sizes = config.model.num_mlp_layers * [dimension]
 
         out_size = 0
         if self.predicts_expression():
-            self.num_classes = 9
+            # self.num_classes = 9
+            self.num_classes = self.config.data.n_expression if 'n_expression' in self.config.data.keys() else 9
             out_size += self.num_classes
         if self.predicts_valence():
             out_size += 1
@@ -75,7 +83,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
         if "use_emonet" in self.config.model.keys() and self.config.model.use_emonet:
             self.emonet = get_emonet(load_pretrained=config.model.load_pretrained_emonet)
             if not config.model.load_pretrained_emonet:
-                self.emonet.n_expression = 9  # we use all affectnet classes (included none) for now
+                self.emonet.n_expression = self.num_classes  # we use all affectnet classes (included none) for now
                 self.emonet._create_Emo()  # reinitialize
         else:
             self.emonet = None
@@ -132,7 +140,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
         return values
 
     def forward(self, batch):
-        values = self.deca.encode(batch)
+        values = self.deca.encode(batch, training=False)
         shapecode = values['shapecode']
         # texcode = values['texcode']
         expcode = values['expcode']
@@ -140,8 +148,10 @@ class EmoDECA(EmotionRecognitionBaseModule):
         if self.config.model.use_detail_code:
             assert self.deca.mode == DecaMode.DETAIL
             detailcode = values['detailcode']
+            detailemocode = values['detailemocode']
         else:
             detailcode = None
+            detailemocode = None
 
         global_pose = posecode[:, :3]
         jaw_pose = posecode[:, 3:]
@@ -163,6 +173,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
             if self.config.model.use_detail_code:
                 input_list += [detailcode]
+
+            if 'use_detail_emo_code' in self.config.model.keys() and self.config.model.use_detail_emo_code:
+                input_list += [detailemocode]
 
             input = torch.cat(input_list, dim=1)
             output = self.mlp(input)
@@ -258,7 +271,6 @@ class EmoDECA(EmotionRecognitionBaseModule):
                      class_weight,
                      training=True,
                      **kwargs):
-
         if self.mlp is not None:
             losses_mlp, metrics_mlp = super()._compute_loss(pred, gt, class_weight, training, **kwargs)
         else:
@@ -288,6 +300,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
 
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
+        return None
         valence_pred = output_values["valence"]
         arousal_pred = output_values["arousal"]
         expr_classification_pred = output_values["expr_classification"]
@@ -299,7 +312,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
         with torch.no_grad():
             values = self.deca.decode(output_values)
 
-        self.deca.logger = self.logger
+        # self.deca.logger = self.logger # old version of PL, now logger is a property and retreived logger from the trainer
+        self.deca.trainer = self.trainer # new version of PL
+
         mode_ = str(self.deca.mode.name).lower()
 
         if "uv_detail_normals" in values.keys():
@@ -312,41 +327,49 @@ class EmoDECA(EmotionRecognitionBaseModule):
         values[f"{mode_}_expression_gt"] = expr_classification_gt
         values["affectnetexp"] = expr_classification_gt
 
+
         visualizations, grid_image = self.deca._visualization_checkpoint(values['verts'], values['trans_verts'],
                                                                          values['ops'],
                                                                          uv_detail_normals, values, self.global_step,
                                                                          "test", "")
-        indices = 0
-        visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
-                                                          indices=indices, dataloader_idx=dataloader_idx)
-        if f"{mode_}_test_landmarks_gt" in visdict.keys():
-            del visdict[f"{mode_}_test_landmarks_gt"]
-        if f"{mode_}_test_landmarks_predicted" in visdict.keys():
-            del visdict[f"{mode_}_test_landmarks_predicted"]
-        if f"{mode_}_test_mask" in visdict.keys():
-            del visdict[f"{mode_}_test_mask"]
-        if f"{mode_}_test_albedo" in visdict.keys():
-            del visdict[f"{mode_}_test_albedo"]
-        if f"{mode_}_test_mask" in visdict.keys():
-            del visdict[f"{mode_}_test_mask"]
-        if f"{mode_}_test_uv_detail_normals" in visdict.keys():
-            del visdict[f"{mode_}_test_uv_detail_normals"]
-        if f"{mode_}_test_uv_texture_gt" in visdict.keys():
-            del visdict[f"{mode_}_test_uv_texture_gt"]
 
-        if isinstance(self.logger, WandbLogger):
-            caption = self.deca.vae_2_str(
-                valence=valence_pred.detach().cpu().numpy()[indices, ...],
-                arousal=arousal_pred.detach().cpu().numpy()[indices, ...],
-                affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[indices, ...],
-                expr7=None, prefix="pred")
-            if f"{mode_}_test_geometry_coarse" in visdict.keys():
-                visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
-            if f"{mode_}_test_geometry_detail" in visdict.keys():
-                visdict[f"{mode_}_test_geometry_detail"]._caption += caption
+        visdict = {}
+        if self.trainer.is_global_zero:
+            indices = 0
+            visdict = self.deca._create_visualizations_to_log("test", visualizations, values, batch_idx,
+                                                              indices=indices, dataloader_idx=dataloader_idx)
+            if f"{mode_}_test_landmarks_gt" in visdict.keys():
+                del visdict[f"{mode_}_test_landmarks_gt"]
+            if f"{mode_}_test_landmarks_predicted" in visdict.keys():
+                del visdict[f"{mode_}_test_landmarks_predicted"]
+            if f"{mode_}_test_mask" in visdict.keys():
+                del visdict[f"{mode_}_test_mask"]
+            if f"{mode_}_test_albedo" in visdict.keys():
+                del visdict[f"{mode_}_test_albedo"]
+            if f"{mode_}_test_mask" in visdict.keys():
+                del visdict[f"{mode_}_test_mask"]
+            if f"{mode_}_test_uv_detail_normals" in visdict.keys():
+                del visdict[f"{mode_}_test_uv_detail_normals"]
+            if f"{mode_}_test_uv_texture_gt" in visdict.keys():
+                del visdict[f"{mode_}_test_uv_texture_gt"]
 
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_metrics(visdict)
+            if isinstance(self.logger, WandbLogger):
+                caption = self.deca.vae_2_str(
+                    valence=valence_pred.detach().cpu().numpy()[indices, ...],
+                    arousal=arousal_pred.detach().cpu().numpy()[indices, ...],
+                    affnet_expr=torch.argmax(expr_classification_pred, dim=1).detach().cpu().numpy().astype(np.int32)[indices, ...],
+                    expr7=None, prefix="pred")
+                if f"{mode_}_test_geometry_coarse" in visdict.keys():
+                    visdict[f"{mode_}_test_geometry_coarse"]._caption += caption
+                if f"{mode_}_test_geometry_detail" in visdict.keys():
+                    visdict[f"{mode_}_test_geometry_detail"]._caption += caption
+
+            if isinstance(self.logger, WandbLogger):
+            #     # if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+            #     env = le.LightningEnvironment()
+            #     if env.global_rank() == 0:
+                self.logger.log_metrics(visdict)
+                # self.log_dict(visdict, sync_dist=True)
         return visdict
 
     # def test_step(self, batch, batch_idx, dataloader_idx=None):

@@ -1,0 +1,66 @@
+# @package model
+deca_class: EMOCA
+max_epochs: 20
+max_steps: 1000000
+val_check_interval: 1000
+
+test_vis_frequency: 30
+val_vis_frequency: 200
+train_vis_frequency: 100
+
+# settings
+#use_flip: false # not used
+
+train_coarse: false
+useSeg: false
+#useSeg: true
+background_from_input: true
+detail_constrain_type: exchange
+mode: detail
+
+
+resume_training: False # this loads a pretrained model
+
+lmk_weight: 1
+#eyed: 1.0 # used only when train_coarse is true
+#lipd: 0.1 # used only when train_coarse is true
+
+eyed: 0.5
+lipd: 0.5
+use_photometric: True # used only when train_coarse is true
+photow: 2
+idw: 0.12 # used only when train_coarse is true
+use_landmarks: True
+useWlmk: true
+shape_reg: 0.0001
+exp_reg: 0.0001
+tex_reg: 0.0001
+light_reg: 12
+useConstraint: true
+#mrfwr: 0.01
+mrfwr: 0.05
+zregw: 0.005
+zdiffw: 0.005
+zsymw: 0.005
+consr: 1
+sfsw:
+- 5
+- 0
+- 0
+- 0
+
+use_detail_l1: True
+use_detail_mrf: True
+use_detailed_photo: False
+
+use_emonet_loss: False # if this one is false, the following are considered false as well
+use_emonet_feat_1: False
+use_emonet_feat_2: False
+use_emonet_valence: False
+use_emonet_arousal: False
+use_emonet_expression: False
+use_emonet_combined: False
+
+emonet_weight: 0.0015
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.15

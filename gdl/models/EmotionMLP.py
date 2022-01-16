@@ -1,4 +1,4 @@
-# from .DECA import DecaModule, instantiate_deca, DecaMode
+# from .EMOCA import DecaModule, instantiate_deca, DecaMode
 from .EmotionRecognitionModuleBase import \
     EmotionRecognitionBaseModule, loss_from_cfg, _get_step_loss_weights, va_loss, v_or_a_loss, exp_loss
 from .MLP import MLP
@@ -42,12 +42,17 @@ class EmotionMLP(torch.nn.Module):
             in_size += deca_cfg.n_detail
         else:
             self.n_detail = None
+        if 'use_detail_emo_code' in self.config.keys() and self.config.use_detail_emo_code:
+            self.n_detail_emo = deca_cfg.n_detail_emo
+            in_size += deca_cfg.n_detail_emo
+        else:
+            self.n_detail_emo = None
 
         hidden_layer_sizes = config.num_mlp_layers * [in_size]
 
         out_size = 0
         if self.config.predict_expression:
-            self.num_classes = 9
+            self.num_classes =  self.config.data.n_expression if 'n_expression' in self.config.data.keys() else 9
             out_size += self.num_classes
         if self.config.predict_valence:
             out_size += 1
@@ -114,6 +119,17 @@ class EmotionMLP(torch.nn.Module):
         else:
             detailcode = None
 
+        if 'use_detailemo_code' in self.config.keys() and self.config.use_detailemo_code:
+            if 'detailemocode' in values.keys() and values['detailemocode'] is not None:
+                detailemocode = values['detailemocode']
+                if 'detach_detailemocode' in self.config.keys() and self.config.detach_detailemocode:
+                    detailemocode = detailemocode.detach()
+            else:
+                detailemocode = torch.zeros((posecode.shape[0], self.n_detail_emo), dtype=posecode.dtype, device=posecode.device )
+        else:
+            detailemocode = None
+
+
         global_pose = posecode[:, :3]
         if self.config.detach_global_pose:
             global_pose = global_pose.detach()
@@ -138,6 +154,9 @@ class EmotionMLP(torch.nn.Module):
 
         if self.config.use_detail_code:
             input_list += [detailcode]
+
+        if 'use_detail_emo_code' in self.config.keys() and self.config.use_detail_emo_code:
+            input_list += [detailemocode]
 
         input = torch.cat(input_list, dim=1)
         output = self.mlp(input)

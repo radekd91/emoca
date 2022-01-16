@@ -1,0 +1,28 @@
+# @package model
+deca_class: Face3DDFAModule
+max_epochs: 4
+val_check_interval: 0.2
+
+test_vis_frequency: 1
+val_vis_frequency: 200
+train_vis_frequency: 1000
+
+mode: detail
+background_from_input: true
+
+tddfa:
+    param_mean_std_fp: configs/param_mean_std_62d_120x120.pkl
+    widen_factor: 1.0
+    gpu_mode: True
+
+#    arch: mobilenet
+#    checkpoint_fp: weights/mb1_120x120.pth
+#    bfm_fp: configs/bfm_noneck_v3.pkl
+#    size: 120
+#    num_params: 62
+
+    arch: resnet22
+    checkpoint_fp: weights/resnet22.pth
+    bfm_fp: configs/bfm_noneck_v3.pkl
+    size: 120
+    num_params: 62

@@ -1,0 +1,80 @@
+# @package model
+
+deca_class: ExpDECA
+#expression_backbone: deca_parallel
+expression_backbone: deca_clone
+#expression_backbone: emonet_trainable
+#expression_backbone: emonet_static
+
+
+exp_deca_global_pose: False
+#exp_deca_global_pose: True
+#exp_deca_jaw_pose: True
+exp_deca_jaw_pose: False
+
+max_epochs: 12
+val_check_interval: 0.2
+
+test_vis_frequency: 1
+val_vis_frequency: 200
+train_vis_frequency: 1000
+
+train_coarse: false
+useSeg: false
+#useSeg: true
+background_from_input: true
+detail_constrain_type: exchange
+#detail_constrain_type: none
+
+expression_constrain_type: none
+expression_constrain_use_jaw_pose: True
+expression_constrain_use_global_pose: False
+use_geometric_losses_expression_exchange: False
+
+mode: detail
+
+resume_training: False # this loads a pretrained model
+
+lmk_weight: 1
+#eyed: 1.0 # used only when train_coarse is true
+#lipd: 0.1 # used only when train_coarse is true
+
+eyed: 0.5
+lipd: 0.5
+use_photometric: True # used only when train_coarse is true
+photow: 2
+idw: 0.12 # used only when train_coarse is true
+use_landmarks: True
+useWlmk: true
+shape_reg: 0.0001
+exp_reg: 0.0001
+tex_reg: 0.0001
+light_reg: 12
+useConstraint: true
+#mrfwr: 0.01 # default from the code
+mrfwr: 0.05 # listed in the paper
+zregw: 0.005
+zdiffw: 0.005
+zsymw: 0.005
+consr: 1
+sfsw:
+- 5
+- 0
+- 0
+- 0
+
+use_detail_l1: True
+use_detail_mrf: True
+use_detailed_photo: False
+
+use_emonet_loss: False # if this one is false, the following are considered false as well
+use_emonet_feat_1: False
+use_emonet_feat_2: False
+use_emonet_valence: False
+use_emonet_arousal: False
+use_emonet_expression: False
+use_emonet_combined: False
+
+emonet_weight: 0.0015
+use_gt_emotion_loss: False
+gt_emotion_reg: 0.0

@@ -1,0 +1,30 @@
+# @package data
+
+## OLD version of AffectNet, using their bounding boxes which are not the most suitable for EMOCA as they often
+## crop away whole or part of forehead.
+
+#dm = AffectNetDataModule(
+#         "/ps/project/EmotionalFacialAnimation/data/affectnet/",
+#         "/ps/scratch/rdanecek/data/affectnet/",
+#         processed_subfolder="processed_2021_Apr_05_15-22-18",
+#         mode="manual",
+#         scale=1.25)
+
+data_class: AffectNetDataModule
+#input_dir: /home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet
+input_dir: /ps/project_cifs/EmotionalFacialAnimation/data/affectnet
+#output_dir: /home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/
+output_dir: /is/cluster/work/rdanecek/data/affectnet/
+processed_subfolder: processed_2021_Apr_05_15-22-18
+num_workers: 8
+
+ignore_invalid: true
+# default parameters:
+mode: manual # the original AffectNet train/val split
+image_size: 224
+scale: 1.25
+face_detector: 'fan'
+face_detector_threshold: 0.9
+
+sampler: uniform
+processed_ext: .png

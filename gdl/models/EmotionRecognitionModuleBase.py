@@ -68,13 +68,25 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
     def predicts_valence(self):
         return self.config.model.predict_valence
 
+    def trains_valence(self):
+        return self.config.model.v_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.v_loss)
+
     # @property
     def predicts_arousal(self):
         return self.config.model.predict_arousal
 
+    def trains_arousal(self):
+        return self.config.model.a_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.a_loss)
+
     # @property
     def predicts_expression(self):
         return self.config.model.predict_expression
+
+    def trains_expression(self):
+        return self.config.model.exp_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.exp_loss)
 
     # @property
     def predicts_AUs(self):
@@ -82,6 +94,9 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             return self.config.model.predict_AUs
         return 0
 
+    def trains_AUs(self):
+        return self.config.model.AU_loss not in [None, 'None', 'none', 0, False] \
+               and bool(self.config.model.AU_loss)
 
     def forward(self, image):
         raise NotImplementedError()
@@ -218,19 +233,19 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             v_weight = None
             a_weight = None
 
-        if self.predicts_valence():
+        if self.predicts_valence() and self.trains_valence():
             losses, metrics = v_or_a_loss(self.v_loss, pred, gt, loss_term_weights, metrics, losses, "valence",
                                           pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                           sample_weights=v_weight)
-        if self.predicts_arousal():
+        if self.predicts_arousal() and self.trains_arousal():
             losses, metrics = v_or_a_loss(self.a_loss, pred, gt, loss_term_weights, metrics, losses, "arousal",
                                           pred_prefix=pred_prefix, permit_dropping_corr=not training,
                                           sample_weights=a_weight)
-        if self.predicts_arousal() and self.predicts_valence():
+        if self.predicts_arousal() and self.predicts_valence() and self.trains_arousal() and self.trains_valence():
             losses, metrics = va_loss(self.va_loss, pred, gt, loss_term_weights, metrics, losses, pred_prefix=pred_prefix,
                                       permit_dropping_corr=not training, sample_weights=v_weight)
 
-        if self.predicts_expression():
+        if self.predicts_expression() and self.trains_expression():
             losses, metrics = exp_loss(self.exp_loss, pred, gt, class_weight, metrics, losses,
                                        self.config.model.expression_balancing, self.num_classes, pred_prefix=pred_prefix)
 
@@ -357,7 +372,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         losses["total"] = loss
         return losses, metrics
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, *args, **kwargs):
         values = self.forward(batch)
         # valence_pred = values["valence"]
         # arousal_pred = values["arousal"]
@@ -369,13 +384,13 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         expression_sample_weight = batch["expression_sample_weight"] if "expression_sample_weight" in batch.keys() else None
 
         gt = {}
-        if self.predicts_valence():
+        if self.predicts_valence() and self.trains_valence():
             valence_gt = batch["va"][:, 0:1]
             gt["valence"] = valence_gt
-        if self.predicts_arousal():
+        if self.predicts_arousal() and self.trains_arousal():
             arousal_gt = batch["va"][:, 1:2]
             gt["arousal"] = arousal_gt
-        if self.predicts_expression():
+        if self.predicts_expression() and self.trains_expression():
             expr_classification_gt = batch["affectnetexp"]
             gt["expr_classification"] = expr_classification_gt
             if "expression_weight" in batch.keys():
@@ -405,6 +420,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
 
         self._log_losses_and_metrics(losses, metrics, "train")
         total_loss = losses["total"]
+        # print("total_loss: ", total_loss.item())
         return total_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
@@ -421,12 +437,15 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             arousal_gt = batch["va"][:, 1:2]
             gt["arousal"] = arousal_gt
         if self.predicts_expression():
-            expr_classification_gt = batch["affectnetexp"]
-            if "expression_weight" in batch.keys():
-                class_weight = batch["expression_weight"][0]
+            if "affectnetexp" in batch.keys():
+                expr_classification_gt = batch["affectnetexp"]
+                if "expression_weight" in batch.keys():
+                    class_weight = batch["expression_weight"][0]
+                else:
+                    class_weight = None
+                gt["expr_classification"] = expr_classification_gt
             else:
                 class_weight = None
-            gt["expr_classification"] = expr_classification_gt
         else:
             class_weight = None
 
@@ -463,6 +482,7 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
         self._log_losses_and_metrics(losses, metrics, "val")
         # visdict = self._test_visualization(values, batch, batch_idx, dataloader_idx=dataloader_idx)
         total_loss = losses["total"]
+        # print("total_loss: ", total_loss.item())
         return total_loss
 
     def _test_visualization(self, output_values, input_batch, batch_idx, dataloader_idx=None):
@@ -515,17 +535,24 @@ class EmotionRecognitionBaseModule(pl.LightningModule):
             on_epoch = True
             on_step = False
             self.log_dict({f"{stage}_loss_" + key: value for key, value in losses.items()}, on_epoch=on_epoch,
-                          on_step=on_step)
+                          on_step=on_step, sync_dist=True)
             self.log_dict({f"{stage}_metric_" + key: value for key, value in metrics.items()}, on_epoch=on_epoch,
-                          on_step=on_step)
+                          on_step=on_step, sync_dist=True)
         else:
-            on_epoch = False
+            # on_epoch = False
+            on_epoch = True
             on_step = True
-            self.logger.log_metrics({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
-                                     losses.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            # self.logger.log_metrics({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
+            #                          losses.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            # #
+            # self.logger.log_metrics({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
+            #                          metrics.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            self.log_dict({f"{stage}_loss_" + key: value.detach().cpu() for key, value in
+                                     losses.items()}, on_epoch=on_epoch, on_step=on_step)
             #
-            self.logger.log_metrics({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
-                                     metrics.items()})  # , on_epoch=on_epoch, on_step=on_step)
+            self.log_dict({f"{stage}_metric_" + key: value.detach().cpu() for key, value in
+                                     metrics.items()}, on_epoch=on_epoch, on_step=on_step)
+
 
 
 
@@ -551,11 +578,29 @@ def v_or_a_loss(loss, pred, gt, term_weights,
             metrics[pred_prefix + f"{measure[0]}_pcc"] = PCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
             metrics[pred_prefix + f"{measure[0]}_ccc"] = CCC_torch(pred[measure_label], gt[measure], batch_first=False)[0]
 
+            if metrics[pred_prefix + f"{measure[0]}_pcc"].isnan().any().item():
+                print(f"[WARNING] pcc is nan")
+                metrics[pred_prefix + f"{measure[0]}_pcc"] = torch.zeros_like(metrics[pred_prefix + f"{measure[0]}_pcc"])
+
+            if metrics[pred_prefix + f"{measure[0]}_ccc"].isnan().any().item():
+                print(f"[WARNING] ccc is nan")
+                metrics[pred_prefix + f"{measure[0]}_ccc"] = torch.zeros_like(metrics[pred_prefix + f"{measure[0]}_pcc"])
+
             if sample_weights is not None:
                 metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = PCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
                 metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = CCC_torch(pred[measure_label], gt[measure],
                                                                        batch_first=False, weights=sample_weights)
+                if metrics[pred_prefix + f"{measure[0]}_pcc_weighted"].isnan().any().item():
+                    metrics[pred_prefix + f"{measure[0]}_pcc_weighted"] = torch.zeros_like(
+                        metrics[pred_prefix + f"{measure[0]}_pcc_weighted"])
+                    print(f"[WARNING] pcc weighted is nan")
+
+                if metrics[pred_prefix + f"{measure[0]}_ccc_weighted"].isnan().any().item():
+                    metrics[pred_prefix + f"{measure[0]}_ccc_weighted"] = torch.zeros_like(
+                        metrics[pred_prefix + f"{measure[0]}_pcc_weighted"])
+                    print(f"[WARNING] ccc weighted is nan")
+
         elif permit_dropping_corr:
             pass
         else:
@@ -633,7 +678,7 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
 
 
         if (num_classes <= gt["expr_classification"].max()).any():
-            print("[Warning] Class lable index is higher and will be reduced.")
+            print("[Warning] Class label index is higher and will be reduced.")
             #TODO: evaluation hack warning
             gt["expr_classification"][gt["expr_classification"] >= num_classes] = num_classes-1
 
@@ -647,13 +692,13 @@ def exp_loss(loss, pred, gt, class_weight, metrics, losses, expression_balancing
             metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
                                                                     gt["expr_classification"][:, 0],
                                                                     class_weight)
-            metrics[pred_prefix + "expr_acc"] = ACC_torch(
-                torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
-                                                          gt["expr_classification"][:, 0])
         else:
             metrics[pred_prefix + "expr_weighted_nll"] = F.nll_loss(pred[pred_prefix + "expr_classification"],
                                                        gt["expr_classification"][:, 0],
                                                        None)
+        metrics[pred_prefix + "expr_acc"] = ACC_torch(
+            torch.argmax(pred[pred_prefix + "expr_classification"], dim=1),
+                                                      gt["expr_classification"][:, 0])
 
         if loss is not None:
             if callable(loss):
