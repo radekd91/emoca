@@ -38,6 +38,7 @@ def main():
     model_name = args.model_name
     image_type = args.image_type
     processed_subfolder = args.processed_subfolder
+    # processed_subfolder = "processed_2022_Jan_15_15-03-37"
 
     mode = 'detail'
     # mode = 'coarse'
@@ -49,6 +50,7 @@ def main():
         batch_size=4, num_workers=4)
     dm.prepare_data()
     dm.setup()
+    processed_subfolder = Path(dm.output_dir).name
 
     ## 2) Load the model
     emoca, conf = load_model(path_to_models, model_name, mode)
@@ -60,7 +62,7 @@ def main():
     ## 3) Get the data loadeer with the detected faces
     dl = dm.test_dataloader()
 
-    ## 4) Run the model on the data
+    # ## 4) Run the model on the data
     for j, batch in enumerate (auto.tqdm( dl)):
 
         current_bs = batch["image"].shape[0]

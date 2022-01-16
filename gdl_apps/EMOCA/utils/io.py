@@ -46,12 +46,13 @@ def save_obj(emoca, filename, opdict, i=0):
                    inverse_face_order=True)
 
 
-def save_images(outfolder, name, vis_dict, i = 0):
+def save_images(outfolder, name, vis_dict, i = 0, with_detection=False):
     prefix = None
     final_out_folder = Path(outfolder) / name
     final_out_folder.mkdir(parents=True, exist_ok=True)
 
-    # imsave(final_out_folder / f"inputs.png",  _fix_image(torch_img_to_np(vis_dict['inputs'][i])))
+    if with_detection:
+        imsave(final_out_folder / f"inputs.png",  _fix_image(torch_img_to_np(vis_dict['inputs'][i])))
     imsave(final_out_folder / f"geometry_coarse.png",  _fix_image(torch_img_to_np(vis_dict['geometry_coarse'][i])))
     imsave(final_out_folder / f"geometry_detail.png", _fix_image(torch_img_to_np(vis_dict['geometry_detail'][i])))
     imsave(final_out_folder / f"out_im_coarse.png", _fix_image(torch_img_to_np(vis_dict['output_images_coarse'][i])))

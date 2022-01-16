@@ -9,12 +9,12 @@ This is the official implementation of EMOCA: Emotion-Driven Monocular Face Capt
 
 Follow the steps at the root of this repo. If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`. After that you should be able to run the demos. 
 
-## Pre-trained model 
-Download the trained models from: TODO
-
 
 ## Demos 
-
+In order to run the demos you'll need to download and unzip the following assets into the `asset` folder at the root of the repo: 
+- [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/ryLKPH3ZyGwimXn)  
+- [DECA related assets](https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46)  
+- [FLAME related assets](https://owncloud.tuebingen.mpg.de/index.php/s/yZiYCGZjNw37jYw)
 
 ### Single Image Reconstruction 
 If you want to run EMOCA on images, run the following
