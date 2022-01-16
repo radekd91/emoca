@@ -1157,9 +1157,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
             if writer is None:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 # outfile = str(vis_folder / "video.mp4")
+                
+                # fps = int(self.video_metas[sequence_id]['fps'].split('/')[0])
+                fps = int(self.video_metas[sequence_id]['fps'].split('/')[0]) / int(self.video_metas[sequence_id]['fps'].split('/')[1])
                 writer = cv2.VideoWriter(str(outfile), cv2.CAP_FFMPEG,
-                                         fourcc, int(self.video_metas[sequence_id]['fps'].split('/')[0]),
+                                         fourcc, fps,
                                          (im.shape[1], im.shape[0]), True)
+                
             im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
             writer.write(im_cv)
         writer.release()
