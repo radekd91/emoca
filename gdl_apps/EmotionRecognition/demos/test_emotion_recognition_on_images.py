@@ -48,9 +48,9 @@ def main():
     # add the input folder arg 
     parser.add_argument('--input_folder', type=str, default="/ps/scratch/rdanecek/EMOCA/InputImages")
     parser.add_argument('--output_folder', type=str, default="/ps/scratch/rdanecek/EMOCA/TestImages", help="Output folder to save the results to.")
-    parser.add_argument('--model_type', type=str, default="image", choices=["image", "3dmm"], help="Type of the model. Image-based vs face reconsruction-based")
-    # parser.add_argument('--model_name', type=str, default='EMOCA-emorec', help='Name of the model to use.')
-    parser.add_argument('--model_name', type=str, default='ResNet50', help='Name of the model to use.')
+    parser.add_argument('--model_type', type=str, default="3dmm", choices=["image", "3dmm"], help="Type of the model. Image-based vs face reconsruction-based")
+    parser.add_argument('--model_name', type=str, default='EMOCA-emorec', help='Name of the model to use.')
+    # parser.add_argument('--model_name', type=str, default='ResNet50', help='Name of the model to use.')
     parser.add_argument('--path_to_models', type=str, default=get_path_to_assets() /"EmotionRecognition")
 
     args = parser.parse_args()
