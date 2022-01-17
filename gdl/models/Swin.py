@@ -1,7 +1,7 @@
 import os, sys
 from pathlib import Path
-# swin_path = (Path(__file__).parents[2] / "Swin-Transformer").absolute()
-swin_path = (Path(__file__).parents[3] / "SwinTransformer").absolute()
+from gdl.utils.other import get_path_to_externals
+swin_path = (get_path_to_externals() / "SwinTransformer").absolute()
 if not swin_path.is_dir():
     raise ImportError(f"Swin repository not found in : '{swin_path}'")
 if str(swin_path.parent) not in sys.path:

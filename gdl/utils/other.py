@@ -16,3 +16,8 @@ def class_from_str(str, module=None, none_on_fail = False) -> type:
 def get_path_to_assets() -> Path:
     import gdl
     return Path(gdl.__file__).parents[1] / "assets"
+
+
+def get_path_to_externals() -> Path:
+    import gdl
+    return Path(gdl.__file__).parents[1] / "external"

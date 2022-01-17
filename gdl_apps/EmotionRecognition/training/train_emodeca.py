@@ -421,8 +421,9 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
     if 'swin_type' in cfg.model.keys():
         if cfg.model.swin_cfg == 'todo':
+            from gdl.utils.other import get_path_to_externals
             swin_cfg = OmegaConf.load(
-                Path(__file__).parents[3] / "SwinTransformer" / "configs" / (cfg.model.swin_type + ".yaml"))
+                get_path_to_externals() / "SwinTransformer" / "configs" / (cfg.model.swin_type + ".yaml"))
             OmegaConf.set_struct(swin_cfg, True)
             cfg.model.swin_cfg = swin_cfg
     return cfg

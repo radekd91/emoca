@@ -1,0 +1,8 @@
+[submodule "external/emonet"]
+	path = external/emonet
+	url = https://github.com/coloss/emonet.git
+	branch = feature/exposeEemotionFeature
+[submodule "external/SwinTransformer"]
+	path = external/SwinTransformer
+	url = https://github.com/coloss/Swin-Transformer.git
+	branch = feature/emoca
