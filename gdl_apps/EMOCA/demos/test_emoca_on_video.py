@@ -59,29 +59,29 @@ def main():
     ## 3) Get the data loadeer with the detected faces
     dl = dm.test_dataloader()
 
-    # ## 4) Run the model on the data
-    # for j, batch in enumerate (auto.tqdm( dl)):
+    ## 4) Run the model on the data
+    for j, batch in enumerate (auto.tqdm( dl)):
 
-    #     current_bs = batch["image"].shape[0]
-    #     img = batch
-    #     vals, visdict = test(emoca, img)
-    #     for i in range(current_bs):
-    #         # name = f"{(j*batch_size + i):05d}"
-    #         name =  batch["image_name"][i]
+        current_bs = batch["image"].shape[0]
+        img = batch
+        vals, visdict = test(emoca, img)
+        for i in range(current_bs):
+            # name = f"{(j*batch_size + i):05d}"
+            name =  batch["image_name"][i]
 
-    #         sample_output_folder = Path(outfolder) /name
-    #         sample_output_folder.mkdir(parents=True, exist_ok=True)
+            sample_output_folder = Path(outfolder) /name
+            sample_output_folder.mkdir(parents=True, exist_ok=True)
 
-    #         if args.save_mesh:
-    #             save_obj(emoca, str(sample_output_folder / "mesh_coarse.obj"), vals, i)
-    #         if args.save_images:
-    #             save_images(outfolder, name, visdict, i)
-    #         if args.save_codes:
-    #             save_codes(Path(outfolder), name, vals, i)
+            if args.save_mesh:
+                save_obj(emoca, str(sample_output_folder / "mesh_coarse.obj"), vals, i)
+            if args.save_images:
+                save_images(outfolder, name, visdict, i)
+            if args.save_codes:
+                save_codes(Path(outfolder), name, vals, i)
 
-    # ## 5) Create the reconstruction video (reconstructions overlayed on the original video)
-    # dm.create_reconstruction_video(0,  rec_method=model_name, image_type=image_type, overwrite=True)
-    # print("Done")
+    ## 5) Create the reconstruction video (reconstructions overlayed on the original video)
+    dm.create_reconstruction_video(0,  rec_method=model_name, image_type=image_type, overwrite=True)
+    print("Done")
 
 
 if __name__ == '__main__':

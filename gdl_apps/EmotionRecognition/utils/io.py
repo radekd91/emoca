@@ -1,7 +1,13 @@
 from gdl.models.EmoDECA import EmoDECA 
 from gdl.models.EmoCnnModule import EmoCnnModule 
-from gdl.models.EmoSwinModule import EmoSwinModule 
-from gdl.models.EmoNetModule import EmoNetModule
+try:
+    from gdl.models.EmoSwinModule import EmoSwinModule 
+except ImportError as e: 
+    print(f"Could not import EmoSwinModule. SWIN models will not be available")
+try:
+    from gdl.models.EmoNetModule import EmoNetModule
+except ImportError as e: 
+    print(f"Could not import EmoNetModule. EmoNet models will not be available")
 from gdl.models.IO import locate_checkpoint
 from gdl.utils.other import class_from_str
 from pathlib import Path

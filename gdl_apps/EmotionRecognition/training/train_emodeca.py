@@ -16,9 +16,15 @@ from gdl_apps.EMOCA.training.train_expdeca import prepare_data, create_logger
 from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
-from gdl.models.EmoSwinModule import EmoSwinModule
+try:
+    from gdl.models.EmoSwinModule import EmoSwinModule
+except ImportError as e: 
+    print(f"Could not import EmoSwinModule. SWIN models will not be available")
 from gdl.models.EmoCnnModule import EmoCnnModule
-from gdl.models.EmoNetModule import EmoNetModule
+try:
+    from gdl.models.EmoNetModule import EmoNetModule
+except ImportError as e: 
+    print(f"Could not import EmoNet. EmoNet models will not be available")
 from gdl.models.EmoMLP import EmoMLP
 
 from gdl.utils.other import class_from_str
