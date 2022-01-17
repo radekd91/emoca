@@ -12,7 +12,7 @@ Follow the steps at the root of this repo. If for some reason the environment fr
 ## Pre-trained models 
 All the provided models have been trained on AffectNet, either from scratch (the image-based backbones) or finetuned based on fixed pretrained face reconstruction nets. 
 
-Use `download_assets.sh` to download and unzip them or do it manually from [here](https://owncloud.tuebingen.mpg.de/index.php/s/WHjQE7t8BE4Re56)
+Use `download_assets.sh` to download and unzip them or do it manually from [here](https://owncloud.tuebingen.mpg.de/index.php/s/WHjQE7t8BE4Re56/download)
 
 
 ## Demos 
