@@ -10,7 +10,7 @@ from gdl.models.IO import locate_checkpoint
 try:
     from gdl.models.EmoNetModule import EmoNetModule
 except ImportError as e: 
-    print("Skipping EmoNetModule because EmoNet it is not installed")
+    print("Skipping EmoNetModule because EmoNet it is not installed.  Make sure you pull the repository with submodules to enable EmoNet.")
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer

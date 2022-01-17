@@ -19,12 +19,12 @@ from gdl.models.EmoDECA import EmoDECA
 try:
     from gdl.models.EmoSwinModule import EmoSwinModule
 except ImportError as e: 
-    print(f"Could not import EmoSwinModule. SWIN models will not be available")
+    print(f"Could not import EmoSwinModule. SWIN models will not be available. Make sure you pull the repository with submodules to enable SWIN.")
 from gdl.models.EmoCnnModule import EmoCnnModule
 try:
     from gdl.models.EmoNetModule import EmoNetModule
 except ImportError as e: 
-    print(f"Could not import EmoNet. EmoNet models will not be available")
+    print(f"Could not import EmoNet. EmoNet models will not be available. Make sure you pull the repository with submodules to enable EmoNet.")
 from gdl.models.EmoMLP import EmoMLP
 
 from gdl.utils.other import class_from_str

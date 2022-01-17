@@ -6,3 +6,15 @@
 	path = external/SwinTransformer
 	url = https://github.com/coloss/Swin-Transformer.git
 	branch = feature/emoca
+[submodule "external/Deep3DFaceRecon_pytorch"]
+	path = external/Deep3DFaceRecon_pytorch
+	url = https://github.com/coloss/Deep3DFaceRecon_pytorch.git
+	branch = master
+[submodule "external/Deep3DFaceRecon_pytorch"]
+	path = external/Deep3DFaceRecon_pytorch
+	url = https://github.com/coloss/Deep3DFaceRecon_pytorch.git
+	branch = master
+[submodule "external/TDDFA_V2"]
+	path = external/TDDFA_V2
+	url = https://github.com/coloss/3DDFA_V2.git
+	branch = master

@@ -8,11 +8,11 @@ import torch.nn.functional as F
 try:
     from gdl.models.EmoNetModule import EmoNetModule
 except ImportError as e:
-    print(f"Could not import EmoNetModule. EmoNet models will not be available.")
+    print(f"Could not import EmoNetModule. EmoNet models will not be available. Make sure you pull the repository with submodules to enable EmoNet.")
 try:
     from gdl.models.EmoSwinModule import EmoSwinModule
 except ImportError as e: 
-    print(f"Could not import EmoSwinModule. SWIN models will not be available")
+    print(f"Could not import EmoSwinModule. SWIN models will not be available. Make sure you pull the repository with submodules to enable SWIN.")
 from gdl.models.EmoCnnModule import EmoCnnModule
 from gdl.models.IO import get_checkpoint_with_kwargs
 from gdl.utils.other import class_from_str
