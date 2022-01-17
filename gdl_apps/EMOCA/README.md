@@ -19,7 +19,7 @@ In order to run the demos you'll need to download and unzip a few assets. Run `d
 ### Single Image Reconstruction 
 If you want to run EMOCA on images, run the following
 ```python 
-python demos/test_emoca_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path> --model_name EMOCA 
+python demos/test_emoca_on_images.py --input_folder <path_to_images> --output_folder <set_your_output_path> --model_name EMOCA 
 ```
 The script will detect faces in every image in the folder output the results that you specify with `--save_images`, `--save_codes`, `--save_mesh` to the output folder. 
 
