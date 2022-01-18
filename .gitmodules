@@ -18,3 +18,7 @@
 	path = external/TDDFA_V2
 	url = https://github.com/coloss/3DDFA_V2.git
 	branch = master
+[submodule "external/face-parsing.PyTorch"]
+	path = external/face-parsing.PyTorch
+	url = https://github.com/zllrunning/face-parsing.PyTorch
+

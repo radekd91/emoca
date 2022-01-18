@@ -31,6 +31,11 @@ Projects with a certain level of usability:
 
 ## Installation 
 
+0) Clone the repo with submodules: 
+```
+git clone --recurse-submodules ...
+```
+
 1) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`. That's the one I run on my workstation. This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness. 
 
 
