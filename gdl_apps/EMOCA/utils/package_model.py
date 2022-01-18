@@ -5,7 +5,8 @@ from typing import overload
 import distutils.dir_util
 from omegaconf import OmegaConf, DictConfig
 import shutil
-from gdl_apps.EMOCA.utils.load import load_model
+from gdl_apps.EMOCA.utils.load import load_model, replace_asset_dirs
+
 
 def package_model(input_dir, output_dir, asset_dir, overwrite=False):
     input_dir = Path(input_dir) 
@@ -52,25 +53,26 @@ def package_model(input_dir, output_dir, asset_dir, overwrite=False):
     with open(Path(output_dir) / "cfg.yaml", "r") as f:
         cfg = OmegaConf.load(f)
     
-    for mode in ["coarse", "detail"]:
+    cfg = replace_asset_dirs(cfg, output_dir)
 
-        cfg[mode].inout.output_dir = str(output_dir.parent)
-        cfg[mode].inout.full_run_dir = str(output_dir / mode)
-        cfg[mode].inout.checkpoint_dir = str(output_dir / mode / "checkpoints")
+    # for mode in ["coarse", "detail"]:
 
-        cfg[mode].model.tex_path = str(asset_dir / "FLAME/texture/FLAME_albedo_from_BFM.npz")
-        cfg[mode].model.topology_path = str(asset_dir / "FLAME/geometry/head_template.obj")
-        cfg[mode].model.fixed_displacement_path = str(asset_dir / 
-                "FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy")
-        cfg[mode].model.flame_model_path = str(asset_dir / "FLAME/geometry/generic_model.pkl")
-        cfg[mode].model.flame_lmk_embedding_path = str(asset_dir / "FLAME/geometry/landmark_embedding.npy")
-        cfg[mode].model.face_mask_path = str(asset_dir / "FLAME/mask/uv_face_mask.png")
-        cfg[mode].model.face_eye_mask_path  = str(asset_dir / "FLAME/mask/uv_face_eye_mask.png")
-        cfg[mode].model.pretrained_modelpath = str(asset_dir / "DECA/data/deca_model.tar")
-        cfg[mode].model.pretrained_vgg_face_path = str(asset_dir /  "FaceRecognition/resnet50_ft_weight.pkl") 
-        # cfg.model.emonet_model_path = str(asset_dir /  "EmotionRecognition/image_based_networks/ResNet50")
-        cfg[mode].model.emonet_model_path = ""
+    #     cfg[mode].inout.output_dir = str(output_dir.parent)
+    #     cfg[mode].inout.full_run_dir = str(output_dir / mode)
+    #     cfg[mode].inout.checkpoint_dir = str(output_dir / mode / "checkpoints")
 
+    #     cfg[mode].model.tex_path = str(asset_dir / "FLAME/texture/FLAME_albedo_from_BFM.npz")
+    #     cfg[mode].model.topology_path = str(asset_dir / "FLAME/geometry/head_template.obj")
+    #     cfg[mode].model.fixed_displacement_path = str(asset_dir / 
+    #             "FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy")
+    #     cfg[mode].model.flame_model_path = str(asset_dir / "FLAME/geometry/generic_model.pkl")
+    #     cfg[mode].model.flame_lmk_embedding_path = str(asset_dir / "FLAME/geometry/landmark_embedding.npy")
+    #     cfg[mode].model.face_mask_path = str(asset_dir / "FLAME/mask/uv_face_mask.png")
+    #     cfg[mode].model.face_eye_mask_path  = str(asset_dir / "FLAME/mask/uv_face_eye_mask.png")
+    #     cfg[mode].model.pretrained_modelpath = str(asset_dir / "DECA/data/deca_model.tar")
+    #     cfg[mode].model.pretrained_vgg_face_path = str(asset_dir /  "FaceRecognition/resnet50_ft_weight.pkl") 
+    #     # cfg.model.emonet_model_path = str(asset_dir /  "EmotionRecognition/image_based_networks/ResNet50")
+    #     cfg[mode].model.emonet_model_path = ""
 
     with open(output_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=cfg, f=outfile)

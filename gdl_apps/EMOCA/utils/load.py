@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 from gdl.models.DECA import DecaModule
 from gdl.models.IO import locate_checkpoint
 from gdl_apps.EMOCA.training.test_and_finetune_deca import prepare_data
+from gdl.utils.other import get_path_to_assets
 
 
 def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
@@ -25,8 +26,6 @@ def hack_paths(cfg, replace_root_path=None, relative_to_path=None):
             cfg.inout.full_run_dir = str(Path(replace_root_path) / Path(cfg.inout.full_run_dir).relative_to(relative_to_path))
         except ValueError as e:
             print(f"Skipping hacking full_run_dir {cfg.inout.full_run_dir} because it does not start with '{relative_to_path}'")
-
-
     return cfg
 
 
@@ -132,6 +131,30 @@ def load_deca_and_data(path_to_models=None,
     return deca, dm
 
 
+def replace_asset_dirs(cfg, output_dir : Path, ): 
+    asset_dir = get_path_to_assets()
+
+    for mode in ["coarse", "detail"]:
+        cfg[mode].inout.output_dir = str(output_dir.parent)
+        cfg[mode].inout.full_run_dir = str(output_dir / mode)
+        cfg[mode].inout.checkpoint_dir = str(output_dir / mode / "checkpoints")
+
+        cfg[mode].model.tex_path = str(asset_dir / "FLAME/texture/FLAME_albedo_from_BFM.npz")
+        cfg[mode].model.topology_path = str(asset_dir / "FLAME/geometry/head_template.obj")
+        cfg[mode].model.fixed_displacement_path = str(asset_dir / 
+                "FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy")
+        cfg[mode].model.flame_model_path = str(asset_dir / "FLAME/geometry/generic_model.pkl")
+        cfg[mode].model.flame_lmk_embedding_path = str(asset_dir / "FLAME/geometry/landmark_embedding.npy")
+        cfg[mode].model.face_mask_path = str(asset_dir / "FLAME/mask/uv_face_mask.png")
+        cfg[mode].model.face_eye_mask_path  = str(asset_dir / "FLAME/mask/uv_face_eye_mask.png")
+        cfg[mode].model.pretrained_modelpath = str(asset_dir / "DECA/data/deca_model.tar")
+        cfg[mode].model.pretrained_vgg_face_path = str(asset_dir /  "FaceRecognition/resnet50_ft_weight.pkl") 
+        # cfg.model.emonet_model_path = str(asset_dir /  "EmotionRecognition/image_based_networks/ResNet50")
+        cfg[mode].model.emonet_model_path = ""
+    
+    return cfg
+
+
 def load_model(path_to_models,
               run_name,
               stage,
@@ -143,6 +166,14 @@ def load_model(path_to_models,
     run_path = Path(path_to_models) / run_name
     with open(Path(run_path) / "cfg.yaml", "r") as f:
         conf = OmegaConf.load(f)
+
+    conf = replace_asset_dirs(conf, Path(path_to_models) / run_name)
+    conf.coarse.checkpoint_dir = str(Path(path_to_models) / run_name / "coarse" / "checkpoints")
+    conf.coarse.full_run_dir = str(Path(path_to_models) / run_name / "coarse" )
+    conf.coarse.output_dir = str(Path(path_to_models) )
+    conf.detail.checkpoint_dir = str(Path(path_to_models) / run_name / "detail" / "checkpoints")
+    conf.detail.full_run_dir = str(Path(path_to_models) / run_name / "detail" )
+    conf.detail.output_dir = str(Path(path_to_models) )
     deca = load_deca(conf,
               stage,
               mode,

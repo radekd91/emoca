@@ -2,10 +2,11 @@ import sys, os
 from pathlib import Path
 
 import numpy as np
+from gdl.utils.other import get_path_to_externals
 
-repo_dir = str(Path(__file__).parents[4])
+repo_dir = str(get_path_to_externals())
 sys.path += [repo_dir]
-tddfa_v2_dir = str(Path(__file__).parents[4] / "TDDFA_V2")
+tddfa_v2_dir = str(get_path_to_externals() / "TDDFA_V2")
 sys.path += [tddfa_v2_dir]
 from TDDFA_V2.TDDFA import TDDFA
 from TDDFA_V2.FaceBoxes import FaceBoxes

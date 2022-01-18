@@ -1,0 +1,24 @@
+[submodule "external/emonet"]
+	path = external/emonet
+	url = https://github.com/coloss/emonet.git
+	branch = feature/exposeEemotionFeature
+[submodule "external/SwinTransformer"]
+	path = external/SwinTransformer
+	url = https://github.com/coloss/Swin-Transformer.git
+	branch = feature/emoca
+[submodule "external/Deep3DFaceRecon_pytorch"]
+	path = external/Deep3DFaceRecon_pytorch
+	url = https://github.com/coloss/Deep3DFaceRecon_pytorch.git
+	branch = master
+[submodule "external/Deep3DFaceRecon_pytorch"]
+	path = external/Deep3DFaceRecon_pytorch
+	url = https://github.com/coloss/Deep3DFaceRecon_pytorch.git
+	branch = master
+[submodule "external/TDDFA_V2"]
+	path = external/TDDFA_V2
+	url = https://github.com/coloss/3DDFA_V2.git
+	branch = master
+[submodule "external/face-parsing.PyTorch"]
+	path = external/face-parsing.PyTorch
+	url = https://github.com/zllrunning/face-parsing.PyTorch
+

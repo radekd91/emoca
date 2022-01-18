@@ -16,9 +16,15 @@ from gdl_apps.EMOCA.training.train_expdeca import prepare_data, create_logger
 from gdl.models.IO import locate_checkpoint, get_checkpoint_with_kwargs
 
 from gdl.models.EmoDECA import EmoDECA
-from gdl.models.EmoSwinModule import EmoSwinModule
+try:
+    from gdl.models.EmoSwinModule import EmoSwinModule
+except ImportError as e: 
+    print(f"Could not import EmoSwinModule. SWIN models will not be available. Make sure you pull the repository with submodules to enable SWIN.")
 from gdl.models.EmoCnnModule import EmoCnnModule
-from gdl.models.EmoNetModule import EmoNetModule
+try:
+    from gdl.models.EmoNetModule import EmoNetModule
+except ImportError as e: 
+    print(f"Could not import EmoNet. EmoNet models will not be available. Make sure you pull the repository with submodules to enable EmoNet.")
 from gdl.models.EmoMLP import EmoMLP
 
 from gdl.utils.other import class_from_str
@@ -415,8 +421,9 @@ def configure(emo_deca_default, emodeca_overrides, deca_default, deca_overrides,
 
     if 'swin_type' in cfg.model.keys():
         if cfg.model.swin_cfg == 'todo':
+            from gdl.utils.other import get_path_to_externals
             swin_cfg = OmegaConf.load(
-                Path(__file__).parents[3] / "SwinTransformer" / "configs" / (cfg.model.swin_type + ".yaml"))
+                get_path_to_externals() / "SwinTransformer" / "configs" / (cfg.model.swin_type + ".yaml"))
             OmegaConf.set_struct(swin_cfg, True)
             cfg.model.swin_cfg = swin_cfg
     return cfg

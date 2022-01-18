@@ -6,7 +6,10 @@ import torch
 import torch.nn.functional as F
 import gdl.models.ResNet as resnet
 
-from .Swin import create_swin_backbone, swin_cfg_from_name
+try:
+    from .Swin import create_swin_backbone, swin_cfg_from_name
+except ImportError as e:
+    print("SWIN not found, will not be able to use SWIN models")
 
 class BaseEncoder(nn.Module):
     def __init__(self, outsize, last_op=None):

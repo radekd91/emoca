@@ -226,8 +226,8 @@ class FaceDataModuleBase(pl.LightningDataModule):
 
 
     def _get_segmentation_net(self, device):
-
-        path_to_segnet = Path(__file__).parents[3] / "face-parsing.PyTorch"
+        from gdl.utils.other import get_path_to_externals
+        path_to_segnet = get_path_to_externals() / "face-parsing.PyTorch"
         if not(str(path_to_segnet) in sys.path  or str(path_to_segnet.absolute()) in sys.path):
             sys.path += [str(path_to_segnet)]
 

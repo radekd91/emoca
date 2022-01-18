@@ -34,8 +34,8 @@ def main():
     output_folder = args.output_folder
     model_name = args.model_name
     image_type = args.image_type
-    processed_subfolder = args.processed_subfolder
-    # processed_subfolder = "processed_2022_Jan_15_15-03-37"
+    # processed_subfolder = args.processed_subfolder
+    processed_subfolder = "processed_2022_Jan_15_15-03-37"
 
     mode = 'detail'
     # mode = 'coarse'

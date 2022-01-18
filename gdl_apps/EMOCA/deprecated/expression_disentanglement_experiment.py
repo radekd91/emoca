@@ -7,7 +7,10 @@ from gdl_apps.EMOCA.train_deca_modular import get_checkpoint
 
 from gdl.models.DECA import DECA, ExpDECA, DecaModule
 from gdl.models.IO import locate_checkpoint
-from gdl.models.EmoNetModule import EmoNetModule
+try:
+    from gdl.models.EmoNetModule import EmoNetModule
+except ImportError as e: 
+    print("Skipping EmoNetModule because EmoNet it is not installed.  Make sure you pull the repository with submodules to enable EmoNet.")
 from gdl.utils.other import class_from_str
 import datetime
 from pytorch_lightning import Trainer
