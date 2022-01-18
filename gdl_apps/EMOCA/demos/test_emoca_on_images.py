@@ -48,17 +48,20 @@ def main():
         batch = dataset[i]
         vals, visdict = test(emoca, batch)
         # name = f"{i:02d}"
-        name =  batch["image_name"][i]
+        current_bs = batch["image"].shape[0]
 
-        sample_output_folder = Path(output_folder) / name
-        sample_output_folder.mkdir(parents=True, exist_ok=True)
+        for j in range(current_bs):
+            name =  batch["image_name"][j]
 
-        if args.save_mesh:
-            save_obj(emoca, str(sample_output_folder / "mesh_coarse.obj"), vals)
-        if args.save_images:
-            save_images(output_folder, name, visdict, with_detection=True)
-        if args.save_codes:
-            save_codes(Path(output_folder), name, vals)
+            sample_output_folder = Path(output_folder) / name
+            sample_output_folder.mkdir(parents=True, exist_ok=True)
+
+            if args.save_mesh:
+                save_obj(emoca, str(sample_output_folder / "mesh_coarse.obj"), vals, j)
+            if args.save_images:
+                save_images(output_folder, name, visdict, with_detection=True, i=j)
+            if args.save_codes:
+                save_codes(Path(output_folder), name, vals, i=j)
 
     print("Done")
 
