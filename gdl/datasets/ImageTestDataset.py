@@ -90,6 +90,7 @@ class TestData(Dataset):
                     right = h - 1
                     top = 0
                     bottom = w - 1
+                    old_size, center = bbox2point(left, right, top, bottom, type=bbox_type)
                 else:
                     if self.max_detection is None:
                         bbox = bbox[0]
