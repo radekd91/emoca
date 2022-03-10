@@ -1,6 +1,6 @@
 from gdl.utils.condor import execute_on_cluster
 from pathlib import Path
-import train_emodeca
+from gdl_apps.EmotionRecognition.training import train_emodeca
 import datetime
 from omegaconf import OmegaConf
 import time as t
@@ -29,7 +29,7 @@ def submit(cfg,
     submission_folder_cluster = Path(submission_dir_cluster_side) / submission_folder_name
 
     local_script_path = Path(train_emodeca.__file__).absolute()
-    cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[1].name \
+    cluster_script_path = Path(cluster_repo_path) / local_script_path.parents[2].name / local_script_path.parents[1].name \
                           / local_script_path.parents[0].name / local_script_path.name
 
 
@@ -68,6 +68,7 @@ def submit(cfg,
                        str(submission_folder_local),
                        str(submission_folder_cluster),
                        str(cluster_repo_path),
+                       env='work36_cu11',
                        python_bin=python_bin,
                        username=username,
                        gpu_mem_requirement_mb=gpu_mem_requirement_mb,
@@ -281,6 +282,15 @@ def train_emodeca_on_cluster():
     #     "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_20-57-10_-5464385799477569099_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early"
     # ]
     #
+
+    # resume_folders += [  # final model with detail
+    #         "/is/cluster/work/rdanecek/emoca/emodeca/2022_01_29_22-13-02_1880637297624421180_EmotionRecognition_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early" ]
+    # resume_folders += [  # final model without detail (to sanity-check the one above)
+    #         "/is/cluster/work/rdanecek/emoca/emodeca/2022_01_29_21-59-07_3822537833951552856_EmotionRecognition_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early" ]
+
+    # final model with detail for cam ready
+    resume_folders += ["/is/cluster/work/rdanecek/emoca/emodeca/2022_03_09_01-38-30_-3310155981496657988_EmotionRecognition_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early"]
+
     # submit_ = False
     submit_ = True
 
@@ -288,10 +298,10 @@ def train_emodeca_on_cluster():
         name = str(Path(resume_folder).name)
         idx = name.find("Emo")
         run_id = name[:idx-1]
-        run = api.run("rdanecek/EmotionRecognition/" + run_id)
+        run = api.run("rdanecek/EmoDECA/" + run_id)
         tags = set(run.tags)
 
-        allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED"])
+        allowed_tags = set(["COMPARISON", "INTERESTING", "FINAL_CANDIDATE", "BEST_CANDIDATE", "BEST_IMAGE_BASED", "FINAL_CANDIDATE_REBUTTAL"])
 
         if len(allowed_tags.intersection(tags)) == 0:
             print(f"Run '{name}' is not tagged to be tested and will be skipped.")
@@ -305,7 +315,6 @@ def train_emodeca_on_cluster():
         if submit_:
             submit(cfg, stage, bid=bid)
         else:
-            project_name = "E"
             stage = 1
             start_from_previous = 1
             force_new_location = 1

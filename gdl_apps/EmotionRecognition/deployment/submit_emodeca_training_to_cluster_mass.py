@@ -103,15 +103,15 @@ def train_emodeca_on_cluster():
         #     [],
         #     []
         # ],
-        [
-            ['data.sampler=balanced_expr'],
-            []
-        ],
         # [
-        #     ['model.use_detail_code=true',
-        #      'data.sampler=balanced_expr'],
+        #     ['data.sampler=balanced_expr'],
         #     []
         # ],
+        [
+            ['model.use_detail_code=true',
+             'data.sampler=balanced_expr'],
+            []
+        ],
         # [
         #     ['data.sampler=balanced_va'],
         #     []
@@ -662,14 +662,19 @@ def train_emodeca_on_cluster():
     #     "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_12_05-47-11_-8987329460203664324_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
     # stage = 'detail'
 
-    # decad no emo and affectnet no emo - run
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-11_-7854117761220635898_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_03_16-10-41_-4637199631508941979_ExpDECA_DecaD_para_NoRing_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-28_6450489661335316335_ExpDECA_DecaD_clone_NoRing_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-17_-6566800429279817771_ExpDECA_DecaD_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
-    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-48-54_3114387149519252327_ExpDECA_Affec_clone_NoRing_DeSegrend_BlackB_Aug_early"]
-    stage = 'coarse'
+    # # decad no emo and affectnet no emo - run
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-32_-5959946206105776497_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-49-11_-7854117761220635898_ExpDECA_Affec_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_03_16-10-41_-4637199631508941979_ExpDECA_DecaD_para_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-28_6450489661335316335_ExpDECA_DecaD_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-55-17_-6566800429279817771_ExpDECA_DecaD_clone_Jaw_NoRing_DeSegrend_BlackB_Aug_early"]
+    # run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_09_04-48-54_3114387149519252327_ExpDECA_Affec_clone_NoRing_DeSegrend_BlackB_Aug_early"]
+    
+    # final EMOCA model with detailed trained
+    run_names += ["/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"]
+
+    # stage = 'coarse'
+    stage = 'detail'
 
     for deca_conf_path in  run_names:
         name = str(Path(deca_conf_path).name)

@@ -1,0 +1,1 @@
+/is/cluster/work/rdanecek/emoca/emodeca/2022_03_08_20-49-11_-6649268653295260387_EmotionRecognition_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_detail_shake_samp-balanced_expr_early

@@ -611,7 +611,7 @@ def main():
     if len(sys.argv) > 5:
         project_name_ = sys.argv[5]
     else:
-        project_name_ = "EmotionRecognition"
+        project_name_ = "EmoDECA"
 
     train_emodeca(cfg, start_stage, project_name_=project_name_, resume_from_previous=start_from_previous,
                   force_new_location=force_new_location)
