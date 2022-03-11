@@ -19,7 +19,10 @@ import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoCnnModule(EmotionRecognitionBaseModule):
-
+    """
+    Emotion Recognitition module which uses a conv net as its backbone. Currently Resnet-50 and VGG are supported. 
+    ResNet-50 based emotion recognition trained on AffectNet is the network used for self-supervising emotion in EMOCA.
+    """
     def __init__(self, config):
         super().__init__(config)
         # self.n_expression = 9  # we use all affectnet classes (included none) for now

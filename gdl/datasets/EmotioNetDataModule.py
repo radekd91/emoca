@@ -31,6 +31,9 @@ from enum import Enum
 
 
 class ActionUnitTypes(Enum):
+    """
+    Enum that labels subsets of AUs used by EmotioNet
+    """
 
     EMOTIONET12 = 1
     EMOTIONET23 = 2
@@ -76,18 +79,16 @@ class ActionUnitTypes(Enum):
         d[26] = "Jaw Drop"
         d[28] = "Lip Suck"
         d[43] = "Eyes Closed"
-        # d[51] = "Eyes Closed"
-        # d[52] = "Eyes Closed"
-        # d[53] = "Eyes Closed"
-        # d[54] = "Eyes Closed"
-        # d[55] = "Eyes Closed"
-        # d[56] = "Eyes Closed"
         if num not in d.keys():
             raise ValueError(f"invalid AU {num}")
         return d[num]
 
 
 class EmotioNetDataModule(FaceDataModuleBase):
+    """
+    A data module of the EmotioNet dataset. 
+    http://cbcsl.ece.ohio-state.edu/EmotionNetChallenge/ 
+    """
 
     def __init__(self,
                  input_dir,
@@ -523,135 +524,6 @@ class EmotioNetDataModule(FaceDataModuleBase):
                          )
         return array
 
-    # def _path_to_emotion_nn_indices_file(self, prefix, feature_label):
-    #     nn_indices_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_indices.memmap")
-    #     return nn_indices_file
-    #
-    # def _path_to_emotion_nn_distances_file(self,  prefix, feature_label):
-    #     nn_distances_file = Path(self.output_dir) / "cache" / (prefix + feature_label + "_nn_distances.memmap")
-    #     return nn_distances_file
-    #
-    # def _path_to_emotion_nn_retrieval_file(self,  prefix, feature_label):
-    #     outfile_name = Path(self.output_dir) / "cache" / (prefix + feature_label + ".memmap")
-    #     return outfile_name
-    #
-    # def _load_retrieval_arrays(self, prefix, feature_label):
-    #     # prefix = self.mode + "_train_"
-    #     # if self.ignore_invalid:
-    #     #     prefix += "valid_only_"
-    #     # feature_label = 'emo_net_emo_feat_2'
-    #     nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
-    #     nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
-    #     try:
-    #         with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "rb") as f:
-    #             indices_array_dtype = pkl.load(f)
-    #             indices_array_shape = pkl.load(f)
-    #     except:
-    #         indices_array_dtype = np.int64,
-    #         indices_array_shape = (len(dataset), NUM_NEIGHBORS)
-    #
-    #     try:
-    #         with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "rb") as f:
-    #             distances_array_dtype = pkl.load(f)
-    #             distances_array_shape = pkl.load(f)
-    #     except:
-    #         distances_array_dtype = np.float32,
-    #         distances_array_shape = (len(dataset), NUM_NEIGHBORS)
-    #
-    #     self.nn_indices_array = np.memmap(nn_indices_file,
-    #                                       # dtype=np.int32,
-    #                                       dtype=indices_array_dtype,
-    #                                       mode="r",
-    #                                       shape=indices_array_shape
-    #                                       )
-    #
-    #     self.nn_distances_array = np.memmap(nn_distances_file,
-    #                                         dtype=distances_array_dtype,
-    #                                         # dtype=np.float64,
-    #                                         mode="r",
-    #                                         shape=distances_array_shape
-    #                                         )
-    #
-    # def _prepare_emotion_retrieval(self):
-    #     prefix = self.mode + "_train_"
-    #     if self.ignore_invalid:
-    #         prefix += "valid_only_"
-    #     feature_label = 'emo_net_emo_feat_2'
-    #     nn_indices_file = self._path_to_emotion_nn_indices_file(prefix, feature_label)
-    #     nn_distances_file = self._path_to_emotion_nn_distances_file(prefix, feature_label)
-    #     NUM_NEIGHBORS = 100
-    #     if nn_indices_file.is_file() and nn_distances_file.is_file():
-    #         print("Precomputed nn arrays found.")
-    #         return
-    #     dataset = self._new_training_set(for_training=False)
-    #     dl = DataLoader(dataset, shuffle=False, num_workers=self.num_workers, batch_size=self.train_batch_size)
-    #
-    #     array = None
-    #     if self.ring_type != "emonet_feature":
-    #         raise ValueError(f"Invalid ring type for emotion retrieval {self.ring_type}")
-    #
-    #     outfile_name = self._path_to_emotion_nn_retrieval_file(prefix, feature_label)
-    #     if not outfile_name.is_file():
-    #         for bi, batch in enumerate(auto.tqdm(dl)):
-    #             feat = batch[feature_label].numpy()
-    #             feat_size = feat.shape[1:]
-    #             if array is None:
-    #                 array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype)
-    #
-    #             # for i in range(feat.shape[0]):
-    #             #     idx = bi*self.train_batch_size + i
-    #             array[bi*self.train_batch_size:bi*self.train_batch_size + feat.shape[0], ...] = feat
-    #         del array
-    #     else:
-    #         print(f"Feature array found in '{outfile_name}'")
-    #         for bi, batch in enumerate(dl):
-    #             feat = batch[feature_label].numpy()
-    #             feat_size = feat.shape[1:]
-    #             break
-    #
-    #     array = self._get_retrieval_array(prefix, feature_label, len(dataset), feat_size, feat.dtype, modifier='r')
-    #
-    #     nbrs = NearestNeighbors(n_neighbors=30, algorithm='auto', n_jobs=-1).fit(array)
-    #     distances, indices = nbrs.kneighbors(array, NUM_NEIGHBORS)
-    #
-    #     indices_array = np.memmap(nn_indices_file,
-    #                      dtype=indices.dtype,
-    #                      mode="w+",
-    #                      shape=indices.shape
-    #                      )
-    #     indices_array[...] = indices
-    #     del indices_array
-    #     distances_array = np.memmap(nn_distances_file,
-    #                      dtype=distances.dtype,
-    #                      mode="w+",
-    #                      shape=distances.shape
-    #                      )
-    #     distances_array[...] = distances
-    #     del distances_array
-    #
-    #     # save sizes a dtypes
-    #     with open(nn_indices_file.parent / (nn_indices_file.stem + "_meta.pkl"), "wb") as f:
-    #         pkl.dump(indices.dtype, f)
-    #         pkl.dump(indices.shape, f)
-    #
-    #     with open(nn_distances_file.parent / (nn_distances_file.stem + "_meta.pkl"), "wb") as f:
-    #         pkl.dump(distances.dtype, f)
-    #         pkl.dump(distances.shape, f)
-    #
-    #     self.nn_indices_array = np.memmap(nn_indices_file,
-    #                      dtype=indices.dtype,
-    #                      mode="r",
-    #                      shape=indices.shape
-    #                      )
-    #
-    #     self.nn_distances_array = np.memmap(nn_distances_file,
-    #                      dtype=distances.dtype,
-    #                      mode="r",
-    #                      shape=distances.shape
-    #                      )
-
-
-
 
 class EmotioNet(EmotionalImageDatasetBase):
 
@@ -693,109 +565,6 @@ class EmotioNet(EmotionalImageDatasetBase):
         num_positive = self.df[ActionUnitTypes.AUtype2AUstring_list(au_type)].to_numpy().astype(np.float64).sum(axis=0)
         num_negative = len(self.df) - num_positive
         self.au_positive_weights = (num_negative / num_positive).astype(np.float32)
-
-
-        # self.ignore_invalid = ignore_invalid
-        # self.load_emotion_feature = load_emotion_feature
-        # self.nn_distances_array = nn_distances_array
-
-        # if ignore_invalid:
-        #     # filter invalid classes
-        #     ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
-        #     self.df = self.df[self.df["expression"].isin(ignored_classes) == False]
-        #     # self.df = self.df.drop(self.df[self.df["expression"].isin(ignored_classes)].index)
-        #
-        #     # filter invalid va values
-        #     self.df = self.df[self.df.valence != -2.]
-        #     # self.df = self.df.drop(self.df.valence == -2.)
-        #     self.df = self.df[self.df.arousal != -2.]
-        #     # self.df = self.df.drop(self.df.arousal == -2.)
-        #     # valid_indices = np.logical_not(pd.isnull(self.df))
-        #     # valid_indices = self.df.index
-        #     self.df = self.df.reset_index(drop=True)
-        #     # if nn_indices_array is not None and nn_indices_array.shape[0] != len(self.df):
-        #     #     nn_indices_array = nn_indices_array[valid_indices, ...]
-        #     # if nn_distances_array is not None and nn_distances_array.shape[0] != len(self.df):
-        #     #     nn_distances_array = nn_distances_array[valid_indices, ...]
-
-        # self.exp_weights = self.df["expression"].value_counts(normalize=True).to_dict()
-        # self.exp_weight_tensor = torch.tensor([self.exp_weights[i] for i in range(len(self.exp_weights))], dtype=torch.float32)
-        # self.exp_weight_tensor = 1. / self.exp_weight_tensor
-        # self.exp_weight_tensor /= torch.norm(self.exp_weight_tensor)
-
-
-        # if ring_type not in [None, "gt_expression", "gt_va", "emonet_feature", "emonet_va", "emonet_expression"]:
-        #     raise ValueError(f"Invalid ring type '{ring_type}'")
-        # if ring_type == "emonet_expression" and ( nn_indices_array is None or nn_distances_array is None ):
-        #     raise ValueError(f"If ring type set to '{ring_type}', nn files must be specified")
-
-        # self.ring_type = ring_type
-        # self.ring_size = ring_size
-    #     self._init_sample_weights()
-    #
-    #
-    # def _init_sample_weights(self):
-    #     if self.ring_type == "gt_expression":
-    #         grouped = self.df.groupby(['expression'])
-    #         self.expr2sample = grouped.groups
-    #     elif self.ring_type == "emonet_expression":
-    #         raise NotImplementedError()
-    #     else:
-    #         self.expr2sample = None
-    #
-    #     va = self.df[["valence", "arousal"]].to_numpy()
-    #     sampling_rate = 0.1
-    #     # bin_1d = np.arange(-1.,1.+sampling_rate, sampling_rate)
-    #     bin_1d = np.arange(-1.,1., sampling_rate)
-    #     stat, x_ed, y_ed, va_binnumber = sp.stats.binned_statistic_2d(
-    #         va[:, 0], va[:, 1], None, 'count', [bin_1d, bin_1d], expand_binnumbers=False)
-    #     va_weights = 1 / va_binnumber
-    #     va_weights /= np.linalg.norm(va_weights)
-    #     va_weights *= np.linalg.norm(np.ones_like(va_weights))
-    #     self.va_sample_weights = va_weights
-    #
-    #     if self.ring_type == "gt_va":
-    #         self.bins_to_samples = {}
-    #         self.va_bin_indices = va_binnumber
-    #         bin_indices = np.unique(va_binnumber)
-    #         for bi in bin_indices:
-    #             self.bins_to_samples[bi] = np.where(va_binnumber == bi)[0]
-    #
-    #     elif self.ring_type == "emonet_va":
-    #         raise NotImplementedError()
-    #     else:
-    #         self.bins_to_samples = {}
-    #
-    #     if self.ring_type == "emonet_feature":
-    #         if len(self) != self.nn_distances_array.shape[0] or len(self) != self.nn_indices_array.shape[0]:
-    #             raise RuntimeError("The lengths of the dataset does not correspond to size of the nn_array. "
-    #                                "The sizes should be equal. Sth fishy is happening")
-    #         # self.nn_indices_array = self.nn_indices_array
-    #         self.nn_distances_array = nn_distances_array
-    #     else:
-    #         self.nn_indices_array = None
-    #         self.nn_distances_array = None
-    #
-    #
-    #     # v = self.df[["valence"]].to_numpy()
-    #     sampling_rate = 0.1
-    #
-    #     bin_1d = np.arange(-1.,1., sampling_rate)
-    #     stat, x_ed, va_binnumber = sp.stats.binned_statistic(
-    #         va[:, 0], None, 'count', bin_1d)
-    #     v_weights = 1 / va_binnumber
-    #     v_weights /= np.linalg.norm(v_weights)
-    #     v_weights *= np.linalg.norm(np.ones_like(v_weights))
-    #     self.v_sample_weights = v_weights
-    #
-    #     bin_1d = np.arange(-1.,1., sampling_rate)
-    #     stat, x_ed, va_binnumber = sp.stats.binned_statistic(
-    #         va[:, 1], None, 'count', bin_1d)
-    #     a_weights = 1 / va_binnumber
-    #     a_weights /= np.linalg.norm(a_weights)
-    #     a_weights *= np.linalg.norm(np.ones_like(a_weights))
-    #     self.a_sample_weights = a_weights
-
 
     def __len__(self):
         return len(self.df)
@@ -902,86 +671,6 @@ class EmotioNet(EmotionalImageDatasetBase):
         sample = self._get_sample(index)
         return sample
 
-        #
-        # self.ring_policy = 'random'
-
-        # # retrieve indices of the samples relevant for this ring
-        # if self.ring_type == "gt_expression" or self.ring_type == "emonet_expression":
-        #     expression_label = sample["affectnetexp"]
-        #     ring_indices = self.expr2sample[expression_label.item()]
-        #     ring_indices = list(ring_indices)
-        #     if len(ring_indices) > 1:
-        #         ring_indices.remove(index)
-        #     label = expression_label
-        # elif self.ring_type == "gt_va" or self.ring_type == "emonet_va":
-        #     ring_indices = self.bins_to_samples[self.va_bin_indices[index]].tolist()
-        #     if len(ring_indices) > 1:
-        #         ring_indices.remove(index)
-        #     label = self.va_bin_indices[index]
-        # elif self.ring_type == "emonet_feature":
-        #     ring_indices = self.nn_indices_array[index].tolist()
-        #     # ring_indices = [n for n in ring_indices if n < len(self)]
-        #     max_nn = 10
-        #     ring_indices = ring_indices[:max_nn]
-        #     if len(ring_indices) > 1:
-        #         ring_indices.remove(index)
-        #     # label = index
-        # else:
-        #     raise NotImplementedError()
-
-        # label = self.labels[index]
-        # label_indices = self.label2index[label]
-        #
-        # if self.ring_policy == 'random':
-        #     picked_label_indices = np.arange(len(ring_indices), dtype=np.int32)
-        #     # print("Size of label_indices:")
-        #     # print(len(label_indices))
-        #     np.random.shuffle(picked_label_indices)
-        #     if len(ring_indices) < self.ring_size - 1:
-        #         print(
-        #             f"[WARNING]. Label '{label}' only has {len(ring_indices)} samples which is less than {self.ring_size}. S"
-        #             f"ome samples will be duplicated")
-        #         picked_label_indices = np.concatenate(self.ring_size * [picked_label_indices], axis=0)
-        #
-        #     picked_label_indices = picked_label_indices[:self.ring_size - 1]
-        #     indices = [ring_indices[i] for i in picked_label_indices]
-        # elif self.ring_policy == 'sequential':
-        #     indices = []
-        #     idx = ring_indices.index(index) + 1
-        #     idx = idx % len(ring_indices)
-        #     while len(indices) != self.ring_size - 1:
-        #         # if self.labels[idx] == label:
-        #         indices += [ring_indices[idx]]
-        #         idx += 1
-        #         idx = idx % len(ring_indices)
-        # else:
-        #     raise ValueError(f"Invalid K policy {self.ring_policy}")
-        #
-        # batches = []
-        # batches += [sample]
-        # for i in range(self.ring_size - 1):
-        #     # idx = indices[i]
-        #     idx = indices[i]
-        #     batches += [self._get_sample(idx)]
-        #
-        # try:
-        #     combined_batch = default_collate(batches)
-        # except RuntimeError as e:
-        #     print(f"Failed for index {index}")
-        #     # print("Failed paths: ")
-        #     for bi, batch in enumerate(batches):
-        #         print(f"Index= {bi}")
-        #         print(f"Path='{batch['path']}")
-        #         print(f"Label='{batch['label']}")
-        #         for key in batch:
-        #             if isinstance(batch[key], torch.Tensor):
-        #                 print(f"{key} shape='{batch[key].shape}")
-        #     raise e
-        #
-        # # end = timer()
-        # # print(f"Reading sample {index} took {end - start}s")
-        # return combined_batch
-
 
 def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin=2):
     va_array = []
@@ -1016,16 +705,6 @@ def sample_representative_set(dataset, output_file, sample_step=0.1, num_per_bin
 
 
 if __name__ == "__main__":
-    # d = AffectNetOriginal(
-    #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/Manually_Annotated_Images",
-    #     "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/Manually_Annotated/validation.csv",
-    #     224
-    # )
-    # print(f"Num sample {len(d)}")
-    # for i in range(100):
-    #     sample = d[i]
-    #     d.visualize_sample(sample)
-
     # dm = EmotioNetDataModule(
     #          ## "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
              # "/ps/project_cifs/EmotionalFacialAnimation/data/emotionnet/emotioNet_challenge_files_server_challenge_1.2_aws_downloaded/",
@@ -1055,43 +734,9 @@ if __name__ == "__main__":
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
-    # dm._extract_emotion_features()
-    # dl = dm.val_dataloader()
-    # print(f"len training set: {len(dm.training_set)}")
-    # print(f"len validation set: {len(dm.validation_set)}")
-    # dl = dm.train_dataloader()
-    # for bi, batch in enumerate(dl):
-        # if bi == 10:
-        #     break
-    # for si in range(len(dm.training_set)):
-    #     dm.training_set.visualize_sample(si)
 
-    # out_path = Path(dm.output_dir) / "validation_representative_selection_.csv"
-    # sample_representative_set(dm.validation_set, out_path)
-
-    training_set = dm.training_set
-    for i in range(len(training_set)):
-        sample = training_set[i]
-        # sample = training_set[0]
-        training_set.visualize_sample(sample)
-
-    # # dl = DataLoader(validation_set, shuffle=False, num_workers=1, batch_size=1)
-
-    # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/processed_2021_Apr_02_03-13-33/validation_representative_selection_.csv"
-
-    # dm._detect_faces()
-
-    # failures = [106, 112, 155, 15, 175, 1, 200, 208, 210, 23, 250, 263, 268, 346, 355, 360, 37, 389, 432, 441, 443, 452,
-    #             465, 482, 491, 4, 523, 590, 600, 629, 647, 653, 658, 660, 676, 729, 737, 748, 760, 789, 798, 818, 878,
-    #             89, 90, 921, 924, ]
-
-
-    # failures = [
-    #     355,
-    #     389, 590, 600, 647, 676]
-
-
-    # for sid in failures:
-    #     dm._detect_landmarks_and_segment_subset(dm.subset_size * sid,
-    #                                               min((sid + 1) * dm.subset_size, len(dm.df)))
-
+    # training_set = dm.training_set
+    # for i in range(len(training_set)):
+    #     sample = training_set[i]
+    #     # sample = training_set[0]
+    #     training_set.visualize_sample(sample)

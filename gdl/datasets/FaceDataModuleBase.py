@@ -19,6 +19,11 @@ from gdl.utils.FaceDetector import FAN, MTCNN, save_landmark
 import pickle as pkl
 
 class FaceDataModuleBase(pl.LightningDataModule):
+    """
+    A base data module for face datasets. This DM can be inherited by any face datasets, which just adapt things 
+    to the dataset's specificities (such as different GT or data storage structure). 
+    This class can take care of face detection, recognition, segmentation and landmark detection.
+    """
 
     def __init__(self, root_dir, output_dir, processed_subfolder, device=None,
                  face_detector='fan',

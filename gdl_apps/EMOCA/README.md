@@ -3,6 +3,7 @@
  ![EMOCA](emoca.png)
 
 This is the official implementation of EMOCA: Emotion-Driven Monocular Face Capture and Animation 
+
  ![EMOCA](EMOCA_gif_sparse_det.gif)  ![EMOCA](EMOCA_gif_sparse_rec.gif)  <!-- ![EMOCA](EMOCA_gif_sparse_rec_trans.gif)  -->
 
 ## Installation 
@@ -35,7 +36,24 @@ The script will extract the frames from the video, run face detection on it to e
 See `demos/test_emoca_on_video.py` for further details.
 
 ### Training 
-Coming soon
+
+In order to train EMOCA, you need the following things: 
+
+1) Get training data of DECA (this is crucial for training the detail stage part of EMOCA) 
+
+2) Download AffectNet from http://mohammadmahoor.com/affectnet/ 
+
+3) Process AffectNet using the `data/process_affectnet.py` script. (See the script for details) This dataset is crucial to train the 
+
+5) In order to train the detailed stage, we need the "DECA dataset" which consists of VGGFace2 and VoxCeleb images. Unfortunately, VGGFace2 is officially not available anymore and we are not allowed to distribute it. 
+We are working on using other face recognition dataset in place of VGGFace2 but pull requests are also welcome. We are also willing to provide assistance and advice in training EMOCA.
+
+4) Train EMOCA by (both coarse and detail) by running:
+```
+python train_expdeca.py config.yaml
+```
+You will need to adjust the paths to the output files, and the data inside the config file. 
+
 
 
 ## Citation 

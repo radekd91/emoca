@@ -15,6 +15,9 @@ import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoDECA(EmotionRecognitionBaseModule):
+    """
+    EmoDECA loads a pretrained DECA-based face reconstruction net and uses it to predict emotion
+    """
 
     def __init__(self, config):
         super().__init__(config)
@@ -30,10 +33,12 @@ class EmoDECA(EmotionRecognitionBaseModule):
             "inout_params": config.model.deca_cfg.inout,
             "stage_name": "testing",
         }
+        # instantiate the face net
         self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test", deca_checkpoint, deca_checkpoint_kwargs)
         self.deca.inout_params.full_run_dir = config.inout.full_run_dir
         self._setup_deca(False)
 
+        # which latent codes are being used
         in_size = 0
         if self.config.model.use_identity:
             in_size += config.model.deca_cfg.model.n_shape
@@ -45,7 +50,9 @@ class EmoDECA(EmotionRecognitionBaseModule):
             in_size += 3
         if self.config.model.use_detail_code:
             in_size += config.model.deca_cfg.model.n_detail
+            
         if 'use_detail_emo_code' in self.config.model.keys() and self.config.model.use_detail_emo_code:
+            # deprecated
             in_size += config.model.deca_cfg.model.n_detail_emo
 
         if 'mlp_dimension_factor' in self.config.model.keys():
@@ -87,8 +94,6 @@ class EmoDECA(EmotionRecognitionBaseModule):
                 self.emonet._create_Emo()  # reinitialize
         else:
             self.emonet = None
-
-
 
     def _get_trainable_parameters(self):
         trainable_params = []
@@ -220,7 +225,7 @@ class EmoDECA(EmotionRecognitionBaseModule):
             values["AUs"] = AUs
 
         if self.emonet is not None:
-        # if 'use_coarse_image_emonet' in self.config.model.keys() and self.config.model.use_coarse_image_emonet:
+            # deprecated
             ## NULLIFY VALUES
             values2decode = { **values }
             if self.config.model.unpose_global_emonet:
@@ -243,20 +248,12 @@ class EmoDECA(EmotionRecognitionBaseModule):
             # values2decode["cam"] = None # TODO: set a meaningful camera
             values_decoded = self.deca.decode(values2decode)
 
-            # import matplotlib.pyplot as plt
-            # for i in range(values["cam"].shape[0]):
-            #     im1 = values_decoded['predicted_images'][i].detach().cpu().numpy().transpose([1, 2, 0])
-            #     im2 = values_decoded['predicted_detailed_image'][i].detach().cpu().numpy().transpose([1, 2, 0])
-            #     plt.figure()
-            #     plt.imshow(im1)
-            #     plt.figure()
-            #     plt.imshow(im2)
-
-
             if self.config.model.use_coarse_image_emonet:
+                # deprecated
                 values = self.forward_emonet(values, values_decoded, 'coarse')
 
             if self.config.model.use_detail_image_emonet:
+                # deprecated
                 values = self.forward_emonet(values, values_decoded, 'detail')
 
         # emotion['expression'] = emotion['expression']

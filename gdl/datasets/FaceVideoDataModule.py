@@ -32,6 +32,9 @@ def add_pretrained_deca_to_path():
 
 
 class FaceVideoDataModule(FaceDataModuleBase):
+    """
+    Base data module for face video datasets. Contains the functionality to unpack the videos, detect faces, segment faces, ...
+    """
 
     def __init__(self, root_dir, output_dir, processed_subfolder=None,
                  face_detector='fan',
@@ -149,38 +152,18 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def _get_path_to_sequence_frames(self, sequence_id):
         return self._get_path_to_sequence_files(sequence_id, "videos")
-        # video_file = self.video_list[sequence_id]
-        # suffix = Path(self._video_category(sequence_id)) / 'videos' /self._video_set(sequence_id) / video_file.stem
-        # out_folder = Path(self.output_dir) / suffix
-        # return out_folder
 
     def _get_path_to_sequence_detections(self, sequence_id): 
         return self._get_path_to_sequence_files(sequence_id, "detections")
-        # video_file = self.video_list[sequence_id]
-        # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
-        # out_folder = Path(self.output_dir) / suffix
-        # return out_folder
 
     def _get_path_to_sequence_landmarks(self, sequence_id):
         return self._get_path_to_sequence_files(sequence_id, "landmarks")
-        # video_file = self.video_list[sequence_id]
-        # suffix = Path(self._video_category(sequence_id)) / 'landmarks' /self._video_set(sequence_id) / video_file.stem
-        # out_folder = Path(self.output_dir) / suffix
-        # return out_folder
 
     def _get_path_to_sequence_segmentations(self, sequence_id):
         return self._get_path_to_sequence_files(sequence_id, "segmentations")
-        # video_file = self.video_list[sequence_id]
-        # suffix = Path(self._video_category(sequence_id)) / 'segmentations' /self._video_set(sequence_id) / video_file.stem
-        # out_folder = Path(self.output_dir) / suffix
-        # return out_folder
 
     def _get_path_to_sequence_emotions(self, sequence_id):
         return self._get_path_to_sequence_files(sequence_id, "emotions")
-        # video_file = self.video_list[sequence_id]
-        # suffix = Path(self._video_category(sequence_id)) / 'emotions' /self._video_set(sequence_id) / video_file.stem
-        # out_folder = Path(self.output_dir) / suffix
-        # return out_folder
 
     def _video_category(self, sequence_id):
         video_file = self.video_list[sequence_id]
@@ -263,8 +246,6 @@ class FaceVideoDataModule(FaceDataModuleBase):
         FaceVideoDataModule.save_detections(out_file,
                                             detection_fnames_all, landmark_fnames_all, centers_all, sizes_all, fid)
         print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
-
-
 
 
     def _get_emotion_net(self, device):

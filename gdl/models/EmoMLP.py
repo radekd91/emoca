@@ -17,6 +17,10 @@ from gdl.models.MLP import MLP
 
 
 class EmoMLP(EmotionRecognitionBaseModule):
+    """
+    EmoMLPmodule that was designed to predict emotion from precomputed 3DMM parameters of other 3D reconsturction methods 
+    such as MGCNet or ExpNet. It takes the 3DMM parameters on the input and feeds it throu an MLP to predict emotion.
+    """
 
     def __init__(self, config):
         super().__init__(config)

@@ -17,6 +17,9 @@ from .Swin import create_swin_backbone
 import pytorch_lightning.plugins.environments.lightning_environment as le
 
 class EmoSwinModule(EmotionRecognitionBaseModule):
+    """
+    Emotion Recognitition module which uses Swin Transformer as its backbone. Currently Resnet-50 and VGG are supported. 
+    """
 
     def __init__(self, config):
         super().__init__(config)

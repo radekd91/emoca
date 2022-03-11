@@ -16,7 +16,6 @@ from gdl.models.Renderer import SRenderY
 from gdl.models.DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
 from gdl.models.DecaDecoder import Generator, GeneratorAdaIn
 from gdl.models.DecaFLAME import FLAME, FLAMETex
-# from .MLP import MLP
 from gdl.models.EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
@@ -33,26 +32,38 @@ from omegaconf import OmegaConf, open_dict
 
 import pytorch_lightning.plugins.environments.lightning_environment as le
 
+
 class DecaMode(Enum):
-    COARSE = 1
-    DETAIL = 2
+    COARSE = 1 # when switched on, only coarse part of DECA-based networks is used
+    DETAIL = 2 # when switched on, only coarse and detail part of DECA-based networks is used 
 
 
 class DecaModule(LightningModule):
+    """
+    DecaModule is a PL module that implements DECA-inspired face reconstruction networks. 
+    """
 
     def __init__(self, model_params, learning_params, inout_params, stage_name = ""):
+        """
+        :param model_params: a DictConfig of parameters about the model itself
+        :param learning_params: a DictConfig of parameters corresponding to the learning process (such as optimizer, lr and others)
+        :param inout_params: a DictConfig of parameters about input and output (where checkpoints and visualizations are saved)
+        """
         super().__init__()
         self.learning_params = learning_params
         self.inout_params = inout_params
 
+        # detail conditioning - what is given as the conditioning input to the detail generator in detail stage training
         if 'detail_conditioning' not in model_params.keys():
-            self.detail_conditioning = ['jawpose', 'expression', 'detail']
+            # jaw, expression and detail code by default
+            self.detail_conditioning = ['jawpose', 'expression', 'detail'] 
             OmegaConf.set_struct(model_params, True)
             with open_dict(model_params):
                 model_params.detail_conditioning = self.detail_conditioning
         else:
             self.detail_conditioning = model_params.detail_conditioning
 
+        # deprecated and is not used
         if 'detailemo_conditioning' not in model_params.keys():
             self.detailemo_conditioning = []
             OmegaConf.set_struct(model_params, True)
@@ -70,14 +81,16 @@ class DecaModule(LightningModule):
             if c not in supported_conditioning_keys:
                 raise ValueError(f"Conditioning on '{c}' is not supported. Supported conditionings: {supported_conditioning_keys}")
 
-
-
+        # which type of DECA network is used
         if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
             print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
+            # vanilla DECA by default (not EMOCA)
             deca_class = DECA
         else:
+            # other type of DECA-inspired networks possible (such as ExpDECA, which is what EMOCA)
             deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
 
+        # instantiate the network
         self.deca = deca_class(config=model_params)
 
         self.mode = DecaMode[str(model_params.mode).upper()]
@@ -86,11 +99,16 @@ class DecaModule(LightningModule):
             self.stage_name = ""
         if len(self.stage_name) > 0:
             self.stage_name += "_"
+        
+        # initialize the emotion perceptual loss (used for EMOCA supervision)
         self.emonet_loss = None
-        self.au_loss = None
         self._init_emotion_loss()
+        
+        # initialize the au perceptual loss (not currently used in EMOCA)
+        self.au_loss = None
         self._init_au_loss()
 
+        # MPL regressor from the encoded space to emotion labels (not used in EMOCA but could be used for direct emotion supervision)
         if 'mlp_emotion_predictor' in self.deca.config.keys():
             # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
             self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
@@ -98,6 +116,9 @@ class DecaModule(LightningModule):
             self.emotion_mlp = None
 
     def _init_emotion_loss(self):
+        """
+        Initialize the emotion perceptual loss (used for EMOCA supervision)
+        """
         if 'emonet_weight' in self.deca.config.keys() and bool(self.deca.config.emonet_model_path):
             if self.emonet_loss is not None:
                 emoloss_force_override = True if 'emoloss_force_override' in self.deca.config.keys() and self.deca.config.emoloss_force_override else False
@@ -136,6 +157,9 @@ class DecaModule(LightningModule):
             self.emonet_loss = None
 
     def _init_au_loss(self):
+        """
+        Initialize the au perceptual loss (not currently used in EMOCA)
+        """
         if 'au_loss' in self.deca.config.keys():
             if self.au_loss is not None:
                 force_override = True if 'force_override' in self.deca.config.au_loss.keys() \
@@ -157,6 +181,9 @@ class DecaModule(LightningModule):
             self.au_loss = None
 
     def reconfigure(self, model_params, inout_params, learning_params, stage_name="", downgrade_ok=False, train=True):
+        """
+        Reconfigure the model. Usually used to switch between detail and coarse stages (which have separate configs)
+        """
         if (self.mode == DecaMode.DETAIL and model_params.mode != DecaMode.DETAIL) and not downgrade_ok:
             raise RuntimeError("You're switching the EMOCA mode from DETAIL to COARSE. Is this really what you want?!")
         self.inout_params = inout_params
@@ -249,8 +276,10 @@ class DecaModule(LightningModule):
     def _encode_flame(self, images):
         if self.mode == DecaMode.COARSE or \
                 (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
+            # forward pass with gradients (for coarse stage (used), or detail stage with coarse training (not used))
             parameters = self.deca._encode_flame(images)
         elif self.mode == DecaMode.DETAIL:
+            # in detail stage, the coarse forward pass does not need gradients
             with torch.no_grad():
                 parameters = self.deca._encode_flame(images)
         else:
@@ -263,7 +292,9 @@ class DecaModule(LightningModule):
                                   expcode, posecode, shapecode, lightcode, texcode,
                                   images, cam, lmk, masks, va, expr7, affectnetexp,
                                   detailcode=None, detailemocode=None, exprw=None):
-        # THIS RING EXCHANGE IS DESIGNED FOR
+        """
+        Deprecated. Expression ring exchange is not used in EMOCA (nor DECA).
+        """
         new_order = np.array([np.random.permutation(K) + i * K for i in range(original_batch_size)])
         new_order = new_order.flatten()
         expcode_new = expcode[new_order]
@@ -339,10 +370,16 @@ class DecaModule(LightningModule):
 
 
     def encode(self, batch, training=True) -> dict:
+        """
+        Forward encoding pass of the model. Takes a batch of images and returns the corresponding latent codes for each image.
+        :param batch: Batch of images to encode. batch['image'] [batch_size, ring_size, 3, image_size, image_size]. 
+        For a training forward pass, additional corresponding data are necessery such as 'landmarks' and 'masks'. 
+        For a testing pass, the images suffice. 
+        :param training: Whether the forward pass is for training or testing.
+        """
         codedict = {}
         original_batch_size = batch['image'].shape[0]
 
-        # [B, K, 3, size, size] ==> [BxK, 3, size, size]
         images = batch['image']
 
         if len(images.shape) == 5:
@@ -352,8 +389,7 @@ class DecaModule(LightningModule):
         else:
             raise RuntimeError("Invalid image batch dimensions.")
 
-        # print("Batch size!")
-        # print(images.shape)
+        # [B, K, 3, size, size] ==> [BxK, 3, size, size]
         images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
 
         if 'landmark' in batch.keys():
@@ -364,46 +400,47 @@ class DecaModule(LightningModule):
             masks = batch['mask']
             masks = masks.view(-1, images.shape[-2], images.shape[-1])
 
-        #TODO: TAKE CARE OF the CASE WHEN va, expr7 and au8 are NaN (the label does not exist)!!!
+        # valence / arousal - not necessary unless we want to use VA for supervision (not done in EMOCA)
         if 'va' in batch:
             va = batch['va']
             va = va.view(-1, va.shape[-1])
         else:
             va = None
 
+        # 7 basic expression - not necessary unless we want to use expression for supervision (not done in EMOCA or DECA)
         if 'expr7' in batch:
             expr7 = batch['expr7']
             expr7 = expr7.view(-1, expr7.shape[-1])
         else:
             expr7 = None
 
+        # affectnet basic expression - not necessary unless we want to use expression for supervision (not done in EMOCA or DECA)
         if 'affectnetexp' in batch:
             affectnetexp = batch['affectnetexp']
             affectnetexp = affectnetexp.view(-1, affectnetexp.shape[-1])
         else:
             affectnetexp = None
 
+        # expression weights if supervising by expression is used (to balance the classification loss) - not done in EMOCA or DECA
         if 'expression_weight' in batch:
             exprw = batch['expression_weight']
             exprw = exprw.view(-1, exprw.shape[-1])
         else:
             exprw = None
 
+
+        # 1) COARSE STAGE
+        # forward pass of the coarse encoder
         shapecode, texcode, expcode, posecode, cam, lightcode = self._encode_flame(images)
 
-        # #TODO: figure out if we want to keep this code block:
-        # if self.config.model.jaw_type == 'euler':
-        #     # if use euler angle
-        #     euler_jaw_pose = posecode[:, 3:].clone()  # x for yaw (open mouth), y for pitch (left ang right), z for roll
-        #     # euler_jaw_pose[:,0] = 0.
-        #     # euler_jaw_pose[:,1] = 0.
-        #     # euler_jaw_pose[:,2] = 30.
-        #     posecode[:, 3:] = batch_euler2axis(euler_jaw_pose)
-
         if training:
+            # If training, we employ the disentanglement strategy
             if self.mode == DecaMode.COARSE:
-                ### shape constraints
+
                 if self.deca.config.shape_constrain_type == 'same':
+                    ## Enforce that all identity shape codes within ring are the same. The batch is duplicated 
+                    ## and the duplicated part's shape codes are shuffled.
+
                     # reshape shapecode => [B, K, n_shape]
                     # shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
                     shapecode_idK = shapecode.view(original_batch_size, K, -1)
@@ -413,6 +450,7 @@ class DecaModule(LightningModule):
                     shapecode_new = shapecode_mean[:, None, :].repeat(1, K, 1)
                     shapecode = shapecode_new.view(-1, self.deca.config.model.n_shape)
                 elif self.deca.config.shape_constrain_type == 'exchange':
+                    ## Shuffle identitys shape codes within ring (they should correspond to the same identity)
                     '''
                     make sure s0, s1 is something to make shape close
                     the difference from ||so - s1|| is 
@@ -441,6 +479,7 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
                 elif self.deca.config.shape_constrain_type == 'shuffle_expression':
+                    ## DEPRECATED, NOT USED IN EMOCA OR DECA
                     new_order = np.random.permutation(K*original_batch_size)
                     old_order = np.arange(K*original_batch_size)
                     while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
@@ -482,6 +521,7 @@ class DecaModule(LightningModule):
                         expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
 
                 elif self.deca.config.shape_constrain_type == 'shuffle_shape':
+                    ## The shape codes are shuffled without duplication
                     new_order = np.random.permutation(K*original_batch_size)
                     old_order = np.arange(K*original_batch_size)
                     while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
@@ -512,9 +552,10 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
-
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'same':
+                    ## NOT USED IN EMOCA OR DECA, deprecated
+
                     # reshape shapecode => [B, K, n_shape]
                     # shapecode_idK = shapecode.view(self.batch_size, self.deca.K, -1)
                     expcode_idK = expcode.view(original_batch_size, K, -1)
@@ -526,6 +567,7 @@ class DecaModule(LightningModule):
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
+                    ## NOT USED IN EMOCA OR DECA, deprecated
                     expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, _, exprw = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
@@ -535,14 +577,21 @@ class DecaModule(LightningModule):
                     #                                   images, cam, lmk, masks, va, expr7, affectnetexp,
                     #                                   detailcode=None, detailemocode=None, exprw=None):
 
-        # -- detail
+        # 2) DETAIL STAGE
         if self.mode == DecaMode.DETAIL:
             all_detailcode = self.deca.E_detail(images)
+
+            # identity-based detail code
             detailcode = all_detailcode[:, :self.deca.n_detail]
+
+            # detail emotion code is deprecated and will be empty
             detailemocode = all_detailcode[:, self.deca.n_detail:(self.deca.n_detail + self.deca.n_detail_emo)]
 
             if training:
+                # If training, we employ the disentanglement strategy
                 if self.deca.config.detail_constrain_type == 'exchange':
+                    # Identity within the same ring should be the same, so they should have the same code. 
+                    # This can be enforced by shuffling. The batch is duplicated and the duplicated part's code shuffled
                     '''
                     make sure s0, s1 is something to make shape close
                     the difference from ||so - s1|| is 
@@ -576,6 +625,7 @@ class DecaModule(LightningModule):
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
                 elif self.deca.config.detail_constrain_type == 'shuffle_expression':
+                    ## Deprecated and not used in EMOCA or DECA
                     new_order = np.random.permutation(K*original_batch_size)
                     old_order = np.arange(K*original_batch_size)
                     while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
@@ -623,6 +673,7 @@ class DecaModule(LightningModule):
                         expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
 
                 elif self.deca.config.detail_constrain_type == 'shuffle_shape':
+                    ## Shuffles teh shape code without duplicating the batch
                     new_order = np.random.permutation(K*original_batch_size)
                     old_order = np.arange(K*original_batch_size)
                     while (new_order == old_order).any(): # ugly hacky way of assuring that every element is permuted
@@ -718,6 +769,11 @@ class DecaModule(LightningModule):
 
 
     def decode(self, codedict, training=True, **kwargs) -> dict:
+        """
+        Forward decoding pass of the model. Takes the latent code predicted by the encoding stage and reconstructs and renders the shape.
+        :param codedict: Batch dict of the predicted latent codes
+        :param training: Whether the forward pass is for training or testing.
+        """
         shapecode = codedict['shapecode']
         expcode = codedict['expcode']
         posecode = codedict['posecode']
@@ -732,6 +788,7 @@ class DecaModule(LightningModule):
 
         effective_batch_size = images.shape[0]  # this is the current batch size after all training augmentations modifications
 
+        # 1) Reconstruct the face mesh
         # FLAME - world space
         verts, landmarks2d, landmarks3d = self.deca.flame(shape_params=shapecode, expression_params=expcode,
                                                           pose_params=posecode)
@@ -744,7 +801,7 @@ class DecaModule(LightningModule):
 
         albedo = self.deca.flametex(texcode)
 
-        # ------ rendering
+        # 2) Render the coarse image
         ops = self.deca.render(verts, trans_verts, albedo, lightcode)
         # mask
         mask_face_eye = F.grid_sample(self.deca.uv_face_eye_mask.expand(effective_batch_size, -1, -1, -1),
@@ -787,13 +844,14 @@ class DecaModule(LightningModule):
         else:
             images_resized = images
 
-        if segmentation_type == "gt":
+        # what type of segmentation we use
+        if segmentation_type == "gt": # GT stands for external segmetnation predicted by face parsing or similar
             masks = masks[:, None, :, :]
-        elif segmentation_type == "rend":
+        elif segmentation_type == "rend": # mask rendered as a silhouette of the face mesh
             masks = mask_face_eye * ops['alpha_images']
-        elif segmentation_type == "intersection":
+        elif segmentation_type == "intersection": # intersection of the two above
             masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
-        elif segmentation_type == "union":
+        elif segmentation_type == "union": # union of the first two options
             masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
         else:
             raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
@@ -812,15 +870,18 @@ class DecaModule(LightningModule):
         else:
             raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
+        # 3) Render the detail image
         if self.mode == DecaMode.DETAIL:
             detailcode = codedict['detailcode']
             detailemocode = codedict['detailemocode']
-            #TODO: what are you conditioning on?
 
+            # a) Create the detail conditioning lists
             detail_conditioning_list = self._create_conditioning_lists(codedict, self.detail_conditioning)
             detailemo_conditioning_list = self._create_conditioning_lists(codedict, self.detailemo_conditioning)
             final_detail_conditioning_list = detail_conditioning_list + detailemo_conditioning_list
 
+
+            # b) Pass the detail code and the conditions through the detail generator to get displacement UV map
             if isinstance(self.deca.D_detail, Generator):
                 uv_z = self.deca.D_detail(torch.cat(final_detail_conditioning_list, dim=1))
             elif isinstance(self.deca.D_detail, GeneratorAdaIn):
@@ -829,6 +890,7 @@ class DecaModule(LightningModule):
             else:
                 raise ValueError(f"This class of generarator is not supported: '{self.deca.D_detail.__class__.__name__}'")
 
+            # if there is a displacement mask, apply it (DEPRECATED and not USED in DECA or EMOCA)
             if hasattr(self.deca, 'displacement_mask') and self.deca.displacement_mask is not None:
                 if 'apply_displacement_masks' in self.deca.config.keys() and self.deca.config.apply_displacement_masks:
                     uv_z = uv_z * self.deca.displacement_mask
@@ -885,8 +947,8 @@ class DecaModule(LightningModule):
             predicted_detailed_image = None
 
 
-        ## NEURAL RENDERING
-        # if hasattr(self, 'image_translator') and self.image_translator is not None:
+        ## 4) (Optional) NEURAL RENDERING - not used in neither DECA nor EMOCA
+        # If neural rendering is enabled, the differentiable rendered synthetic images are translated using an image translation net (such as StarGan)
         if self.deca._has_neural_rendering():
             predicted_translated_image = self.deca.image_translator(
                 {
@@ -1771,6 +1833,8 @@ class DecaModule(LightningModule):
 
     def compute_loss(self, values, batch, training=True, testing=False) -> (dict, dict):
         """
+        The function used to compute the loss on a training batch.
+        :
         training should be set to true when calling from training_step only
         """
         losses, metrics = self._compute_loss(values, batch, training=training, testing=testing)
@@ -1799,6 +1863,12 @@ class DecaModule(LightningModule):
         self.train_dict_list += [d]
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
+        """
+        Training step override of pytorch lightning module. It makes the encoding, decoding passes, computes the loss and logs the losses/visualizations. 
+        :param batch: Batch of images to encode. batch['image'] [batch_size, ring_size, 3, image_size, image_size]. 
+        For a training forward pass, additional corresponding data are necessery such as 'landmarks' and 'masks'. 
+        :batch_idx batch index
+        """
         with torch.no_grad():
             training = False
             values = self.encode(batch, training=training)
@@ -1857,6 +1927,13 @@ class DecaModule(LightningModule):
         return prefix
 
     def test_step(self, batch, batch_idx, dataloader_idx=None):
+                """
+        Testing step override of pytorch lightning module. It makes the encoding, decoding passes, computes the loss and logs the losses/visualizations
+        without gradient  
+        :param batch: Batch of images to encode. batch['image'] [batch_size, ring_size, 3, image_size, image_size]. 
+        For a training forward pass, additional corresponding data are necessery such as 'landmarks' and 'masks'. 
+        :batch_idx batch index
+        """
         prefix = self._get_logging_prefix()
         losses_and_metrics_to_log = {}
 
@@ -1904,6 +1981,7 @@ class DecaModule(LightningModule):
             uv_detail_normals = values['uv_detail_normals']
 
         if self.deca.config.test_vis_frequency > 0:
+            # Log visualizations every once in a while
             if batch_idx % self.deca.config.test_vis_frequency == 0:
                 # if self.trainer.is_global_zero:
                 visualizations, grid_image = self._visualization_checkpoint(values['verts'], values['trans_verts'], values['ops'],
@@ -1921,6 +1999,12 @@ class DecaModule(LightningModule):
 
 
     def training_step(self, batch, batch_idx, *args, **kwargs): #, debug=True):
+        """
+        Training step override of pytorch lightning module. It makes the encoding, decoding passes, computes the loss and logs the losses/visualizations. 
+        :param batch: Batch of images to encode. batch['image'] [batch_size, ring_size, 3, image_size, image_size]. 
+        For a training forward pass, additional corresponding data are necessery such as 'landmarks' and 'masks'. 
+        :batch_idx batch index
+        """
         values = self.encode(batch, training=True)
         values = self.decode(values, training=True)
         losses_and_metrics = self.compute_loss(values, batch, training=True)
@@ -1970,7 +2054,8 @@ class DecaModule(LightningModule):
         # return losses_and_metrics
         return losses_and_metrics['loss']
 
-    ### STEP ENDS ARE PROBABLY NOT NECESSARY BUT KEEP AN EYE ON THEM IF MULI-GPU TRAINING DOESN'T WORKs
+
+    ### STEP ENDS ARE PROBABLY NOT NECESSARY BUT KEEP AN EYE ON THEM IF MULI-GPU TRAINING DOESN'T WORK
     # def training_step_end(self, batch_parts):
     #     return self._step_end(batch_parts)
     #
@@ -2238,21 +2323,38 @@ class DecaModule(LightningModule):
 
 
 class DECA(torch.nn.Module):
+    """
+    The original DECA class which contains the encoders, FLAME decoder and the detail decoder.
+    """
 
     def __init__(self, config):
+        """
+        :config corresponds to a model_params from DecaModule
+        """
         super().__init__()
+        
+        # ID-MRF perceptual loss (kept here from the original DECA implementation)
         self.perceptual_loss = None
+        
+        # Face Recognition loss
         self.id_loss = None
+
+        # VGG feature loss
         self.vgg_loss = None
+        
         self._reconfigure(config)
         self._reinitialize()
 
     def _reconfigure(self, config):
         self.config = config
+        
         self.n_param = config.n_shape + config.n_tex + config.n_exp + config.n_pose + config.n_cam + config.n_light
+        # identity-based detail code 
         self.n_detail = config.n_detail
+        # emotion-based detail code (deprecated, not use by DECA or EMOCA)
         self.n_detail_emo = config.n_detail_emo if 'n_detail_emo' in config.keys() else 0
 
+        # count the size of the conidition vector
         if 'detail_conditioning' in self.config.keys():
             self.n_cond = 0
             if 'globalpose' in self.config.detail_conditioning:
@@ -2278,6 +2380,11 @@ class DECA(torch.nn.Module):
         self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
 
     def _init_deep_losses(self):
+        """
+        Initialize networks for deep losses
+        """
+        # TODO: ideally these networks should be moved out the DECA class and into DecaModule, 
+        # but that would break backwards compatility with the original DECA and would not be able to load DECA's weights
         if 'mrfwr' not in self.config.keys() or self.config.mrfwr == 0:
             self.perceptual_loss = None
         else:
@@ -2315,6 +2422,7 @@ class DECA(torch.nn.Module):
         uv_face_eye_mask = F.interpolate(mask, [self.config.uv_size, self.config.uv_size])
         self.register_buffer('uv_face_eye_mask', uv_face_eye_mask)
 
+        # displacement mask is deprecated and not used by DECA or EMOCA
         if 'displacement_mask' in self.config.keys():
             displacement_mask_ = 1-np.load(self.config.displacement_mask).astype(np.float32)
             # displacement_mask_ = np.load(self.config.displacement_mask).astype(np.float32)
@@ -2371,12 +2479,12 @@ class DECA(torch.nn.Module):
             del self.D_detail # just to make sure we free the CUDA memory, probably not necessary
 
         if not "detail_conditioning_type" in self.config.keys() or str(self.config.detail_conditioning_type).lower() == "concat":
-            # concatenates detail latent and conditioning
+            # concatenates detail latent and conditioning (this one is used by DECA/EMOCA)
             print("Creating classic detail generator.")
             self.D_detail = Generator(latent_dim=self.n_detail + self.n_detail_emo + self.n_cond, out_channels=1, out_scale=0.01,
                                       sample_mode='bilinear')
         elif str(self.config.detail_conditioning_type).lower() == "adain":
-            # conditioning passed in through adain layers
+            # conditioning passed in through adain layers (this one is experimental and not currently used)
             print("Creating AdaIn detail generator.")
             self.D_detail = GeneratorAdaIn(self.n_detail + self.n_detail_emo,  self.n_cond, out_channels=1, out_scale=0.01,
                                       sample_mode='bilinear')
@@ -2384,7 +2492,7 @@ class DECA(torch.nn.Module):
             raise NotImplementedError(f"Detail conditioning invalid: '{self.config.detail_conditioning_type}'")
 
     def _create_model(self):
-        # coarse shape
+        # 1) build coarse encoder
         e_flame_type = 'ResnetEncoder'
         if 'e_flame_type' in self.config.keys():
             e_flame_type = self.config.e_flame_type
@@ -2398,7 +2506,8 @@ class DECA(torch.nn.Module):
 
         self.flame = FLAME(self.config)
         self.flametex = FLAMETex(self.config)
-        # detail modeling
+        
+        # 2) build detail encoder
         e_detail_type = 'ResnetEncoder'
         if 'e_detail_type' in self.config.keys():
             e_detail_type = self.config.e_detail_type
@@ -2410,7 +2519,6 @@ class DECA(torch.nn.Module):
         else:
             raise ValueError(f"Invalid 'e_detail_type'={e_detail_type}")
         self._create_detail_generator()
-
         # self._load_old_checkpoint()
 
     def _get_coarse_trainable_parameters(self):
@@ -2459,13 +2567,17 @@ class DECA(torch.nn.Module):
             self.D_detail.eval()
             # print("Setting D_detail to eval")
 
-        # these are set to eval no matter what, they're never being trained
+        # these are set to eval no matter what, they're never being trained (the FLAME shape and texture spaces are pretrained)
         self.flame.eval()
         self.flametex.eval()
         return self
 
 
     def _load_old_checkpoint(self):
+        """
+        Loads the DECA model weights from the original DECA implementation: 
+        https://github.com/YadiraF/DECA 
+        """
         if self.config.resume_training:
             model_path = self.config.pretrained_modelpath
             print(f"Loading model state from '{model_path}'")
@@ -2504,6 +2616,9 @@ class DECA(torch.nn.Module):
         return code_list
 
     def displacement2normal(self, uv_z, coarse_verts, coarse_normals, detach=True):
+        """
+        Converts the displacement uv map (uv_z) and coarse_verts to a normal map coarse_normals. 
+        """
         batch_size = uv_z.shape[0]
         uv_coarse_vertices = self.render.world2uv(coarse_verts)#.detach()
         if detach:
@@ -2610,23 +2725,34 @@ class DECA(torch.nn.Module):
 
 from gdl.models.EmoNetRegressor import EmoNetRegressor, EmonetRegressorStatic
 
+
 class ExpDECA(DECA):
+    """
+    This is the EMOCA class (previously ExpDECA). This class derives from DECA and add EMOCA-related functionality. 
+    Such as a separate expression decoder and related.
+    """
 
     def _create_model(self):
+        # 1) Initialize DECA
         super()._create_model()
         # E_flame should be fixed for expression EMOCA
         self.E_flame.requires_grad_(False)
+        
+        # 2) add expression decoder
         if self.config.expression_backbone == 'deca_parallel':
-            ## Attach a parallel flow of FCs onto deca coarse backbone
+            ## a) Attach a parallel flow of FCs onto the original DECA coarse backbone. (Only the second FC head is trainable)
             self.E_expression = SecondHeadResnet(self.E_flame, self.n_exp_param, 'same')
         elif self.config.expression_backbone == 'deca_clone':
+            ## b) Clones the original DECA coarse decoder (and the entire decoder will be trainable) - This is in final EMOCA.
             #TODO this will only work for Resnet. Make this work for the other backbones (Swin) as well.
             self.E_expression = ResnetEncoder(self.n_exp_param)
             # clone parameters of the ResNet
             self.E_expression.encoder.load_state_dict(self.E_flame.encoder.state_dict())
         elif self.config.expression_backbone == 'emonet_trainable':
+            # Trainable EmoNet instead of Resnet (deprecated)
             self.E_expression = EmoNetRegressor(self.n_exp_param)
         elif self.config.expression_backbone == 'emonet_static':
+            # Frozen EmoNet with a trainable head instead of Resnet (deprecated)
             self.E_expression = EmonetRegressorStatic(self.n_exp_param)
         else:
             raise ValueError(f"Invalid expression backbone: '{self.config.expression_backbone}'")
@@ -2691,7 +2817,7 @@ class ExpDECA(DECA):
     def train(self, mode: bool = True):
         super().train(mode)
 
-        # for expression deca, we are not training teh resnet feature extractor plus the identity/light/texture regressor
+        # for expression deca, we are not training the resnet feature extractor plus the identity/light/texture regressor
         self.E_flame.eval()
 
         if mode:
@@ -2722,9 +2848,14 @@ class ExpDECA(DECA):
 
 
 def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None):
+    """
+    Function that instantiates a DecaModule from checkpoint or config
+    """
+
     if checkpoint is None:
         deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
         if cfg.model.resume_training:
+            # This load the DECA model weights from the original DECA release
             print("[WARNING] Loading EMOCA checkpoint pretrained by the old code")
             deca.deca._load_old_checkpoint()
     else:

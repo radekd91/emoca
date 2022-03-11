@@ -70,28 +70,6 @@ def create_single_dm(cfg, data_class):
                 dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None,
                 use_gt=cfg.data.use_gt if "use_gt" in cfg.data.keys() else True,
             )
-        # elif data_class == 'AffectNetDataModuleValTest':
-        #     dm = AffectNetDataModuleValTest(
-        #         input_dir=cfg.data.input_dir,
-        #         output_dir=cfg.data.output_dir,
-        #         processed_subfolder=cfg.data.processed_subfolder,
-        #         ignore_invalid=False if "ignore_invalid" not in cfg.data.keys() else cfg.data.ignore_invalid,
-        #         mode=cfg.data.mode,
-        #         face_detector=cfg.data.face_detector,
-        #         face_detector_threshold=cfg.data.face_detector_threshold,
-        #         image_size=cfg.data.image_size,
-        #         scale=cfg.data.scale,
-        #         train_batch_size=cfg.learning.batch_size_train,
-        #         val_batch_size=cfg.learning.batch_size_val,
-        #         test_batch_size=cfg.learning.batch_size_test,
-        #         num_workers=cfg.data.num_workers,
-        #         augmentation=augmentation,
-        #         ring_type=ring_type,
-        #         ring_size=ring_size,
-        #         drop_last=drop_last,
-        #         sampler="uniform" if "sampler" not in cfg.data.keys() else cfg.data.sampler,
-        #         processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
-        #     )
         else:
             raise ValueError(f"Uknown data module class '{data_class}'")
         sequence_name = "AffNet"
@@ -320,14 +298,6 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=-1, resume_from_previous = Tru
     stages = ["train", "test", "train", "test"]
     stages_prefixes = ["", "", "", ""]
 
-    # CAREFUL: debug hacks that have no business being commited
-    # configs = [cfg_detail, cfg_detail]
-    # stages = ["train", "test"]
-    # stages_prefixes = ["", ""]
-    # configs = [cfg_coarse, cfg_detail]
-    # stages = ["train", "train",]
-    # stages_prefixes = ["", ""]
-
     if start_i >= 0 or force_new_location:
         if resume_from_previous:
             resume_i = start_i - 1
@@ -486,6 +456,7 @@ def resume_training(run_path, start_at_stage, resume_from_previous, force_new_lo
 
 def main():
     configured = False
+    num_workers = 0
 
     if len(sys.argv) <= 2:
         coarse_conf = "deca_train_coarse"
@@ -496,8 +467,8 @@ def main():
             # 'model/settings=coarse_train_expdeca',
             'model/settings=coarse_train_expdeca_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
-            'model.expression_constrain_type=exchange',
-            'model.expression_constrain_use_jaw_pose=True',
+            # 'model.expression_constrain_type=exchange',
+            # 'model.expression_constrain_use_jaw_pose=True',
             'model.expression_constrain_use_global_pose=False',
             # 'model.use_geometric_losses_expression_exchange=True',
 
@@ -508,10 +479,10 @@ def main():
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
 
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
-            f'data.ring_type=gt_va',
-             'data.ring_size=4',
-             'learning/batching=single_gpu_expdeca_coarse_ring',
-            'data.num_workers=0',
+            # f'data.ring_type=gt_va',
+            #  'data.ring_size=4',
+            #  'learning/batching=single_gpu_expdeca_coarse_ring',
+            f'data.num_workers={num_workers}',
             'model.resume_training=True', # load the original EMOCA model
             'learning.early_stopping.patience=5',
             'learning/logging=none',
@@ -523,8 +494,8 @@ def main():
             'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             'model.expression_constrain_type=exchange',
-            'model.expression_constrain_use_jaw_pose=True',
-            'model.expression_constrain_use_global_pose=False',
+            # 'model.expression_constrain_use_jaw_pose=True',
+            # 'model.expression_constrain_use_global_pose=False',
             # 'model.use_geometric_losses_expression_exchange=True',
             # '+model.mlp_emotion_predictor.detach_shape=True',
             # '+model.mlp_emotion_predictor.detach_expression=True',
@@ -532,12 +503,12 @@ def main():
             # '+model.mlp_emotion_predictor.detach_jaw=True',
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
-            f'data.ring_type=gt_va',
-             'learning/batching=single_gpu_expdeca_detail_ring',
-             'data.ring_size=4',
+            # f'data.ring_type=gt_va',
+            #  'learning/batching=single_gpu_expdeca_detail_ring',
+            #  'data.ring_size=4',
             'learning.early_stopping.patience=5',
             'learning/logging=none',
-            'data.num_workers=0',
+            f'data.num_workers={num_workers}',
             'learning.batch_size_train=4',
         ]
 

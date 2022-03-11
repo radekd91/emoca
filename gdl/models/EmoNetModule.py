@@ -13,6 +13,10 @@ import pytorch_lightning.plugins.environments.lightning_environment as le
 
 
 class EmoNetModule(EmotionRecognitionBaseModule):
+    """
+    Emotion analysis using the EmoNet architecture. 
+    https://github.com/face-analysis/emonet 
+    """
 
     def __init__(self, config):
         super().__init__(config)

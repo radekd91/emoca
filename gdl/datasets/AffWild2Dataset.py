@@ -60,6 +60,10 @@ class AU8(Enum):
 
 
 class AffWild2DMBase(FaceVideoDataModule):
+    """
+    A data module which implements a wrapper for the AffWild2 dataset.
+    https://ibug.doc.ic.ac.uk/resources/aff-wild2/ 
+    """
 
     def _get_processed_annotations_for_sequence(self, sid):
         pass

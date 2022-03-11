@@ -20,6 +20,9 @@ def swin_cfg_from_name(name):
 
 
 def create_swin_backbone(swin_cfg, num_classes, img_size, load_pretrained_swin=False, pretrained_model=None):
+    """
+    Returns a SWIN backbone with a head of size num_classes.
+    """
 
     with open_dict(swin_cfg):
         swin_cfg.MODEL.NUM_CLASSES = num_classes

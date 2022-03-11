@@ -12,6 +12,7 @@ import sys
 import adabound
 from gdl.datasets.EmotioNetDataModule import ActionUnitTypes
 
+
 def loss_from_cfg(config, loss_name):
     if loss_name in config.keys():
         if isinstance(config[loss_name], str):
@@ -30,8 +31,14 @@ def loss_from_cfg(config, loss_name):
 
 
 class EmotionRecognitionBaseModule(pl.LightningModule):
+    """
+    EmotionRecognitionBaseModule is a base class for emotion prediction (valence and arousal, expression classification and/or action units)
+    """
 
     def __init__(self, config):
+        """
+        
+        """
         super().__init__()
         self.config = config
 

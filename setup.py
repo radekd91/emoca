@@ -1,6 +1,6 @@
 import setuptools
 
-requirements = open("requirements.txt").read().splitlines()
+requirements = open("requirements36.txt").read().splitlines()
 # dev_requirements = open("requirements_dev.txt").read().splitlines()
 
 with open("README.md", "r") as fh:
@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="GDL",
-    description="Radek's messy library for deep learning gdl_apps. Mostly with focus on 2D to 3D DL",
+    description="Official release of code accompanying EMOCA, CVPR2022",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Radek Danecek",
