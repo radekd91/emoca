@@ -5,17 +5,20 @@ cd assets
 echo "Downloading assets to run EMOCA..." 
 
 echo "Downloading EMOCA..."
-wget https://owncloud.tuebingen.mpg.de/index.php/s/NaGoq8Jt4BXcTDN/download -O EMOCA.zip
+ wget https://download.is.tue.mpg.de/emoca/assets/EMOCA/models/EMOCA.zip -O EMOCA.zip
+mkdir -p EMOCA/models 
+cd EMOCA/models 
 echo "Extracting EMOCA..."
 unzip EMOCA.zip
+cd ../../
 
 echo "Downloading DECA..."
-wget https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46/download -O DECA.zip
+wget https://download.is.tue.mpg.de/emoca/assets/DECA.zip -O DECA.zip
 echo "Extracting DECA..."
 unzip DECA.zip
 
 echo "Downloading FLAME..."
-wget https://owncloud.tuebingen.mpg.de/index.php/s/yZiYCGZjNw37jYw/download -O FLAME.zip
+wget https://download.is.tue.mpg.de/emoca/assets/FLAME.zip -O FLAME.zip
 echo "Extracting FLAME..."
 unzip FLAME.zip
 

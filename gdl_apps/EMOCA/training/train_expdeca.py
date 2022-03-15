@@ -1,3 +1,23 @@
+"""
+Author: Radek Danecek
+Copyright (c) 2022, Radek Danecek
+All rights reserved.
+
+# Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V. (MPG) is
+# holder of all proprietary rights on this computer program.
+# Using this computer program means that you agree to the terms 
+# in the LICENSE file included with this software distribution. 
+# Any use not explicitly granted by the LICENSE is prohibited.
+#
+# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
+# der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
+# for Intelligent Systems. All rights reserved.
+#
+# For comments or questions, please email us at emoca@tue.mpg.de
+# For commercial licensing contact, please contact ps-license@tuebingen.mpg.de
+"""
+
+
 from gdl_apps.EMOCA.training.test_and_finetune_deca import single_stage_deca_pass, get_checkpoint_with_kwargs, create_logger
 from gdl.datasets.DecaDataModule import DecaDataModule
 from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetDataModuleValTest, \
@@ -485,7 +505,7 @@ def main():
             f'data.num_workers={num_workers}',
             'model.resume_training=True', # load the original EMOCA model
             'learning.early_stopping.patience=5',
-            'learning/logging=none',
+            # 'learning/logging=none',
             'learning.batch_size_train=4',
                               ]
         detail_override = [
@@ -493,7 +513,7 @@ def main():
             # 'model/settings=detail_train_emonet',
             'model/settings=detail_train_expdeca_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
-            'model.expression_constrain_type=exchange',
+            # 'model.expression_constrain_type=exchange',
             # 'model.expression_constrain_use_jaw_pose=True',
             # 'model.expression_constrain_use_global_pose=False',
             # 'model.use_geometric_losses_expression_exchange=True',
@@ -507,7 +527,7 @@ def main():
             #  'learning/batching=single_gpu_expdeca_detail_ring',
             #  'data.ring_size=4',
             'learning.early_stopping.patience=5',
-            'learning/logging=none',
+            # 'learning/logging=none',
             f'data.num_workers={num_workers}',
             'learning.batch_size_train=4',
         ]

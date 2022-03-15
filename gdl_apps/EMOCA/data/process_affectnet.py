@@ -1,5 +1,24 @@
-from gdl.datasets.AffectNetDataModule import AffectNetDataModule
+"""
+Author: Radek Danecek
+Copyright (c) 2022, Radek Danecek
+All rights reserved.
 
+# Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V. (MPG) is
+# holder of all proprietary rights on this computer program.
+# Using this computer program means that you agree to the terms 
+# in the LICENSE file included with this software distribution. 
+# Any use not explicitly granted by the LICENSE is prohibited.
+#
+# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
+# der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
+# for Intelligent Systems. All rights reserved.
+#
+# For comments or questions, please email us at emoca@tue.mpg.de
+# For commercial licensing contact, please contact ps-license@tuebingen.mpg.de
+"""
+
+
+from gdl.datasets.AffectNetDataModule import AffectNetDataModule
 
 
 def main(): 
@@ -27,16 +46,16 @@ def main():
 
     dm = AffectNetDataModule(
             downloaded_affectnet_folder,
-             "/is/cluster/work/rdanecek/data/affectnet/",
-             processed_subfolder=processed_subfolder,
-             mode="manual",
-             scale=1.25,
-             ignore_invalid=True,
+            processed_output_folder,
+            processed_subfolder=processed_subfolder,
+            mode="manual",
+            scale=1.25,
+            ignore_invalid=True,
             )
 
     if sid is not None:
         if sid >= dm.num_subsets: 
-            print("Subset index is larger than number of subsets")
+            print(f"Subset index {sid} is larger than number of subsets. Terminating".)
             sys.exit()
         dm._detect_landmarks_and_segment_subset(dm.subset_size * sid, min((sid + 1) * dm.subset_size, len(dm.df)))
     else:

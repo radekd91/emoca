@@ -12,7 +12,7 @@ Follow the steps at the root of this repo. If for some reason the environment fr
 ## Pre-trained models 
 All the provided models have been trained on AffectNet, either from scratch (the image-based backbones) or finetuned based on fixed pretrained face reconstruction nets. 
 
-Use `download_assets.sh` to download and unzip them or do it manually from [here](https://owncloud.tuebingen.mpg.de/index.php/s/WHjQE7t8BE4Re56/download)
+Use `download_assets.sh` to download and unzip them. 
 
 
 ## Demos 
@@ -21,7 +21,7 @@ Use `download_assets.sh` to download and unzip them or do it manually from [here
 
 If you want to run Emotion Recognition on images, run the following
 ```python 
-python demos/test_emoca_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|EMOCA-emorec)
+python demos/test_emoca_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|SWIN-B|EMOCA-emorec|EMOCA_detail-emorec)
 ```
 The script will detect faces in every image in the folder output the results that you specify with `--save_images`, `--save_codes`, `--save_mesh` to the output folder. 
 
@@ -38,4 +38,3 @@ Coming soon
 ## Citation 
 If you use this work in your publication, please cite the following publications (TODO: add bibtex): 
 - EMOCA
-- AffectNet 
