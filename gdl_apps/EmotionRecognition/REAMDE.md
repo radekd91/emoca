@@ -6,6 +6,10 @@ This project accompanies the EMOCA project. Here we provide training and testing
     - vanilla vision backbones (ResNet, VGG, SWIN)
 - EMOCA-based emotion recognotion 
 
+The provided models were trained and tested on AffectNet.
+
+ ![emotion_recog](emotion_recognition.png)
+
 ## Installation 
 Follow the steps at the root of this repo. If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`. After that you should be able to run the demos. 
 

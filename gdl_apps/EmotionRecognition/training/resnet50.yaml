@@ -1,0 +1,100 @@
+data:
+  data_class: AffectNetEmoNetSplitModuleValTest
+  input_dir: /ps/project/EmotionalFacialAnimation/data/affectnet
+  output_dir: /is/cluster/work/rdanecek/data/affectnet/
+  processed_subfolder: processed_2021_Apr_05_15-22-18
+  num_workers: 6
+  ignore_invalid: like_emonet
+  n_expression: 8
+  mode: manual
+  image_size: 224
+  scale: 1.25
+  face_detector: fan
+  face_detector_threshold: 0.9
+  ring_type: none
+  ring_size: none
+  drop_last: true
+  sampler: balanced_expr
+  augmentation:
+  - Affine:
+    - scale:
+      - 0.8
+      - 1.2
+    - rotate:
+      - -10.0
+      - 10.0
+    - translate_percent:
+      - -0.1
+      - 0.1
+  - OneOf:
+    - JpegCompression:
+      - compression:
+        - 50
+        - 90
+    - AdditiveGaussianNoise:
+      - scale:
+        - 0
+        - 10
+    - GaussianBlur:
+      - sigma:
+        - 0.0
+        - 1.5
+    - Sharpen:
+      - lightness: 1.0
+      - alpha:
+        - 0.0
+        - 0.5
+    - Identity:
+      - name: identity
+model:
+  emodeca_type: EmoCnnModule
+  backbone: resnet50
+  load_pretrained: true
+  pretrained_weights: /ps/scratch/rdanecek/FaceRecognition/resnet50_ft_weight.pkl
+  predict_expression: true
+  predict_valence: true
+  predict_arousal: true
+  predict_AUs: false
+  a_loss:
+    a_mse: 1.0
+  v_loss:
+    v_mse: 1.0
+  va_loss:
+    va_lpcc: 1.0
+    va_lccc: 1.0
+  exp_loss: nll_loss
+  va_loss_scheme: shake
+  a_activation: none
+  v_activation: none
+  exp_activation: log_softmax
+  AU_activation: none
+  expression_balancing: false
+learning:
+  learning_rate: 0.0001
+  optimizer: Adam
+  batch_size_train: 64
+  batch_size_test: 64
+  batch_size_val: 64
+  train_K: 1
+  val_K: 1
+  test_K: 1
+  train_K_policy: random
+  val_K_policy: sequential
+  test_K_policy: sequential
+  num_gpus: 1
+  gpu_memory_min_gb: 30
+  early_stopping:
+    patience: 10
+  checkpoint_after_training: best
+  logger_type: WandbLogger
+  test_vis_frequency: 100
+  max_steps: 100000000
+  max_epochs: 50
+  val_check_interval: 0.2
+inout:
+  output_dir: /is/cluster/work/rdanecek/emoca/emodeca
+  full_run_dir: /is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early
+  checkpoint_dir: /is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early/checkpoints
+  name: EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early
+  time: 2021_11_09_05-15-38
+  random_id: '-8198495972451127810'
