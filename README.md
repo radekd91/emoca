@@ -1,7 +1,17 @@
 # EMOCA
 This repository is the official implementation of the CVPR 2022 paper EMOCA: Emotion Driven Monocular Face Capture and Animation. 
 
-By using the following code, you hereby agree to sell your soul and pledge allegiance to the underworld. 
+ ![EMOCA](gdl_apps/EMOCA/emoca.png)
+
+This is the official implementation of EMOCA: Emotion-Driven Monocular Face Capture and Animation 
+
+ ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_det.gif)  ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec.gif)  <!-- ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec_trans.gif)  -->
+
+
+## EMOCA project 
+The trainng and testing script for EMOCA can be found in this subfolder: 
+
+[EMOCA](gdl_apps/EMOCA) 
 
 
 ## Structure 
@@ -22,7 +32,7 @@ The repo is heavily based on PyTorch and Pytorch Lightning.
 
 Look for individual READMEs in each sub-projects. 
 
-Projects with a certain level of usability: 
+Current projects: 
 - [EMOCA](gdl_apps/EMOCA) 
 - [EmotionRecognition](gdl_apps/EmotionRecognition)
 
@@ -36,11 +46,15 @@ git clone --recurse-submodules ...
 
 1) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness. 
 
-`conda env create --file conda-environment_py36_cu11_ubuntu.yml`
+```
+conda env create --file conda-environment_py36_cu11_ubuntu.yml
+```
 
 I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda: 
 
-`mamba env create --file conda-environment_py36_cu11_ubuntu.yml`
+```
+mamba env create --file conda-environment_py36_cu11_ubuntu.yml
+```
 
 
 Note: the environment might contain some packages. If you find an environment is missing then just `conda/mamba`- or  `pip`- install it and please notify me.
@@ -48,5 +62,7 @@ Note: the environment might contain some packages. If you find an environment is
 
 2) Install `gdl` using pip install. I recommend using the `-e` option and I have not tested otherwise. 
 
-`pip install -e .`
+```
+pip install -e .
+```
 

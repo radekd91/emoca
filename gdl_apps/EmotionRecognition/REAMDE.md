@@ -1,6 +1,6 @@
 # Emotion Recognition 
 
-This project accompanies the EMOCA project. Here we provide training and testing code for: 
+This project accompanies the EMOCA release. Here we provide training and testing code for: 
 - image-based emotion recognition networks 
     - EmoNet 
     - vanilla vision backbones (ResNet, VGG, SWIN)
