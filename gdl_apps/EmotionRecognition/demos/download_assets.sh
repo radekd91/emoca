@@ -35,4 +35,4 @@ unzip SWIN-B.zip
 cd ..
 
 echo "Assets for  Emotion Recognition downloaded and extracted."
-cd ../../../gdl_apps/EmotionRecognition/demos
+cd ../../gdl_apps/EmotionRecognition/demos

@@ -39,9 +39,8 @@ See `demos/test_emoca_on_images.py` for further details.
 
 
 ### Training 
-If you want to train your own models, you will need to download the AffectNet dataset from the 
-
-Coming soon
+1. Process AffectNet data as described in [EMOCA](../EMOCA)
+2. Pick one of the configuration files based on what network you want to train (`resnet50.yaml`, `emoca_coarse.yaml`, `emoca_detail.yaml`, `swin.yaml`). For EMOCA-based models, you will need to change paths to 
 
 ## Citation 
 If you use this work in your publication, please cite the following publications: 
@@ -54,3 +53,6 @@ If you use this work in your publication, please cite the following publications
   year = {2022}
 }
 ```
+
+### Contributing 
+Pull requests are welcome! Please report crashes and/or bugs.
