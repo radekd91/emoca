@@ -3,7 +3,7 @@ This repository is the official implementation of the CVPR 2022 paper EMOCA: Emo
 
  ![EMOCA](gdl_apps/EMOCA/emoca.png)
 
-This is the official implementation of EMOCA: Emotion-Driven Monocular Face Capture and Animation 
+EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
 
  ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_det.gif)  ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec.gif)  <!-- ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec_trans.gif)  -->
 
@@ -44,13 +44,15 @@ Current projects:
 git clone --recurse-submodules ...
 ```
 
-1) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness. 
+1) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  
+<!-- This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness.  -->
 
+You can use conda:
 ```
 conda env create --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
-I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda: 
+but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda: 
 
 ```
 mamba env create --file conda-environment_py36_cu11_ubuntu.yml
@@ -66,3 +68,7 @@ Note: the environment might contain some packages. If you find an environment is
 pip install -e .
 ```
 
+## Acknowledgements 
+There are many people who deserve to get credited. These include but are not limited to: 
+Yao Fend and Haiwen Feng and their original implementation of [DECA])(https://github.com/YadiraF/DECA).
+Antoine Toisoul and colleagues for [EmoNet](https://github.com/face-analysis/emonet).

@@ -12,7 +12,11 @@ Follow the steps at the root of this repo. If for some reason the environment fr
 
 
 ## Demos 
-In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that. 
+In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that: 
+```bash 
+cd demos 
+bash download_assets.sh
+```
 <!-- Alternatively, manually download and unzip the following assets into the `asset` folder at the root of the repo: 
 - [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/NaGoq8Jt4BXcTDN)  
 - [DECA related assets](https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46)  
@@ -57,10 +61,16 @@ python training/train_expdeca.py emoca.yaml
 
 
 ## Citation 
-If you use this work in your publication, please cite the following publications (TODO: add bibtex): 
-- EMOCA
+If you use this work in your publication, please cite the following publications:
 
 ```
+@inproceedings{EMOCA:CVPR:2021,
+  title = {{EMOCA}: {E}motion Driven Monocular Face Capture and Animation},
+  author = {Danecek, Radek and Black, Michael J. and Bolkart, Timo},
+  booktitle = {Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages = {},
+  year = {2022}
+}
 
 @inproceedings{DECA:Siggraph2021,
   title={Learning an Animatable Detailed {3D} Face Model from In-The-Wild Images},

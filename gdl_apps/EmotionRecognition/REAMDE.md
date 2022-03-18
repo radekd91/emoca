@@ -16,7 +16,11 @@ Follow the steps at the root of this repo. If for some reason the environment fr
 ## Pre-trained models 
 All the provided models have been trained on AffectNet, either from scratch (the image-based backbones) or finetuned based on fixed pretrained face reconstruction nets. 
 
-Use `download_assets.sh` to download and unzip them. 
+Use `download_assets.sh` to download and unzip them: 
+```bash
+cd demos 
+bash download_assets.sh
+```
 
 
 ## Demos 
@@ -40,5 +44,13 @@ If you want to train your own models, you will need to download the AffectNet da
 Coming soon
 
 ## Citation 
-If you use this work in your publication, please cite the following publications (TODO: add bibtex): 
-- EMOCA
+If you use this work in your publication, please cite the following publications: 
+```
+@inproceedings{EMOCA:CVPR:2021,
+  title = {{EMOCA}: {E}motion Driven Monocular Face Capture and Animation},
+  author = {Danecek, Radek and Black, Michael J. and Bolkart, Timo},
+  booktitle = {Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages = {},
+  year = {2022}
+}
+```
