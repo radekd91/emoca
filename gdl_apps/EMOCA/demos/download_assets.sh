@@ -23,4 +23,4 @@ echo "Extracting FLAME..."
 unzip FLAME.zip
 
 echo "Assets for EMOCA downloaded and extracted."
-cd ../../../gdl_apps/EMOCA/demos
+cd ../gdl_apps/EMOCA/demos

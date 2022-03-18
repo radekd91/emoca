@@ -9,8 +9,8 @@ cd assets
 
 echo "Downloading assets to run Emotion Recognition" 
 
-mkdir -p face_reconstruction_based 
-cd face_reconstruction_based
+mkdir -p EmotionRecognition/face_reconstruction_based 
+cd EmotionRecognition/face_reconstruction_based
 
 wget https://download.is.tue.mpg.de/emoca/assets/EmotionRecognition/facerec_based_models/EMOCA-emorec.zip -O EMOCA-emorec.zip
 echo "Extracting  EMOCA-emorec"
