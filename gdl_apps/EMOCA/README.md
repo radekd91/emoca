@@ -79,12 +79,12 @@ If you use this work in your publication, please cite the following publications
 }
 ```
 
-Further, as EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts of DECA as fixed part of the model, please further cite:
+As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts of DECA as fixed part of the model, please further cite:
 ```
-@inproceedings{DECA:Siggraph2021,
+@article{DECA:Siggraph2021,
   title={Learning an Animatable Detailed {3D} Face Model from In-The-Wild Images},
   author={Feng, Yao and Feng, Haiwen and Black, Michael J. and Bolkart, Timo},
-  journal = {ACM Transactions on Graphics, (Proc. SIGGRAPH)}, 
+  journal = {ACM Transactions on Graphics (ToG), Proc. SIGGRAPH},
   volume = {40}, 
   number = {8}, 
   year = {2021}, 
