@@ -1,10 +1,18 @@
 # EMOCA : Emotion-Driven Monocular Face Capture and Animation 
 
- ![EMOCA](emoca.png)
+This is the official implementation of [EMOCA: Emotion-Driven Monocular Face Capture and Animation](https://emoca.is.tue.mpg.de/). EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the
+input image. 
 
-This is the official implementation of EMOCA: Emotion-Driven Monocular Face Capture and Animation 
+<p align="center"> 
+<img src="EMOCA_gif_sparse_det.gif">
+<img src="EMOCA_gif_sparse_rec.gif">
+</p>
 
- ![EMOCA](EMOCA_gif_sparse_det.gif)  ![EMOCA](EMOCA_gif_sparse_rec.gif)  <!-- ![EMOCA](EMOCA_gif_sparse_rec_trans.gif)  -->
+<p align="center"> 
+<img src="emoca.png">
+</p>
+<p align="center">Top row: input images. Middle row: coarse shape reconstruction. Bottom row: reconstruction with detailed displacements.<p align="center">
+
 
 ## Installation 
 
@@ -58,11 +66,9 @@ We are working towards switching to another face recognition dataset in place of
 python training/train_expdeca.py emoca.yaml
 ```
 
-
-
 ## Citation 
-If you use this work in your publication, please cite the following publications:
 
+If you use this work in your publication, please cite the following publications:
 ```
 @inproceedings{EMOCA:CVPR:2021,
   title = {{EMOCA}: {E}motion Driven Monocular Face Capture and Animation},
@@ -71,7 +77,10 @@ If you use this work in your publication, please cite the following publications
   pages = {},
   year = {2022}
 }
+```
 
+Further, as EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts of DECA as fixed part of the model, please further cite:
+```
 @inproceedings{DECA:Siggraph2021,
   title={Learning an Animatable Detailed {3D} Face Model from In-The-Wild Images},
   author={Feng, Yao and Feng, Haiwen and Black, Michael J. and Bolkart, Timo},
@@ -81,17 +90,8 @@ If you use this work in your publication, please cite the following publications
   year = {2021}, 
   url = {https://doi.org/10.1145/3450626.3459936} 
 }
-
-@article{FLAME:SiggraphAsia2017, 
-  title = {Learning a model of facial shape and expression from {4D} scans}, 
-  author = {Li, Tianye and Bolkart, Timo and Black, Michael. J. and Li, Hao and Romero, Javier}, 
-  journal = {ACM Transactions on Graphics, (Proc. SIGGRAPH Asia)}, 
-  volume = {36}, 
-  number = {6}, 
-  year = {2017}, 
-  pages = {194:1--194:17},
-  url = {https://doi.org/10.1145/3130800.3130813} 
-}
-
-````
-- FLAME
+```
+ 
+ 
+## License
+This code and model are available for non-commercial scientific research purposes as defined in the [LICENSE](https://emoca.is.tue.mpg.de/license.html) file. By downloading and using the code and model you agree to the terms of this license.
