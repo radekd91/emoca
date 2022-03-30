@@ -1,15 +1,21 @@
 # EMOCA
-This repository is the official implementation of the CVPR 2022 paper EMOCA: Emotion Driven Monocular Face Capture and Animation. 
+This repository is the official implementation of the [CVPR 2022](https://cvpr2022.thecvf.com/) paper [EMOCA: Emotion-Driven Monocular Face Capture and Animation](https://emoca.is.tue.mpg.de/). EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. 
 
- ![EMOCA](gdl_apps/EMOCA/emoca.png)
+<p align="center"> 
+<img src="gdl_apps/EMOCA/EMOCA_gif_sparse_det.gif">
+<img src="gdl_apps/EMOCA/EMOCA_gif_sparse_rec.gif">
+</p>
+
+<p align="center"> 
+<img src="gdl_apps/EMOCA/emoca.png">
+</p>
+<p align="center">Top row: input images. Middle row: coarse shape reconstruction. Bottom row: reconstruction with detailed displacements.<p align="center">
 
 EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
-
- ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_det.gif)  ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec.gif)  <!-- ![EMOCA](gdl_apps/EMOCA/EMOCA_gif_sparse_rec_trans.gif)  -->
-
+ 
 
 ## EMOCA project 
-The trainng and testing script for EMOCA can be found in this subfolder: 
+The training and testing script for EMOCA can be found in this subfolder: 
 
 [EMOCA](gdl_apps/EMOCA) 
 
