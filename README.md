@@ -34,7 +34,7 @@ This repo has two subpackages. `gdl` and `gdl_apps`
 The repo is heavily based on PyTorch and Pytorch Lightning. 
 
 ### GDL_APPS 
-`gdl_apps` contains prototypes (finished and not finished). These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
+`gdl_apps` contains prototypes that use the GDL library. These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
 
 Look for individual READMEs in each sub-projects. 
 
@@ -105,7 +105,14 @@ pip install Cython==0.29.14
 pip install -e .
 ```
 
+## Usage 
+
+1) For running EMOCA examples, go to [EMOCA](gdl_apps/EMOCA) 
+
+2) For running examples of Emotion Recognition, go to [EmotionRecognition](gdl_apps/EmotionRecognition)
+
+
 ## Acknowledgements 
 There are many people who deserve to get credited. These include but are not limited to: 
-Yao Fend and Haiwen Feng and their original implementation of [DECA])(https://github.com/YadiraF/DECA).
+Yao Fend and Haiwen Feng and their original implementation of [DECA](https://github.com/YadiraF/DECA).
 Antoine Toisoul and colleagues for [EmoNet](https://github.com/face-analysis/emonet).
