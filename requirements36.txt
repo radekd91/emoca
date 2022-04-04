@@ -70,12 +70,10 @@ subprocess32~=3.5.4
 tb-nightly~=2.5.0a20201210
 tensorboard-data-server~=0.6.1
 timm~=0.4.9
-torchaudio~=0.7.2
-torchfile~=0.1.0
-torchgeometry~=0.1.2
-torchmetrics~=0.5.1
-torchvision~=0.10.1
-pytorch-lightning~=1.4.9
+torchfile>=0.1.0
+torchgeometry>=0.1.2
+torchmetrics>=0.5.1
+pytorch-lightning==1.4.9
 pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git@v0.6.0
 trimesh~=3.6.18
 wandb~=0.10.30
