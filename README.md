@@ -78,13 +78,13 @@ bash pull_submodules.sh
 
 You can use conda:
 ```bash
-conda env create --file conda-environment_py36_cu11_ubuntu.yml
+conda env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
 but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda (much faster): 
 
 ```bash
-mamba env create --file conda-environment_py36_cu11_ubuntu.yml
+mamba env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
 
