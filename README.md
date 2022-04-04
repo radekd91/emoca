@@ -87,15 +87,19 @@ but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) inste
 mamba env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
-
 Note: the environment might contain some packages. If you find an environment is missing then just `conda/mamba`- or  `pip`- install it and please notify me.
 
-2) For some reason cython is glitching in the requirements file so install it separately: 
+2) Activate the environment: 
+```bash 
+conda activate work36_cu11
+```
+
+3) For some reason cython is glitching in the requirements file so install it separately: 
 ```bash 
 pip install Cython==0.29.14
 ```
 
-3) Install `gdl` using pip install. I recommend using the `-e` option and I have not tested otherwise. 
+4) Install `gdl` using pip install. I recommend using the `-e` option and I have not tested otherwise. 
 
 ```bash
 pip install -e .
