@@ -1,9 +1,35 @@
-# EMOCA
+
+<!-- # EMOCA -->
+<h1 align="center">EMOCA: Emotion Driven Monocular Face Capture and Animation</h1>
+<p align="center">
+
+  <p align="center">
+    <a href="https://ps.is.tuebingen.mpg.de/person/rdanecek"><strong>Radek Daněček</strong></a>
+    ·
+    <a href="https://ps.is.tuebingen.mpg.de/person/tbolkart"><strong>Timo Bolkart</strong></a>
+    ·
+    <a href="https://ps.is.tuebingen.mpg.de/person/black"><strong>Michael J. Black</strong></a>
+  </p>
+  <h2 align="center">CVPR 2022</h2>
+  <div align="center">
+  </div>
+
+  <!-- <a href="">
+    <img src="./assets/teaser.jpeg" alt="Logo" width="100%">
+  </a> -->
+
 This repository is the official implementation of the [CVPR 2022](https://cvpr2022.thecvf.com/) paper [EMOCA: Emotion-Driven Monocular Face Capture and Animation](https://emoca.is.tue.mpg.de/). 
 
+
+
+  <!-- 
 <p align="center"> 
 <img src="gdl_apps/EMOCA/EMOCA_gif_sparse_det.gif">
 <img src="gdl_apps/EMOCA/EMOCA_gif_sparse_rec.gif">
+</p>
+-->
+<p align="center"> 
+<img src="gdl_apps/EMOCA/EMOCA_gif_sparse_det_rec.gif">
 </p>
 
 <p align="center"> 
@@ -11,7 +37,14 @@ This repository is the official implementation of the [CVPR 2022](https://cvpr20
 </p>
 <p align="center">Top row: input images. Middle row: coarse shape reconstruction. Bottom row: reconstruction with detailed displacements.<p align="center">
 
- EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
+
+<p align="center">
+  <br>
+    <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>
+    <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white"></a>
+</p>
+
+EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
  
 
 ## EMOCA project 
@@ -105,7 +138,20 @@ pip install Cython==0.29.14
 pip install -e .
 ```
 
+### Optional (but recommended) TODO:
+
+Convert BFM texture space onto FLAME: 
+
+1) link repo 
+
+2) explain where to put the files 
+
+
 ## Usage 
+0) Activate the environment: 
+```bash
+conda activate work36_cu11
+```
 
 1) For running EMOCA examples, go to [EMOCA](gdl_apps/EMOCA) 
 

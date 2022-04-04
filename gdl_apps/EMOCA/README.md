@@ -29,6 +29,11 @@ bash download_assets.sh
 - [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/NaGoq8Jt4BXcTDN)  
 - [DECA related assets](https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46)  
 - [FLAME related assets](https://owncloud.tuebingen.mpg.de/index.php/s/yZiYCGZjNw37jYw) -->
+Then activate your environment: 
+```bash
+conda activate work36_cu11
+```
+
 
 ### Single Image Reconstruction 
 If you want to run EMOCA on images, run the following
