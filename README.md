@@ -4,11 +4,12 @@
 <p align="center">
 
   <p align="center">
-    <a href="https://ps.is.tuebingen.mpg.de/person/rdanecek"><strong>Radek Daněček</strong></a>
-    ·
-    <a href="https://ps.is.tuebingen.mpg.de/person/tbolkart"><strong>Timo Bolkart</strong></a>
+    <a href="https://ps.is.tuebingen.mpg.de/person/rdanecek"><strong>Radek Daněček</strong></a>    
     ·
     <a href="https://ps.is.tuebingen.mpg.de/person/black"><strong>Michael J. Black</strong></a>
+    ·
+    <a href="https://ps.is.tuebingen.mpg.de/person/tbolkart"><strong>Timo Bolkart</strong></a>
+
   </p>
   <h2 align="center">CVPR 2022</h2>
   <div align="center">
