@@ -45,22 +45,45 @@ Current projects:
 
 ## Installation 
 
-0) Clone the repo with submodules: 
-```
-git clone --recurse-submodules ...
+### Dependencies
+
+1) Install [conda](https://docs.conda.io/en/latest/miniconda.html)
+
+2) Install [mamba](https://github.com/mamba-org/mamba)
+
+<!-- 0) Clone the repo with submodules:  -->
+<!-- ``` -->
+<!-- git clone --recurse-submodules ... -->
+<!-- ``` -->
+3) Clone this repo
+
+### Short version 
+
+1) Run the installation script: 
+
+```bash
+bash install.sh
 ```
 
-1) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  
+### Long version
+
+1) Pull the relevant submodules using: 
+```bash
+bash pull_submodules.sh
+```
+
+
+2) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  
 <!-- This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness.  -->
 
 You can use conda:
-```
+```bash
 conda env create --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
-but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda: 
+but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda (much faster): 
 
-```
+```bash
 mamba env create --file conda-environment_py36_cu11_ubuntu.yml
 ```
 
@@ -68,7 +91,7 @@ mamba env create --file conda-environment_py36_cu11_ubuntu.yml
 Note: the environment might contain some packages. If you find an environment is missing then just `conda/mamba`- or  `pip`- install it and please notify me.
 
 
-2) Install `gdl` using pip install. I recommend using the `-e` option and I have not tested otherwise. 
+3) Install `gdl` using pip install. I recommend using the `-e` option and I have not tested otherwise. 
 
 ```
 pip install -e .

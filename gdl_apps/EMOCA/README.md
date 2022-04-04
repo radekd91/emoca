@@ -95,3 +95,8 @@ As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts
  
 ## License
 This code and model are available for non-commercial scientific research purposes as defined in the [LICENSE](https://emoca.is.tue.mpg.de/license.html) file. By downloading and using the code and model you agree to the terms of this license.
+
+
+### Contributing 
+Pull requests are welcome! Please report crashes and/or bugs.
+If you run EMOCA and get interesting results (both good and bad), please let us know. 
