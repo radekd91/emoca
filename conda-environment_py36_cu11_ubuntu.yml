@@ -32,4 +32,3 @@ dependencies:
   - wheel>=0.37.0
   - yaml>=0.2.5
   - yarl>=1.6.3
-prefix: /home/rdanecek/anaconda3/envs/work36_cu11
