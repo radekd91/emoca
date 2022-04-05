@@ -43,6 +43,8 @@ This repository is the official implementation of the [CVPR 2022](https://cvpr20
   <br>
     <a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>
     <a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white"></a>
+    <a href='https://emoca.is.tue.mpg.de/' style='padding-left: 0.5rem;'>
+      <img src='https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue' alt='Project Page'>
 </p>
 
 EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
@@ -138,6 +140,11 @@ pip install Cython==0.29.14
 ```bash
 pip install -e .
 ```
+
+5) Verify that previous step correctly installed Pytorch3D
+
+Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.0 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
+
 
 ### Optional (but recommended) TODO:
 
