@@ -22,18 +22,34 @@ cd demos
 bash download_assets.sh
 ```
 
+Then activate your environment: 
+```bash
+conda activate work36_cu11
+```
+
 
 ## Demos 
 
 ### Single-image based emotion recognition 
 
 If you want to run Emotion Recognition on images, run the following
-```python 
-python demos/test_emoca_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|SWIN-B|EMOCA-emorec|EMOCA_detail-emorec)
+```bash 
+python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|SWIN-B|EMOCA-emorec|EMOCA_detail-emorec)
 ```
 The script will detect faces in every image in the folder output the results that you specify with `--save_images`, `--save_codes`, `--save_mesh` to the output folder. 
 
-See `demos/test_emoca_on_images.py` for further details.
+For example, for inference with EMOCA run: 
+```bash 
+python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype 3dmm --model_name EMOCA-emorec
+```
+
+and for inference with Resnet50 run: 
+```bash 
+python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype image --model_name ResNet50
+```
+
+
+See `demos/test_emotion_recognition_on_images.py` for further details.
 
 <!-- ### Video-based emotion recognition  -->
 

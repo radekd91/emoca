@@ -16,7 +16,7 @@ input image.
 
 ## Installation 
 
-Follow the steps at the root of this repo. If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`. After that you should be able to run the demos. 
+Follow the steps at the [root of this repo](../..). If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`. After that you should be able to run the demos. 
 
 
 ## Demos 

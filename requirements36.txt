@@ -65,7 +65,6 @@ setuptools~=54.2.0
 shapely~=1.7.1
 shortuuid~=1.0.1
 smmap~=3.0.4
-smplx~=0.1.26
 subprocess32~=3.5.4
 tb-nightly~=2.5.0a20201210
 tensorboard-data-server~=0.6.1
