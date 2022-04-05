@@ -18,7 +18,7 @@ input image.
 
 1) Follow the steps at the [root of this repo](../..). If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`.
 
-2) In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that: 
+2) In order to run the demos you will need to download and unzip a few assets. Run `download_assets.sh` to do that: 
 ```bash 
 cd demos 
 bash download_assets.sh
@@ -99,24 +99,9 @@ As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts
   url = {https://doi.org/10.1145/3450626.3459936} 
 }
 ```
-EMOCA and DECA are built on FLAME:
-```
-@article{FLAME:SiggraphAsia2017, 
-  title = {Learning a model of facial shape and expression from {4D} scans}, 
-  author = {Li, Tianye and Bolkart, Timo and Black, Michael. J. and Li, Hao and Romero, Javier}, 
-  journal = {ACM Transactions on Graphics, (Proc. SIGGRAPH Asia)}, 
-  volume = {36}, 
-  number = {6}, 
-  year = {2017}, 
-  pages = {194:1--194:17},
-  url = {https://doi.org/10.1145/3130800.3130813} 
-}
-```
-
- 
  
 ## License
-This code and model are available for non-commercial scientific research purposes as defined in the [LICENSE](https://emoca.is.tue.mpg.de/license.html) file. By downloading and using the code and model you agree to the terms of this license.
+This code and model are **available for non-commercial scientific research purposes** as defined in the [LICENSE](https://emoca.is.tue.mpg.de/license.html) file. By downloading and using the code and model you agree to the terms of this license. 
 
 
 ### Contributing 
