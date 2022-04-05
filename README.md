@@ -146,15 +146,6 @@ pip install -e .
 Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.0 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
 
 
-### Optional (but recommended) TODO:
-
-Convert BFM texture space onto FLAME: 
-
-1) link repo 
-
-2) explain where to put the files 
-
-
 ## Usage 
 0) Activate the environment: 
 ```bash

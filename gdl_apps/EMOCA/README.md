@@ -16,19 +16,19 @@ input image.
 
 ## Installation 
 
-Follow the steps at the [root of this repo](../..). If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`. After that you should be able to run the demos. 
+1) Follow the steps at the [root of this repo](../..). If for some reason the environment from there is not valid, create one using a `.yml` file from `envs`.
 
-
-## Demos 
-In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that: 
+2) In order to run the demos you'll need to download and unzip a few assets. Run `download_assets.sh` to do that: 
 ```bash 
 cd demos 
 bash download_assets.sh
 ```
-<!-- Alternatively, manually download and unzip the following assets into the `asset` folder at the root of the repo: 
-- [pretrained EMOCA model](https://owncloud.tuebingen.mpg.de/index.php/s/NaGoq8Jt4BXcTDN)  
-- [DECA related assets](https://owncloud.tuebingen.mpg.de/index.php/s/Wf5CbTweKE9ap46)  
-- [FLAME related assets](https://owncloud.tuebingen.mpg.de/index.php/s/yZiYCGZjNw37jYw) -->
+3) (Optional for inference, required for training) [Basel Face Model](https://faces.dmi.unibas.ch/bfm/bfm2019.html) texture space adapted to FLAME. Unfortunately, we are not allowed to distribute the texture space, since the license does not permit it. Therefore, please go to the [BFM page](https://faces.dmi.unibas.ch/bfm/bfm2019.html) sign up and dowload BFM. Then use the tool from this [repo](https://github.com/TimoBolkart/BFM_to_FLAME) to convert the texture space to FLAME. Put the resulting texture model file file into [`../../assets/FLAME/texture`](../../assets/FLAME/texture) as `FLAME_albedo_from_BFM.npz`
+
+
+## Demos 
+
+
 Then activate your environment: 
 ```bash
 conda activate work36_cu11
@@ -57,6 +57,8 @@ See `demos/test_emoca_on_video.py` for further details.
 
 In order to train EMOCA, you need the following things: 
 
+<!-- 0) [Basel Face Model](https://faces.dmi.unibas.ch/bfm/bfm2019.html) texture space adapted to FLAME. Unfortunately, we are not allowed to distribute the texture space, since the license does not permit it. Therefore, please go to the [BFM page](https://faces.dmi.unibas.ch/bfm/bfm2019.html) sign up and dowload BFM. Then use the tool from this [repo](https://github.com/TimoBolkart/BFM_to_FLAME) to convert the texture space to FLAME. Put the resulting texture model file file into [`../../assets/FLAME/texture`](../../assets/FLAME/texture) as `FLAME_albedo_from_BFM.npz` -->
+
 1) Get training data of DECA (this is crucial for training the detail stage part of EMOCA) 
 
 2) Download AffectNet from http://mohammadmahoor.com/affectnet/ 
@@ -70,6 +72,7 @@ We are working towards switching to another face recognition dataset in place of
 ```
 python training/train_expdeca.py emoca.yaml
 ```
+
 
 ## Citation 
 
@@ -96,6 +99,20 @@ As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts
   url = {https://doi.org/10.1145/3450626.3459936} 
 }
 ```
+EMOCA and DECA are built on FLAME:
+```
+@article{FLAME:SiggraphAsia2017, 
+  title = {Learning a model of facial shape and expression from {4D} scans}, 
+  author = {Li, Tianye and Bolkart, Timo and Black, Michael. J. and Li, Hao and Romero, Javier}, 
+  journal = {ACM Transactions on Graphics, (Proc. SIGGRAPH Asia)}, 
+  volume = {36}, 
+  number = {6}, 
+  year = {2017}, 
+  pages = {194:1--194:17},
+  url = {https://doi.org/10.1145/3130800.3130813} 
+}
+```
+
  
  
 ## License
