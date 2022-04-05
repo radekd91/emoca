@@ -259,6 +259,12 @@ class DecaModule(LightningModule):
         if shape_constraint is not None and expression_constraint is not None:
             raise ValueError("Both shape constraint and expression constraint are active. This is probably not what we want.")
 
+    def uses_texture(self):
+        """
+        Check if the model uses texture
+        """
+        return self.deca.uses_texture()
+
     def visualize(self, visdict, savepath, catdim=1):
         return self.deca.visualize(visdict, savepath, catdim)
 
@@ -822,7 +828,11 @@ class DecaModule(LightningModule):
         trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
         predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
 
-        albedo = self.deca.flametex(texcode)
+        if self.uses_texture():
+            albedo = self.deca.flametex(texcode)
+        else: 
+            # if not using texture, default to gray
+            albedo = torch.ones([effective_batch_size, 3, self.deca.config.uv_size, self.deca.config.uv_size], device=images.device) * 0.5
 
         # 2) Render the coarse image
         ops = self.deca.render(verts, trans_verts, albedo, lightcode)
@@ -2461,6 +2471,18 @@ class DECA(torch.nn.Module):
             fixed_uv_dis = torch.zeros([512, 512]).float()
         self.register_buffer('fixed_uv_dis', fixed_uv_dis)
 
+    def uses_texture(self): 
+        if 'use_texture' in self.config.keys():
+            return self.config.use_texture
+        return True # true by default
+
+    def _disable_texture(self, remove_from_model=False): 
+        self.config.use_texture = False
+        if remove_from_model:
+            self.flametex = None
+
+    def _enable_texture(self):
+        self.config.use_texture = True
 
     def _has_neural_rendering(self):
         return hasattr(self.config, "neural_renderer") and bool(self.config.neural_renderer)
@@ -2528,8 +2550,12 @@ class DECA(torch.nn.Module):
             raise ValueError(f"Invalid 'e_flame_type' = {e_flame_type}")
 
         self.flame = FLAME(self.config)
-        self.flametex = FLAMETex(self.config)
-        
+
+        if self.uses_texture():
+            self.flametex = FLAMETex(self.config)
+        else: 
+            self.flametex = None
+
         # 2) build detail encoder
         e_detail_type = 'ResnetEncoder'
         if 'e_detail_type' in self.config.keys():
@@ -2592,7 +2618,8 @@ class DECA(torch.nn.Module):
 
         # these are set to eval no matter what, they're never being trained (the FLAME shape and texture spaces are pretrained)
         self.flame.eval()
-        self.flametex.eval()
+        if self.flametex is not None:
+            self.flametex.eval()
         return self
 
 
