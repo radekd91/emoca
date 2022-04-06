@@ -7,7 +7,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - cudatoolkit=11.3
   - ffmpeg=4.4.1
   - ffmpeg-python=0.2.0
   - matplotlib-base>=3.2.2
@@ -20,7 +19,7 @@ dependencies:
   - pandas>=1.1.5
   - pip>=21.2.4
   - python=3.6
-  - pytorch=1.9.1
+  - pytorch=1.9.1=py3.6_cuda11.1_cudnn8.0.5_0
   - torchvision=0.10.1 
   - torchaudio=0.9.1 
   - pywavelets>=1.1.1

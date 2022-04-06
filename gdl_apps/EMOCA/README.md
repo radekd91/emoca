@@ -42,6 +42,11 @@ python demos/test_emoca_on_images.py --input_folder <path_to_images> --output_fo
 ```
 The script will detect faces in every image in the folder output the results that you specify with `--save_images`, `--save_codes`, `--save_mesh` to the output folder. 
 
+Running this (default parameters) will use EMOCA to reconstruct faces on several test images.
+```python 
+python demos/test_emoca_on_images.py
+```
+
 See `demos/test_emoca_on_images.py` for further details.
 
 ### Video Reconstruction 

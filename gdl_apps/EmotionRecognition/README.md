@@ -34,20 +34,25 @@ conda activate work36_cu11
 
 If you want to run Emotion Recognition on images, run the following
 ```bash 
-python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|SWIN-B|EMOCA-emorec|EMOCA_detail-emorec)
+python demos/test_emotion_recognition_on_images.py --input_folder <path_to_images> --output_folder <set_your_output_path>  --modeltype (image|3dmm) --model_name (ResNet50|SWIN-B|EMOCA-emorec|EMOCA_detail-emorec)
 ```
 The script will detect faces in every image in the folder output the results that you specify with `--save_images`, `--save_codes`, `--save_mesh` to the output folder. 
 
 For example, for inference with EMOCA run: 
 ```bash 
-python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype 3dmm --model_name EMOCA-emorec
+python demos/test_emotion_recognition_on_images.py --input_folder <path_to_images> --output_folder <set_your_output_path>  --modeltype 3dmm --model_name EMOCA-emorec
 ```
 
 and for inference with Resnet50 run: 
 ```bash 
-python demos/test_emotion_recognition_on_images.py --input_video <path_to_images> --output_folder <set_your_output_path>  --modeltype image --model_name ResNet50
+python demos/test_emotion_recognition_on_images.py --input_folder <path_to_images> --output_folder <set_your_output_path>  --modeltype image --model_name ResNet50
 ```
 
+For example, running the following will run emotion recognition with EMOCA on a number of test images: 
+
+```bash 
+python demos/test_emotion_recognition_on_images.py --modeltype 3dmm --model_name EMOCA-emorec
+```
 
 See `demos/test_emotion_recognition_on_images.py` for further details.
 

@@ -28,7 +28,7 @@ from gdl_apps.EMOCA.utils.io import save_obj, save_images, save_codes, test
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_video', type=str, default=Path(gdl.__file__).parents[1] /"videos/82-25-854x480_affwild2.mp4", 
+    parser.add_argument('--input_video', type=str, default=Path(gdl.__file__).parents[1] / "assets/data/EMOCA_test_example_data/videos/82-25-854x480_affwild2.mp4", 
         help="Filename of the video for reconstruction.")
     parser.add_argument('--output_folder', type=str, default="video_output", help="Output folder to save the results to.")
     parser.add_argument('--model_name', type=str, default='EMOCA', help='Name of the model to use.')
