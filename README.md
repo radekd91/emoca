@@ -55,30 +55,6 @@ The training and testing script for EMOCA can be found in this subfolder:
 
 [EMOCA](gdl_apps/EMOCA) 
 
-
-## Structure 
-This repo has two subpackages. `gdl` and `gdl_apps` 
-
-### GDL
-`gdl` is a library full of research code. Some things are OK organized, some things are badly organized. It includes but is not limited to the following: 
-
-- `models` is a module with (larger) deep learning modules (pytorch based) 
-- `layers` contains individual deep learning layers 
-- `datasets` contains base classes and their implementations for various datasets I had to use at some points. It's mostly image-based datasets with various forms of GT if any
-- `utils` - various tools
-
-The repo is heavily based on PyTorch and Pytorch Lightning. 
-
-### GDL_APPS 
-`gdl_apps` contains prototypes that use the GDL library. These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
-
-Look for individual READMEs in each sub-projects. 
-
-Current projects: 
-- [EMOCA](gdl_apps/EMOCA) 
-- [EmotionRecognition](gdl_apps/EmotionRecognition)
-
-
 ## Installation 
 
 ### Dependencies
@@ -100,6 +76,7 @@ Current projects:
 ```bash
 bash install.sh
 ```
+If this ran without any errors (especially for CUDA, PyTorch and PyTorch3D), you can skip the long version.
 
 ### Long version
 
@@ -112,16 +89,17 @@ bash pull_submodules.sh
 2) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  
 <!-- This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness.  -->
 
-You can use conda:
-```bash
-conda env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
-```
-
-but I strongly recommend using [mamba](https://github.com/mamba-org/mamba) instead of conda (much faster): 
+You can use [mamba](https://github.com/mamba-org/mamba) to create a conda environment (strongly recommended):
 
 ```bash
 mamba env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
 ```
+
+but you can also use plain conda if you want (but it will be slower): 
+```bash
+conda env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
+```
+
 
 Note: the environment might contain some packages. If you find an environment is missing then just `conda/mamba`- or  `pip`- install it and please notify me.
 
@@ -145,6 +123,7 @@ pip install -e .
 
 Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.0 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
 
+Note: EMOCA was developed with Pytorch 1.9.1 and Pytorch3d 0.6.0 running on CUDA toolkit 11.1.1. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way.
 
 ## Usage 
 0) Activate the environment: 
@@ -155,6 +134,30 @@ conda activate work36_cu11
 1) For running EMOCA examples, go to [EMOCA](gdl_apps/EMOCA) 
 
 2) For running examples of Emotion Recognition, go to [EmotionRecognition](gdl_apps/EmotionRecognition)
+
+
+## Structure 
+This repo has two subpackages. `gdl` and `gdl_apps` 
+
+### GDL
+`gdl` is a library full of research code. Some things are OK organized, some things are badly organized. It includes but is not limited to the following: 
+
+- `models` is a module with (larger) deep learning modules (pytorch based) 
+- `layers` contains individual deep learning layers 
+- `datasets` contains base classes and their implementations for various datasets I had to use at some points. It's mostly image-based datasets with various forms of GT if any
+- `utils` - various tools
+
+The repo is heavily based on PyTorch and Pytorch Lightning. 
+
+### GDL_APPS 
+`gdl_apps` contains prototypes that use the GDL library. These can include scripts on how to train, evaluate, test and analyze models from `gdl` and/or data for various tasks. 
+
+Look for individual READMEs in each sub-projects. 
+
+Current projects: 
+- [EMOCA](gdl_apps/EMOCA) 
+- [EmotionRecognition](gdl_apps/EmotionRecognition)
+
 
 
 ## Citation 
