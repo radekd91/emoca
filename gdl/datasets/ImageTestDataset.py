@@ -9,7 +9,7 @@ All rights reserved.
 # in the LICENSE file included with this software distribution. 
 # Any use not explicitly granted by the LICENSE is prohibited.
 #
-# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
+# Copyright©2022 Max-Planck-Gesellschaft zur Förderung
 # der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
 # for Intelligent Systems. All rights reserved.
 #

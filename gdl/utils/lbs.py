@@ -10,7 +10,7 @@
 # Any use of the computer program without a valid license is prohibited and
 # liable to prosecution.
 #
-# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
+# Copyright©2022 Max-Planck-Gesellschaft zur Förderung
 # der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
 # for Intelligent Systems. All rights reserved.
 #
