@@ -84,7 +84,7 @@ def main():
     output_folder = args.output_folder
     model_name = args.model_name
 
-    Path(output).mkdir(parents=True, exist_ok=True)
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     mode = 'detail'
     # mode = 'coarse'
