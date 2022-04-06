@@ -25,7 +25,8 @@ import torch.functional as F
 from gdl_apps.EMOCA.interactive_deca_decoder import load_deca_and_data, test #, plot_results
 from affectnet_validation import load_model
 import copy
-from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, emo_network_from_path, EmoNetModule
+from gdl.layers.losses.EmoNetLoss import EmoNetLoss, EmoLossBase, EmoBackboneLoss, EmoNetModule
+from gdl.layers.losses.emotion_loss_loader import emo_network_from_path
 from gdl.models.DECA import DecaModule, DECA, DecaMode
 from skimage.io import imread, imsave
 from skimage.transform import resize, rescale

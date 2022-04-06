@@ -45,6 +45,12 @@ echo "Downloading FLAME related assets"
 wget https://download.is.tue.mpg.de/emoca/assets/FLAME.zip -O FLAME.zip
 echo "Extracting FLAME..."
 unzip FLAME.zip
-
 echo "Assets for EMOCA downloaded and extracted."
+
+cd ../data 
+echo "Downloading example test data"
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
+unzip EMOCA_test_example_data.zip
+echo "Example test data downloaded and extracted."
+
 cd ../gdl_apps/EMOCA/demos

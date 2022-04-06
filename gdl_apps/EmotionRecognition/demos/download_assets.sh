@@ -57,5 +57,13 @@ echo "Extracting SWIN B"
 unzip SWIN-B.zip
 cd ..
 
+
+cd ../data 
+echo "Downloading example test data"
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
+unzip EMOCA_test_example_data.zip
+echo "Example test data downloaded and extracted."
+
+
 echo "Assets for  Emotion Recognition downloaded and extracted."
 cd ../../gdl_apps/EmotionRecognition/demos

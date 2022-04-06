@@ -35,7 +35,7 @@ def main():
     parser = argparse.ArgumentParser()
     # add the input folder arg 
     parser.add_argument('--input_folder', type=str, default="/ps/data/SignLanguage/SignLanguage_210805_03586_GH/IOI/2021-08-05_ASL_PNG_MH/SignLanguage_210805_03586_GH_LiebBitte_2/Cam_0_35mm_90CW")
-    parser.add_argument('--output_folder', type=str, default="/ps/scratch/rdanecek/EMOCA/TestImages", help="Output folder to save the results to.")
+    parser.add_argument('--output_folder', type=str, default="/ps/scratch/rdanecek/EMOCA/TestImages2", help="Output folder to save the results to.")
     parser.add_argument('--model_name', type=str, default='EMOCA', help='Name of the model to use.')
     parser.add_argument('--path_to_models', type=str, default=Path(gdl.__file__).parents[1] / "assets/EMOCA/models")
     parser.add_argument('--save_images', type=bool, default=True, help="If true, output images will be saved")
