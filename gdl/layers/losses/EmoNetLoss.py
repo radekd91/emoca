@@ -19,42 +19,43 @@ from gdl.utils.other import class_from_str
 import sys
 
 
-def emo_network_from_path(path):
-    print(f"Loading trained emotion network from: '{path}'")
 
-    def load_configs(run_path):
-        from omegaconf import OmegaConf
-        with open(Path(run_path) / "cfg.yaml", "r") as f:
-            conf = OmegaConf.load(f)
-        if run_path != conf.inout.full_run_dir: 
-            conf.inout.output_dir = str(Path(run_path).parent)
-            conf.inout.full_run_dir = str(run_path)
-            conf.inout.checkpoint_dir = str(Path(run_path) / "checkpoints")
-        return conf
+# def emo_network_from_path(path):
+#     print(f"Loading trained emotion network from: '{path}'")
 
-    cfg = load_configs(path)
+#     def load_configs(run_path):
+#         from omegaconf import OmegaConf
+#         with open(Path(run_path) / "cfg.yaml", "r") as f:
+#             conf = OmegaConf.load(f)
+#         if run_path != conf.inout.full_run_dir: 
+#             conf.inout.output_dir = str(Path(run_path).parent)
+#             conf.inout.full_run_dir = str(run_path)
+#             conf.inout.checkpoint_dir = str(Path(run_path) / "checkpoints")
+#         return conf
 
-    if not bool(cfg.inout.checkpoint_dir):
-        cfg.inout.checkpoint_dir = str(Path(path) / "checkpoints")
+#     cfg = load_configs(path)
 
-    checkpoint_mode = 'best'
-    stages_prefixes = ""
+#     if not bool(cfg.inout.checkpoint_dir):
+#         cfg.inout.checkpoint_dir = str(Path(path) / "checkpoints")
 
-    checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixes,
-                                                               checkpoint_mode=checkpoint_mode,
-                                                               # relative_to=relative_to_path,
-                                                               # replace_root=replace_root_path
-                                                               )
-    checkpoint_kwargs = checkpoint_kwargs or {}
+#     checkpoint_mode = 'best'
+#     stages_prefixes = ""
 
-    if 'emodeca_type' in cfg.model.keys():
-        module_class = class_from_str(cfg.model.emodeca_type, sys.modules[__name__])
-    else:
-        module_class = EmoNetModule
+#     checkpoint, checkpoint_kwargs = get_checkpoint_with_kwargs(cfg, stages_prefixes,
+#                                                                checkpoint_mode=checkpoint_mode,
+#                                                                # relative_to=relative_to_path,
+#                                                                # replace_root=replace_root_path
+#                                                                )
+#     checkpoint_kwargs = checkpoint_kwargs or {}
 
-    emonet_module = module_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False,
-                                                      **checkpoint_kwargs)
-    return emonet_module
+#     if 'emodeca_type' in cfg.model.keys():
+#         module_class = class_from_str(cfg.model.emodeca_type, sys.modules[__name__])
+#     else:
+#         module_class = EmoNetModule
+
+#     emonet_module = module_class.load_from_checkpoint(checkpoint_path=checkpoint, strict=False,
+#                                                       **checkpoint_kwargs)
+#     return emonet_module
 
 
 def create_emo_loss(device, emoloss = None, trainable=False, dual=False, normalize_features=False, emo_feat_loss=None):
@@ -63,6 +64,7 @@ def create_emo_loss(device, emoloss = None, trainable=False, dual=False, normali
     if isinstance(emoloss, str):
         path = Path(emoloss)
         if path.is_dir():
+            from gdl.layers.losses.emotion_loss_loader import emo_network_from_path
             emo_loss = emo_network_from_path(path)
 
             if isinstance(emo_loss, EmoNetModule):

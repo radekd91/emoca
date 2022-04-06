@@ -25,10 +25,11 @@ from typing import overload
 import distutils.dir_util
 from omegaconf import OmegaConf, DictConfig
 import shutil
+from gdl.models.IO import locate_checkpoint
+from gdl.layers.losses.emotion_loss_loader import emo_network_from_path
 
-from gdl.layers.losses.EmoNetLoss import emo_network_from_path
 
-def package_model(input_dir, output_dir, asset_dir, overwrite=False):
+def package_model(input_dir, output_dir, asset_dir, overwrite=False, remove_bfm_textures=True):
     input_dir = Path(input_dir) 
     output_dir = Path(output_dir)
     asset_dir = Path(asset_dir)
@@ -49,8 +50,20 @@ def package_model(input_dir, output_dir, asset_dir, overwrite=False):
         sys.exit()
 
 
-    # copy all files and folders from input_dir to output_dir using distutils.dir_util.copy_tree
-    distutils.dir_util.copy_tree(str(input_dir), str(output_dir), preserve_symlinks=True)
+    with open(Path(input_dir) / "cfg.yaml", "r") as f:
+        cfg = OmegaConf.load(f)
+
+    # # copy all files and folders from input_dir to output_dir using distutils.dir_util.copy_tree
+    # distutils.dir_util.copy_tree(str(input_dir), str(output_dir), preserve_symlinks=True)
+    checkpoints_dir = output_dir / "checkpoints"
+    
+    checkpoint = Path(locate_checkpoint(cfg, mode="best"))
+    
+    # copy checkpoint file
+    dst_checkpoint = checkpoints_dir / ( Path(checkpoint).relative_to(cfg.inout.checkpoint_dir) )
+    dst_checkpoint.parent.mkdir(parents=True, exist_ok=overwrite)
+    shutil.copy(str(checkpoint), str(dst_checkpoint))
+
 
     things_to_remove = ["wandb", "submission", "test"]
     for thing in things_to_remove: 
@@ -62,14 +75,11 @@ def package_model(input_dir, output_dir, asset_dir, overwrite=False):
             else:
                 os.remove(thing_path)
 
-    with open(Path(output_dir) / "cfg.yaml", "r") as f:
-        cfg = OmegaConf.load(f)
-    
     cfg.inout.output_dir = str(output_dir.parent)
     cfg.inout.full_run_dir = str(output_dir)
     cfg.inout.checkpoint_dir = str(output_dir / "checkpoints")
 
-    if 'deca_cfg' in cfg.model.keys(): 
+    if 'deca_cfg' in cfg.model.keys(): # if EMOCA-based face recognition, take care of EMOCA related paths
         cfg.model.deca_cfg.inout.output_dir = "todo"
         cfg.model.deca_cfg.inout.full_run_dir = "todo"
         cfg.model.deca_cfg.inout.checkpoint_dir = "todo"
@@ -86,9 +96,22 @@ def package_model(input_dir, output_dir, asset_dir, overwrite=False):
         # cfg.model.deca_cfg.model.emonet_model_path = str(asset_dir /  "EmotionRecognition/image_based_networks/ResNet50")
         cfg.model.deca_cfg.model.emonet_model_path = ""
 
-
+        if remove_bfm_textures: 
+            cfg.model.deca_cfg.model.use_texture = False
+            # if we are removing BFM textures (distributed release), we need to remove the texture weights (which are not publicly available)
+    
     with open(output_dir / "cfg.yaml", 'w') as outfile:
         OmegaConf.save(config=cfg, f=outfile)
+    
+    net = emo_network_from_path(str(output_dir))
+    if 'deca_cfg' in cfg.model.keys():
+        net.deca.deca._disable_texture(remove_from_model=True)
+    from pytorch_lightning import Trainer
+    trainer = Trainer(resume_from_checkpoint=dst_checkpoint)
+    trainer.model = net
+    # overwrite the checkpoint with the new one without textures
+    trainer.save_checkpoint(dst_checkpoint)
+
 
 
 def test_loading(outpath):

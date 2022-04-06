@@ -31,16 +31,16 @@ def test_loading(output_dir):
 def main():
     asset_dir = get_path_to_assets()
     input_dir = Path("/ps/project/EmotionalFacialAnimation/emoca/emorec_models_comparison/affectnet/new_split/validation") 
-    output_dir = asset_dir / "EmotionRecognition" / "facerec_based_models"
+    output_dir = asset_dir / "EmotionRecognition" / "facerec_based_models_2"
     output_dir.mkdir(exist_ok=True, parents=True)
     model_dirs = {
-        # "2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early": "EMOCA-emorec",  
+        "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_10_16-33-08_2929045501486288941_EmoDECA_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early": "EMOCA-emorec",  
         # "/is/cluster/work/rdanecek/emoca/emodeca/2022_01_29_21-59-07_3822537833951552856_EmotionRecognition_Affec_ExpDECA_nl-4BatchNorm1d_id_exp_jaw_shake_samp-balanced_expr_early": "EMOCA_detail-emorec",  
     }
 
     for model, name in model_dirs.items():
         print(f"Packing model {name}")
-        package_model(input_dir / model, output_dir / name, asset_dir, overwrite=True)
+        package_model(input_dir / model, output_dir / name, asset_dir, overwrite=True, remove_bfm_textures=True)
         test_loading(output_dir / name)
         print("Model loading tested")
 

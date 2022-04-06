@@ -31,7 +31,7 @@ from captum.insights.attr_vis.features import ImageFeature
 
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions, AffectNetDataModule
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
-from gdl.layers.losses.EmoNetLoss import emo_network_from_path
+from gdl.layers.losses.emotion_loss_loader import emo_network_from_path
 
 
 def get_classes():

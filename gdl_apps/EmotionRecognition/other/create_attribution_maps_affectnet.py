@@ -47,7 +47,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions, AffectNetDataModule, AffectNetTestModule
 from gdl.models.EmotionRecognitionModuleBase import EmotionRecognitionBaseModule
-from gdl.layers.losses.EmoNetLoss import emo_network_from_path
+from gdl.layers.losses.emotion_loss_loader import emo_network_from_path
 from gdl.models.DECA import DECA, DecaModule
 from gdl.models.IO import locate_checkpoint
 from gdl_apps.EMOCA.load_data import hack_paths
