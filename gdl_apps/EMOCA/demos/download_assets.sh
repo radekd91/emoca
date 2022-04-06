@@ -49,7 +49,7 @@ echo "Assets for EMOCA downloaded and extracted."
 
 cd ../data 
 echo "Downloading example test data"
-wget https://download.is.tue.mpg.de/emoca/assets/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
+wget https://download.is.tue.mpg.de/emoca/assets/data/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
 unzip EMOCA_test_example_data.zip
 echo "Example test data downloaded and extracted."
 
