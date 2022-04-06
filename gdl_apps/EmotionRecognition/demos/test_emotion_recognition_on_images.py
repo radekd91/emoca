@@ -79,7 +79,7 @@ def main():
     if args.model_type == "image": 
         path_to_models = path_to_models / "image_based_networks"
     elif args.model_type == "3dmm": 
-        path_to_models = path_to_models / "facerec_based_models"
+        path_to_models = path_to_models / "face_reconstruction_based"
     input_folder = args.input_folder
     output_folder = args.output_folder
     model_name = args.model_name
