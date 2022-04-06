@@ -157,6 +157,34 @@ conda activate work36_cu11
 2) For running examples of Emotion Recognition, go to [EmotionRecognition](gdl_apps/EmotionRecognition)
 
 
+## Citation 
+
+If you use this work in your publication, please cite the following publications:
+```
+@inproceedings{EMOCA:CVPR:2022,
+  title = {{EMOCA}: {E}motion Driven Monocular Face Capture and Animation},
+  author = {Danecek, Radek and Black, Michael J. and Bolkart, Timo},
+  booktitle = {Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages = {},
+  year = {2022}
+}
+```
+As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts of DECA as fixed part of the model, please further cite:
+```
+@article{DECA:Siggraph2021,
+  title={Learning an Animatable Detailed {3D} Face Model from In-The-Wild Images},
+  author={Feng, Yao and Feng, Haiwen and Black, Michael J. and Bolkart, Timo},
+  journal = {ACM Transactions on Graphics (ToG), Proc. SIGGRAPH},
+  volume = {40}, 
+  number = {8}, 
+  year = {2021}, 
+  url = {https://doi.org/10.1145/3450626.3459936} 
+}
+```
+
+## License
+This code and model are **available for non-commercial scientific research purposes** as defined in the [LICENSE](https://emoca.is.tue.mpg.de/license.html) file. By downloading and using the code and model you agree to the terms of this license. 
+
 ## Acknowledgements 
 There are many people who deserve to get credited. These include but are not limited to: 
 Yao Feng and Haiwen Feng and their original implementation of [DECA](https://github.com/YadiraF/DECA).
