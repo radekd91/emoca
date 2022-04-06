@@ -56,6 +56,11 @@ python demos/test_emoca_on_video.py --input_video <path_to_your_video> --output_
 ```
 The script will extract the frames from the video, run face detection on it to extract cropped out faces. Then EMOCA will be run, the reconstruction renderings saved and finally 
 
+Running the following (default parameters) will use EMOCA to reconstruct faces on a provided test video.
+```python 
+python demos/test_emoca_on_video.py
+```
+
 See `demos/test_emoca_on_video.py` for further details.
 
 ## Training 
