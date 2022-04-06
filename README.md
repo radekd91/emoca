@@ -159,5 +159,5 @@ conda activate work36_cu11
 
 ## Acknowledgements 
 There are many people who deserve to get credited. These include but are not limited to: 
-Yao Fend and Haiwen Feng and their original implementation of [DECA](https://github.com/YadiraF/DECA).
+Yao Feng and Haiwen Feng and their original implementation of [DECA](https://github.com/YadiraF/DECA).
 Antoine Toisoul and colleagues for [EmoNet](https://github.com/face-analysis/emonet).
