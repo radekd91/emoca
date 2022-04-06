@@ -28,12 +28,9 @@ from gdl_apps.EMOCA.utils.io import save_obj, save_images, save_codes, test
 
 def main():
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--input_video', type=str, default="/ps/project/EmotionalFacialAnimation/data/aff-wild2/Aff-Wild2_ready/AU_Set/videos/Test_Set/82-25-854x480.mp4")
-    # parser.add_argument('--input_video', type=str, default="/ps/project/EmotionalFacialAnimation/data/aff-wild2/Aff-Wild2_ready/AU_Set/videos/Test_Set/30-30-1920x1080.mp4", 
-        # help="Filename of the video for reconstruction.")
-    parser.add_argument('--input_video', type=str, default="/ps/scratch/rdanecek/EMOCA/Videos/ThisIsUs_s01_trailer.mp4", 
+    parser.add_argument('--input_video', type=str, default=Path(gdl.__file__).parents[1] /"videos/82-25-854x480_affwild2.mp4", 
         help="Filename of the video for reconstruction.")
-    parser.add_argument('--output_folder', type=str, default="/ps/scratch/rdanecek/EMOCA/Test", help="Output folder to save the results to.")
+    parser.add_argument('--output_folder', type=str, default="video_output", help="Output folder to save the results to.")
     parser.add_argument('--model_name', type=str, default='EMOCA', help='Name of the model to use.')
     parser.add_argument('--path_to_models', type=str, default=Path(gdl.__file__).parents[1] / "assets/EMOCA/models")
     parser.add_argument('--save_images', type=bool, default=True, help="If true, output images will be saved")

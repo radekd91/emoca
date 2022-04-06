@@ -58,7 +58,9 @@ unzip SWIN-B.zip
 cd ..
 
 
-cd ../data 
+cd ..
+mkdir data 
+cd data
 echo "Downloading example test data"
 wget https://download.is.tue.mpg.de/emoca/assets/data/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
 unzip EMOCA_test_example_data.zip

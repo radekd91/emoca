@@ -14,7 +14,7 @@ while true; do
     esac
 done
 
-echo "If you wish to use EMOCA, please register at:", 
+echo "If you wish to use EMOCA, please register at:" 
 echo -e '\e]8;;https://emoca.is.tue.mpg.de\ahttps://emoca.is.tue.mpg.de\e]8;;\a'
 while true; do
     read -p "I have registered and agreed to the license terms at https://emoca.is.tue.mpg.de? (y/n)" yn
@@ -47,7 +47,9 @@ echo "Extracting FLAME..."
 unzip FLAME.zip
 echo "Assets for EMOCA downloaded and extracted."
 
-cd ../data 
+cd ../
+mkdir data 
+cd data
 echo "Downloading example test data"
 wget https://download.is.tue.mpg.de/emoca/assets/data/EMOCA_test_example_data.zip -O EMOCA_test_example_data.zip
 unzip EMOCA_test_example_data.zip
