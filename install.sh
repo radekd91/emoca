@@ -8,4 +8,6 @@ conda activate work36_cu11
 echo "Installing GDL"
 pip install Cython==0.29.14
 pip install -e . 
+echo "Making sure Pytorch3D installed correctly"
+pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.0
 echo "Installation finished"

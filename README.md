@@ -121,6 +121,12 @@ pip install -e .
 
 5) Verify that previous step correctly installed Pytorch3D
 
+For some people the compilation fails during requirements install and works after. Try running the following separately: 
+
+```bash
+pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.0
+```
+
 Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.0 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
 
 Note: EMOCA was developed with Pytorch 1.9.1 and Pytorch3d 0.6.0 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
