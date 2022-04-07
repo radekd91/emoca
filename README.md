@@ -76,7 +76,7 @@ The training and testing script for EMOCA can be found in this subfolder:
 ```bash
 bash install.sh
 ```
-If this ran without any errors (especially for CUDA, PyTorch and PyTorch3D), you can skip the long version.
+If this ran without any errors, you now have a functioning conda environment with all the necessary packages to [run the demos](#usage). If you had issues with the installation script, go through the [long version](#long-version) of the installation and see what went wrong. Certain packages (especially for CUDA, PyTorch and PyTorch3D) may cause issues for some users.
 
 ### Long version
 
@@ -132,6 +132,7 @@ Pytorch3D installation (which is part of the requirements file) can unfortunatel
 Note: EMOCA was developed with Pytorch 1.9.1 and Pytorch3d 0.6.0 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
 
 ## Usage 
+
 0) Activate the environment: 
 ```bash
 conda activate work36_cu11
