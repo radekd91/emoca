@@ -1,4 +1,4 @@
-cython~=0.29.21
+cython~=0.29
 adabound~=0.0.5
 addict~=2.4.0
 alabaster~=0.7.12
