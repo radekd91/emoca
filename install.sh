@@ -1,4 +1,10 @@
 #!/bin/bash
+if ! command -v mamba &> /dev/null
+then
+    echo "mamba could not be found. Please install mamba before running this script"
+    exit
+fi
+
 echo "Pulling submodules"
 bash pull_submodules.sh
 echo "Creating conda environment"
