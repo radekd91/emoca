@@ -36,10 +36,21 @@ echo "Extracting EMOCA..."
 unzip EMOCA.zip
 cd ../../
 
-echo "Downloading DECA related assets"
-wget https://download.is.tue.mpg.de/emoca/assets/DECA.zip -O DECA.zip
+echo "Downloading DECA..."
+mkdir -p EMOCA/models 
+cd EMOCA/models 
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA/models/DECA.zip -O DECA.zip
 echo "Extracting DECA..."
 unzip DECA.zip
+cd ../../
+
+
+echo "Downloading DECA related assets"
+wget https://download.is.tue.mpg.de/emoca/assets/DECA.zip -O DECA.zip
+wget https://download.is.tue.mpg.de/emoca/assets/FaceRecognition.zip -O FaceRecognition.zip
+echo "Extracting DECA related assets..."
+unzip DECA.zip
+unzip FaceRecognition.zip
 
 echo "Downloading FLAME related assets"
 wget https://download.is.tue.mpg.de/emoca/assets/FLAME.zip -O FLAME.zip

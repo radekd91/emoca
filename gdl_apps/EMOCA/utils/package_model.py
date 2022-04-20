@@ -118,11 +118,17 @@ def main():
     if len(sys.argv) < 4:
         # print("Usage: package_model.py <model_dir> <output_packaged_model_dir>")
         # sys.exit()
+        # EMOA
         input_dir = "/ps/project/EmotionalFacialAnimation/emoca/face_reconstruction_models/new_affectnet_split/final_models" \
             "/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early" 
         output_dir = "/ps/project/EmotionalFacialAnimation/emoca/face_reconstruction_models/new_affectnet_split/final_models/packaged2/EMOCA"
 
-        asset_dir = "/home/rdanecek/Workspace/Repos/gdl/assets2/"
+        # DECA
+        # input_dir = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_15_17-20-34_-4851631063966731039_Orig_DECA2" 
+        # output_dir = "/ps/project/EmotionalFacialAnimation/emoca/face_reconstruction_models/new_affectnet_split/final_models/packaged2/DECA"
+
+
+        asset_dir = "/home/rdanecek/Workspace/Repos/gdl/assets/"
 
 
     # input_dir = sys.argv[1]
