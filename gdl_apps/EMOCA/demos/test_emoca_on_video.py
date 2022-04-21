@@ -43,15 +43,21 @@ def main():
     parser.add_argument('--processed_subfolder', type=str, default=None, 
         help="If you want to resume previously interrupted computation over a video, make sure you specify" \
             "the subfolder where the got unpacked. It will be in format 'processed_%Y_%b_%d_%H-%M-%S'")
+    parser.add_argument('--cat_dim', type=int, default=0, 
+        help="The result video will be concatenated vertically if 0 and horizontally if 1")
+    parser.add_argument('--include_transparent', type=bool, default=False, 
+        help="Apart from the reconstruction video, also a video with the transparent mesh will be added")
     args = parser.parse_args()
-
+    print("Path to models " + args.path_to_models)
     path_to_models = args.path_to_models
     input_video = args.input_video
     output_folder = args.output_folder
     model_name = args.model_name
     image_type = args.image_type
-    # processed_subfolder = args.processed_subfolder
-    processed_subfolder = "processed_2022_Jan_15_15-03-37"
+    cat_dim = args.cat_dim
+    include_transparent = bool(args.include_transparent)
+    print("Include transparent:", include_transparent)
+    processed_subfolder = args.processed_subfolder
 
     mode = 'detail'
     # mode = 'coarse'
@@ -96,7 +102,8 @@ def main():
                 save_codes(Path(outfolder), name, vals, i)
 
     ## 5) Create the reconstruction video (reconstructions overlayed on the original video)
-    dm.create_reconstruction_video(0,  rec_method=model_name, image_type=image_type, overwrite=True)
+    dm.create_reconstruction_video(0,  rec_method=model_name, image_type=image_type, overwrite=True, 
+            cat_dim=cat_dim, include_transparent=include_transparent)
     print("Done")
 
 
