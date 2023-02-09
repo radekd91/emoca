@@ -15,9 +15,8 @@ echo "Installing GDL"
 pip install Cython==0.29
 pip install -e . 
 echo "Making sure Pytorch3D installed correctly"
-pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.0
-echo "Installing avhubert and fairseq"
-cd external/av_hubert/fairseq 
+pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.2
+echo "Installing other requirements"
 pip install -e . 
 cd .. 
 pip install -r requirements.txt
