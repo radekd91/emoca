@@ -1,0 +1,42 @@
+name: work38
+channels:
+  - huggingface
+  - pytorch
+  - fastai
+  - nvidia
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - libiconv=1.17 # otherwise ffmpeg might have a missing .so 
+  - ffmpeg=4.4.1
+  - ffmpeg-python=0.2.0
+  - matplotlib-base>=3.2.2
+  - moviepy=1.0.1
+  - multidict=5.1.0
+  - murmurhash=1.0.5
+  - ninja=1.10.2
+  - notebook=6.3.0
+  - numba>=0.52.0
+  - pandas>=1.1.5
+  - pip>=21.2.4
+  - python=3.8
+  # - pytorch=1.9.1=py3.8_cuda11.1_cudnn8.0.5_0
+  - pytorch=1.10.2=py3.8_cuda11.3_cudnn8.2.0_0
+  - torchvision=0.11.3
+  - torchaudio=0.10.2
+  - pywavelets>=1.1.1
+  - pyyaml>=5.4.1
+  - resampy=0.2.2
+  - scikit-image>=0.17.2
+  - scikit-learn>=0.24.2
+  - scikit-video>=1.1.11
+  - seaborn=0.11.0
+  - tqdm>=4.62.3
+  - wheel>=0.37.0
+  - yaml>=0.2.5
+  - yarl>=1.6.3
+  - requests=2.27.1
+  - transformers=4.11.3
+  - kornia==0.6.5
+  - pyrender==0.1.45

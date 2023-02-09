@@ -129,6 +129,8 @@ def create_single_dm(cfg, data_class):
             processed_ext=".png" if "processed_ext" not in cfg.data.keys() else cfg.data.processed_ext,
             dataset_type=cfg.data.dataset_type if "dataset_type" in cfg.data.keys() else None,
             # use_gt=cfg.data.use_gt if "use_gt" in cfg.data.keys() else True,
+            k_fold_crossvalidation=cfg.data.k_fold_crossvalidation if "k_fold_crossvalidation" in cfg.data.keys() else None,
+            k_index=cfg.data.k_index if "k_index" in cfg.data.keys() else None,
         )
         sequence_name = "AFEW-VA"
     else:
@@ -179,6 +181,10 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
         if cfg_coarse.model.exp_deca_jaw_pose:
             experiment_name += '_Jaw'
 
+        zero_out = cfg_coarse.model.get('zero_out_last_enc_layer', False)
+        if zero_out:
+            experiment_name += '_Z'
+
         if cfg_coarse.learning.train_K == 1:
             experiment_name += '_NoRing'
 
@@ -213,6 +219,15 @@ def create_experiment_name(cfg_coarse, cfg_detail, version=2):
                 experiment_name += 'f-' + cfg_coarse.model.au_loss.feat_loss[:3]
             if cfg_coarse.model.au_loss.au_loss != 'l1_loss':
                 experiment_name += '_c-' + cfg_coarse.model.au_loss.au_loss[:3]
+        
+        if 'lipread_loss' in cfg_coarse.model.keys():
+            experiment_name += '_LR'
+            
+        if cfg_coarse.model.get('use_mediapipe_landmarks', False) or \
+            cfg_coarse.model.get('use_mouth_corner_distance_mediapipe', False)\
+                or cfg_coarse.model.get('use_lip_distance_mediapipe', False)\
+                    or cfg_coarse.model.get('use_eye_distance_mediapipe', False):
+            experiment_name += '_MP'
 
         # if expression exchange and geometric errors are to be computed even for the exchanged
         if 'use_geometric_losses_expression_exchange' in cfg_coarse.model.keys() and \
@@ -356,8 +371,8 @@ def train_expdeca(cfg_coarse, cfg_detail, start_i=-1, resume_from_previous = Tru
 
     full_run_dir.mkdir(parents=True, exist_ok=exist_ok)
     print(f"The run will be saved  to: '{str(full_run_dir)}'")
-    with open("out_folder.txt", "w") as f:
-        f.write(str(full_run_dir))
+    # with open("out_folder.txt", "w") as f:
+        # f.write(str(full_run_dir))
 
     coarse_checkpoint_dir = full_run_dir / "coarse" / "checkpoints"
     coarse_checkpoint_dir.mkdir(parents=True, exist_ok=exist_ok)
@@ -481,23 +496,44 @@ def main():
     if len(sys.argv) <= 2:
         coarse_conf = "deca_train_coarse"
         detail_conf = "deca_train_detail"
+
+        emonet = "/is/cluster/work/rdanecek/emoca/emodeca/2021_11_09_05-15-38_-8198495972451127810_EmoCnn_resnet50_shake_samp-balanced_expr_Aug_early"
+        photometric_normalization = 'mean'
+        use_mouth_corner_distance = True 
+        use_eye_distance = True
+        use_lip_distance = True
+        emo_feature_loss_type = 'mse'
+
         coarse_override = [
             # 'model/settings=coarse_train',
             # 'model/settings=coarse_train_emonet',
             # 'model/settings=coarse_train_expdeca',
-            'model/settings=coarse_train_expdeca_emonet',
+            # 'model/settings=coarse_train_expdeca_emonet',
+            # 'model/settings=coarse_train_emica',
+            'model/settings=coarse_train_emica_emonet',
             # 'model/settings=coarse_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
             # 'model.expression_constrain_use_jaw_pose=True',
             'model.expression_constrain_use_global_pose=False',
             # 'model.use_geometric_losses_expression_exchange=True',
 
+            'model.use_emonet_feat_1=False',
+            'model.use_emonet_feat_2=True',
+            'model.use_emonet_valence=False',
+            'model.use_emonet_arousal=False',
+            'model.use_emonet_expression=False',
+            'model.use_emonet_combined=False',
+            f'+model.photometric_normalization={photometric_normalization}',
+            f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+            f'+model.use_eye_distance={use_eye_distance}',
+            f'+model.use_lip_distance={use_lip_distance}',
+            f'+model.emo_feat_loss={emo_feature_loss_type}',  # emonet feature loss
             # '+model.mlp_emotion_predictor.detach_shape=True',
             # '+model.mlp_emotion_predictor.detach_expression=True',
             # '+model.mlp_emotion_predictor.detach_detailcode=True',
             # '+model.mlp_emotion_predictor.detach_jaw=True',
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
-
+            f'+model.emonet_model_path={emonet}',
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
             # f'data.ring_type=gt_va',
             #  'data.ring_size=4',
@@ -505,13 +541,14 @@ def main():
             f'data.num_workers={num_workers}',
             'model.resume_training=True', # load the original EMOCA model
             'learning.early_stopping.patience=5',
-            # 'learning/logging=none',
+            'learning/logging=none',
             'learning.batch_size_train=4',
                               ]
         detail_override = [
             # 'model/settings=detail_train',
             # 'model/settings=detail_train_emonet',
-            'model/settings=detail_train_expdeca_emonet',
+            # 'model/settings=detail_train_expdeca_emonet',
+            'model/settings=detail_train_emica_emonet',
             # 'model/settings=detail_train_expdeca_emomlp',
             # 'model.expression_constrain_type=exchange',
             # 'model.expression_constrain_use_jaw_pose=True',
@@ -522,14 +559,27 @@ def main():
             # '+model.mlp_emotion_predictor.detach_detailcode=True',
             # '+model.mlp_emotion_predictor.detach_jaw=True',
             # '+model.mlp_emotion_predictor.detach_global_pose=True',
+            f'+model.emonet_model_path={emonet}',
             'data/datasets=affectnet_desktop', # affectnet vs deca dataset
+            
             # f'data.ring_type=gt_va',
             #  'learning/batching=single_gpu_expdeca_detail_ring',
             #  'data.ring_size=4',
             'learning.early_stopping.patience=5',
-            # 'learning/logging=none',
+            'learning/logging=none',
             f'data.num_workers={num_workers}',
             'learning.batch_size_train=4',
+
+            'model.use_emonet_feat_1=False',
+            'model.use_emonet_feat_2=True',
+            'model.use_emonet_valence=False',
+            'model.use_emonet_arousal=False',
+            'model.use_emonet_expression=False',
+            'model.use_emonet_combined=False',
+            f'+model.photometric_normalization={photometric_normalization}',
+            f'+model.use_mouth_corner_distance={use_mouth_corner_distance}',
+            f'+model.use_eye_distance={use_eye_distance}',
+            f'+model.use_lip_distance={use_lip_distance}',
         ]
 
         # coarse_conf = detail_conf

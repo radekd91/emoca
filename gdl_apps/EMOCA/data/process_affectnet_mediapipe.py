@@ -1,6 +1,22 @@
+import sys, os 
+import math
+sys.path = [os.path.abspath("../../..")] + sys.path
+
+from pathlib import Path
+
+if len(sys.argv) > 1:
+    sid = int(sys.argv[1])
+else:
+    sid = 0
+
+
+from gdl.datasets.AffectNetDataModule import AffectNetDataModule, AffectNetEmoNetSplitModule
+
+
+
 """
 Author: Radek Danecek
-Copyright (c) 2022, Radek Danecek
+Copyright (c) 2023, Radek Danecek
 All rights reserved.
 
 # Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V. (MPG) is
@@ -56,13 +72,14 @@ def main():
         if sid >= dm.num_subsets: 
             print(f"Subset index {sid} is larger than number of subsets. Terminating")
             sys.exit()
-        dm._detect_landmarks_and_segment_subset(dm.subset_size * sid, min((sid + 1) * dm.subset_size, len(dm.df)))
+        print("Detecting mediapipe landmarks in subset %d" % sid)
+        dm._detect_landmarks_mediapipe(dm.subset_size * sid, min((sid + 1) * dm.subset_size, len(dm.df)))
+        print("Finished decting faces")
     else:
         dm.prepare_data() 
 
     
     
-
 
 if __name__ == "__main__":
     main()
