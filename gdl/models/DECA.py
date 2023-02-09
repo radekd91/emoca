@@ -25,6 +25,7 @@ import os, sys
 import torch
 import torchvision
 import torch.nn.functional as F
+import torchvision.transforms.functional as F_v
 import adabound
 from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
@@ -32,16 +33,18 @@ from gdl.layers.losses.EmoNetLoss import EmoNetLoss, create_emo_loss, create_au_
 import numpy as np
 # from time import time
 from skimage.io import imread
+from skimage.transform import resize
 import cv2
 from pathlib import Path
 
 from gdl.models.Renderer import SRenderY
 from gdl.models.DecaEncoder import ResnetEncoder, SecondHeadResnet, SwinEncoder
 from gdl.models.DecaDecoder import Generator, GeneratorAdaIn
-from gdl.models.DecaFLAME import FLAME, FLAMETex
+from gdl.models.DecaFLAME import FLAME, FLAMETex, FLAME_mediapipe
 from gdl.models.EmotionMLP import EmotionMLP
 
 import gdl.layers.losses.DecaLosses as lossfunc
+import gdl.layers.losses.MediaPipeLandmarkLosses as lossfunc_mp
 import gdl.utils.DecaUtils as util
 from gdl.datasets.AffWild2Dataset import Expression7
 from gdl.datasets.AffectNetDataModule import AffectNetExpressions
@@ -49,7 +52,7 @@ from gdl.utils.lightning_logging import _log_array_image, _log_wandb_image, _tor
 
 torch.backends.cudnn.benchmark = True
 from enum import Enum
-from gdl.utils.other import class_from_str
+from gdl.utils.other import class_from_str, get_path_to_assets
 from gdl.layers.losses.VGGLoss import VGG19Loss
 from omegaconf import OmegaConf, open_dict
 
@@ -131,12 +134,36 @@ class DecaModule(LightningModule):
         self.au_loss = None
         self._init_au_loss()
 
+        # initialize the lip reading perceptual loss (not currently used in original EMOCA)
+        self.lipread_loss = None
+        self._init_lipread_loss()
+
         # MPL regressor from the encoded space to emotion labels (not used in EMOCA but could be used for direct emotion supervision)
         if 'mlp_emotion_predictor' in self.deca.config.keys():
             # self._build_emotion_mlp(self.deca.config.mlp_emotion_predictor)
             self.emotion_mlp = EmotionMLP(self.deca.config.mlp_emotion_predictor, model_params)
         else:
             self.emotion_mlp = None
+
+    def get_input_image_size(self): 
+        return (self.deca.config.image_size, self.deca.config.image_size)
+
+    def _instantiate_deca(self, model_params):
+        """
+        Instantiate the DECA network.
+        """
+        # which type of DECA network is used
+        if 'deca_class' not in model_params.keys() or model_params.deca_class is None:
+            print(f"Deca class is not specified. Defaulting to {str(DECA.__class__.__name__)}")
+            # vanilla DECA by default (not EMOCA)
+            deca_class = DECA
+        else:
+            # other type of DECA-inspired networks possible (such as ExpDECA, which is what EMOCA)
+            deca_class = class_from_str(model_params.deca_class, sys.modules[__name__])
+
+        # instantiate the network
+        self.deca = deca_class(config=model_params)
+
 
     def _init_emotion_loss(self):
         """
@@ -202,6 +229,34 @@ class DecaModule(LightningModule):
             self.au_loss = create_au_loss(self.device, self.deca.config.au_loss)
         else:
             self.au_loss = None
+
+    def _init_lipread_loss(self):
+        """
+        Initialize the au perceptual loss (not currently used in EMOCA)
+        """
+        if 'lipread_loss' in self.deca.config.keys():
+            if self.lipread_loss is not None:
+                force_override = True if 'force_override' in self.deca.config.lipread_loss.keys() \
+                                         and self.deca.config.lipread_loss.force_override else False
+                assert self.lipread_loss.is_trainable(), "Trainable lip reading loss is not supported yet."
+                if self.lipread_loss.is_trainable():
+                    if not force_override:
+                        print("The old lip reading loss is trainable and will not be overrided or replaced.")
+                        return
+                        # raise NotImplementedError("The old emonet loss was trainable. Changing a trainable loss is probably now "
+                        #                       "what you want implicitly. If you need this, use the '`'emoloss_force_override' config.")
+                    else:
+                        print("The old lip reading loss is trainable but override is set so it will be replaced.")
+                else:
+                    print("The old lip reading loss is not trainable. It will be replaced.")
+
+            # old_lipread_loss = self.emonet_loss
+            from gdl.models.temporal.external.LipReadingLoss import LipReadingLoss
+            self.lipread_loss = LipReadingLoss(self.device, self.deca.config.lipread_loss.lipread_loss)
+            self.lipread_loss.eval()
+            self.lipread_loss.requires_grad_(False)
+        else:
+            self.lipread_loss = None
 
     def reconfigure(self, model_params, inout_params, learning_params, stage_name="", downgrade_ok=False, train=True):
         """
@@ -302,6 +357,16 @@ class DecaModule(LightningModule):
         values = self.decode(values, training=False)
         return values
 
+    def _unwrap_list(self, codelist): 
+        shapecode, texcode, expcode, posecode, cam, lightcode = codelist
+        return shapecode, texcode, expcode, posecode, cam, lightcode
+
+    
+    def _unwrap_list_to_dict(self, codelist): 
+        shapecode, texcode, expcode, posecode, cam, lightcode = codelist
+        return {'shape': shapecode, 'tex': texcode, 'exp': expcode, 'pose': posecode, 'cam': cam, 'light': lightcode}
+        # return shapecode, texcode, expcode, posecode, cam, lightcode
+
     def _encode_flame(self, images):
         if self.mode == DecaMode.COARSE or \
                 (self.mode == DecaMode.DETAIL and self.deca.config.train_coarse):
@@ -313,14 +378,15 @@ class DecaModule(LightningModule):
                 parameters = self.deca._encode_flame(images)
         else:
             raise ValueError(f"Invalid EMOCA Mode {self.mode}")
-        code_list = self.deca.decompose_code(parameters)
-        shapecode, texcode, expcode, posecode, cam, lightcode = code_list
-        return shapecode, texcode, expcode, posecode, cam, lightcode
+        code_list, original_code = self.deca.decompose_code(parameters)
+        # shapecode, texcode, expcode, posecode, cam, lightcode = code_list
+        # return shapecode, texcode, expcode, posecode, cam, lightcode, original_code
+        return code_list, original_code
 
     def _expression_ring_exchange(self, original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
                                   images, cam, lmk, masks, va, expr7, affectnetexp,
-                                  detailcode=None, detailemocode=None, exprw=None):
+                                  detailcode=None, detailemocode=None, exprw=None, lmk_mp=None):
         """
         Deprecated. Expression ring exchange is not used in EMOCA (nor DECA).
         """
@@ -361,6 +427,8 @@ class DecaModule(LightningModule):
         images = torch.cat([images, images],
                            dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
         lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+        if lmk_mp is not None:
+            lmk_mp = torch.cat([lmk_mp, lmk_mp], dim=0)
         masks = torch.cat([masks, masks], dim=0)
 
 
@@ -393,7 +461,7 @@ class DecaModule(LightningModule):
             detailemocode = torch.cat([detailemocode, detailemocode[new_order]], dim=0)
 
         return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, \
-               detailcode, detailemocode, exprw
+               detailcode, detailemocode, exprw, lmk_mp
 
         # return expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7
 
@@ -424,6 +492,12 @@ class DecaModule(LightningModule):
         if 'landmark' in batch.keys():
             lmk = batch['landmark']
             lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+        
+        if 'landmark_mediapipe' in batch.keys():
+            lmk_mp = batch['landmark_mediapipe']
+            lmk_mp = lmk_mp.view(-1, lmk_mp.shape[-2], lmk_mp.shape[-1])
+        else:
+            lmk_mp = None
 
         if 'mask' in batch.keys():
             masks = batch['mask']
@@ -460,7 +534,11 @@ class DecaModule(LightningModule):
 
         # 1) COARSE STAGE
         # forward pass of the coarse encoder
-        shapecode, texcode, expcode, posecode, cam, lightcode = self._encode_flame(images)
+        # shapecode, texcode, expcode, posecode, cam, lightcode = self._encode_flame(images)
+        code, original_code = self._encode_flame(images)
+        shapecode, texcode, expcode, posecode, cam, lightcode = self._unwrap_list(code)
+        if original_code is not None:
+            original_code = self._unwrap_list_to_dict(original_code)
 
         if training:
             # If training, we employ the disentanglement strategy
@@ -477,7 +555,15 @@ class DecaModule(LightningModule):
                     shapecode_mean = torch.mean(shapecode_idK, dim=[1])
                     # shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
                     shapecode_new = shapecode_mean[:, None, :].repeat(1, K, 1)
-                    shapecode = shapecode_new.view(-1, self.deca.config.model.n_shape)
+                    shapecode = shapecode_new.view(-1, self.deca._get_num_shape_params())
+
+                    # do the same for the original code dict
+                    shapecode_orig = original_code['shape']
+                    shapecode_orig_idK = shapecode_orig.view(original_batch_size, K, -1)
+                    shapecode_orig_mean = torch.mean(shapecode_orig_idK, dim=[1])
+                    shapecode_orig_new = shapecode_orig_mean[:, None, :].repeat(1, K, 1)
+                    original_code['shape'] = shapecode_orig_new.view(-1, self.deca._get_num_shape_params())
+
                 elif self.deca.config.shape_constrain_type == 'exchange':
                     ## Shuffle identitys shape codes within ring (they should correspond to the same identity)
                     '''
@@ -501,13 +587,28 @@ class DecaModule(LightningModule):
                     images = torch.cat([images, images],
                                        dim=0)  # images = images.view(-1, images.shape[-3], images.shape[-2], images.shape[-1])
                     lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    if lmk_mp is not None:
+                        lmk_mp = torch.cat([lmk_mp, lmk_mp], dim=0)
                     masks = torch.cat([masks, masks], dim=0)
 
                     if va is not None:
                         va = torch.cat([va, va], dim=0)
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
+
+                    # do the same for the original code dict
+                    shapecode_orig = original_code['shape']
+                    shapecode_orig_new = shapecode_orig[new_order]
+                    original_code['shape'] = torch.cat([shapecode_orig, shapecode_orig_new], dim=0)
+                    original_code['tex'] = torch.cat([original_code['tex'], original_code['tex']], dim=0)
+                    original_code['exp'] = torch.cat([original_code['exp'], original_code['exp']], dim=0)
+                    original_code['pose'] = torch.cat([original_code['pose'], original_code['pose']], dim=0)
+                    original_code['cam'] = torch.cat([original_code['cam'], original_code['cam']], dim=0)
+                    original_code['light'] = torch.cat([original_code['light'], original_code['light']], dim=0)
+
+
                 elif self.deca.config.shape_constrain_type == 'shuffle_expression':
+                    assert original_code is not None
                     ## DEPRECATED, NOT USED IN EMOCA OR DECA
                     new_order = np.random.permutation(K*original_batch_size)
                     old_order = np.arange(K*original_batch_size)
@@ -537,6 +638,8 @@ class DecaModule(LightningModule):
                     print(f"TRAINING: {training}")
                     if lmk is not None:
                         lmk = torch.cat([lmk, lmk], dim=0)  # lmk = lmk.view(-1, lmk.shape[-2], lmk.shape[-1])
+                    if lmk_mp is not None:
+                        lmk_mp = torch.cat([lmk_mp, lmk_mp], dim=0)
                     masks = torch.cat([masks, masks], dim=0)
 
                     ref_images_identity_idxs = np.concatenate([old_order, old_order])
@@ -548,6 +651,18 @@ class DecaModule(LightningModule):
                         va = torch.cat([va, va[new_order]], dim=0)
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7[new_order]], dim=0)
+
+                    # do the same for the original code dict
+                    original_code['shape'] = torch.cat([original_code['shape'], original_code['shape']], dim=0)
+                    original_code['tex'] = torch.cat([original_code['tex'], original_code['tex']], dim=0)
+                    original_code['exp'] = torch.cat([original_code['exp'], original_code['exp'][new_order]], dim=0)
+                    original_global_pose = original_code['pose'][:, :3]
+                    original_jaw_pose = original_code['pose'][:, 3:]
+                    original_jaw_pose = torch.cat([original_jaw_pose, original_jaw_pose[new_order]], dim=0)
+                    original_global_pose = torch.cat([original_global_pose, original_global_pose], dim=0)
+                    original_code['pose'] = torch.cat([original_global_pose, original_jaw_pose], dim=1)
+                    original_code['cam'] = torch.cat([original_code['cam'], original_code['cam']], dim=0)
+                    original_code['light'] = torch.cat([original_code['light'], original_code['light']], dim=0)
 
                 elif self.deca.config.shape_constrain_type == 'shuffle_shape':
                     ## The shape codes are shuffled without duplication
@@ -581,6 +696,18 @@ class DecaModule(LightningModule):
                     if expr7 is not None:
                         expr7 = torch.cat([expr7, expr7], dim=0)
 
+                    # do the same for the original code dict
+                    shapecode_orig = original_code['shape']
+                    shapecode_orig_new = shapecode_orig[new_order]
+                    original_code['shape'] = torch.cat([shapecode_orig, shapecode_orig_new], dim=0)
+                    original_code['tex'] = torch.cat([original_code['tex'], original_code['tex']], dim=0)
+                    original_code['exp'] = torch.cat([original_code['exp'], original_code['exp']], dim=0)
+                    original_code['pose'] = torch.cat([original_code['pose'], original_code['pose']], dim=0)
+                    original_code['cam'] = torch.cat([original_code['cam'], original_code['cam']], dim=0)
+                    original_code['light'] = torch.cat([original_code['light'], original_code['light']], dim=0)
+                    original_code['ref_images_identity_idxs'] = ref_images_identity_idxs
+                    original_code['ref_images_expression_idxs'] = ref_images_expression_idxs
+
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'same':
                     ## NOT USED IN EMOCA OR DECA, deprecated
@@ -592,15 +719,21 @@ class DecaModule(LightningModule):
                     expcode_mean = torch.mean(expcode_idK, dim=[1])
                     # shapecode_new = shapecode_mean[:, None, :].repeat(1, self.deca.K, 1)
                     expcode_new = expcode_mean[:, None, :].repeat(1, K, 1)
-                    expcode = expcode_new.view(-1, self.deca.config.model.n_shape)
+                    expcode = expcode_new.view(-1, self.deca._get_num_shape_params())
+
+                    # do the same thing for the original code dict
+                    expcode_idK = original_code['exp'].view(original_batch_size, K, -1)
+                    expcode_mean = torch.mean(expcode_idK, dim=[1])
+                    expcode_new = expcode_mean[:, None, :].repeat(1, K, 1)
+                    original_code['exp'] = expcode_new.view(-1, self.deca._get_num_shape_params())
 
                 elif 'expression_constrain_type' in self.deca.config.keys() and \
                         self.deca.config.expression_constrain_type == 'exchange':
                     ## NOT USED IN EMOCA OR DECA, deprecated
-                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, _, exprw = \
+                    expcode, posecode, shapecode, lightcode, texcode, images, cam, lmk, masks, va, expr7, affectnetexp, _, _, exprw, lmk_mp = \
                         self._expression_ring_exchange(original_batch_size, K,
                                   expcode, posecode, shapecode, lightcode, texcode,
-                                  images, cam, lmk, masks, va, expr7, affectnetexp, None, None, exprw)
+                                  images, cam, lmk, masks, va, expr7, affectnetexp, None, None, exprw, lmk_mp)
                     # (self, original_batch_size, K,
                     #                                   expcode, posecode, shapecode, lightcode, texcode,
                     #                                   images, cam, lmk, masks, va, expr7, affectnetexp,
@@ -761,6 +894,8 @@ class DecaModule(LightningModule):
             codedict['masks'] = masks
         if 'landmark' in batch.keys():
             codedict['lmk'] = lmk
+        if lmk_mp is not None:
+            codedict['lmk_mp'] = lmk_mp
 
         if 'va' in batch.keys():
             codedict['va'] = va
@@ -771,6 +906,9 @@ class DecaModule(LightningModule):
 
         if 'expression_weight' in batch.keys():
             codedict['expression_weight'] = exprw
+
+        if original_code is not None:
+            codedict['original_code'] = original_code
 
         return codedict
 
@@ -797,7 +935,7 @@ class DecaModule(LightningModule):
         return detail_conditioning_list
 
 
-    def decode(self, codedict, training=True, **kwargs) -> dict:
+    def decode(self, codedict, training=True, render=True, **kwargs) -> dict:
         """
         Forward decoding pass of the model. Takes the latent code predicted by the encoding stage and reconstructs and renders the shape.
         :param codedict: Batch dict of the predicted latent codes
@@ -819,14 +957,22 @@ class DecaModule(LightningModule):
 
         # 1) Reconstruct the face mesh
         # FLAME - world space
-        verts, landmarks2d, landmarks3d = self.deca.flame(shape_params=shapecode, expression_params=expcode,
+        if not isinstance(self.deca.flame, FLAME_mediapipe):
+            verts, landmarks2d, landmarks3d = self.deca.flame(shape_params=shapecode, expression_params=expcode,
                                                           pose_params=posecode)
+            landmarks2d_mediapipe = None
+        else:
+            verts, landmarks2d, landmarks3d, landmarks2d_mediapipe = self.deca.flame(shapecode, expcode, posecode)
         # world to camera
         trans_verts = util.batch_orth_proj(verts, cam)
         predicted_landmarks = util.batch_orth_proj(landmarks2d, cam)[:, :, :2]
         # camera to image space
         trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
         predicted_landmarks[:, :, 1:] = - predicted_landmarks[:, :, 1:]
+
+        if landmarks2d_mediapipe is not None:
+            predicted_landmarks_mediapipe = util.batch_orth_proj(landmarks2d_mediapipe, cam)[:, :, :2]
+            predicted_landmarks_mediapipe[:, :, 1:] = - predicted_landmarks_mediapipe[:, :, 1:]
 
         if self.uses_texture():
             albedo = self.deca.flametex(texcode)
@@ -835,73 +981,74 @@ class DecaModule(LightningModule):
             albedo = torch.ones([effective_batch_size, 3, self.deca.config.uv_size, self.deca.config.uv_size], device=images.device) * 0.5
 
         # 2) Render the coarse image
-        ops = self.deca.render(verts, trans_verts, albedo, lightcode)
-        # mask
-        mask_face_eye = F.grid_sample(self.deca.uv_face_eye_mask.expand(effective_batch_size, -1, -1, -1),
-                                      ops['grid'].detach(),
-                                      align_corners=False)
-        # images
-        predicted_images = ops['images']
-        # predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
-        # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
-        segmentation_type = None
-        if isinstance(self.deca.config.useSeg, bool):
-            if self.deca.config.useSeg:
-                segmentation_type = 'gt'
+        if render:
+            ops = self.deca.render(verts, trans_verts, albedo, lightcode)
+            # mask
+            mask_face_eye = F.grid_sample(self.deca.uv_face_eye_mask.expand(effective_batch_size, -1, -1, -1),
+                                        ops['grid'].detach(),
+                                        align_corners=False)
+            # images
+            predicted_images = ops['images']
+            # predicted_images = ops['images'] * mask_face_eye * ops['alpha_images']
+            # predicted_images_no_mask = ops['images'] #* mask_face_eye * ops['alpha_images']
+            segmentation_type = None
+            if isinstance(self.deca.config.useSeg, bool):
+                if self.deca.config.useSeg:
+                    segmentation_type = 'gt'
+                else:
+                    segmentation_type = 'rend'
+            elif isinstance(self.deca.config.useSeg, str):
+                segmentation_type = self.deca.config.useSeg
             else:
+                raise RuntimeError(f"Invalid 'useSeg' type: '{type(self.deca.config.useSeg)}'")
+
+            if segmentation_type not in ["gt", "rend", "intersection", "union"]:
+                raise ValueError(f"Invalid segmentation type for masking '{segmentation_type}'")
+
+            if masks is None: # if mask not provided, the only mask available is the rendered one
                 segmentation_type = 'rend'
-        elif isinstance(self.deca.config.useSeg, str):
-            segmentation_type = self.deca.config.useSeg
-        else:
-            raise RuntimeError(f"Invalid 'useSeg' type: '{type(self.deca.config.useSeg)}'")
 
-        if segmentation_type not in ["gt", "rend", "intersection", "union"]:
-            raise ValueError(f"Invalid segmentation type for masking '{segmentation_type}'")
+            elif masks.shape[-1] != predicted_images.shape[-1] or masks.shape[-2] != predicted_images.shape[-2]:
+                # resize masks if need be (this is only done if configuration was changed at some point after training)
+                dims = masks.ndim == 3
+                if dims:
+                    masks = masks[:, None, :, :]
+                masks = F.interpolate(masks, size=predicted_images.shape[-2:], mode='bilinear')
+                if dims:
+                    masks = masks[:, 0, ...]
 
-        if masks is None: # if mask not provided, the only mask available is the rendered one
-            segmentation_type = 'rend'
-
-        elif masks.shape[-1] != predicted_images.shape[-1] or masks.shape[-2] != predicted_images.shape[-2]:
-            # resize masks if need be (this is only done if configuration was changed at some point after training)
-            dims = masks.ndim == 3
-            if dims:
-                masks = masks[:, None, :, :]
-            masks = F.interpolate(masks, size=predicted_images.shape[-2:], mode='bilinear')
-            if dims:
-                masks = masks[:, 0, ...]
-
-        # resize images if need be (this is only done if configuration was changed at some point after training)
-        if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
-            ## special case only for inference time if the rendering image sizes have been changed
-            images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
-        else:
-            images_resized = images
-
-        # what type of segmentation we use
-        if segmentation_type == "gt": # GT stands for external segmetnation predicted by face parsing or similar
-            masks = masks[:, None, :, :]
-        elif segmentation_type == "rend": # mask rendered as a silhouette of the face mesh
-            masks = mask_face_eye * ops['alpha_images']
-        elif segmentation_type == "intersection": # intersection of the two above
-            masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
-        elif segmentation_type == "union": # union of the first two options
-            masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
-        else:
-            raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
-
-
-        if self.deca.config.background_from_input in [True, "input"]:
+            # resize images if need be (this is only done if configuration was changed at some point after training)
             if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
                 ## special case only for inference time if the rendering image sizes have been changed
-                predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
             else:
-                predicted_images = (1. - masks) * images + masks * predicted_images
-        elif self.deca.config.background_from_input in [False, "black"]:
-            predicted_images = masks * predicted_images
-        elif self.deca.config.background_from_input in ["none"]:
-            predicted_images = predicted_images
-        else:
-            raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
+                images_resized = images
+
+            # what type of segmentation we use
+            if segmentation_type == "gt": # GT stands for external segmetnation predicted by face parsing or similar
+                masks = masks[:, None, :, :]
+            elif segmentation_type == "rend": # mask rendered as a silhouette of the face mesh
+                masks = mask_face_eye * ops['alpha_images']
+            elif segmentation_type == "intersection": # intersection of the two above
+                masks = masks[:, None, :, :] * mask_face_eye * ops['alpha_images']
+            elif segmentation_type == "union": # union of the first two options
+                masks = torch.max(masks[:, None, :, :],  mask_face_eye * ops['alpha_images'])
+            else:
+                raise RuntimeError(f"Invalid segmentation type for masking '{segmentation_type}'")
+
+
+            if self.deca.config.background_from_input in [True, "input"]:
+                if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+                    ## special case only for inference time if the rendering image sizes have been changed
+                    predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                else:
+                    predicted_images = (1. - masks) * images + masks * predicted_images
+            elif self.deca.config.background_from_input in [False, "black"]:
+                predicted_images = masks * predicted_images
+            elif self.deca.config.background_from_input in ["none"]:
+                predicted_images = predicted_images
+            else:
+                raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
         # 3) Render the detail image
         if self.mode == DecaMode.DETAIL:
@@ -930,51 +1077,52 @@ class DecaModule(LightningModule):
 
             # uv_z = self.deca.D_detail(torch.cat([posecode[:, 3:], expcode, detailcode], dim=1))
             # render detail
-            detach_from_coarse_geometry = not self.deca.config.train_coarse
-            uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'],
-                                                                                  detach=detach_from_coarse_geometry)
-            uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
-            uv_texture = albedo.detach() * uv_shading
+            if render:
+                detach_from_coarse_geometry = not self.deca.config.train_coarse
+                uv_detail_normals, uv_coarse_vertices = self.deca.displacement2normal(uv_z, verts, ops['normals'],
+                                                                                    detach=detach_from_coarse_geometry)
+                uv_shading = self.deca.render.add_SHlight(uv_detail_normals, lightcode.detach())
+                uv_texture = albedo.detach() * uv_shading
 
-            # batch size X image_rows X image_cols X 2
-            # you can query the grid for UV values of the face mesh at pixel locations
-            grid = ops['grid']
-            if detach_from_coarse_geometry:
-                # if the grid is detached, the gradient of the positions of UV-values in image space won't flow back to the geometry
-                grid = grid.detach()
-            predicted_detailed_image = F.grid_sample(uv_texture, grid, align_corners=False)
-            if self.deca.config.background_from_input in [True, "input"]:
-                if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
-                    ## special case only for inference time if the rendering image sizes have been changed
-                    # images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
-                    ## before bugfix
-                    # predicted_images = (1. - masks) * images_resized + masks * predicted_images
-                    ## after bugfix
-                    predicted_detailed_image = (1. - masks) * images_resized + masks * predicted_detailed_image
+                # batch size X image_rows X image_cols X 2
+                # you can query the grid for UV values of the face mesh at pixel locations
+                grid = ops['grid']
+                if detach_from_coarse_geometry:
+                    # if the grid is detached, the gradient of the positions of UV-values in image space won't flow back to the geometry
+                    grid = grid.detach()
+                predicted_detailed_image = F.grid_sample(uv_texture, grid, align_corners=False)
+                if self.deca.config.background_from_input in [True, "input"]:
+                    if images.shape[-1] != predicted_images.shape[-1] or images.shape[-2] != predicted_images.shape[-2]:
+                        ## special case only for inference time if the rendering image sizes have been changed
+                        # images_resized = F.interpolate(images, size=predicted_images.shape[-2:], mode='bilinear')
+                        ## before bugfix
+                        # predicted_images = (1. - masks) * images_resized + masks * predicted_images
+                        ## after bugfix
+                        predicted_detailed_image = (1. - masks) * images_resized + masks * predicted_detailed_image
+                    else:
+                        predicted_detailed_image = (1. - masks) * images + masks * predicted_detailed_image
+                elif self.deca.config.background_from_input in [False, "black"]:
+                    predicted_detailed_image = masks * predicted_detailed_image
+                elif self.deca.config.background_from_input in ["none"]:
+                    predicted_detailed_image = predicted_detailed_image
                 else:
-                    predicted_detailed_image = (1. - masks) * images + masks * predicted_detailed_image
-            elif self.deca.config.background_from_input in [False, "black"]:
-                predicted_detailed_image = masks * predicted_detailed_image
-            elif self.deca.config.background_from_input in ["none"]:
-                predicted_detailed_image = predicted_detailed_image
-            else:
-                raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
+                    raise ValueError(f"Invalid type of background modification {self.deca.config.background_from_input}")
 
 
-            # --- extract texture
-            uv_pverts = self.deca.render.world2uv(trans_verts).detach()
-            uv_gt = F.grid_sample(torch.cat([images_resized, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
-                                  mode='bilinear')
-            uv_texture_gt = uv_gt[:, :3, :, :].detach()
-            uv_mask_gt = uv_gt[:, 3:, :, :].detach()
-            # self-occlusion
-            normals = util.vertex_normals(trans_verts, self.deca.render.faces.expand(effective_batch_size, -1, -1))
-            uv_pnorm = self.deca.render.world2uv(normals)
+                # --- extract texture
+                uv_pverts = self.deca.render.world2uv(trans_verts).detach()
+                uv_gt = F.grid_sample(torch.cat([images_resized, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                                    mode='bilinear')
+                uv_texture_gt = uv_gt[:, :3, :, :].detach()
+                uv_mask_gt = uv_gt[:, 3:, :, :].detach()
+                # self-occlusion
+                normals = util.vertex_normals(trans_verts, self.deca.render.faces.expand(effective_batch_size, -1, -1))
+                uv_pnorm = self.deca.render.world2uv(normals)
 
-            uv_mask = (uv_pnorm[:, -1, :, :] < -0.05).float().detach()
-            uv_mask = uv_mask[:, None, :, :]
-            ## combine masks
-            uv_vis_mask = uv_mask_gt * uv_mask * self.deca.uv_face_eye_mask
+                uv_mask = (uv_pnorm[:, -1, :, :] < -0.05).float().detach()
+                uv_mask = uv_mask[:, None, :, :]
+                ## combine masks
+                uv_vis_mask = uv_mask_gt * uv_mask * self.deca.uv_face_eye_mask
         else:
             uv_detail_normals = None
             predicted_detailed_image = None
@@ -982,70 +1130,76 @@ class DecaModule(LightningModule):
 
         ## 4) (Optional) NEURAL RENDERING - not used in neither DECA nor EMOCA
         # If neural rendering is enabled, the differentiable rendered synthetic images are translated using an image translation net (such as StarGan)
-        if self.deca._has_neural_rendering():
-            predicted_translated_image = self.deca.image_translator(
-                {
-                    "input_image" : predicted_images,
-                    "ref_image" : images,
-                    "target_domain" : torch.tensor([0]*predicted_images.shape[0],
-                                                   dtype=torch.int64, device=predicted_images.device)
-                }
-            )
+        predicted_translated_image = None
+        predicted_detailed_translated_image = None
+        translated_uv_texture = None
 
-            if self.mode == DecaMode.DETAIL:
-                predicted_detailed_translated_image = self.deca.image_translator(
-                        {
-                            "input_image" : predicted_detailed_image,
-                            "ref_image" : images,
-                            "target_domain" : torch.tensor([0]*predicted_detailed_image.shape[0],
-                                                           dtype=torch.int64, device=predicted_detailed_image.device)
-                        }
-                    )
-                translated_uv = F.grid_sample(torch.cat([predicted_detailed_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
-                                      mode='bilinear')
-                translated_uv_texture = translated_uv[:, :3, :, :].detach()
+        if render:
+            if self.deca._has_neural_rendering():
+                predicted_translated_image = self.deca.image_translator(
+                    {
+                        "input_image" : predicted_images,
+                        "ref_image" : images,
+                        "target_domain" : torch.tensor([0]*predicted_images.shape[0],
+                                                    dtype=torch.int64, device=predicted_images.device)
+                    }
+                )
 
-            else:
-                predicted_detailed_translated_image = None
+                if self.mode == DecaMode.DETAIL:
+                    predicted_detailed_translated_image = self.deca.image_translator(
+                            {
+                                "input_image" : predicted_detailed_image,
+                                "ref_image" : images,
+                                "target_domain" : torch.tensor([0]*predicted_detailed_image.shape[0],
+                                                            dtype=torch.int64, device=predicted_detailed_image.device)
+                            }
+                        )
+                    translated_uv = F.grid_sample(torch.cat([predicted_detailed_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                                        mode='bilinear')
+                    translated_uv_texture = translated_uv[:, :3, :, :].detach()
 
-                translated_uv_texture = None
-                # no need in coarse mode
-                # translated_uv = F.grid_sample(torch.cat([predicted_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
-                #                       mode='bilinear')
-                # translated_uv_texture = translated_uv_gt[:, :3, :, :].detach()
-        else:
-            predicted_translated_image = None
-            predicted_detailed_translated_image = None
-            translated_uv_texture = None
+                else:
+                    predicted_detailed_translated_image = None
+
+                    translated_uv_texture = None
+                    # no need in coarse mode
+                    # translated_uv = F.grid_sample(torch.cat([predicted_translated_image, masks], dim=1), uv_pverts.permute(0, 2, 3, 1)[:, :, :, :2],
+                    #                       mode='bilinear')
+                    # translated_uv_texture = translated_uv_gt[:, :3, :, :].detach()
 
         if self.emotion_mlp is not None:
             codedict = self.emotion_mlp(codedict, "emo_mlp_")
 
         # populate the value dict for metric computation/visualization
-        codedict['predicted_images'] = predicted_images
-        codedict['predicted_detailed_image'] = predicted_detailed_image
-        codedict['predicted_translated_image'] = predicted_translated_image
+        if render:
+            codedict['predicted_images'] = predicted_images
+            codedict['predicted_detailed_image'] = predicted_detailed_image
+            codedict['predicted_translated_image'] = predicted_translated_image
+            codedict['ops'] = ops
+            codedict['normals'] = ops['normals']
+            codedict['mask_face_eye'] = mask_face_eye
+        
         codedict['verts'] = verts
         codedict['albedo'] = albedo
-        codedict['mask_face_eye'] = mask_face_eye
         codedict['landmarks2d'] = landmarks2d
         codedict['landmarks3d'] = landmarks3d
         codedict['predicted_landmarks'] = predicted_landmarks
+        if landmarks2d_mediapipe is not None:
+            codedict['predicted_landmarks_mediapipe'] = predicted_landmarks_mediapipe
         codedict['trans_verts'] = trans_verts
-        codedict['ops'] = ops
         codedict['masks'] = masks
-        codedict['normals'] = ops['normals']
 
         if self.mode == DecaMode.DETAIL:
-            codedict['predicted_detailed_translated_image'] = predicted_detailed_translated_image
-            codedict['translated_uv_texture'] = translated_uv_texture
-            codedict['uv_texture_gt'] = uv_texture_gt
-            codedict['uv_texture'] = uv_texture
-            codedict['uv_detail_normals'] = uv_detail_normals
+            if render:
+                codedict['predicted_detailed_translated_image'] = predicted_detailed_translated_image
+                codedict['translated_uv_texture'] = translated_uv_texture
+                codedict['uv_texture_gt'] = uv_texture_gt
+                codedict['uv_texture'] = uv_texture
+                codedict['uv_detail_normals'] = uv_detail_normals
+                codedict['uv_shading'] = uv_shading
+                codedict['uv_vis_mask'] = uv_vis_mask
+                codedict['uv_mask'] = uv_mask
             codedict['uv_z'] = uv_z
-            codedict['uv_shading'] = uv_shading
-            codedict['uv_vis_mask'] = uv_vis_mask
-            codedict['uv_mask'] = uv_mask
             codedict['displacement_map'] = uv_z + self.deca.fixed_uv_dis[None, None, :, :]
 
         return codedict
@@ -1175,6 +1329,157 @@ class DecaModule(LightningModule):
         # else:
         #     d = metric_dict
 
+
+    def _cut_mouth_vectorized(self, images, landmarks, convert_grayscale=True):
+        # mouth_window_margin = 12
+        mouth_window_margin = 1 # not temporal
+        mouth_crop_height = 96
+        mouth_crop_width = 96
+        mouth_landmark_start_idx = 48
+        mouth_landmark_stop_idx = 68
+        B, T = images.shape[:2]
+
+        landmarks = landmarks.to(torch.float32)
+
+        with torch.no_grad():
+            image_size = images.shape[-1] / 2
+
+            landmarks = landmarks * image_size + image_size
+            # #1) smooth the landmarks with temporal convolution
+            # landmarks are of shape (T, 68, 2) 
+            # reshape to (T, 136) 
+            landmarks_t = landmarks.reshape(*landmarks.shape[:2], -1)
+            # make temporal dimension last 
+            landmarks_t = landmarks_t.permute(0, 2, 1)
+            # change chape to (N, 136, T)
+            # landmarks_t = landmarks_t.unsqueeze(0)
+            # smooth with temporal convolution
+            temporal_filter = torch.ones(mouth_window_margin, device=images.device) / mouth_window_margin
+            # pad the the landmarks 
+            landmarks_t_padded = F.pad(landmarks_t, (mouth_window_margin // 2, mouth_window_margin // 2), mode='replicate')
+            # convolve each channel separately with the temporal filter
+            num_channels = landmarks_t.shape[1]
+            if temporal_filter.numel() > 1:
+                smooth_landmarks_t = F.conv1d(landmarks_t_padded, 
+                    temporal_filter.unsqueeze(0).unsqueeze(0).expand(num_channels,1,temporal_filter.numel()), 
+                    groups=num_channels, padding='valid'
+                )
+                smooth_landmarks_t = smooth_landmarks_t[..., 0:landmarks_t.shape[-1]]
+            else:
+                smooth_landmarks_t = landmarks_t
+
+            # reshape back to the original shape 
+            smooth_landmarks_t = smooth_landmarks_t.permute(0, 2, 1).view(landmarks.shape)
+            smooth_landmarks_t = smooth_landmarks_t + landmarks.mean(dim=2, keepdims=True) - smooth_landmarks_t.mean(dim=2, keepdims=True)
+
+            # #2) get the mouth landmarks
+            mouth_landmarks_t = smooth_landmarks_t[..., mouth_landmark_start_idx:mouth_landmark_stop_idx, :]
+            
+            # #3) get the mean of the mouth landmarks
+            mouth_landmarks_mean_t = mouth_landmarks_t.mean(dim=-2, keepdims=True)
+        
+            # #4) get the center of the mouth
+            center_x_t = mouth_landmarks_mean_t[..., 0]
+            center_y_t = mouth_landmarks_mean_t[..., 1]
+
+            # #5) use grid_sample to crop the mouth in every image 
+            # create the grid
+            height = mouth_crop_height//2
+            width = mouth_crop_width//2
+
+            torch.arange(0, mouth_crop_width, device=images.device)
+
+            grid = torch.stack(torch.meshgrid(torch.linspace(-height, height, mouth_crop_height).to(images.device) / (images.shape[-2] /2),
+                                            torch.linspace(-width, width, mouth_crop_width).to(images.device) / (images.shape[-1] /2) ), 
+                                            dim=-1)
+            grid = grid[..., [1, 0]]
+            grid = grid.unsqueeze(0).unsqueeze(0).repeat(*images.shape[:2], 1, 1, 1)
+
+            center_x_t -= images.shape[-1] / 2
+            center_y_t -= images.shape[-2] / 2
+
+            center_x_t /= images.shape[-1] / 2
+            center_y_t /= images.shape[-2] / 2
+
+            grid = grid + torch.cat([center_x_t, center_y_t ], dim=-1).unsqueeze(-2).unsqueeze(-2)
+
+        images = images.view(B*T, *images.shape[2:])
+        grid = grid.view(B*T, *grid.shape[2:])
+
+        if convert_grayscale: 
+            images = F_v.rgb_to_grayscale(images)
+
+        image_crops = F.grid_sample(
+            images, 
+            grid,  
+            align_corners=True, 
+            padding_mode='zeros',
+            mode='bicubic'
+            )
+        image_crops = image_crops.view(B, T, *image_crops.shape[1:])
+
+        if convert_grayscale:
+            image_crops = image_crops#.squeeze(1)
+
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.imshow(image_crops[0, 0].permute(1,2,0).cpu().numpy())
+        # plt.show()
+
+        # plt.figure()
+        # plt.imshow(image_crops[0, 10].permute(1,2,0).cpu().numpy())
+        # plt.show()
+
+        # plt.figure()
+        # plt.imshow(image_crops[0, 20].permute(1,2,0).cpu().numpy())
+        # plt.show()
+
+        # plt.figure()
+        # plt.imshow(image_crops[1, 0].permute(1,2,0).cpu().numpy())
+        # plt.show()
+
+        # plt.figure()
+        # plt.imshow(image_crops[1, 10].permute(1,2,0).cpu().numpy())
+        # plt.show()
+
+        # plt.figure()
+        # plt.imshow(image_crops[1, 20].permute(1,2,0).cpu().numpy())
+        # plt.show()
+        return image_crops
+
+
+    def _compute_lipread_loss(self, images, predicted_images, landmarks, predicted_landmarks, loss_dict, metric_dict, prefix, with_grad=True): 
+        def loss_or_metric(name, loss, is_loss):
+            if not is_loss:
+                metric_dict[name] = loss
+            else:
+                loss_dict[name] = loss
+
+        # shape of images is: (B, R, C, H, W)
+        # convert to (B * R, 1, H, W, C)
+        images = images.unsqueeze(1)
+        predicted_images = predicted_images.unsqueeze(1)
+        landmarks = landmarks.unsqueeze(1)
+        predicted_landmarks = predicted_landmarks.unsqueeze(1)
+
+        # cut out the mouth region
+
+
+        images_mouth = self._cut_mouth_vectorized(images, landmarks)
+        predicted_images_mouth  = self._cut_mouth_vectorized(predicted_images, predicted_landmarks)
+
+        # make sure that the lip reading net interprests  things with depth=1, 
+
+        # if self.deca.config.use_emonet_loss:
+        if with_grad:
+            d = loss_dict
+            loss = self.lipread_loss.compute_loss(images_mouth, predicted_images_mouth)
+        else:
+            d = metric_dict
+            with torch.no_grad():
+                loss = self.lipread_loss.compute_loss(images_mouth, predicted_images_mouth)
+
+        d[prefix + '_lipread'] = loss * self.deca.config.lipread_loss.weight
 
 
     def _metric_or_loss(self, loss_dict, metric_dict, is_loss):
@@ -1472,10 +1777,16 @@ class DecaModule(LightningModule):
         metrics = {}
 
         predicted_landmarks = codedict["predicted_landmarks"]
+        predicted_landmarks_mediapipe = codedict.get("predicted_landmarks_mediapipe", None)
         if "lmk" in codedict.keys():
             lmk = codedict["lmk"]
         else:
             lmk = None
+        
+        if "lmk_mp" in codedict.keys():
+            lmk_mp = codedict["lmk_mp"]
+        else:
+            lmk_mp = None
 
         if "masks" in codedict.keys():
             masks = codedict["masks"]
@@ -1545,6 +1856,8 @@ class DecaModule(LightningModule):
                 #     d = metrics
                 d = self._metric_or_loss(losses, metrics, self.deca.config.use_landmarks)
 
+
+
                 if self.deca.config.useWlmk:
                     d['landmark'] = \
                         lossfunc.weighted_landmark_loss(predicted_landmarks[:geom_losses_idxs, ...], lmk[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight
@@ -1566,6 +1879,23 @@ class DecaModule(LightningModule):
                                          self.deca.config.use_mouth_corner_distance)
                 d['mouth_corner_distance'] = lossfunc.mouth_corner_loss(predicted_landmarks[:geom_losses_idxs, ...],
                                                        lmk[:geom_losses_idxs, ...]) * self.deca.config.lipd
+
+                if predicted_landmarks_mediapipe is not None and lmk_mp is not None:
+                    use_mediapipe_landmarks = self.deca.config.get('use_mediapipe_landmarks', False) 
+                    d = self._metric_or_loss(losses, metrics, use_mediapipe_landmarks)
+                    d['landmark_mediapipe'] =lossfunc_mp.landmark_loss(predicted_landmarks_mediapipe[:geom_losses_idxs, ...], lmk_mp[:geom_losses_idxs, ...]) * self.deca.config.lmk_weight_mp
+
+                    d = self._metric_or_loss(losses, metrics, self.deca.config.get('use_eye_distance_mediapipe', False) )
+                    d['eye_distance_mediapipe'] = lossfunc_mp.eyed_loss(predicted_landmarks_mediapipe[:geom_losses_idxs, ...],
+                                                        lmk_mp[:geom_losses_idxs, ...]) * self.deca.config.eyed_mp
+                    d = self._metric_or_loss(losses, metrics,  self.deca.config.get('use_lip_distance_mediapipe', False) )
+                    d['lip_distance_mediapipe'] = lossfunc_mp.lipd_loss(predicted_landmarks_mediapipe[:geom_losses_idxs, ...],
+                                                        lmk_mp[:geom_losses_idxs, ...]) * self.deca.config.lipd_mp
+
+                    d = self._metric_or_loss(losses, metrics, self.deca.config.get('use_mouth_corner_distance_mediapipe', False))
+                    d['mouth_corner_distance_mediapipe'] = lossfunc_mp.mouth_corner_loss(predicted_landmarks_mediapipe[:geom_losses_idxs, ...],
+                                                        lmk_mp[:geom_losses_idxs, ...]) * self.deca.config.lipd_mp
+
 
                 #TODO: fix this on the next iteration lipd_loss
                 # d['lip_distance'] = lossfunc.lipd_loss(predicted_landmarks, lmk) * self.deca.config.lipd
@@ -1640,6 +1970,30 @@ class DecaModule(LightningModule):
             losses['light_reg'] = ((torch.mean(lightcode, dim=2)[:, :,
                                     None] - lightcode) ** 2).mean() * self.deca.config.light_reg
 
+            if 'original_code' in codedict.keys():
+                # original jaw pose regularization
+                if self.deca.config.get('exp_deca_jaw_pose', False) and \
+                    'deca_jaw_reg' in self.deca.config.keys() and self.deca.config.deca_jaw_reg > 0:
+                    jaw_pose_orig = codedict['original_code']['pose'][:, 3:]
+                    jaw_pose = codedict['posecode'][..., 3:]
+                    deca_jaw_pose_reg = (torch.sum((jaw_pose - jaw_pose_orig) ** 2) / 2) * self.deca.config.deca_jaw_reg
+                    losses['deca_jaw_pose_reg'] = deca_jaw_pose_reg
+
+                if self.deca.config.get('exp_deca_global_pose', False) and \
+                    'deca_global_reg' in self.deca.config.keys() and self.deca.config.deca_global_reg > 0:
+                    global_pose_orig = codedict['original_code']['pose'][:, :3]
+                    global_pose = codedict['posecode'][..., :3]
+                    global_pose_reg = (torch.sum((global_pose - global_pose_orig) ** 2) / 2) * self.deca.config.deca_global_reg
+                    losses['deca_global_pose_reg'] = global_pose_reg
+
+                # original expression regularization
+                if 'deca_expression_reg' in self.deca.config.keys() and self.deca.config.deca_expression_reg > 0:
+                    expression_orig = codedict['original_code']['exp']
+                    expression = codedict['expcode']
+                    deca_expression_reg = (torch.sum((expression - expression_orig) ** 2) / 2) * self.deca.config.deca_expression_reg
+                    losses['deca_expression_reg'] = deca_expression_reg
+
+
             losses, metrics, codedict = self._compute_emonet_loss_wrapper(codedict, batch, training, testing, losses, metrics,
                                                                  prefix="coarse", image_key="predicted_images",
                                                                 with_grad=self.deca.config.use_emonet_loss and not self.deca._has_neural_rendering(),
@@ -1661,6 +2015,17 @@ class DecaModule(LightningModule):
                     self._compute_au_loss(images, predicted_translated_image, losses, metrics, "coarse",
                                           au=None,
                                           with_grad=self.deca.config.au_loss.use_as_loss and self.deca._has_neural_rendering())
+
+            if self.lipread_loss is not None:
+                # with torch.no_grad():
+
+                self._compute_lipread_loss(images, predicted_images, lmk, predicted_landmarks, losses, metrics, "coarse",
+                                      with_grad=self.deca.config.lipread_loss.use_as_loss and not self.deca._has_neural_rendering())
+                if self.deca._has_neural_rendering():
+                    self._compute_lipread_loss(images, predicted_translated_image, 
+                                        lmk, predicted_landmarks,
+                                          losses, metrics, "coarse",
+                                          with_grad=self.deca.config.lipread_loss.use_as_loss and self.deca._has_neural_rendering())
 
         ## DETAIL loss only
         if self.mode == DecaMode.DETAIL:
@@ -1864,7 +2229,7 @@ class DecaModule(LightningModule):
 
         return losses, metrics
 
-    def compute_loss(self, values, batch, training=True, testing=False) -> (dict, dict):
+    def compute_loss(self, values, batch, training=True, testing=False) -> dict:
         """
         The function used to compute the loss on a training batch.
         :
@@ -2332,7 +2697,7 @@ class DecaModule(LightningModule):
                 lr=self.learning_params.learning_rate,
                 amsgrad=False)
         elif self.config.learning.optimizer == 'AdaBound':
-            opt = adabound.AdaBound(
+            self.deca.opt = adabound.AdaBound(
                 trainable_params,
                 lr=self.config.learning.learning_rate,
                 final_lr=self.config.learning.final_learning_rate
@@ -2378,6 +2743,9 @@ class DECA(torch.nn.Module):
         self._reconfigure(config)
         self._reinitialize()
 
+    def get_input_image_size(self): 
+        return (self.config.image_size, self.config.image_size)
+
     def _reconfigure(self, config):
         self.config = config
         
@@ -2411,6 +2779,9 @@ class DECA(torch.nn.Module):
         self._setup_renderer()
         self._init_deep_losses()
         self.face_attr_mask = util.load_local_mask(image_size=self.config.uv_size, mode='bbx')
+
+    def _get_num_shape_params(self): 
+        return self.config.n_shape
 
     def _init_deep_losses(self):
         """
@@ -2469,6 +2840,7 @@ class DECA(torch.nn.Module):
             fixed_uv_dis = torch.tensor(fixed_dis).float()
         else:
             fixed_uv_dis = torch.zeros([512, 512]).float()
+            print("Warning: fixed_displacement_path not found, using zero displacement")
         self.register_buffer('fixed_uv_dis', fixed_uv_dis)
 
     def uses_texture(self): 
@@ -2549,7 +2921,13 @@ class DECA(torch.nn.Module):
         else:
             raise ValueError(f"Invalid 'e_flame_type' = {e_flame_type}")
 
-        self.flame = FLAME(self.config)
+        import copy 
+        flame_cfg = copy.deepcopy(self.config)
+        flame_cfg.n_shape = self._get_num_shape_params()
+        if 'flame_mediapipe_lmk_embedding_path' not in flame_cfg.keys():
+            self.flame = FLAME(flame_cfg)
+        else:
+            self.flame = FLAME_mediapipe(flame_cfg)
 
         if self.uses_texture():
             self.flametex = FLAMETex(self.config)
@@ -2663,7 +3041,7 @@ class DECA(torch.nn.Module):
             start = start + num_list[i]
         # shapecode, texcode, expcode, posecode, cam, lightcode = code_list
         code_list[-1] = code_list[-1].reshape(code.shape[0], 9, 3)
-        return code_list
+        return code_list, None
 
     def displacement2normal(self, uv_z, coarse_verts, coarse_normals, detach=True):
         """
@@ -2806,6 +3184,9 @@ class ExpDECA(DECA):
             self.E_expression = EmonetRegressorStatic(self.n_exp_param)
         else:
             raise ValueError(f"Invalid expression backbone: '{self.config.expression_backbone}'")
+        
+        if self.config.get('zero_out_last_enc_layer', False):
+            self.E_expression.reset_last_layer() 
 
     def _get_coarse_trainable_parameters(self):
         print("Add E_expression.parameters() to the optimizer")
@@ -2833,10 +3214,17 @@ class ExpDECA(DECA):
         deca_code = code[0]
         expdeca_code = code[1]
 
-        deca_code_list = super().decompose_code(deca_code)
+        deca_code_list, _ = super().decompose_code(deca_code)
         # shapecode, texcode, expcode, posecode, cam, lightcode = deca_code_list
         exp_idx = 2
         pose_idx = 3
+
+        # deca_exp_code = deca_code_list[exp_idx]
+        # deca_global_pose_code = deca_code_list[pose_idx][:3]
+        # deca_jaw_pose_code = deca_code_list[pose_idx][3:6]
+
+        deca_code_list_copy = deca_code_list.copy()
+
 
         #TODO: clean this if-else block up
         if self.config.exp_deca_global_pose and self.config.exp_deca_jaw_pose:
@@ -2862,7 +3250,7 @@ class ExpDECA(DECA):
             exp_code = expdeca_code
             deca_code_list[exp_idx] = exp_code
 
-        return deca_code_list
+        return deca_code_list, deca_code_list_copy
 
     def train(self, mode: bool = True):
         super().train(mode)
@@ -2896,24 +3284,3 @@ class ExpDECA(DECA):
             self.D_detail.eval()
         return self
 
-
-def instantiate_deca(cfg, stage, prefix, checkpoint=None, checkpoint_kwargs=None):
-    """
-    Function that instantiates a DecaModule from checkpoint or config
-    """
-
-    if checkpoint is None:
-        deca = DecaModule(cfg.model, cfg.learning, cfg.inout, prefix)
-        if cfg.model.resume_training:
-            # This load the DECA model weights from the original DECA release
-            print("[WARNING] Loading EMOCA checkpoint pretrained by the old code")
-            deca.deca._load_old_checkpoint()
-    else:
-        checkpoint_kwargs = checkpoint_kwargs or {}
-        deca = DecaModule.load_from_checkpoint(checkpoint_path=checkpoint, strict=False, **checkpoint_kwargs)
-        if stage == 'train':
-            mode = True
-        else:
-            mode = False
-        deca.reconfigure(cfg.model, cfg.inout, cfg.learning, prefix, downgrade_ok=True, train=mode)
-    return deca

@@ -212,7 +212,9 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
     def _augment(self, img, seg_image, landmark, input_img_shape=None):
 
         if self.transforms is not None:
-            res = self.transforms(image=img.astype(np.float32),
+            assert img.dtype == np.uint8
+            # img = img.astype(np.float32) # TODO: debug this (do we get valid images when not used?)
+            res = self.transforms(image=img,
                                   segmentation_maps=seg_image,
                                   keypoints=landmark)
             if seg_image is not None and landmark is not None:
@@ -224,7 +226,13 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
             else:
                 img = res
 
-            img = img.astype(np.float32) / 255.0
+            
+            assert img.dtype == np.uint8
+            if img.dtype != np.float32:
+                img = img.astype(np.float32) / 255.0
+            
+            assert img.dtype == np.float32
+
 
         if seg_image is not None:
             seg_image = np.squeeze(seg_image)[..., np.newaxis].astype(np.float32)
@@ -256,6 +264,8 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
             num_images += 1
 
         if 'landmark' in sample.keys():
+            num_images += 1
+        if 'landmark_mediapipe' in sample.keys():
             num_images += 1
 
         if len(sample["image"].shape) >= 4:
@@ -296,8 +306,20 @@ class EmotionalImageDatasetBase(torch.utils.data.Dataset):
             index_axis(i, k).imshow(lmk_im)
             i += 1
 
+        if 'landmark_mediapipe' in sample.keys():
+            lmk = sample["landmark_mediapipe"][k, ...] if K is not None else sample["landmark_mediapipe"]
+            lmk_expanded = lmk[np.newaxis, ...]
+            lmk_im = tensor_vis_landmarks(im_expanded,
+                                          self.landmark_normalizer.inv(lmk_expanded),
+                                          isScale=False, rgb2bgr=False, scale_colors=True).numpy()[0] \
+                .transpose([1, 2, 0])
+            index_axis(i, k).imshow(lmk_im)
+            i += 1
+
         if 'mask' in sample.keys():
             mask = sample["mask"][k, ...] if K is not None else sample["mask"]
+            if mask.ndim == 2:
+                mask = mask[np.newaxis, ...]
             index_axis(i, k).imshow(mask.numpy().transpose([1, 2, 0]).squeeze(), cmap='gray')
             i += 1
 

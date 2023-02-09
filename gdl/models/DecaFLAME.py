@@ -1,4 +1,4 @@
-# THIS FILE HAS BEEN COPIED FROM THE EMOCA TRAINING REPOSITORY
+# THIS FILE HAS BEEN COPIED FROM THE DECA TRAINING REPOSITORY
 
 """
 Author: Soubhik Sanyal
@@ -55,6 +55,7 @@ class FLAME(nn.Module):
             ss = pickle.load(f, encoding='latin1')
             flame_model = Struct(**ss)
 
+        self.cfg = config
         self.dtype = torch.float32
         self.register_buffer('faces_tensor', to_tensor(to_np(flame_model.f, dtype=np.int64), dtype=torch.long))
         # The vertices of the template model
@@ -169,7 +170,7 @@ class FLAME(nn.Module):
         """
         # Extract the indices of the vertices for each face
         # NxLx3
-        batch_size, num_verts = vertices.shape[:dd2]
+        batch_size, num_verts = vertices.shape[:2]
         lmk_faces = torch.index_select(faces, 0, lmk_faces_idx.view(-1)).view(
             1, -1, 3).view(batch_size, lmk_faces_idx.shape[1], -1)
 
@@ -179,6 +180,38 @@ class FLAME(nn.Module):
         lmk_vertices = vertices.view(-1, 3)[lmk_faces]
         landmarks = torch.einsum('blfi,blf->bli', [lmk_vertices, lmk_bary_coords])
         return landmarks
+
+    def _vertices2landmarks2d(self, vertices, full_pose):
+        """
+            Calculates landmarks by barycentric interpolation
+            Input:
+                vertices: torch.tensor NxVx3, dtype = torch.float32
+                    The tensor of input vertices
+                full_pose: torch.tensor N X 12, dtype = torch.float32
+                    The tensor with global pose, neck pose, jaw pose and eye pose (respectively) in axis angle format
+
+            Returns:
+                landmarks: torch.tensor NxLx3, dtype = torch.float32
+                    The coordinates of the landmarks for each mesh in the batch
+        """
+        # Extract the indices of the vertices for each face
+        # NxLx3
+        batch_size = vertices.shape[0]
+        lmk_faces_idx = self.lmk_faces_idx.unsqueeze(dim=0).expand(batch_size, -1)
+        lmk_bary_coords = self.lmk_bary_coords.unsqueeze(dim=0).expand(batch_size, -1, -1)
+
+        dyn_lmk_faces_idx, dyn_lmk_bary_coords = self._find_dynamic_lmk_idx_and_bcoords(
+            full_pose, self.dynamic_lmk_faces_idx,
+            self.dynamic_lmk_bary_coords,
+            self.neck_kin_chain, dtype=self.dtype)
+        lmk_faces_idx = torch.cat([dyn_lmk_faces_idx, lmk_faces_idx], 1)
+        lmk_bary_coords = torch.cat([dyn_lmk_bary_coords, lmk_bary_coords], 1)
+
+        landmarks2d = vertices2landmarks(vertices, self.faces_tensor,
+                                         lmk_faces_idx,
+                                         lmk_bary_coords)
+        return landmarks2d
+
 
     def seletec_3d68(self, vertices):
         landmarks3d = vertices2landmarks(vertices, self.faces_tensor,
@@ -198,9 +231,12 @@ class FLAME(nn.Module):
         """
         batch_size = shape_params.shape[0]
         if pose_params is None:
-            pose_params = self.eye_pose.expand(batch_size, -1)
+            pose_params = self.eye_pose.expand(batch_size, -1) # TODO: is this correct?
         if eye_pose_params is None:
             eye_pose_params = self.eye_pose.expand(batch_size, -1)
+        if expression_params is None:
+            expression_params = torch.zeros(batch_size, self.cfg.n_exp).to(shape_params.device)
+
         betas = torch.cat([shape_params, expression_params], dim=1)
         full_pose = torch.cat(
             [pose_params[:, :3], self.neck_pose.expand(batch_size, -1), pose_params[:, 3:], eye_pose_params], dim=1)
@@ -209,7 +245,8 @@ class FLAME(nn.Module):
         vertices, _ = lbs(betas, full_pose, template_vertices,
                           self.shapedirs, self.posedirs,
                           self.J_regressor, self.parents,
-                          self.lbs_weights, dtype=self.dtype)
+                          self.lbs_weights, dtype=self.dtype, 
+                          detach_pose_correctives=False)
 
         lmk_faces_idx = self.lmk_faces_idx.unsqueeze(dim=0).expand(batch_size, -1)
         lmk_bary_coords = self.lmk_bary_coords.unsqueeze(dim=0).expand(batch_size, -1, -1)
@@ -230,6 +267,35 @@ class FLAME(nn.Module):
                                          self.full_lmk_bary_coords.repeat(bz, 1, 1))
 
         return vertices, landmarks2d, landmarks3d
+
+
+class FLAME_mediapipe(FLAME): 
+
+    def __init__(self, config):
+        super().__init__(config)
+        # static MEDIAPIPE landmark embeddings for FLAME
+        lmk_embeddings_mediapipe = np.load(config.flame_mediapipe_lmk_embedding_path, 
+            allow_pickle=True, encoding='latin1')
+        # indices = lmk_embeddings_mediapipe['landmark_indices']
+        self.register_buffer('lmk_faces_idx_mediapipe', 
+            torch.tensor(lmk_embeddings_mediapipe['lmk_face_idx'].astype(np.int64), dtype=torch.long))
+        self.register_buffer('lmk_bary_coords_mediapipe',
+            torch.tensor(lmk_embeddings_mediapipe['lmk_b_coords'], dtype=self.dtype))
+        
+    def forward(self, shape_params=None, expression_params=None, pose_params=None, eye_pose_params=None):
+        vertices, landmarks2d, landmarks3d = super().forward(shape_params, expression_params, pose_params, eye_pose_params)
+        batch_size = shape_params.shape[0]
+        lmk_faces_idx_mediapipe = self.lmk_faces_idx_mediapipe.unsqueeze(dim=0).expand(batch_size, -1).contiguous()
+        lmk_bary_coords_mediapipe = self.lmk_bary_coords_mediapipe.unsqueeze(dim=0).expand(batch_size, -1, -1).contiguous()
+        landmarks2d_mediapipe = vertices2landmarks(vertices, self.faces_tensor,
+                                         lmk_faces_idx_mediapipe,
+                                         lmk_bary_coords_mediapipe )
+        # landmarks3d_mediapipe = vertices2landmarks(vertices, self.faces_tensor,
+        #                                  self.full_lmk_faces_idx_mediapipe.repeat(bz, 1),
+        #                                  self.full_lmk_bary_coords_mediapipe.repeat(bz, 1, 1))
+
+        return vertices, landmarks2d, landmarks3d, landmarks2d_mediapipe#, landmarks3d_mediapipe
+    
 
 
 # class FLAMETex(nn.Module):
@@ -370,7 +436,7 @@ class FLAMETex(nn.Module):
             mu_key = 'mean'
             pc_key = 'tex_dir'
             n_pc = 200
-            tex_path = config.flame_tex_path
+            tex_path = config.tex_path
             tex_space = np.load(tex_path)
             texture_mean = tex_space[mu_key].reshape(1, -1) / 255.
             texture_basis = tex_space[pc_key].reshape(-1, n_pc) / 255.

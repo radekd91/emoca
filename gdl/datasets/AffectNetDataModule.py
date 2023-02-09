@@ -249,8 +249,11 @@ class AffectNetDataModule(FaceDataModuleBase):
     def _path_to_segmentations(self):
         return Path(self.output_dir) / "segmentations"
 
-    def _path_to_landmarks(self):
-        return Path(self.output_dir) / "landmarks"
+    def _path_to_landmarks(self, landmark_type=None):
+        if landmark_type is None:
+            return Path(self.output_dir) / "landmarks"
+        return Path(self.output_dir) / f"landmarks_{landmark_type}"
+        
 
     def _path_to_emotions(self):
         return Path(self.output_dir) / "emotions"
@@ -336,7 +339,7 @@ class AffectNetDataModule(FaceDataModuleBase):
 
                 im_fullfile = Path(self.input_dir) / im_file
                 try:
-                    detection, _, _, bbox_type, landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
+                    detection, _, _, bbox_type, landmarks, orig_landmarks = self._detect_faces_in_image(im_fullfile, detected_faces=[bb])
                 except Exception as e:
                 # except ValueError as e:
                     print(f"Failed to load file:")
@@ -368,6 +371,75 @@ class AffectNetDataModule(FaceDataModuleBase):
             self._segment_images(detection_fnames, self._path_to_segmentations(), path_depth=1)
 
             status_array = np.memmap(self.status_array_path,
+                                     dtype=np.bool,
+                                     mode='r+',
+                                     shape=(self.num_subsets,)
+                                     )
+            status_array[start_i // self.subset_size] = True
+            status_array.flush()
+            del status_array
+            print(f"Processing subset {start_i // self.subset_size} finished")
+        else:
+            print(f"Subset {start_i // self.subset_size} is already processed")
+
+    
+    def _detect_landmarks_mediapipe(self, start_i, end_i):
+        detections_path = self._path_to_detections()
+        landmark_type = "mediapipe"
+        landmark_path = self._path_to_landmarks(landmark_type=landmark_type)
+        landmark_path.mkdir(parents=True, exist_ok=True)
+
+        status_array_path = Path(self.output_dir) / "mediapipe_status.memmap"
+
+        status_array = np.memmap(status_array_path,
+                                 dtype=np.bool,
+                                 mode='r',
+                                 shape=(self.num_subsets,)
+                                 )
+                                 
+        completed = status_array[start_i // self.subset_size]
+        del status_array
+        from gdl.utils.FaceDetector import save_landmark_v2, save_landmark
+        from gdl.utils.MediaPipeLandmarkDetector import MediaPipeLandmarkDetector
+
+        detector = MediaPipeLandmarkDetector()
+
+        if not completed:
+            print(f"Processing subset {start_i // self.subset_size}")
+            for i in auto.tqdm(range(start_i, end_i)):
+                im_file = self.df.loc[i]["subDirectory_filePath"]
+                # left = self.df.loc[i]["face_x"]
+                # top = self.df.loc[i]["face_y"]
+                # right = left + self.df.loc[i]["face_width"]
+                # bottom = top + self.df.loc[i]["face_height"]
+                # bb = np.array([top, left, bottom, right])
+
+                image_path = (detections_path / im_file).with_suffix(self.processed_ext)
+                # save landmarks
+                out_landmark_fname = landmark_path / Path(im_file).parent / (Path(im_file).stem + ".pkl")
+                out_landmark_fname.parent.mkdir(exist_ok=True)
+                # landmark_fnames += [out_landmark_fname.relative_to(self.output_dir)]
+
+                if out_landmark_fname.exists():
+                    print(f"Landmark file {out_landmark_fname} already exists. Skipping")
+                    continue
+
+                try:
+                    image = imread(image_path)
+                except IOError as e:
+                    print(f"Failed to load file:")
+                    print(f"{image_path}")
+                    print(traceback.print_exc())
+                    continue
+
+                bb, lmk_type, landmarks = detector.run(image, with_landmarks=True)
+                save_landmark(out_landmark_fname, landmarks, lmk_type)
+                # save_landmark_v2(out_landmark_fname, landmarks, )
+                if len(bb) == 0:
+                    print(f"Failed to detect face in '{image_path}'")
+                    continue
+
+            status_array = np.memmap(status_array_path,
                                      dtype=np.bool,
                                      mode='r+',
                                      shape=(self.num_subsets,)
@@ -940,6 +1012,8 @@ class AffectNet(EmotionalImageDatasetBase):
         self.use_gt = use_gt
         self.drop_last = False
 
+        self.load_mediapipe_landmarks = True # False in the original paper, True is experimental
+
         if ignore_invalid:
             # filter invalid classes
             ignored_classes = [AffectNetExpressions.Uncertain.value, AffectNetExpressions.Occluded.value]
@@ -1109,12 +1183,10 @@ class AffectNet(EmotionalImageDatasetBase):
         if num_skips > 0:
             print(f"Warning: skipped {num_skips} samples do to failed loading. In total {self.num_skips} samples skipped")
 
-
         expression = self.df.loc[index]["expression"]
         valence = self.df.loc[index]["valence"]
         arousal = self.df.loc[index]["arousal"]
         facial_landmarks = self.df.loc[index]["facial_landmarks"]
-
 
         input_img_shape = input_img.shape
 
@@ -1161,6 +1233,26 @@ class AffectNet(EmotionalImageDatasetBase):
             segmentation_path = Path(self.image_path).parent / "segmentations" / im_rel_path
             segmentation_path = segmentation_path.parent / (segmentation_path.stem + ".pkl")
 
+            # try mediapipe landmarks if available
+            if self.load_mediapipe_landmarks:
+                mediapipe_landmark_path = Path(self.image_path).parent / "landmarks_mediapipe" / im_rel_path
+                mediapipe_landmark_path = mediapipe_landmark_path.parent / (mediapipe_landmark_path.stem + ".pkl")
+
+                # try:
+                if mediapipe_landmark_path.is_file():
+                    mp_landmark_type, mediapipe_landmark = load_landmark(
+                        mediapipe_landmark_path)
+                    assert len(mediapipe_landmark) > 0, "Mediapipe not detected"
+                    if len(mediapipe_landmark) == 0:
+                        mediapipe_landmark = None
+                    else:
+                        mediapipe_landmark = mediapipe_landmark[0]
+                    mediapipe_landmark = mediapipe_landmark[np.newaxis, ..., :2]
+                else:
+                    mediapipe_landmark = None
+            else: 
+                mediapipe_landmark = None
+
             seg_image, seg_type = load_segmentation(
                 segmentation_path)
             seg_image = seg_image[np.newaxis, :, :, np.newaxis]
@@ -1175,7 +1267,17 @@ class AffectNet(EmotionalImageDatasetBase):
             else:
                 emotion_features = None
 
+        if mediapipe_landmark is not None:
+            # concatenate landmark and mediapipe landmark
+            num_landmarks = landmark.shape[1]
+            landmark = np.concatenate([landmark, mediapipe_landmark], axis=1)
+
         img, seg_image, landmark = self._augment(img, seg_image, landmark)
+
+        if mediapipe_landmark is not None:
+            mediapipe_landmark = landmark[num_landmarks:, ...]
+            landmark = landmark[:num_landmarks, ...]
+
 
         sample = {
             "image": numpy_image_to_torch(img.astype(np.float32)),
@@ -1200,6 +1302,8 @@ class AffectNet(EmotionalImageDatasetBase):
 
         if landmark is not None:
             sample["landmark"] = torch.from_numpy(landmark)
+        if mediapipe_landmark is not None:
+            sample["landmark_mediapipe"] = torch.from_numpy(mediapipe_landmark)
         if seg_image is not None:
             sample["mask"] = numpy_image_to_torch(seg_image)[0]
         if emotion_features is not None:
@@ -1212,6 +1316,28 @@ class AffectNet(EmotionalImageDatasetBase):
         return sample
 
     def __getitem__(self, index):
+        # max_attempts = 10
+        max_attempts = 50
+        for i in range(max_attempts):
+            try: 
+                return self._getitem(index)
+            except AssertionError as e:
+                if not hasattr(self, "num_total_failed_attempts"):
+                    self.num_total_failed_attempts = 0
+                old_index = index
+                index = np.random.randint(0, self.__len__())
+                tb = traceback.format_exc()
+                if self.num_total_failed_attempts % 50 == 0:
+                    print(f"[ERROR] AssertionError in {self.__class__.__name__} dataset while retrieving sample {old_index}, retrying with new index {index}")
+                    print(f"In total, there has been {self.num_total_failed_attempts} failed attempts. This number should be very small. If it's not, check the data.")
+                    print("See the exception message for more details.")
+                    print(tb)
+                self.num_total_failed_attempts += 1
+        print("[ERROR] Failed to retrieve sample after {} attempts".format(max_attempts))
+        raise RuntimeError("Failed to retrieve sample after {} attempts".format(max_attempts))
+
+
+    def _getitem(self, index):
         # if self.ring_type is None or self.ring_size == 1:
         #TODO: check if following line is a breaking change
         if self.ring_type is None: # or self.ring_size == 1:
@@ -1534,48 +1660,63 @@ if __name__ == "__main__":
     #          ring_size=4
     #         )
     import yaml
-    # augmenter = yaml.load(open(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"))["augmentation"]
-    augmenter = None
+    augmenter = yaml.load(
+            open(Path(__file__).parents[2] / "gdl_apps" / "EmotionRecognition" / "emodeca_conf" / "data" / "augmentations" / "default_with_resize.yaml"), 
+            Loader=yaml.FullLoader)["augmentation"]
+    # augmenter = None
     # # dm = AffectNetEmoNetSplitModule(
-    # dm = AffectNetEmoNetSplitModuleValTest(
-    # # dm = AffectNetDataModule(
-    #          # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
-    #          "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
-    #          # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
-    #          # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
-    #          "/is/cluster/work/rdanecek/data/affectnet/",
-    #          # processed_subfolder="processed_2021_Aug_27_19-58-02",
-    #          processed_subfolder="processed_2021_Apr_05_15-22-18",
-    #          processed_ext=".png",
-    #          mode="manual",
-    #          scale=1.7,
-    #          image_size=512,
-    #          bb_center_shift_x=0,
-    #          bb_center_shift_y=-0.3,
-    #          ignore_invalid=True,
-    #          # ignore_invalid="like_emonet",
-    #          # ring_type="gt_expression",
-    #          # ring_type="gt_va",
-    #          # ring_type="emonet_feature",
-    #          ring_size=4,
-    #         augmentation=augmenter,
-    #         # use_clean_labels=True
-    #         # dataset_type="AffectNetWithMGCNetPredictions",
-    #         # dataset_type="AffectNetWithExpNetPredictions",
-    #         )
-    #
+    dm = AffectNetEmoNetSplitModuleValTest(
+    # dm = AffectNetDataModule(
+             # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
+             "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
+             # "/home/rdanecek/Workspace/mount/scratch/rdanecek/data/affectnet/",
+             # "/home/rdanecek/Workspace/mount/work/rdanecek/data/affectnet/",
+             "/is/cluster/work/rdanecek/data/affectnet/",
+             # processed_subfolder="processed_2021_Aug_27_19-58-02",
+             processed_subfolder="processed_2021_Apr_05_15-22-18",
+             processed_ext=".png",
+             mode="manual",
+             scale=1.7,
+             image_size=512,
+             bb_center_shift_x=0,
+             bb_center_shift_y=-0.3,
+             ignore_invalid=True,
+             # ignore_invalid="like_emonet",
+             # ring_type="gt_expression",
+             # ring_type="gt_va",
+             # ring_type="emonet_feature",
+             ring_size=4,
+            augmentation=augmenter,
+            # use_clean_labels=True
+            # dataset_type="AffectNetWithMGCNetPredictions",
+            # dataset_type="AffectNetWithExpNetPredictions",
+            train_batch_size=4,
+            )
+    
     print(dm.num_subsets)
     dm.prepare_data()
     dm.setup()
-    # # dm._extract_emotion_features()
+    # # # dm._extract_emotion_features()
     dltr = dm.train_dataloader()
-    dlv = dm.val_dataloader()
-    dlt = dm.test_dataloader()
+    # dlv = dm.val_dataloader()
+    # dlt = dm.test_dataloader()
 
-    for i in range(len(dm.training_set)):
-        sample = dm.training_set[i]
-        print(AffectNetExpressions(sample["affectnetexp"].item()))
+    dataset = dm.training_set
+    # dataset = dm.test_set
+
+    # for i in range(50):
+    for i, sample in enumerate(dltr):
+        # sample = dataset[i]
+        # sample = next(dltr)
+        # if AffectNetExpressions(sample["affectnetexp"].item()) != AffectNetExpressions.Contempt:
+        #     # print(AffectNetExpressions(sample["affectnetexp"].item()))
+        #     continue
+        # print(AffectNetExpressions(sample["affectnetexp"].item()))
         print(sample["va"])
-        dm.training_set.visualize_sample(sample)
+        dataset.visualize_sample(sample)
 
-    print("Done")
+    #     path = Path("/home/rdanecek/Downloads/AffectNet_Contempt")
+    #     path.mkdir(exist_ok=True, parents=True)
+    #     imsave(f"/home/rdanecek/Downloads/AffectNet_Contempt/{i:05d}.png", sample["image"].numpy().transpose([1, 2, 0]), )
+
+    # print("Done")

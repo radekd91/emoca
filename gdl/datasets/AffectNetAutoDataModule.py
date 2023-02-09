@@ -33,6 +33,25 @@ class AffectNetAutoDataModule(AffectNetDataModule):
     def setup(self, stage=None):
         self.df = self.df[self.df["expression"] != "Neutral"]
         print("Pass")
+        self.training_set = self._new_training_set()
+        self.training_set.use_processed = False
+        self.validation_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path,
+                                                               self.image_size, self.scale,
+                                        None, ignore_invalid=self.ignore_invalid,
+                                        ring_type=self.ring_type,
+                                        ring_size=1,
+                                        ext=self.processed_ext,
+                                                               use_gt=self.use_gt,
+                                        )
+        self.validation_set.use_processed = False
+        self.test_set = new_affectnet(self.dataset_type)(self.image_path, self.val_dataframe_path, self.image_size, self.scale,
+                                    None, ignore_invalid= self.ignore_invalid,
+                                  ring_type=self.ring_type,
+                                  ring_size=1,
+                                  ext=self.processed_ext,
+                                                         use_gt=self.use_gt,
+                                  )
+        self.validation_set.use_processed = False
 
 class AffectNetAutoTestDataModule(AffectNetAutoDataModule):
     def __init__(self, *args, **kwargs):
@@ -65,8 +84,8 @@ if __name__ == '__main__':
     # df = pd.read_csv(df_dir / "automatically_annotated.csv")
     # # sample_representative_set(df, df_dir / "representative.csv")
     # sample_representative_set(df, df_dir / "representative2.csv", num_per_bin=1)
-    # dm = AffectNetAutoDataModule(
-    dm = AffectNetAutoTestDataModule(
+    dm = AffectNetAutoDataModule(
+    # dm = AffectNetAutoTestDataModule(
         # dm = AffectNetDataModule(
         # "/home/rdanecek/Workspace/mount/project/EmotionalFacialAnimation/data/affectnet/",
         # "/ps/project_cifs/EmotionalFacialAnimation/data/affectnet/",
@@ -96,10 +115,17 @@ if __name__ == '__main__':
     dm.prepare_data()
     dm.setup()
 
-    for i in range(len(dm.validation_set)):
-        sample = dm.validation_set[i]
+    dataset = dm.training_set
+    # dataset = dm.validation_set
+    # dataset = dm.test_set
+
+    for i in range(len(dataset)):
+        sample = dataset[i]
+        if AffectNetExpressions(sample["affectnetexp"].item()) != AffectNetExpressions.Contempt:
+            print(AffectNetExpressions(sample["affectnetexp"].item()))
+            continue
         # print(AffectNetExpressions(sample["affectnetexp"].item()))
         print(sample["va"])
-        dm.validation_set.visualize_sample(sample)
+        dataset.visualize_sample(sample)
 
     print("Done")

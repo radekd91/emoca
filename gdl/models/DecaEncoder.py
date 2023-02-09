@@ -31,6 +31,7 @@ try:
 except ImportError as e:
     print("SWIN not found, will not be able to use SWIN models")
 
+
 class BaseEncoder(nn.Module):
     def __init__(self, outsize, last_op=None):
         super().__init__()
@@ -46,17 +47,30 @@ class BaseEncoder(nn.Module):
         )
         self.last_op = last_op
 
-    def forward(self, inputs, output_features=False):
-        features = self.encoder(inputs)
+    def forward_features(self, inputs):
+        return self.encoder(inputs)
+
+    def forward_features_to_output(self, features):
         parameters = self.layers(features)
         if self.last_op:
             parameters = self.last_op(parameters)
+        return parameters
+
+    def forward(self, inputs, output_features=False):
+        features = self.forward_features(inputs)
+        parameters = self.forward_features_to_output(features)
         if not output_features:
             return parameters
         return parameters, features
 
     def _create_encoder(self):
         raise NotImplementedError()
+
+    def reset_last_layer(self):
+        # initialize the last layer to zero to help the network 
+        # predict the initial pose a bit more stable
+        torch.nn.init.constant_(self.layers[-1].weight, 0)
+        torch.nn.init.constant_(self.layers[-1].bias, 0)
 
 
 class ResnetEncoder(BaseEncoder):
@@ -91,12 +105,20 @@ class SecondHeadResnet(nn.Module):
         else:
             self.last_op = last_op
 
+    def forward_features(self, inputs):
+        out1, features = self.resnet(inputs, output_features=True)
+        return out1, features
+
+    def forward_features_to_output(self, features):
+        parameters = self.layers(features)
+        if self.last_op:
+            parameters = self.last_op(parameters)
+        return parameters
+
 
     def forward(self, inputs):
-        out1, features = self.resnet(inputs, output_features=True)
-        out2 = self.layers(features)
-        if self.last_op:
-            out2 = self.last_op(out2)
+        out1, features = self.forward_features()
+        out2 = self.forward_features_to_output(features)
         return out1, out2
 
 
@@ -104,6 +126,13 @@ class SecondHeadResnet(nn.Module):
         #here we NEVER modify the eval/train status of the resnet backbone, only the FC layers of the second head
         self.layers.train(mode)
         return self
+
+    def reset_last_layer(self):
+        # initialize the last layer to zero to help the network 
+        # predict the initial pose a bit more stable
+        torch.nn.init.constant_(self.layers[-1].weight, 0)
+        torch.nn.init.constant_(self.layers[-1].bias, 0)
+
 
 
 class SwinEncoder(BaseEncoder):
