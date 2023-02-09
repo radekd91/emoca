@@ -55,6 +55,20 @@ This repository is the official implementation of the [CVPR 2022](https://cvpr20
 
 EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
  
+## !!! UPDATES !!!
+**EMOCA v2 is now out.** 
+
+Compared to the original model it produces: 
+
+1) Much better lip and eye alignment 
+2) Much better lip articulation 
+
+This is achieved by: 
+1) Using a subset of mediapipe landmarks for mouth, eyes and eyebrows (as opposed to FAN landmarks that EMOCA v1 uses)
+2) Using absolute landmark loss in combination with the relative losses (as opposed to only relative landmark losses in EMOCA v1)
+3) Incorporating perceptual lip reading loss. Inspired by [spectre](https://filby89.github.io/spectre/). Big shout-out to these guys!
+
+You will have to upgrade to the new environment in order to use EMOCA v2. Please follow the steps bellow to install the package. Then, go to [EMOCA](gdl_apps/EMOCA) .
 
 ## EMOCA project 
 The training and testing script for EMOCA can be found in this subfolder: 
@@ -80,7 +94,7 @@ The training and testing script for EMOCA can be found in this subfolder:
 1) Run the installation script: 
 
 ```bash
-bash install.sh
+bash install_38.sh
 ```
 If this ran without any errors, you now have a functioning conda environment with all the necessary packages to [run the demos](#usage). If you had issues with the installation script, go through the [long version](#long-version) of the installation and see what went wrong. Certain packages (especially for CUDA, PyTorch and PyTorch3D) may cause issues for some users.
 
@@ -92,18 +106,18 @@ bash pull_submodules.sh
 ```
 
 
-2) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py36_cu11_ubuntu.yml`.  
+2) Set up a conda environment with one of the provided conda files. I recommend using `conda-environment_py38_cu11_ubuntu.yml`.  
 <!-- This is the one I use for the cluster `conda-environment_py36_cu11_cluster.yml`. The differences between tehse two are probably not important but I include both for completeness.  -->
 
 You can use [mamba](https://github.com/mamba-org/mamba) to create a conda environment (strongly recommended):
 
 ```bash
-mamba env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
+mamba env create python=3.8 --file conda-environment_py38_cu11_ubuntu.yml
 ```
 
 but you can also use plain conda if you want (but it will be slower): 
 ```bash
-conda env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml
+conda env create python=3.8 --file conda-environment_py38_cu11_ubuntu.yml
 ```
 
 
@@ -130,12 +144,12 @@ pip install -e .
 For some people the compilation fails during requirements install and works after. Try running the following separately: 
 
 ```bash
-pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.0
+pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.2
 ```
 
-Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.0 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
+Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.2 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
 
-Note: EMOCA was developed with Pytorch 1.9.1 and Pytorch3d 0.6.0 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
+Note: EMOCA was developed with Pytorch 1.12.1 and Pytorch3d 0.6.2 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
 
 ## Usage 
 
@@ -195,6 +209,16 @@ As EMOCA builds on top of [DECA](https://github.com/YadiraF/DECA) and uses parts
   number = {8}, 
   year = {2021}, 
   url = {https://doi.org/10.1145/3450626.3459936} 
+}
+```
+Furthermore, if you use EMOCA v2, please also cite [SPECTRE](https://filby89.github.io/spectre/): 
+```
+@article{filntisis2022visual,
+  title = {Visual Speech-Aware Perceptual 3D Facial Expression Reconstruction from Videos},
+  author = {Filntisis, Panagiotis P. and Retsinas, George and Paraperas-Papantoniou, Foivos and Katsamanis, Athanasios and Roussos, Anastasios and Maragos, Petros},
+  journal = {arXiv preprint arXiv:2207.11094},
+  publisher = {arXiv},
+  year = {2022},
 }
 ```
 
