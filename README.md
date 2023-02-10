@@ -55,7 +55,7 @@ This repository is the official implementation of the [CVPR 2022](https://cvpr20
 
 EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
  
-## !!! UPDATES !!!
+## !!! UPDATE !!!
 **EMOCA v2 is now out.** 
 
 Compared to the original model it produces: 
@@ -68,7 +68,7 @@ This is achieved by:
 2) Using absolute landmark loss in combination with the relative losses (as opposed to only relative landmark losses in EMOCA v1)
 3) Incorporating perceptual lip reading loss. Inspired by [spectre](https://filby89.github.io/spectre/). Big shout-out to these guys!
 
-You will have to upgrade to the new environment in order to use EMOCA v2. Please follow the steps bellow to install the package. Then, go to [EMOCA](gdl_apps/EMOCA) .
+You will have to upgrade to the new environment in order to use EMOCA v2. Please follow the steps bellow to install the package. Then, go to the [EMOCA](gdl_apps/EMOCA) subfolder and follow the steps described there.
 
 ## EMOCA project 
 The training and testing script for EMOCA can be found in this subfolder: 
