@@ -36,6 +36,19 @@ echo "Extracting EMOCA..."
 unzip EMOCA.zip
 cd ../../
 
+echo "Downloading EMOCA v2..."
+mkdir -p EMOCA/models 
+cd EMOCA/models 
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA/models/EMOCA_v2_mp.zip -O EMOCA_v2_mp.zip
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA/models/EMOCA_v2_lr_mse_20.zip -O EMOCA_v2_lr_mse_20.zip
+wget https://download.is.tue.mpg.de/emoca/assets/EMOCA/models/EMOCA_v2_lr_cos_1.5.zip -O EMOCA_v2_lr_cos_1.5.zip
+echo "Extracting EMOCA v2..."
+unzip EMOCA.zip
+unzip EMOCA_v2_mp.zip
+unzip EMOCA_v2_lr_mse_20.zip
+unzip EMOCA_v2_lr_cos_1.5.zip
+cd ../../
+
 echo "Downloading DECA..."
 mkdir -p EMOCA/models 
 cd EMOCA/models 
