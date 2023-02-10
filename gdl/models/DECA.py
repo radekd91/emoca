@@ -234,7 +234,7 @@ class DecaModule(LightningModule):
         """
         Initialize the au perceptual loss (not currently used in EMOCA)
         """
-        if 'lipread_loss' in self.deca.config.keys():
+        if 'lipread_loss' in self.deca.config.keys() and self.deca.config.lipread_loss.get('load', True):
             if self.lipread_loss is not None:
                 force_override = True if 'force_override' in self.deca.config.lipread_loss.keys() \
                                          and self.deca.config.lipread_loss.force_override else False
