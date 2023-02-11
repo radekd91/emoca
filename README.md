@@ -150,7 +150,10 @@ pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.2
 
 Pytorch3D installation (which is part of the requirements file) can unfortunately be tricky and machine specific. EMOCA was developed with is Pytorch3D 0.6.2 and the previous command includes its installation from source (to ensure its compatibility with pytorch and CUDA). If it fails to compile, you can try to find another way to install Pytorch3D.
 
-Note: EMOCA was developed with Pytorch 1.12.1 and Pytorch3d 0.6.2 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
+Notes: 
+1) EMOCA was developed with Pytorch 1.12.1 and Pytorch3d 0.6.2 running on CUDA toolkit 11.1.1 with cuDNN 8.0.5. If for some reason installation of these failed on your machine (which can happen), feel free to install these dependencies another way. The most important thing is that version of Pytorch and Pytorch3D match. The version of CUDA is probably less important.
+2) Some people experience import issues with opencv-python from either pip or conda. If the OpenCV version installed by the automated script does not work for you (i.e. it does not import without errors), try installing it through other means. The install script installs `opencv-python~=4.5.1.48` installed via `pip`.
+
 
 ## Usage 
 
