@@ -155,7 +155,7 @@ Note: EMOCA was developed with Pytorch 1.12.1 and Pytorch3d 0.6.2 running on CUD
 
 0) Activate the environment: 
 ```bash
-conda activate work36_cu11
+conda activate work38_cu11
 ```
 
 1) For running EMOCA examples, go to [EMOCA](gdl_apps/EMOCA) 
