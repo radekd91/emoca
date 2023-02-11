@@ -18,7 +18,7 @@ dependencies:
   - ninja=1.10.2
   - notebook=6.3.0
   - numba>=0.52.0
-  - pandas>=1.1.5
+  - pandas>=1.4.2
   - pip>=21.2.4
   - python=3.8
   # - pytorch=1.9.1=py3.8_cuda11.1_cudnn8.0.5_0
