@@ -56,7 +56,7 @@ This repository is the official implementation of the [CVPR 2022](https://cvpr20
 EMOCA takes a single in-the-wild image as input and reconstructs a 3D face with sufficient facial expression detail to convey the emotional state of the input image. EMOCA advances the state-of-the-art monocular face reconstruction in-the-wild, putting emphasis on accurate capture of emotional content. The official project page is [here](https://emoca.is.tue.mpg.de/index.html).
  
 ## !!! UPDATE !!!
-**EMOCA v2 is now out.** 
+**EMOCA v2 is now out.** Complete the installation steps below and o to [EMOCA](gdl_apps/EMOCA) to test the demos. 
 
 Compared to the original model it produces: 
 
