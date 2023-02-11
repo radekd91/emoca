@@ -81,13 +81,14 @@ The training and testing script for EMOCA can be found in this subfolder:
 
 1) Install [conda](https://docs.conda.io/en/latest/miniconda.html)
 
-2) Install [mamba](https://github.com/mamba-org/mamba)
+<!-- 2) Install [mamba](https://github.com/mamba-org/mamba) -->
 
 <!-- 0) Clone the repo with submodules:  -->
 <!-- ``` -->
 <!-- git clone --recurse-submodules ... -->
 <!-- ``` -->
-3) Clone this repo
+2) Clone this repo
+<!-- 3) Clone this repo -->
 
 ### Short version 
 
@@ -125,7 +126,7 @@ Note: the environment might contain some packages. If you find an environment is
 
 2) Activate the environment: 
 ```bash 
-conda activate work36_cu11
+conda activate work38_cu11
 ```
 
 3) For some reason cython is glitching in the requirements file so install it separately: 
