@@ -20,9 +20,61 @@ All rights reserved.
 
 import pickle as pkl
 import compress_pickle as cpkl
+import hickle as hkl
 from pathlib import Path
 import numpy as np
 from timeit import default_timer as timer
+
+
+def load_reconstruction_list(filename):
+    reconstructions = hkl.load(filename)
+    return reconstructions
+
+
+def save_reconstruction_list(filename, reconstructions):
+    hkl.dump(reconstructions, filename)
+
+
+def load_emotion_list(filename):
+    emotions = hkl.load(filename)
+    return emotions
+
+
+def save_emotion_list(filename, emotions):
+    hkl.dump(emotions, filename)
+
+
+def save_segmentation_list(filename, seg_images, seg_types, seg_names):
+    with open(filename, "wb") as f:
+        # for some reason compressed pickle can only load one object (EOF bug)
+        # so put it in the list
+        cpkl.dump([seg_types, seg_images, seg_names], f, compression='gzip')
+        # pkl.dump(seg_type, f)
+        # pkl.dump(seg_image, f)
+
+
+def load_segmentation_list(filename):
+    try:
+        with open(filename, "rb") as f:
+            seg = cpkl.load(f, compression='gzip')
+            seg_types = seg[0]
+            seg_images = seg[1]
+            seg_names = seg[2]
+    except EOFError as e: 
+        print(f"Error loading segmentation list: {filename}")
+        raise e
+    return seg_images, seg_types, seg_names
+
+
+def load_segmentation(filename):
+    with open(filename, "rb") as f:
+        seg = cpkl.load(f, compression='gzip')
+        seg_type = seg[0]
+        seg_image = seg[1]
+        # seg_type = pkl.load(f)
+        # seg_image = pkl.load(f)
+    return seg_image, seg_type
+
 
 
 def save_segmentation(filename, seg_image, seg_type):
