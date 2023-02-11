@@ -22,7 +22,8 @@ dependencies:
   - pip>=21.2.4
   - python=3.8
   # - pytorch=1.9.1=py3.8_cuda11.1_cudnn8.0.5_0
-  - pytorch=1.10.2=py3.8_cuda11.3_cudnn8.2.0_0
+  # - pytorch=1.10.2=py3.8_cuda11.3_cudnn8.2.0_0
+  - pytorch=1.12.1=py3.8_cuda11.3_cudnn8.3.2_0
   - torchvision=0.11.3
   - torchaudio=0.10.2
   - pywavelets>=1.1.1
