@@ -19,6 +19,6 @@ pip install git+https://github.com/facebookresearch/pytorch3d.git@v0.6.2
 echo "Installing other requirements"
 pip install -e . 
 cd .. 
-pip install -r requirements.txt
+pip install -r requirements38.txt
 cd ../..
 echo "Installation finished"
