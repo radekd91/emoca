@@ -7,6 +7,8 @@ fi
 
 echo "Pulling submodules"
 bash pull_submodules.sh
+echo "Installing mamba"
+conda install mamba -n base -c conda-forge
 echo "Creating conda environment"
 mamba env create python=3.6 --file conda-environment_py36_cu11_ubuntu.yml 
 eval "$(conda shell.bash hook)" # make sure conda works in the shell script
