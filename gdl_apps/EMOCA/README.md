@@ -31,8 +31,8 @@ There are now mutiple EMOCA models that you can use for reconstruction. You can 
 
 The available models are: 
 1) `EMOCA` - the original `EMOCA version 
-2) `EMOCA_v2_mp` - EMOCA v2 trained with mediapiple landmarks (instead of FAN) but without the lip reading loss
-3) `EMOCA_v2_lr_cos_1.5` - EMOCA v2 trained with mediapiple landmarks and with the lip reading loss (cosine similarity on lip reading features, similarly to SPECTRE) 
+2) `EMOCA_v2_mp` - EMOCA v2 trained with mediapipe landmarks (instead of FAN) but without the lip reading loss
+3) `EMOCA_v2_lr_cos_1.5` - EMOCA v2 trained with mediapipe landmarks and with the lip reading loss (cosine similarity on lip reading features, similarly to SPECTRE) 
 4) `EMOCA_v2_lr_mse_20` - (default) EMOCA v2 trained with mediapipe landmarks and with the lip reading loss (MSE on lip reading features)
 
 Notes: 
