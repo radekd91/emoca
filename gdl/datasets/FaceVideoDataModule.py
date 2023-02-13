@@ -20,12 +20,14 @@ All rights reserved.
 
 from torch.utils.data.dataloader import DataLoader
 import os, sys
+import subprocess
 from pathlib import Path
 import numpy as np
 import torch
 # import torchaudio
 from typing import Optional, Union, List
 import pickle as pkl
+import hickle as hkl
 # from collections import OrderedDict
 from tqdm import tqdm, auto
 # import subprocess
@@ -37,10 +39,18 @@ from gdl.datasets.ImageDatasetHelpers import point2bbox, bbpoint_warp
 from gdl.datasets.UnsupervisedImageDataset import UnsupervisedImageDataset
 from facenet_pytorch import InceptionResnetV1
 from collections import OrderedDict
-from gdl.datasets.IO import save_emotion
+from gdl.datasets.IO import save_emotion, save_segmentation_list, save_reconstruction_list, save_emotion_list
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 from skimage.io import imread
+from skvideo.io import vreader, vread
+import skvideo.io
+import torch.nn.functional as F
+
+from gdl.datasets.VideoFaceDetectionDataset import VideoFaceDetectionDataset
+import types
+
+from gdl.utils.FaceDetector import save_landmark, save_landmark_v2
 
 # from memory_profiler import profile
 
@@ -61,24 +71,49 @@ class FaceVideoDataModule(FaceDataModuleBase):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
-                 device=None):
+                 processed_video_size=256,
+                 device=None, 
+                 unpack_videos=True, 
+                 save_detection_images=True, 
+                 save_landmarks=True, 
+                 save_landmarks_one_file=False, 
+                 save_segmentation_frame_by_frame=True, 
+                 save_segmentation_one_file=False,    
+                 bb_center_shift_x=0, # in relative numbers
+                 bb_center_shift_y=0, # in relative numbers (i.e. -0.1 for 10% shift upwards, ...)
+                 include_processed_audio = True,
+                 include_raw_audio = True,
+                 preload_videos = False,
+                 inflate_by_video_size = False,
+                 read_video=True,
+                 ):
         super().__init__(root_dir, output_dir,
                          processed_subfolder=processed_subfolder,
                          face_detector=face_detector,
                          face_detector_threshold=face_detector_threshold,
                          image_size = image_size,
                          scale = scale,
-                         device=device)
-
-
+                         device=device, 
+                         save_detection_images=save_detection_images, 
+                         save_landmarks_frame_by_frame=save_landmarks, 
+                         save_landmarks_one_file=save_landmarks_one_file,
+                         save_segmentation_frame_by_frame=save_segmentation_frame_by_frame, # default
+                         save_segmentation_one_file=save_segmentation_one_file, # only use for large scale video datasets (that would produce too many files otherwise)
+                         bb_center_shift_x=bb_center_shift_x, # in relative numbers
+                         bb_center_shift_y=bb_center_shift_y, # in relative numbers (i.e. -0.1 for 10% shift upwards, ...)
+                         )
+        self.unpack_videos = unpack_videos
+        self.detect_landmarks_on_restored_images = None
+        self.processed_video_size = processed_video_size
         # self._instantiate_detector()
         # self.face_recognition = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
-
-        self.version = 2
+        # self.version = 2
+        self.version = 3
 
         self.video_list = None
         self.video_metas = None
+        self.audio_metas = None
         self.annotation_list = None
         self.frame_lists = None
         self.loaded = False
@@ -87,6 +122,14 @@ class FaceVideoDataModule(FaceDataModuleBase):
         self.detection_fnames = []
         self.detection_centers = []
         self.detection_sizes = []
+
+        self.include_processed_audio = include_processed_audio
+        self.include_raw_audio = include_raw_audio
+        self.preload_videos = preload_videos
+        self.inflate_by_video_size = inflate_by_video_size
+
+        self._must_include_audio = False
+        self.read_video=read_video
 
     @property
     def metadata_path(self):
@@ -106,6 +149,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
         self._unpack_videos()
         self._saveMeta()
 
+    def _is_video_dataset(self): 
+        return True
 
     def _unpack_videos(self):
         self.frame_lists = []
@@ -114,6 +159,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def get_frame_number_format(self):
         return "%06d"
+
+    def count_num_frames(self): 
+        num_frames = 0
+        for i in range(len(self.video_metas)): 
+            num_frames += self.video_metas[i]['num_frames']
+        return num_frames
 
     # def _get_unpacked_video_subfolder(self, video_idx):
         # return  Path(self._video_category(video_idx)) / video_file.parts[-3] /self._video_set(video_idx) / video_file.stem
@@ -152,7 +203,28 @@ class FaceVideoDataModule(FaceDataModuleBase):
                   % (expected_frames, n_frames, str(video_file)))
 
 
-    def _detect_faces(self):
+    def _extract_audio(self):
+        # extract audio for all videos 
+        print("Extracting audio for all videos")
+        for vi, video_file in enumerate(auto.tqdm(self.video_list)):
+            self._extract_audio_for_video(vi)
+        print("Audio extracted for all videos")
+
+    def _extract_audio_for_video(self, video_idx): 
+        video_file = Path(self.root_dir) / self.video_list[video_idx] 
+        audio_file = self._get_path_to_sequence_audio(video_idx)  
+
+        # extract the audio from the video using ffmpeg 
+        if not audio_file.is_file():
+            # print("Extracting audio from video '%s'" % str(video_file))
+            audio_file.parent.mkdir(exist_ok=True, parents=True)
+            cmd = "ffmpeg -i " + str(video_file) + " -f wav -vn -y " + str(audio_file) + ' -loglevel quiet'
+            os.system(cmd)
+        else: 
+            print("Skipped extracting audio from video '%s' because it already exists" % str(video_file))
+
+
+    def _detect_faces(self): #, videos_unpacked=True): #, save_detection_images=True, save_landmarks=True):
         for sid in range(self.num_sequences):
             self._detect_faces_in_sequence(sid)
 
@@ -169,21 +241,65 @@ class FaceVideoDataModule(FaceDataModuleBase):
         out_folder = Path(self.output_dir) / suffix
         return out_folder
 
+    def _get_path_to_sequence_audio(self, sequence_id):
+        return self._get_path_to_sequence_files(sequence_id, "audio").with_suffix(".wav")
 
     def _get_path_to_sequence_frames(self, sequence_id):
         return self._get_path_to_sequence_files(sequence_id, "videos")
 
+    def _get_path_to_aligned_videos(self, sequence_id):
+        return self._get_path_to_sequence_files(sequence_id, "videos_aligned").with_suffix(".mp4")
+
     def _get_path_to_sequence_detections(self, sequence_id): 
         return self._get_path_to_sequence_files(sequence_id, "detections")
 
-    def _get_path_to_sequence_landmarks(self, sequence_id):
-        return self._get_path_to_sequence_files(sequence_id, "landmarks")
+    def _get_landmark_method(self):
+        return "" # for backwards compatibility (AffectNet, ...), the inheriting classes should specify the method
 
-    def _get_path_to_sequence_segmentations(self, sequence_id):
-        return self._get_path_to_sequence_files(sequence_id, "segmentations")
+    def _get_path_to_sequence_landmarks(self, sequence_id, use_aligned_videos=False):
 
-    def _get_path_to_sequence_emotions(self, sequence_id):
-        return self._get_path_to_sequence_files(sequence_id, "emotions")
+        if self.save_detection_images: 
+            # landmarks will be saved wrt to the detection images
+            landmark_subfolder = "landmarks" 
+        elif use_aligned_videos: 
+            landmark_subfolder = "landmarks_aligned"
+        else: 
+            # landmarks will be saved wrt to the original images (not the detection images), 
+            # so better put them in a different folder to make it clear
+            landmark_subfolder = "landmarks_original"
+
+        method = self._get_landmark_method()
+
+        return self._get_path_to_sequence_files(sequence_id, landmark_subfolder, method=method)
+
+    def _get_segmentation_method(self):
+        return ""
+
+    def _get_path_to_sequence_segmentations(self, sequence_id, use_aligned_videos=False):
+        if self.save_detection_images: 
+            # landmarks will be saved wrt to the detection images
+            segmentation_subfolder = "segmentations" 
+        elif use_aligned_videos: 
+            segmentation_subfolder = "segmentations_aligned"
+        else: 
+            # landmarks will be saved wrt to the original images (not the detection images), 
+            # so better put them in a different folder to make it clear
+            segmentation_subfolder = "segmentations_original"
+
+        method = self._get_segmentation_method()
+
+        return self._get_path_to_sequence_files(sequence_id, segmentation_subfolder, method=method)
+        # return self._get_path_to_sequence_files(sequence_id, "segmentations")
+
+
+    # def _get_path_to_sequence_landmarks(self, sequence_id):
+    #     return self._get_path_to_sequence_files(sequence_id, "landmarks")
+
+    # def _get_path_to_sequence_segmentations(self, sequence_id):
+    #     return self._get_path_to_sequence_files(sequence_id, "segmentations")
+
+    def _get_path_to_sequence_emotions(self, sequence_id, emo_method="resnet50"):
+        return self._get_path_to_sequence_files(sequence_id, "emotions", method=emo_method)
 
     def _video_category(self, sequence_id):
         video_file = self.video_list[sequence_id]
@@ -202,7 +318,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
         if rec_method == 'deca':
             return self._get_path_to_sequence_files(sequence_id, "reconstructions", "", suffix)
         else:
-            assert rec_method in ['emoca', 'deep3dface']
+            assert rec_method in ['emoca', 'deep3dface', 'spectre']
             return self._get_path_to_sequence_files(sequence_id, "reconstructions", rec_method, suffix)
         # video_file = self.video_list[sequence_id]
         # if rec_method == 'deca':
@@ -227,10 +343,17 @@ class FaceVideoDataModule(FaceDataModuleBase):
         # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
         out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
         out_detection_folder.mkdir(exist_ok=True, parents=True)
-        out_file = out_detection_folder / "bboxes.pkl"
+        out_file_boxes = out_detection_folder / "bboxes.pkl"
 
         out_landmark_folder = self._get_path_to_sequence_landmarks(sequence_id)
         out_landmark_folder.mkdir(exist_ok=True, parents=True)
+
+        if self.save_landmarks_one_file: 
+            overwrite = False
+            if not overwrite and (out_landmark_folder / "landmarks.pkl").is_file() and (out_landmark_folder / "landmarks_original.pkl").is_file() and (out_landmark_folder / "landmark_types.pkl").is_file(): 
+                print("Files with landmarks already found in '%s'. Skipping" % out_landmark_folder)
+                return
+
 
         centers_all = []
         sizes_all = []
@@ -251,21 +374,222 @@ class FaceVideoDataModule(FaceDataModuleBase):
         # detector_instantion_frequency = 200
         start_fid = 0
 
-        frame_list = self.frame_lists[sequence_id]
-        fid = 0
-        if len(frame_list) == 0:
-            print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
-        for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
+        if self.unpack_videos:
+            frame_list = self.frame_lists[sequence_id]
+            fid = 0
+            if len(frame_list) == 0:
+                print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
+            for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
 
-            # if fid % detector_instantion_frequency == 0:
-            #     self._instantiate_detector(overwrite=True)
+                # if fid % detector_instantion_frequency == 0:
+                #     self._instantiate_detector(overwrite=True)
 
-            self._detect_faces_in_image_wrapper(frame_list, fid, out_detection_folder, out_landmark_folder, out_file,
-                                           centers_all, sizes_all, detection_fnames_all, landmark_fnames_all)
+                self._detect_faces_in_image_wrapper(frame_list, fid, out_detection_folder, out_landmark_folder, out_file_boxes,
+                                            centers_all, sizes_all, detection_fnames_all, landmark_fnames_all)
 
-        FaceVideoDataModule.save_detections(out_file,
+        else: 
+            num_frames = self.video_metas[sequence_id]['num_frames']
+            if self.detect_landmarks_on_restored_images is None:
+                video_name = self.root_dir / self.video_list[sequence_id]
+            else: 
+                video_name = video_file = self._get_path_to_sequence_restored(
+                    sequence_id, method=self.detect_landmarks_on_restored_images)
+            assert video_name.is_file()
+            if start_fid == 0:
+                videogen =  vreader(str(video_name))
+                # videogen =  vread(str(video_name))
+                # for i in range(start_fid): 
+                    # _discarded_frame = next(videogen
+            else: 
+                videogen =  vread(str(video_name))
+
+            if self.save_landmarks_one_file: 
+                out_landmarks_all = [] # landmarks wrt to the aligned image
+                out_landmarks_original_all = [] # landmarks wrt to the original image
+                out_bbox_type_all = []
+            else: 
+                out_landmarks_all = None
+                out_landmarks_original_all = None
+                out_bbox_type_all = None
+
+            for fid in tqdm(range(start_fid, num_frames)):
+                self._detect_faces_in_image_wrapper(videogen, fid, out_detection_folder, out_landmark_folder, out_file_boxes,
+                                            centers_all, sizes_all, detection_fnames_all, landmark_fnames_all,
+                                            out_landmarks_all, out_landmarks_original_all, out_bbox_type_all)
+                                            
+        if self.save_landmarks_one_file: 
+            # saves all landmarks per video  
+            out_file = out_landmark_folder / "landmarks.pkl"
+            FaceVideoDataModule.save_landmark_list(out_file, out_landmarks_all)
+            out_file = out_landmark_folder / "landmarks_original.pkl"
+            FaceVideoDataModule.save_landmark_list(out_file, out_landmarks_original_all)
+            print(f"Landmarks for sequence saved into one file: {out_file}")
+            out_file = out_landmark_folder / "landmark_types.pkl"
+            FaceVideoDataModule.save_landmark_list(out_file, out_bbox_type_all)
+
+
+        FaceVideoDataModule.save_detections(out_file_boxes,
                                             detection_fnames_all, landmark_fnames_all, centers_all, sizes_all, fid)
         print("Done detecting faces in sequence: '%s'" % self.video_list[sequence_id])
+        return 
+
+
+    # @profile
+    def _detect_landmarkes_in_aligned_sequence(self, sequence_id):
+        video_file = self._get_path_to_aligned_videos(sequence_id)
+        print("Detecting landmarks in aligned sequence: '%s'" % video_file)
+
+        out_landmark_folder = self._get_path_to_sequence_landmarks(sequence_id, use_aligned_videos=True)
+        out_landmark_folder.mkdir(exist_ok=True, parents=True)
+
+        if self.save_landmarks_one_file: 
+            overwrite = False
+            if not overwrite and (out_landmark_folder / "landmarks.pkl").is_file() and (out_landmark_folder / "landmarks_original.pkl").is_file() and (out_landmark_folder / "landmark_types.pkl").is_file(): 
+                print("Files with landmarks already found in '%s'. Skipping" % out_landmark_folder)
+                return
+
+        # start_fid = 0
+
+        if self.unpack_videos:
+            raise NotImplementedError("Not implemented and should not be. Unpacking videos into a sequence of images is pricy.")
+            # frame_list = self.frame_lists[sequence_id]
+            # fid = 0
+            # if len(frame_list) == 0:
+            #     print("Nothing to detect in: '%s'. All frames have been processed" % self.video_list[sequence_id])
+            # for fid, frame_fname in enumerate(tqdm(range(start_fid, len(frame_list)))):
+
+            #     # if fid % detector_instantion_frequency == 0:
+            #     #     self._instantiate_detector(overwrite=True)
+
+            #     self._detect_faces_in_image_wrapper(frame_list, fid, out_detection_folder, out_landmark_folder, out_file_boxes,
+            #                                 centers_all, sizes_all, detection_fnames_all, landmark_fnames_all)
+
+        else: 
+            # if start_fid == 0:
+                # videogen =  vreader(str(video_name))
+            videogen =  skvideo.io.FFmpegReader(str(video_file))
+                # videogen =  vread(str(video_name))
+                # for i in range(start_fid): 
+                    # _discarded_frame = next(videogen)
+            # else: 
+            #     videogen =  vread(str(video_name))
+            self._detect_landmarks_no_face_detection(videogen, out_landmark_folder)
+
+
+    def _detect_landmarks_no_face_detection(self, detection_fnames_or_ims, out_landmark_folder, path_depth = 0):
+        """
+        Just detects landmarks without face detection. The images should already be cropped to the face.
+        """
+        import time
+        if self.save_landmarks_one_file: 
+            overwrite = False 
+            single_out_file = out_landmark_folder / "landmarks.pkl"
+            if single_out_file.is_file() and not overwrite:
+                print(f"Landmarks already found in {single_out_file}, skipping")
+                return
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print(device)
+        # net, landmark_type, batch_size = self._get_segmentation_net(device)
+
+        # if self.save_detection_images:
+        #     ref_im = imread(detection_fnames_or_ims[0])
+        # else: 
+        #     ref_im = detection_fnames_or_ims[0]
+        # ref_size = Resize((ref_im.shape[0], ref_im.shape[1]), interpolation=Image.NEAREST)
+        # ref_size = None
+
+        optimal_landmark_detector_size = self.face_detector.optimal_landmark_detector_im_size()
+
+        transforms = Compose([
+            Resize((optimal_landmark_detector_size, optimal_landmark_detector_size)),
+        #     Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+        # transforms=None
+        batch_size = 64
+
+        if isinstance(detection_fnames_or_ims, types.GeneratorType): 
+            im_read = "skvreader"
+        elif isinstance(detection_fnames_or_ims, (skvideo.io.FFmpegReader)):
+            im_read = "skvffmpeg"
+        else:
+            im_read = 'pil' if not isinstance(detection_fnames_or_ims[0], np.ndarray) else None
+
+        dataset = UnsupervisedImageDataset(detection_fnames_or_ims, image_transforms=transforms,
+                                           im_read=im_read)
+        num_workers = 4 if im_read not in ["skvreader", "skvffmpeg"] else 1 # videos can only be read on 1 thread frame by frame
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
+
+        # import matplotlib.pyplot as plt
+
+        if self.save_landmarks_one_file: 
+            # out_landmark_names = []
+            out_landmarks = []
+            out_landmark_types = []
+            out_landmarks_scores = []
+
+        for i, batch in enumerate(tqdm(loader)):
+            # facenet_pytorch expects this stanadrization for the input to the net
+            # images = fixed_image_standardization(batch['image'].to(device))
+            images = batch['image'].cuda()
+            # start = time.time()
+            with torch.no_grad():
+                landmarks, landmark_scores = self.face_detector.landmarks_from_batch_no_face_detection(images)
+            # end = time.time()
+
+            # import matplotlib.pyplot as plt 
+            # plt.imshow(images[0].cpu().numpy().transpose(1,2,0))
+            # # plot the landmark points 
+            # plt.scatter(landmarks[0, :, 0] * images.shape[3], landmarks[0, :, 1] * images.shape[2], s=10, marker='.', c='r')
+            # plt.show()
+
+            if self.save_landmarks_frame_by_frame:
+                start = time.time()
+                for j in range(landmarks.shape[0]):
+                    image_path = batch['path'][j]
+                    # if isinstance(out_segmentation_folder, list):
+                    if path_depth > 0:
+                        rel_path = Path(image_path).parent.relative_to(Path(image_path).parents[path_depth])
+                        landmark_path = out_landmark_folder / rel_path / (Path(image_path).stem + ".pkl")
+                    else:
+                        landmark_path = out_landmark_folder / (Path(image_path).stem + ".pkl")
+                    landmark_path.parent.mkdir(exist_ok=True, parents=True)
+                    save_landmark_v2(landmark_path, landmarks[j], landmark_scores[j], self.face_detector.landmark_type())
+                print(f" Saving batch {i} took: {end - start}")
+                end = time.time()
+            if self.save_landmarks_one_file: 
+                out_landmarks += [landmarks]
+                out_landmarks_scores += [landmark_scores]
+                out_landmark_types += [self.face_detector.landmark_type()] * len(landmarks)
+
+        if self.save_landmarks_one_file: 
+            out_landmarks = np.concatenate(out_landmarks, axis=0)
+            out_landmarks_scores = np.concatenate(out_landmarks_scores, axis=0)
+            FaceVideoDataModule.save_landmark_list_v2(single_out_file, out_landmarks, landmark_scores, out_landmark_types)
+            print("Landmarks saved to %s" % single_out_file)
+
+
+    def _cut_out_detected_faces_in_sequence(self, sequence_id):
+        in_landmark_folder = self._get_path_to_sequence_landmarks(sequence_id)
+        in_file = in_landmark_folder / "landmarks_original.pkl"
+        FaceVideoDataModule.load_landmark_list(in_file)
+
+        # Extract the number of people (use face recognition)
+
+        # Take the most numerous person. (that is most likely the person in question)
+        #  - very unlikely there will be more equally present ones in most face datasets 
+
+
+        # Interpolate the bounding boxes of that person in order to have a BB for dropped detections 
+
+        # Extract the face from all frames to create a video 
+
+        # Resample the video to conform to the desired FPS if need be 
+        
+        # Save the video
+
+        
+
 
 
     def _get_emotion_net(self, device):
@@ -276,19 +600,35 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         return net, "emo_net"
 
-    def _segment_faces_in_sequence(self, sequence_id):
+    def _segment_faces_in_sequence(self, sequence_id, use_aligned_videos=False):
         video_file = self.video_list[sequence_id]
         print("Segmenting faces in sequence: '%s'" % video_file)
         # suffix = Path(self._video_category(sequence_id)) / 'detections' /self._video_set(sequence_id) / video_file.stem
 
-        out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_segmentation_folder = self._get_path_to_sequence_segmentations(sequence_id)
+        if self.save_detection_images:
+            out_detection_folder = self._get_path_to_sequence_detections(sequence_id)
+            detections = sorted(list(out_detection_folder.glob("*.png")))
+        elif use_aligned_videos:
+            # video_path = str( Path(self.output_dir) / "videos_aligned" / self.video_list[sequence_id])
+            video_path = self._get_path_to_aligned_videos(sequence_id)
+            # detections = vreader( video_path)
+            detections = skvideo.io.FFmpegReader(str(video_path))
+            # detections = detections.astype(np.float32) / 255.
+        else: 
+            detections = vread( str(self.root_dir / self.video_list[sequence_id]))
+            detections = detections.astype(np.float32) / 255.
+            
+
+        out_segmentation_folder = self._get_path_to_sequence_segmentations(sequence_id, use_aligned_videos=use_aligned_videos)
         out_segmentation_folder.mkdir(exist_ok=True, parents=True)
 
-        detection_fnames = sorted(list(out_detection_folder.glob("*.png")))
+        # if self.save_landmarks_frame_by_frame: 
+        #     out_landmark_folder = self._get_path_to_sequence_landmarks(sequence_id)
+        #     landmarks = sorted(list(out_landmark_folder.glob("*.pkl")))
+        # else: 
+        #     landmarks = None
 
-        self._segment_images(detection_fnames, out_segmentation_folder)
-
+        self._segment_images(detections, out_segmentation_folder) 
 
     def _extract_emotion_from_faces_in_sequence(self, sequence_id):
 
@@ -477,7 +817,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
         for sid in range(self.num_sequences):
             self._recognize_faces_in_sequence(sid, recognition_net, device)
 
-    def _recognize_faces_in_sequence(self, sequence_id, recognition_net=None, device=None, num_workers = 4):
+    def _recognize_faces_in_sequence(self, sequence_id, recognition_net=None, device=None, num_workers = 4, overwrite = False):
 
         def fixed_image_standardization(image_tensor):
             processed_tensor = (image_tensor - 127.5) / 128.0
@@ -485,13 +825,27 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
         print("Running face recognition in sequence '%s'" % self.video_list[sequence_id])
         out_folder = self._get_path_to_sequence_detections(sequence_id)
+        out_file = out_folder / "embeddings.pkl" 
+        if out_file.exists() and not overwrite:
+            print("Face embeddings already computed for sequence '%s'" % self.video_list[sequence_id])
+            return
         device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         recognition_net = recognition_net or self._get_recognition_net(device)
         recognition_net.requires_grad_(False)
         # detections_fnames = sorted(self.detection_fnames[sequence_id])
         detections_fnames = sorted(list(out_folder.glob("*.png")))
-        dataset = UnsupervisedImageDataset(detections_fnames)
-        loader = DataLoader(dataset, batch_size=64, num_workers=num_workers, shuffle=False)
+
+        if len(detections_fnames) == 0: 
+            # there are no images, either there is a video file or something went wrong: 
+            video_path = self.root_dir / self.video_list[sequence_id]
+            landmark_file = self._get_path_to_sequence_landmarks(sequence_id) 
+            
+            from gdl.datasets.VideoFaceDetectionDataset import VideoFaceDetectionDataset
+            dataset = VideoFaceDetectionDataset(video_path, landmark_file, output_im_range=255)
+        else:
+            dataset = UnsupervisedImageDataset(detections_fnames)
+        # loader = DataLoader(dataset, batch_size=64, num_workers=num_workers, shuffle=False)
+        loader = DataLoader(dataset, batch_size=64, num_workers=1, shuffle=False)
         # loader = DataLoader(dataset, batch_size=2, num_workers=0, shuffle=False)
         all_embeddings = []
         for i, batch in enumerate(tqdm(loader)):
@@ -500,8 +854,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
             embeddings = recognition_net(images)
             all_embeddings += [embeddings.detach().cpu().numpy()]
 
-        embedding_array = np.concatenate(all_embeddings, axis=0)
-        FaceVideoDataModule._save_face_embeddings(out_folder / "embeddings.pkl", embedding_array, detections_fnames)
+        if len(all_embeddings) > 0:
+            embedding_array = np.concatenate(all_embeddings, axis=0)
+        else: 
+            embedding_array = np.array([])
+        out_folder.mkdir(parents=True, exist_ok=True)
+        FaceVideoDataModule._save_face_embeddings(out_file, embedding_array, detections_fnames)
         print("Done running face recognition in sequence '%s'" % self.video_list[sequence_id])
 
 
@@ -553,6 +911,76 @@ class FaceVideoDataModule(FaceDataModuleBase):
     #     deca = EMOCA(config=deca_cfg, device=device)
     #     return deca
 
+    def _get_emotion_recognition_net(self, device, rec_method='resnet50'):
+        if rec_method == 'resnet50':
+            if hasattr(self, '_emo_resnet') and self._emo_resnet is not None: 
+                return self._emo_resnet.to(device)
+            from gdl.models.temporal.Preprocessors import EmotionRecognitionPreprocessor
+            from munch import Munch
+            cfg = Munch()
+            cfg.model_name = "ResNet50"
+            cfg.model_path = False
+            cfg.return_features = True
+            self._emo_resnet = EmotionRecognitionPreprocessor(cfg).to(device)
+            return self._emo_resnet
+
+        raise ValueError(f"Unknown emotion recognition method: {rec_method}")
+
+
+    def _get_reconstruction_net_v2(self, device, rec_method="emoca"): 
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        if rec_method == "emoca":
+            if hasattr(self, '_emoca') and self._emoca is not None: 
+                return self._emoca.to(device)
+            from gdl.models.temporal.Preprocessors import EmocaPreprocessor
+            from munch import Munch
+            cfg = Munch()
+            cfg.with_global_pose = True
+            cfg.return_global_pose = True
+            cfg.average_shape_decode = False
+            cfg.return_appearance = True
+            cfg.model_name = "EMOCA"
+            cfg.model_path = False
+            cfg.stage = "detail" 
+            cfg.max_b = 16
+            cfg.render = False
+            cfg.crash_on_invalid = False
+            # cfg.render = True
+            emoca = EmocaPreprocessor(cfg).to(device)
+            self._emoca = emoca
+            return emoca
+        elif rec_method == "spectre": 
+            if hasattr(self, '_spectre') and self._spectre is not None: 
+                return self._spectre.to(device)
+            from gdl.models.temporal.external.SpectrePreprocessor import SpectrePreprocessor
+            from munch import Munch
+            cfg = Munch()
+            cfg.return_vis = False
+            # cfg.render = True
+            cfg.render = False
+            cfg.with_global_pose = True
+            cfg.return_global_pose = True
+            cfg.slice_off_invalid = False
+            cfg.return_appearance = True
+            cfg.average_shape_decode = False
+            cfg.crash_on_invalid = False
+
+            # paths
+            cfg.flame_model_path = "/ps/scratch/rdanecek/data/FLAME/geometry/generic_model.pkl"
+            cfg.flame_lmk_embedding_path = "/ps/scratch/rdanecek/data/FLAME/geometry/landmark_embedding.npy"
+            cfg.face_mask_path = "/ps/scratch/rdanecek/data/FLAME/mask/uv_face_mask.png"
+            cfg.face_eye_mask_path = "/ps/scratch/rdanecek/data/FLAME/mask/uv_face_eye_mask.png"
+            cfg.tex_type = "BFM"
+            cfg.tex_path = "/ps/scratch/rdanecek/data/FLAME/texture/FLAME_albedo_from_BFM.npz"
+            cfg.fixed_displacement_path = "/ps/scratch/rdanecek/data/FLAME/geometry/fixed_uv_displacements/fixed_displacement_256.npy"
+            cfg.pretrained_modelpath = "pretrained/spectre_model.tar"
+      
+            spectre = SpectrePreprocessor(cfg).to(device)
+            self._spectre = spectre
+            return spectre
+        raise ValueError("Unknown reconstruction method '%s'" % rec_method)
+
+
     def _get_reconstruction_net(self, device, rec_method='deca'):
         if rec_method == 'deca':
             add_pretrained_deca_to_path()
@@ -567,8 +995,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
             mode = "test"
             from gdl.models.IO import get_checkpoint_with_kwargs
             from omegaconf import OmegaConf
-            # model_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
-            model_path = Path(gdl.__file__).parents[1] / "assets" / "EMOCA" / "models" / "EMOCA"
+            model_path = "/is/cluster/work/rdanecek/emoca/finetune_deca/2021_11_13_03-43-40_4753326650554236352_ExpDECA_Affec_clone_NoRing_EmoC_F2_DeSeggt_BlackC_Aug_early"
+            # model_path = Path(gdl.__file__).parents[1] / "assets" / "EMOCA" / "models" / "EMOCA"
             cfg = OmegaConf.load(Path(model_path) / "cfg.yaml")
             stage = 'detail'
             cfg = cfg[stage]
@@ -587,9 +1015,20 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 "inout_params": checkpoint_kwargs["config"]["inout"],
                 "stage_name": "train",
             }
+
+            from gdl_apps.EMOCA.utils.load import load_model 
+
             deca = instantiate_deca(cfg, mode, "",  checkpoint, deca_checkpoint_kwargs )
             deca.to(device)
             deca.deca.config.detail_constrain_type = 'none'
+
+            # path_to_models = Path(gdl.__file__).parents[1] / "assets/EMOCA/models
+            # model_name = "EMOCA"
+            # mode = "detail"
+            # deca, conf = load_model(path_to_models, model_name, mode)
+            # deca.to(device)
+            # deca.eval()
+
             return deca
             # return deca.deca
         elif rec_method == "deep3dface":
@@ -731,6 +1170,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
         for sid in range(self.num_sequences):
             self._reconstruct_faces_in_sequence(sid, reconstruction_net, device)
 
+    def get_single_video_dataset(self, i):
+        raise NotImplementedError("This method must be implemented by the deriving classes.")
 
     def _reconstruct_faces_in_sequence(self, sequence_id, reconstruction_net=None, device=None,
                                        save_obj=False, save_mat=True, save_vis=True, save_images=False,
@@ -749,13 +1190,19 @@ class FaceVideoDataModule(FaceDataModuleBase):
             codedict_retarget = None
             suffix = None
 
-
-
         def fixed_image_standardization(image):
             return image / 255.
 
         print("Running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
-        in_folder = self._get_path_to_sequence_detections(sequence_id)
+        if self.unpack_videos:
+            in_folder = self._get_path_to_sequence_detections(sequence_id)
+        else: 
+            if self.detect_landmarks_on_restored_images is None:
+                in_folder = self.root_dir / self.video_list[sequence_id]
+            else: 
+                in_folder = self._get_path_to_sequence_restored(
+                    sequence_id, method=self.detect_landmarks_on_restored_images)
+
         out_folder = self._get_path_to_sequence_reconstructions(sequence_id, rec_method=rec_method, suffix=suffix)
 
         if retarget_from is not None:
@@ -776,8 +1223,13 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
 
         video_writer = None
-        detections_fnames = sorted(list(in_folder.glob("*.png")))
-        dataset = UnsupervisedImageDataset(detections_fnames)
+        if self.unpack_videos:
+            detections_fnames_or_images = sorted(list(in_folder.glob("*.png")))
+        else:
+            from skvideo.io import vread
+            detections_fnames_or_images = vread(str(in_folder))
+             
+        dataset = UnsupervisedImageDataset(detections_fnames_or_images)
         batch_size = 32
         # batch_size = 64
         # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
@@ -787,14 +1239,22 @@ class FaceVideoDataModule(FaceDataModuleBase):
             with torch.no_grad():
                 images = fixed_image_standardization(batch['image'].to(device))#[None, ...]
                 batch_ = {}
+                if images.shape[2:4] != reconstruction_net.get_input_image_size():
+                    images = F.interpolate(images, size=reconstruction_net.get_input_image_size(), mode='bicubic', align_corners=False)
                 batch_["image"] = images
                 codedict = reconstruction_net.encode(batch_, training=False)
+                encoded_values = util.dict_tensor2npy(codedict) 
+                if "images" in encoded_values.keys(): 
+                    del encoded_values["images"]
+                if "image" in encoded_values.keys(): 
+                    del encoded_values["image"]
+
                 # opdict, visdict = reconstruction_net.decode(codedict)
                 if codedict_retarget is not None:
                     codedict["shapecode"] = codedict_retarget["shapecode"].repeat(batch_["image"].shape[0], 1,)
                     codedict["detailcode"] = codedict_retarget["detailcode"].repeat(batch_["image"].shape[0], 1,)
                 codedict = reconstruction_net.decode(codedict, training=False)
-
+                
                 uv_detail_normals = None
                 if 'uv_detail_normals' in codedict.keys():
                     uv_detail_normals = codedict['uv_detail_normals']
@@ -805,7 +1265,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
                                                            uv_detail_normals, codedict, 0, "train", "")
                 else:
                     visdict = reconstruction_net._visualization_checkpoint(batch_["image"].shape[0], batch_, codedict, i, "", "")
-                values = util.dict_tensor2npy(codedict)
+                # values = util.dict_tensor2npy(codedict)
                 #TODO: verify axis
                 # vis_im = np.split(vis_im, axis=0 ,indices_or_sections=batch_size)
                 for j in range(images.shape[0]):
@@ -816,12 +1276,12 @@ class FaceVideoDataModule(FaceDataModuleBase):
                         # if i*j == 0:
                         mesh_folder = out_folder / 'meshes'
                         mesh_folder.mkdir(exist_ok=True, parents=True)
-                        reconstruction_net.deca.save_obj(str(mesh_folder / (name + '.obj')), values)
+                        reconstruction_net.deca.save_obj(str(mesh_folder / (name + '.obj')), encoded_values)
                     if save_mat:
                         # if i*j == 0:
                         mat_folder = out_folder / 'mat'
                         mat_folder.mkdir(exist_ok=True, parents=True)
-                        savemat(str(mat_folder / (name + '.mat')), values)
+                        savemat(str(mat_folder / (name + '.mat')), encoded_values)
                     if save_vis or save_video:
                         # if i*j == 0:
                         vis_folder = out_folder / 'vis'
@@ -846,7 +1306,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
                         # if i*j == 0:
                         ims_folder = out_folder / 'ims'
                         ims_folder.mkdir(exist_ok=True, parents=True)
-                        for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images']:
+                        for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images', 
+                                "geometry_detail", "geometry_coarse", "output_images_detail"]:
                             if vis_name not in visdict.keys():
                                 continue
                             image = util.tensor2image(visdict[vis_name][j])
@@ -856,7 +1317,167 @@ class FaceVideoDataModule(FaceDataModuleBase):
             video_writer.release()
         print("Done running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
 
-    def _gather_data(self, exist_ok=False):
+    def _reconstruct_faces_in_sequence_v2(self, sequence_id, reconstruction_net=None, device=None,
+                                       save_obj=False, save_mat=True, save_vis=True, save_images=False,
+                                       save_video=True, rec_methods='emoca', retarget_from=None, retarget_suffix=None):
+        if retarget_from is not None:
+            raise NotImplementedError("Retargeting is not implemented yet for _reconstruct_faces_in_sequence_v2")
+            import datetime
+            t = datetime.datetime.now()
+            t_str = t.strftime("%Y_%m_%d_%H-%M-%S")
+            suffix = f"_retarget_{t_str}_{str(hash(t_str))}" if retarget_suffix is None else retarget_suffix
+        else:
+            codedict_retarget = None
+            suffix = None
+
+        if not isinstance(rec_methods, list):
+            rec_methods = [rec_methods]
+
+        print("Running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
+
+        out_folder = {}
+        out_file_shape = {}
+        out_file_appearance = {}
+        for rec_method in rec_methods:
+            out_folder[rec_method] = self._get_path_to_sequence_reconstructions(sequence_id, rec_method=rec_method, suffix=suffix)
+            out_file_shape[rec_method] = out_folder[rec_method] / f"shape_pose_cam.pkl"
+            out_file_appearance[rec_method] = out_folder[rec_method] / f"appearance.pkl"
+            out_folder[rec_method].mkdir(exist_ok=True, parents=True)
+
+        if retarget_from is not None:
+            raise NotImplementedError("Retargeting is not implemented yet for _reconstruct_faces_in_sequence_v2")
+            out_folder.mkdir(exist_ok=True, parents=True)
+
+
+        exists = True
+        for rec_method in rec_methods:
+            if not out_file_shape[rec_method].is_file(): 
+                exists = False
+                break
+            if not out_file_appearance[rec_method].is_file():
+                exists = False
+                break
+        if exists: 
+            return
+
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        # reconstruction_net = reconstruction_net or self._get_reconstruction_net_v2(device, rec_method=rec_method)
+
+        # if retarget_from is not None:
+        #     image = imread(retarget_from)
+        #     batch_r = {}
+        #     batch_r["image"] = torch.from_numpy(image).float().unsqueeze(0).to(device)
+        #     # to torch channel format
+        #     batch_r["image"] = batch_r["image"].permute(0, 3, 1, 2)
+        #     batch_r["image"] = fixed_image_standardization(batch_r["image"])
+        #     with torch.no_grad():
+        #         codedict_retarget = reconstruction_net.encode(batch_r, training=False)
+
+
+        # video_writer = None
+        # if self.unpack_videos:
+        #     detections_fnames_or_images = sorted(list(in_folder.glob("*.png")))
+        # else:
+        #     from skvideo.io import vread
+        #     detections_fnames_or_images = vread(str(in_folder))
+             
+        dataset = self.get_single_video_dataset(sequence_id)
+        batch_size = 32
+        # batch_size = 64
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+
+        for i, batch in enumerate(tqdm(loader)):
+            with torch.no_grad():
+                batch = dict_to_device(batch, device)
+                for rec_method in rec_methods:
+                    if out_file_shape[rec_method].is_file() and  out_file_appearance[rec_method].is_file(): 
+                        continue
+                    batch_ = batch.copy()
+                    reconstruction_net = self._get_reconstruction_net_v2(device, rec_method=rec_method)
+                    result = reconstruction_net(batch_, input_key='video', output_prefix="")
+                    assert batch['video'].shape[0] == 1
+                    T = batch['video'].shape[1]
+                    result_keys_to_keep = ['shape', 'exp', 'jaw', 'global_pose', 'cam']
+                    shape_pose = {k: result[k].cpu().numpy() for k in result_keys_to_keep}
+                    assert shape_pose['shape'].shape[1] == T, f"{shape_pose['shape'].shape[1]} != {T}"
+                    result_keys_to_keep = ['tex', 'light', 'detail']
+                    appearance = {k: result[k].cpu().numpy() for k in result_keys_to_keep if k in result.keys()}
+
+                    # with open(out_file_shape, "wb") as f:
+                    #     hkl.dump(shape_pose, f) 
+                    # with open(out_file_appearance, "wb") as f:
+                    #     hkl.dump(appearance, f)
+                    # hkl.dump(shape_pose, out_file_shape[rec_method])
+                    # hkl.dump(appearance, out_file_appearance[rec_method])
+
+                    save_reconstruction_list(out_file_shape[rec_method], shape_pose)
+                    save_reconstruction_list(out_file_appearance[rec_method], appearance)
+
+        print("Done running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
+
+
+    
+    def _extract_emotion_in_sequence(self, sequence_id, emotion_net=None, device=None,
+                                       emo_methods='resnet50',):
+        if not isinstance(emo_methods, list):
+            emo_methods = [emo_methods]
+
+        print("Running face emotion recognition in sequence '%s'" % self.video_list[sequence_id])
+
+        out_folder = {}
+        out_file_emotion = {}
+        out_file_features = {}
+        for emo_method in emo_methods:
+            out_folder[emo_method] = self._get_path_to_sequence_emotions(sequence_id, emo_method=emo_method)
+            out_file_emotion[emo_method] = out_folder[emo_method] / f"emotions.pkl"
+            out_file_features[emo_method] = out_folder[emo_method] / f"features.pkl"
+            out_folder[emo_method].mkdir(exist_ok=True, parents=True)
+
+        exists = True
+        for emo_method in emo_methods:
+            if not out_file_emotion[emo_method].is_file(): 
+                exists = False
+                break
+            if not out_file_features[emo_method].is_file():
+                exists = False
+                break
+        if exists: 
+            return
+
+        device = device or torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        # emotion_net = emotion_net or self._get_emotion_recognition_net(device, rec_method=emo_method)
+             
+        dataset = self.get_single_video_dataset(sequence_id)
+        batch_size = 32
+        # batch_size = 64
+        loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+
+        for i, batch in enumerate(tqdm(loader)):
+            with torch.no_grad():
+                batch = dict_to_device(batch, device)
+                for emo_method in emo_methods:
+                    if out_file_emotion[emo_method].is_file() and out_file_features[emo_method].is_file(): 
+                        continue
+                    emotion_net = self._get_emotion_recognition_net(device, rec_method=emo_method)
+                    result = emotion_net(batch, input_key='video', output_prefix="")
+                    assert batch['video'].shape[0] == 1
+                    T = batch['video'].shape[1]
+                    result_keys_to_keep = ['expression', 'valence', 'arousal',]
+                    assert result['expression'].shape[1] == T, f"{result['expression'].shape[1]} != {T}"
+                    emotion_labels = {k: result[k].cpu().numpy() for k in result_keys_to_keep}
+                    result_keys_to_keep = ['feature',]
+                    emotion_features = {k: result[k].cpu().numpy() for k in result_keys_to_keep}
+                    
+                    # hkl.dump(emotion_labels, out_file_emotion[emo_method])
+                    # hkl.dump(emotion_features, out_file_features[emo_method])
+
+                    save_emotion_list(out_file_emotion[emo_method], emotion_labels)
+                    save_emotion_list(out_file_features[emo_method], emotion_features)
+
+        print("Done running face reconstruction in sequence '%s'" % self.video_list[sequence_id])
+
+    # def _gather_data(self, exist_ok=False):
+    def _gather_data(self, exist_ok=True):
         print("Processing dataset")
         Path(self.output_dir).mkdir(parents=True, exist_ok=exist_ok)
 
@@ -872,24 +1493,88 @@ class FaceVideoDataModule(FaceDataModuleBase):
     def _gather_video_metadata(self):
         import ffmpeg
         self.video_metas = []
+        self.audio_metas = []
+
+        invalid_videos = []
+
         for vi, vid_file in enumerate(tqdm(self.video_list)):
-            vid = ffmpeg.probe(str( Path(self.root_dir) / vid_file))
+            video_path = str( Path(self.root_dir) / vid_file)
+            try:
+                vid = ffmpeg.probe(video_path)
+            except ffmpeg._run.Error as e: 
+                print(f"The video file '{video_path}' is corrupted. Skipping it." ) 
+                self.video_metas += [None]
+                self.audio_metas += [None]
+                invalid_videos += [vi]
+                continue
             # codec_idx = [idx for idx in range(len(vid)) if vid['streams'][idx]['codec_type'] == 'video']
-            codec_idx = [idx for idx in range(len(vid)) if vid['streams'][0]['codec_type'] == 'video']
+            codec_idx = [idx for idx in range(len(vid['streams'])) if vid['streams'][idx]['codec_type'] == 'video']
             if len(codec_idx) == 0:
                 raise RuntimeError("Video file has no video streams! '%s'" % str(vid_file))
-            # if len(codec_idx) > 1:
+            if len(codec_idx) > 1:
                 # raise RuntimeError("Video file has two video streams! '%s'" % str(vid_file))
-            print("[WARNING] Video file has %d video streams. Only the first one will be processed" % len(codec_idx))
+                print("[WARNING] Video file has %d video streams. Only the first one will be processed" % len(codec_idx))
             codec_idx = codec_idx[0]
             vid_info = vid['streams'][codec_idx]
+            assert vid_info['codec_type'] == 'video'
             vid_meta = {}
             vid_meta['fps'] = vid_info['avg_frame_rate']
             vid_meta['width'] = int(vid_info['width'])
             vid_meta['height'] = int(vid_info['height'])
-            vid_meta['num_frames'] = int(vid_info['nb_frames'])
+            if 'nb_frames' in vid_info.keys():
+                vid_meta['num_frames'] = int(vid_info['nb_frames'])
+            elif 'num_frames' in vid_info.keys():
+                vid_meta['num_frames'] = int(vid_info['num_frames'])
+            else: 
+                vid_meta['num_frames'] = 0
+            # make the frame number reading a bit more robest, sometims the above does not work and gives zeros
+            if vid_meta['num_frames'] == 0: 
+                vid_meta['num_frames'] = int(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_packets", "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", 
+                    video_path]))
+            if vid_meta['num_frames'] == 0: 
+                _vr = skvideo.io.FFmpegReader(video_path)
+                vid_meta['num_frames'] = _vr.getShape()[0]
+                del _vr
+            vid_meta['bit_rate'] = vid_info['bit_rate']
+            if 'bits_per_raw_sample' in vid_info.keys():
+                vid_meta['bits_per_raw_sample'] = vid_info['bits_per_raw_sample']
             self.video_metas += [vid_meta]
 
+            # audio codec
+            codec_idx = [idx for idx in range(len(vid['streams'])) if vid['streams'][idx]['codec_type'] == 'audio']
+            if len(codec_idx) > 1:
+                raise RuntimeError("Video file has two audio streams! '%s'" % str(vid_file))
+            if len(codec_idx) == 0:
+                if self._must_include_audio is True or self._must_include_audio == 'strict':
+                    raise RuntimeError("Video file has no audio streams! '%s'" % str(vid_file))
+                elif self._must_include_audio == 'warn':
+                    print("[WARNING] Video file has no audio streams! '%s'" % str(vid_file))
+                self.audio_metas += [None]
+            else:
+                codec_idx = codec_idx[0]
+                aud_info = vid['streams'][codec_idx]
+                assert aud_info['codec_type'] == 'audio'
+                aud_meta = {}
+                aud_meta['sample_rate'] = aud_info['sample_rate']
+                aud_meta['sample_fmt'] = aud_info['sample_fmt']
+                # aud_meta['num_samples'] = int(aud_info['nb_samples'])
+                aud_meta["num_frames"] = int(aud_info['nb_frames'])
+                assert float(aud_info['start_time']) == 0
+                self.audio_metas += [aud_meta]
+        
+        for vi in sorted(invalid_videos, reverse=True):
+            del self.video_list[vi]
+            del self.video_metas[vi]
+            if self.annotation_list is not None:
+                del self.annotation_list[vi]
+    
+            if hasattr(self, "audio_metas") and self.audio_metas is not None:
+                del self.audio_metas[vi]
+        
+            if self.frame_lists is not None:
+                del self.frame_lists[vi]
+                        
+    
     def _loadMeta(self):
         if self.loaded:
             print("FaceVideoDataset already loaded.")
@@ -900,10 +1585,11 @@ class FaceVideoDataModule(FaceDataModuleBase):
             self.video_list = pkl.load(f)
             self.video_metas = pkl.load(f)
             self.annotation_list = pkl.load(f)
-            # try:
             self.frame_lists = pkl.load(f)
-            # except Exception:
-            #     pass
+            try:
+                self.audio_metas = pkl.load(f)
+            except Exception:
+                pass
         self.loaded = True
 
     def _saveMeta(self):
@@ -913,6 +1599,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
             pkl.dump(self.video_metas, f)
             pkl.dump(self.annotation_list,f)
             pkl.dump(self.frame_lists, f)
+            if hasattr(self, "audio_metas"): 
+                pkl.dump(self.audio_metas, f)
 
 
     def setup(self, stage: Optional[str] = None):
@@ -1011,7 +1699,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
     def _get_annotations_for_sequence(self, sid):
         video_file = self.video_list[sid]
-        suffix = Path(self._video_category(sid)) / 'annotations' /self._video_set(sequence_id)
+        suffix = Path(self._video_category(sid)) / 'annotations' /self._video_set(sid)
         annotation_prefix = Path(self.root_dir / suffix)
         annotation = sorted(annotation_prefix.glob(video_file.stem + "*.txt"))
         return annotation
@@ -1028,14 +1716,18 @@ class FaceVideoDataModule(FaceDataModuleBase):
         return indices, labels, mean, cov, fnames
 
     def create_reconstruction_video(self, sequence_id, overwrite=False, distance_threshold=0.5,
-                                    rec_method='emoca', image_type=None, retarget_suffix=None, cat_dim=0, include_transparent=True):
+                                    rec_method='emoca', image_type=None, retarget_suffix=None, cat_dim=0, include_transparent=True, 
+                                    include_original=True, include_rec=True, black_background=False, use_mask=True, 
+                                    out_folder=None):
+        print("Include original: " + str(include_original)) 
+        print("========================")
         from PIL import Image, ImageDraw
         # fid = 0
-        image_type = image_type or "detail"
+        image_type = image_type or "geometry_detail"
         detection_fnames, centers, sizes, last_frame_id = self._get_detection_for_sequence(sequence_id)
         vis_fnames = self._get_reconstructions_for_sequence(sequence_id, rec_method=rec_method, 
-            retarget_suffix=retarget_suffix, image_type=image_type)
-
+            retarget_suffix=retarget_suffix, image_type=image_type, out_folder=out_folder)
+        
         vid_frames = self._get_frames_for_sequence(sequence_id)
 
         vis_fnames.sort()
@@ -1061,14 +1753,18 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 break
 
             frame_name = vid_frames[fid]
-            c = centers[fid]
-            s = sizes[fid]
-
             frame = imread(frame_name)
+
+            if len(centers) > 0 and len(sizes) > 0:
+                c = centers[fid]
+                s = sizes[fid]
+            else: 
+                c = [[frame.shape[0] / 2, frame.shape[0] / 2]]
+                s = frame.shape[0]
 
 
             frame_pill_bb = Image.fromarray(frame)
-            if retarget_suffix is None:
+            if retarget_suffix is not None or black_background is False:
                 frame_deca_full = Image.fromarray(frame)
                 frame_deca_trans = Image.fromarray(frame)
             else:
@@ -1086,7 +1782,7 @@ class FaceVideoDataModule(FaceDataModuleBase):
 
                 vis_name = vis_fnames[did]
 
-                if detection_name.stem not in str(vis_name):
+                if detection_name.stem not in str(vis_name) :
                     print("%s != %s" % (detection_name.stem, vis_name.stem))
                     raise RuntimeError("Detection and visualization filenames should match but they don't.")
 
@@ -1104,16 +1800,22 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 im_c = vis_im.shape[1]
                 num_ims = im_c // im_r
 
-                if image_type == "coarse":
-                    vis_im = vis_im[:, im_r*3:im_r*4, ...] # coarse
-                elif image_type == "detail":
-                    vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
+                # if image_type == "coarse":
+                #     vis_im = vis_im[:, im_r*3:im_r*4, ...] # coarse
+                # elif image_type == "detail":
+                #     vis_im = vis_im[:, im_r*4:im_r*5, ...] # detail
 
                     
                 # vis_im = vis_im[:, :, ...]
 
                 # vis_mask = np.prod(vis_im, axis=2) == 0
-                vis_mask = (np.prod(vis_im, axis=2) > 30).astype(np.uint8) * 255
+                mask_name = vis_name.parent / "geometry_coarse.png"
+                mask_im = imread(mask_name)
+
+                # a hacky way to get the mask
+                vis_mask = (np.prod(mask_im, axis=2) > 30).astype(np.uint8) * 255
+                if not use_mask: 
+                    vis_mask = np.ones_like(vis_mask) * 255
 
                 # vis_im = np.concatenate([vis_im, vis_mask[..., np.newaxis]], axis=2)
 
@@ -1155,10 +1857,22 @@ class FaceVideoDataModule(FaceDataModuleBase):
                 else:
                     cat_dim = 0
             
-            if include_transparent:
-                im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
-            else: 
-                im = np.concatenate([final_im, final_im2,], axis=cat_dim)
+            im_list = [] 
+            if include_original: 
+                im_list += [final_im]
+            
+            if include_rec: 
+                im_list += [final_im2] 
+
+            if include_transparent: 
+                im_list += [final_im3]
+
+            im = np.concatenate(im_list, axis=cat_dim)
+
+            # if include_transparent:
+            #     im = np.concatenate([final_im, final_im2, final_im3], axis=cat_dim)
+            # else: 
+            #     im = np.concatenate([final_im, final_im2,], axis=cat_dim)
 
             if writer is None:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -1173,7 +1887,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
             im_cv = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
             writer.write(im_cv)
         writer.release()
-        attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
+        outfile_with_sound = attach_audio_to_reconstruction_video(outfile, self.root_dir / self.video_list[sequence_id])
+        return outfile, outfile_with_sound
         # plt.figure()
         # plt.imshow(im)
         # plt.show()
@@ -1511,8 +2226,10 @@ class FaceVideoDataModule(FaceDataModuleBase):
         else:
             print("Faces for video %d not detected" % sequence_id)
             detection_fnames = []
+            landmark_fnames = []
             centers = []
             sizes = []
+
         if with_recognitions:
             return detection_fnames, landmark_fnames, centers, sizes, embeddings, recognized_detections_fnames
         return detection_fnames, landmark_fnames, centers, sizes
@@ -1554,17 +2271,22 @@ class FaceVideoDataModule(FaceDataModuleBase):
     def _identify_recognitions_for_sequence(self, sequence_id, distance_threshold = None):
         if distance_threshold is None:
             distance_threshold = self.get_default_recognition_threshold()
+        out_file = self._get_recognition_filename(sequence_id, distance_threshold)
+        if out_file.is_file():
+            print("Recognitions for video %d already processed. Skipping" % sequence_id)
+            return 
+
         print("Identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
 
         detection_fnames, landmark_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
             self._gather_detections_for_sequence(sequence_id, with_recognitions=True)
 
         out_folder = self._get_path_to_sequence_detections(sequence_id)
-        # if distance_threshold != 0.5:
-        #     out_file = out_folder / ("recognition_dist_%.03f.pkl" % distance_threshold)
-        # else:
-        #     out_file = out_folder / "recognition.pkl"
-        out_file = self._get_recognition_filename(sequence_id, distance_threshold)
+
+
+        if embeddings is None or embeddings.size == 0:
+            print("No embeddings found for sequence %d" % sequence_id)
+            return 
 
         from collections import Counter, OrderedDict
         from sklearn.cluster import DBSCAN
@@ -1588,21 +2310,301 @@ class FaceVideoDataModule(FaceDataModuleBase):
             features = embeddings[indices]
             mean = np.mean(features, axis=0, keepdims=True)
             cov = np.cov(features, rowvar=False)
-            try:
-                recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
-                    self.output_dir) for i in indices.tolist()])
-            except ValueError:
-                recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
-                    recognized_detections_fnames[i].parents[4]) for i in indices.tolist()])
+            if len(recognized_detections_fnames):
+                try:
+                    pass
+                    recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
+                        self.output_dir) for i in indices.tolist()])
+                except ValueError:
+                    recognized_filenames_label = sorted([recognized_detections_fnames[i].relative_to(
+                        recognized_detections_fnames[i].parents[4]) for i in indices.tolist()])
+
 
             recognition_indices[label] = indices
             recognition_means[label] = mean
             recognition_cov[label] = cov
-            recognition_fnames[label] = recognized_filenames_label
+            if len(recognized_detections_fnames):
+                recognition_fnames[label] = recognized_filenames_label
+            else:
+                recognition_fnames[label] = None
+
 
         FaceVideoDataModule._save_recognitions(out_file, labels, recognition_indices, recognition_means,
                                                recognition_cov, recognition_fnames)
         print("Done identifying recognitions for sequence %d: '%s'" % (sequence_id, self.video_list[sequence_id]))
+
+    def _extract_personal_recognition_sequences(self, sequence_id, distance_threshold = None): 
+        detection_fnames, landmark_fnames, centers, sizes, embeddings, recognized_detections_fnames = \
+            self._gather_detections_for_sequence(sequence_id, with_recognitions=True)
+
+        output_video_file = self._get_path_to_sequence_files(sequence_id, "videos_aligned").with_suffix(".mp4")
+        
+        if output_video_file.is_file():
+            print("Aligned personal video for sequence %d already extracted" % sequence_id)
+            return
+
+        desired_processed_video_size = self.processed_video_size
+
+        # 1) first handle the case with no successful detections
+        if embeddings is None or embeddings.size == 0:
+            self._save_unsuccessfully_aligned_video(sequence_id, output_video_file)
+            return
+
+        # 2) handle the case with successful detections
+        landmark_file = self._get_path_to_sequence_landmarks(sequence_id) / "landmarks_original.pkl"
+        landmarks = FaceVideoDataModule.load_landmark_list(landmark_file)
+
+        num_frames = len(landmarks)
+
+        distance_threshold = self.get_default_recognition_threshold() if distance_threshold is None else distance_threshold
+
+        indices, labels, mean, cov, fnames = self._get_recognition_for_sequence(sequence_id, distance_threshold)
+
+        # 1) extract the most numerous recognition 
+        exclusive_indices = OrderedDict({key: np.unique(value) for key, value in indices.items()})
+        exclusive_sizes = OrderedDict({key: value.size for key, value in exclusive_indices.items()})
+
+        max_size = max(exclusive_sizes.values())
+        max_size = -1 
+        max_index = -1
+        same_occurence_count = []
+        for k,v in exclusive_sizes.items():
+            if exclusive_sizes[k] > max_size:
+                max_size = exclusive_sizes[k]
+                max_index = k 
+                same_occurence_count.clear()
+                same_occurence_count.append(k)
+            elif exclusive_sizes[k] == max_size:
+                same_occurence_count.append(k) 
+                #TODO: handle this case - how to break the ambiguity?
+                
+        if len(same_occurence_count) > 1: 
+            print(f"Warning: ambiguous recognition for sequence {sequence_id}. There are {len(same_occurence_count)} of faces" 
+                "that have dominant detections across the video. Choosing the first one")
+
+        main_occurence_mean = mean[max_index]
+        main_occurence_cov = cov[max_index]
+
+        # 2) retrieve its detections/landmarks
+        total_len = 0
+        frame_map = OrderedDict() # detection index to frame map
+        index_for_frame_map = OrderedDict() # detection index to frame map
+        inv_frame_map = {} # frame to detection index map
+        frame_indices = OrderedDict()
+        for i in range(len(landmarks)): 
+            # for j in range(len(landmarks[i])): 
+                # frame_map[total_len + j] = i
+                # index_for_frame_map[total_len + j] = j
+                # inv_frame_map[i] = (i, j)
+            frame_indices[i] = (total_len, total_len + len(landmarks[i]))
+            total_len += len(landmarks[i])
+
+
+        # main_occurence_sizes = OrderedDict()
+        # main_occurence_centers = OrderedDict()
+
+        used_frames = []
+        per_frame_landmark_indices = np.zeros((num_frames,), dtype=np.int32) 
+        main_occurence_centers = []
+        main_occurence_sizes = []
+        used_landmarks = []
+
+
+        for frame_num in frame_indices.keys():
+            first_index, last_index = frame_indices[frame_num]
+            if first_index == last_index: 
+                continue
+            frame_recognitions = embeddings[first_index:last_index, ...]
+            
+            # 3) compute the distance between the main recognition and the detections
+            distances = np.linalg.norm(frame_recognitions - main_occurence_mean, axis=1)
+            # find the closest detection to the main recognition
+            closest_detection = np.argmin(distances)
+            closest_detection_index = first_index + closest_detection
+
+            per_frame_landmark_indices[frame_num] = closest_detection
+
+            if distances.min() < distance_threshold:
+                main_occurence_sizes += [sizes[frame_num][closest_detection]]
+                main_occurence_centers += [centers[frame_num][closest_detection]]
+                used_frames += [frame_num]
+                used_landmarks += [landmarks[frame_num][closest_detection]]
+                # main_occurence_sizes[frame_num] = sizes[closest_detection_index]
+                # main_occurence_centers[frame_num] = centers[closest_detection_index]
+
+        # 3) compute bounding box for frames without detection (via fitting/interpolating the curve) 
+        from scipy.interpolate import griddata, RBFInterpolator
+        import scipy
+
+        if len(used_frames) < 2: 
+            self._save_unsuccessfully_aligned_video(sequence_id, output_video_file)
+            return
+
+        used_frames = np.array(used_frames, dtype=np.int32)[:,np.newaxis]
+        main_occurence_centers = np.stack(main_occurence_centers, axis=0)
+        main_occurence_sizes = np.stack(main_occurence_sizes, axis=0)
+
+        used_frames_bin = np.zeros((num_frames,), dtype=np.int32) 
+        used_frames_bin[used_frames] = 1
+
+        # only iterpolates
+        # interpolated_centers = griddata(used_frames, main_occurence_centers, np.arange(len(landmarks)), method='linear')
+        # interpolated_sizes = griddata(used_frames, main_occurence_sizes, np.arange(len(landmarks)), method='linear')
+
+        # can extrapolate
+        if len(used_landmarks) >= 2:
+            interpolated_centers = RBFInterpolator(used_frames, main_occurence_centers)(np.arange(len(landmarks))[:, np.newaxis])
+            interpolated_sizes = RBFInterpolator(used_frames, main_occurence_sizes)(np.arange(len(landmarks))[:, np.newaxis])
+            interpolated_landmarks = RBFInterpolator(used_frames, used_landmarks)(np.arange(len(landmarks))[:, np.newaxis])
+        else: 
+            self._save_unsuccessfully_aligned_video(sequence_id, output_video_file)
+            return
+
+        # convolve with a gaussian kernel to smooth the curve
+        smoothed_centers = np.zeros(interpolated_centers.shape)
+        
+        smoothed_sizes = scipy.ndimage.filters.gaussian_filter1d(interpolated_sizes, sigma=3)
+        for i in range(interpolated_centers.shape[1]):
+            smoothed_centers[:, i] = scipy.ndimage.filters.gaussian_filter1d(interpolated_centers[:, i], sigma=3)
+        
+        # do we need to smooth landmarks?
+        # smoothed_landmarks = np.zeros(interpolated_landmarks.shape)
+        # for i in range(interpolated_landmarks.shape[0]):
+        #     smoothed_landmarks[:, i] = scipy.ndimage.filters.gaussian_filter1d(interpolated_landmarks[:, i], sigma=3)
+
+        # # plot the centers over time 
+        # from matplotlib import pyplot as plt
+        # plt.figure()
+        # plt.plot(np.arange(len(landmarks)), interpolated_centers[:, 0], 'r-', label="center x")
+        # # plt.plot(np.arange(len(landmarks)), interpolated_centers[:, 1], 'b-', label="center y")
+        # plt.plot(np.arange(len(landmarks)), smoothed_centers[:, 0], 'r.', label="smoothed center x")
+        # # plt.plot(np.arange(len(landmarks)), smoothed_centers[:, 1], 'b.', label="smoothed center y")
+        # plt.legend()
+        # plt.show()
+
+        # 4) generate a new video 
+
+        # video = skvideo.io.vread(str(self.root_dir / self.video_list[sequence_id]))
+        video = skvideo.io.vreader(str(self.root_dir / self.video_list[sequence_id]))
+
+        from gdl.datasets.FaceAlignmentTools import align_video, align_and_save_video
+
+        # # aligned_video, aligned_landmarks = align_video(video, interpolated_centers, interpolated_sizes, interpolated_landmarks, 
+        # #     target_size_height=desired_processed_video_size, target_size_width=desired_processed_video_size)
+        # # smoothed_video, aligned_smoothed_landmarks = align_video(video, smoothed_centers, smoothed_sizes, smoothed_landmarks, 
+        # #     target_size_height=desired_processed_video_size, target_size_width=desired_processed_video_size)
+        # smoothed_video, aligned_smoothed_landmarks = align_video(video, smoothed_centers, smoothed_sizes, interpolated_landmarks, 
+        #     target_size_height=desired_processed_video_size, target_size_width=desired_processed_video_size)
+
+
+        output_video_file = self._get_path_to_sequence_files(sequence_id, "videos_aligned").with_suffix(".mp4")
+        output_video_file.parent.mkdir(parents=True, exist_ok=True)
+        output_dict = {
+            '-c:v': 'h264', 
+            # '-q:v': '1',
+            '-r': self.video_metas[sequence_id]['fps'],
+            '-b': self.video_metas[sequence_id].get('bit_rate', '300000000'),
+        }
+        aligned_smoothed_landmarks = align_and_save_video(video, output_video_file, smoothed_centers, smoothed_sizes, interpolated_landmarks, 
+            target_size_height=desired_processed_video_size, target_size_width=desired_processed_video_size, output_dict=output_dict)
+
+
+        # 5) save the video and the landmarks 
+
+        trasformed_landmarks_path = self._get_path_to_sequence_landmarks(sequence_id) / "landmarks_aligned_video.pkl"
+        smoothed_trasformed_landmarks_path = self._get_path_to_sequence_landmarks(sequence_id) / "landmarks_aligned_video_smoothed.pkl"
+        used_indices_landmarks_path = self._get_path_to_sequence_landmarks(sequence_id) / "landmarks_alignment_used_frame_indices.pkl"
+        used_detection_indices_path = self._get_path_to_sequence_landmarks(sequence_id) / "landmarks_alignment_per_frame_detection_indices.pkl"
+
+        # FaceVideoDataModule.save_landmark_list(trasformed_landmarks_path, aligned_landmarks)
+        FaceVideoDataModule.save_landmark_list(smoothed_trasformed_landmarks_path, aligned_smoothed_landmarks)
+        FaceVideoDataModule.save_landmark_list(used_indices_landmarks_path, used_frames)
+        FaceVideoDataModule.save_landmark_list(used_detection_indices_path, per_frame_landmark_indices)
+
+
+        # # aligned_video = (aligned_video * 255).astype(np.uint8)
+        # smoothed_video = (smoothed_video * 255).astype(np.uint8)
+
+        # output_video_file = self._get_path_to_sequence_files(sequence_id, "videos_aligned").with_suffix(".mp4")
+        # video_file_smooth = self._get_path_to_sequence_files(sequence_id, "videos_aligned").parent / (output_video_file.stem + "_smooth.mp4")
+        # output_dict = {
+        #     '-c:v': 'h264', 
+        #     # '-q:v': '1',
+        #     '-r': self.video_metas[sequence_id]['fps'],
+        #     '-b': self.video_metas[sequence_id].get('bit_rate', '300000000'),
+        # }
+        # writer = skvideo.io.FFmpegWriter(str(output_video_file), outputdict=output_dict)
+        # for i in range(aligned_video.shape[0]):
+        #     writer.writeFrame(aligned_video[i])
+        # writer.close()
+
+        # writer = skvideo.io.FFmpegWriter(str(video_file_smooth), outputdict=output_dict)
+        # for i in range(smoothed_video.shape[0]):
+        #     writer.writeFrame(smoothed_video[i])
+        # writer.close()
+
+        # writer = skvideo.io.FFmpegWriter(str(output_video_file), outputdict=output_dict)
+        # for i in range(smoothed_video.shape[0]):
+        #     writer.writeFrame(smoothed_video[i])
+        # writer.close()
+
+
+    def _save_unsuccessfully_aligned_video(self, sequence_id, output_video_file): 
+        desired_processed_video_size = self.processed_video_size
+        videogen = skvideo.io.vreader(str(self.root_dir / self.video_list[sequence_id]))
+        first_frame = None
+        for frame in videogen:
+            first_frame = frame 
+            break
+        height = first_frame.shape[0]
+        width = first_frame.shape[1]
+
+        assert first_frame is not None, "No frames found in video"
+
+
+        from skimage.transform import resize
+
+
+        output_dict = {
+            '-c:v': 'h264', 
+            '-r': self.video_metas[sequence_id]['fps'],
+            '-b': self.video_metas[sequence_id].get('bit_rate', '300000000'),
+        }
+        Path(output_video_file).parent.mkdir(parents=True, exist_ok=True)
+        writer = skvideo.io.FFmpegWriter(str(output_video_file), outputdict=output_dict)
+
+        # write the first already read out frame
+        if height < width: 
+            diff = (width - height) // 2
+            first_frame = first_frame[..., :, diff: diff + height, :]        
+        elif height > width: 
+            diff = (height - width) // 2
+            first_frame = first_frame[..., diff :diff + width, :]
+        first_frame_resized = resize(frame, (desired_processed_video_size, desired_processed_video_size))
+        if first_frame_resized.dtype in [np.float32, np.float64]: 
+            if first_frame_resized.max() < 5.: # likely to be in range [0, 1]
+                first_frame_resized *= 255.0
+                first_frame_resized = first_frame_resized.astype(np.uint8)
+        writer.writeFrame(first_frame_resized)
+
+        # write the rest of the frames
+        for frame in videogen:
+            if height < width: 
+                diff = (width - height) // 2
+                frame = frame[..., :, diff: diff + height, :]        
+            elif height > width: 
+                diff = (height - width) // 2
+                frame = frame[..., diff :diff + width, :, :]
+            frame_resized = resize(frame, (desired_processed_video_size, desired_processed_video_size))
+            if frame_resized.dtype in [np.float32, np.float64]: 
+                if frame_resized.max() < 5.: # likely to be in range [0, 1] (yeah, it's hacky, bite me)
+                    frame_resized *= 255.0
+                frame_resized = frame_resized.astype(np.uint8)
+
+            writer.writeFrame(frame_resized)
+        # for i in range(video_resized.shape[0]):
+            # writer.writeFrame(video_resized[i])
+        writer.close()
 
 
     @staticmethod
@@ -1617,8 +2619,8 @@ class FaceVideoDataModule(FaceDataModuleBase):
     @staticmethod
     def _load_recognitions(file):
         with open(file, "rb") as f:
-            indices = pkl.load(f)
             labels = pkl.load(f)
+            indices = pkl.load(f)
             mean = pkl.load(f)
             cov = pkl.load(f)
             fnames = pkl.load(f)
@@ -1671,9 +2673,6 @@ class FaceVideoDataModule(FaceDataModuleBase):
             self.detection_embeddings += [embeddings]
             self.detection_recognized_fnames += [recognized_detections_fnames]
 
-    def _assign_gt_to_detections(self):
-        for sid in range(self.num_sequences):
-            self.assign_gt_to_detections_sequence(sid)
 
     def get_default_recognition_threshold(self):
         #TODO: ensure that 0.6 is good for the most part
@@ -2144,280 +3143,6 @@ class FaceVideoDataModule(FaceDataModuleBase):
     #     dataset = self.get_annotated_emotion_dataset(annotation_list, filter_pattern)
 
 
-    def assign_gt_to_detections_sequence(self, sequence_id):
-        print(f"Assigning GT to sequence {sequence_id}")
-
-        def second_most_frequent_label():
-            if len(most_frequent_labels) == 2:
-                second_label = most_frequent_labels[1]
-            elif len(most_frequent_labels) > 2:
-                raise RuntimeError(f"Too many labels occurred with the same frequency. Unclear which one to pick.")
-            else:
-                most_frequent_count2 = list(counts2labels.keys())[1]
-                most_frequent_labels2 = counts2labels[most_frequent_count2]
-                if len(most_frequent_labels2) != 1:
-                    raise RuntimeError(
-                        f"Too many labels occurred with the same frequency. Unclear which one to pick.")
-                second_label = most_frequent_labels2[0]
-            return second_label
-
-        def correct_left_right_order(left_center, right_center):
-            left_right_dim = 0 # TODO: verify if this is correct
-            if left_center[left_right_dim] < right_center[left_right_dim]:
-                # left is on the left
-                return 1
-            elif left_center[left_right_dim] == right_center[left_right_dim]:
-                # same place
-                return 0
-            # left is on the right
-            return -1
-
-        # detection_fnames = self._get_path_to_sequence_detections(sequence_id)
-        # full_frames = self._get_frames_for_sequence(sequence_id)
-        annotations = self._get_annotations_for_sequence(sequence_id)
-        if len(annotations) == 0:
-            print(f"No GT available for video '{self.video_list[sequence_id]}'")
-            return
-        annotation_type = annotations[0].parent.parent.parent.stem
-        if annotation_type == 'AU_Set':
-            anno_type = 'au8' # AU1,AU2,AU4,AU6,AU12,AU15,AU20,AU25
-        elif annotation_type == 'Expression_Set':
-            anno_type = 'expr7' # Neutral,Anger,Disgust,Fear,Happiness,Sadness,Surprise
-        elif annotation_type == 'VA_Set':
-            anno_type = 'va' # valence arousal -1 to 1
-        else:
-            raise ValueError(f"Unsupported annotation type: '{annotation_type}'")
-
-        # load the recognitions:
-        # recognition_file = self._get_recognition_filename(
-        #     sequence_id, self.get_default_recognition_threshold())
-        # indices, labels, mean, cov, recognition_fnames = FaceVideoDataModule._load_recognitions(
-        #     recognition_file)
-        indices, labels, mean, cov, recognition_fnames = self._get_recognition_for_sequence(sequence_id)
-        counts2labels = OrderedDict()
-        for key, val in labels.items():
-            if key == -1: # skip invalid outliers
-                continue
-            count = len(val)
-            if count not in counts2labels.keys():
-                counts2labels[count] = []
-            counts2labels[count] += [key]
-
-        recognition_label_dict = OrderedDict()
-        annotated_detection_fnames = OrderedDict()
-        validated_annotations = OrderedDict()
-        discarded_annotations = OrderedDict()
-        detection_not_found = OrderedDict()
-
-        # suffs = [str(Path(str(anno)[len(str(anno.parent / self.video_list[sequence_id].stem)):]).stem) for anno in
-        #      annotations]
-        suffs = [str(anno.stem)[len(str(self.video_list[sequence_id].stem)):] for anno in
-             annotations]
-
-        ### WARNING: HORRIBLE THINGS FOLLOW, PUT ON YOUR PROTECTIVE GOGGLES BEFORE YOU PROCEED
-        # this next section is a ugly rule-based approach to assign annotation files to detected and recognized
-        # faces. This assignment is not provided by the authors of aff-wild2 and therefore it's approximated
-        # using these rules that are taken from the readme.
-
-        # THERE IS ONLY ONE DOMINANT DETECTION AND ONE ANNOTATION FILE:
-        if len(annotations) == 1 and suffs[0] == '':
-            most_frequent_count = list(counts2labels.keys())[0]
-            most_frequent_labels = counts2labels[most_frequent_count]
-
-            if len(most_frequent_labels) != 1:
-                raise ValueError("There seem to be two people at the same time in all pictures but we only "
-                                 "have annotation for one")
-
-            main_label = most_frequent_labels[0]
-            main_detection_file_names = recognition_fnames[main_label]
-            main_annotation_file = annotations[0]
-            main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list \
-                = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
-
-            recognition_label_dict[main_annotation_file.stem] = main_label
-            annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
-            validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
-            discarded_annotations[main_annotation_file.stem] = main_discarded_list
-            detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
-
-
-            # THERE ARE TWO DOMINANT DETECTIONS BUT ONLY ONE IS ANNOTATED
-        elif len(annotations) == 1 and (suffs[0] == '_left' or suffs[0] == '_right'):
-
-            most_frequent_count = list(counts2labels.keys())[0]
-            most_frequent_labels = counts2labels[most_frequent_count]
-
-            detection_fnames, detection_centers, detection_sizes, _ = \
-                self._get_detection_for_sequence(sequence_id)
-
-            if len(most_frequent_labels) != 1:
-                raise ValueError("There seem to be two people at the same time in all pictures but we only "
-                                 "have annotation for one")
-
-            main_label = most_frequent_labels[0]
-            main_detection_file_names = recognition_fnames[main_label]
-            main_annotation_file = annotations[0]
-            main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list  \
-                = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
-
-            other_label = second_most_frequent_label()
-            other_detection_file_names = recognition_fnames[other_label]
-            other_annotation_file = annotations[0] # use the same annotation, which one will be used is figured out next
-            other_valid_detection_list, other_valid_annotation_list, other_discarded_list, other_detection_not_found_list\
-                = self._map_detections_to_gt(other_detection_file_names, other_annotation_file, anno_type)
-
-            other_center = self._get_bb_center_from_fname(other_detection_file_names[0], detection_fnames,
-                                                          detection_centers)
-            main_center = self._get_bb_center_from_fname(main_detection_file_names[0], detection_fnames,
-                                                         detection_centers)
-            if correct_left_right_order(other_center, main_center) == 1:
-                pass # do nothing, order correct
-            elif correct_left_right_order(other_center, main_center) == -1:
-                # swap main and other
-                print("Swapping left and right")
-                other_label, main_label = main_label, other_label
-                # other_valid_detection_list, main_valid_detection_list = main_valid_detection_list, other_valid_detection_list
-                # other_valid_annotation_list, main_valid_annotation_list = main_valid_annotation_list, other_valid_annotation_list
-            else:
-                raise ValueError("Detections are in the same place. No way to tell left from right")
-
-            # now other is on the left, and main is on the right, decide which one is annotated based on the suffix
-            if suffs[0] == '_left':
-                print("Choosing left")
-                recognition_label_dict[other_annotation_file.stem] = other_label
-                annotated_detection_fnames[other_annotation_file.stem] = other_valid_detection_list
-                validated_annotations[other_annotation_file.stem] = other_valid_annotation_list
-                discarded_annotations[other_annotation_file.stem] = other_discarded_list
-                detection_not_found[other_annotation_file.stem] = other_detection_not_found_list
-            else: # suffs[0] == '_right':
-                print("Choosing right")
-                recognition_label_dict[main_annotation_file.stem] = main_label
-                annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
-                validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
-                discarded_annotations[main_annotation_file.stem] = main_discarded_list
-                detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
-        else:
-            if len(suffs) > 2:
-                print(f"Unexpected number of suffixes found {len(suffs)}")
-                print(suffs)
-                raise RuntimeError(f"Unexpected number of suffixes found {len(suffs)}")
-
-            most_frequent_count = list(counts2labels.keys())[0]
-            most_frequent_labels = counts2labels[most_frequent_count]
-
-            detection_fnames, detection_centers, detection_sizes, _ = \
-                self._get_detection_for_sequence(sequence_id)
-
-            # THE CASE OF ONE DOMINANT DETECTION AND ONE SMALLER ONE (NO SUFFIX vs LEFT/RIGHT)
-            if suffs[0] == '' and (suffs[1] == '_left' or suffs[1] == '_right'):
-                if len(most_frequent_labels) != 1:
-                    raise ValueError("There seem to be two people at the same time in all pictures but we only "
-                                     "have annotation for one")
-
-                main_label = most_frequent_labels[0]
-                main_detection_file_names = recognition_fnames[main_label]
-                main_annotation_file = annotations[0]
-                main_valid_detection_list, main_valid_annotation_list, main_discarded_list, main_detection_not_found_list\
-                    = self._map_detections_to_gt(main_detection_file_names, main_annotation_file, anno_type)
-
-                recognition_label_dict[main_annotation_file.stem] = main_label
-                annotated_detection_fnames[main_annotation_file.stem] = main_valid_detection_list
-                validated_annotations[main_annotation_file.stem] = main_valid_annotation_list
-                discarded_annotations[main_annotation_file.stem] = main_discarded_list
-                detection_not_found[main_annotation_file.stem] = main_detection_not_found_list
-
-
-                other_label = most_frequent_labels[1]
-                other_detection_file_names = recognition_fnames[other_label]
-                other_annotation_file = annotations[1]
-                other_valid_detection_list, other_valid_annotation_list, other_discarded_list, other_detection_not_found_list \
-                    = self._map_detections_to_gt(other_detection_file_names, other_annotation_file, anno_type)
-
-                recognition_label_dict[other_annotation_file.stem] = other_label
-                annotated_detection_fnames[other_annotation_file.stem] = other_valid_detection_list
-                validated_annotations[other_annotation_file.stem] = other_valid_annotation_list
-                discarded_annotations[other_annotation_file.stem] = other_discarded_list
-                detection_not_found[other_annotation_file.stem] = other_detection_not_found_list
-
-                other_center = self._get_bb_center_from_fname(other_detection_file_names[0], detection_fnames,
-                                                        detection_centers)
-                main_center = self._get_bb_center_from_fname(main_detection_file_names[0], detection_fnames,
-                                                       detection_centers)
-                if suffs[1] == '_left':
-                    if correct_left_right_order(other_center, main_center) != 1:
-                        raise RuntimeError("The main detection should be on the right and the other on the left but this is not the case")
-                elif suffs[1] == '_right':
-                    if correct_left_right_order(main_center, other_center) != 1:
-                        raise RuntimeError(
-                            "The main detection should be on the left and the other on the right but this is not the case")
-
-            # THE CASE OF TWO ROUGHLY EQUALY DOMINANT DETECTIONS (LEFT and RIGHT)
-            elif suffs[0] == '_left' and suffs[1] == '_right':
-                #TODO: figure out which one is left and which one is right by loading the bboxes and comparing
-                counts2labels.keys()
-                left_label = most_frequent_labels[0]
-                # if len(most_frequent_labels) == 2:
-                #     right_label = most_frequent_labels[1]
-                # elif len(most_frequent_labels) > 2:
-                #     raise RuntimeError(f"Too many labels occurred with the same frequency. Unclear which one to pick.")
-                # else:
-                #     most_frequent_count2 = list(counts2labels.keys())[1]
-                #     most_frequent_labels2 = counts2labels[most_frequent_count2]
-                #     if len(most_frequent_labels2) != 1:
-                #         raise RuntimeError(
-                #             f"Too many labels occurred with the same frequency. Unclear which one to pick.")
-                #     right_label = most_frequent_labels2[0]
-                right_label = second_most_frequent_label()
-
-                left_filename = recognition_fnames[left_label][0]
-                left_center = self._get_bb_center_from_fname(left_filename, detection_fnames, detection_centers)
-
-                right_filename = recognition_fnames[right_label][0]
-                right_center = self._get_bb_center_from_fname(right_filename, detection_fnames, detection_centers)
-
-                order = correct_left_right_order(left_center, right_center)
-                # if left is not left, swap
-                if order == -1:
-                    left_label, right_label = right_label, left_label
-                    left_filename, right_filename = right_filename, left_filename
-                elif order == 0:
-                    raise RuntimeError("Left and right detections have centers in the same place. "
-                                       "No way to tell left from right")
-
-                left_detection_file_names = recognition_fnames[left_label]
-                left_annotation_file = annotations[0]
-                left_valid_detection_list, left_annotation_list, left_discarded_list, left_detection_not_found_list \
-                    = self._map_detections_to_gt(left_detection_file_names, left_annotation_file, anno_type)
-                recognition_label_dict[left_annotation_file.stem] = left_label
-                annotated_detection_fnames[left_annotation_file.stem] = left_valid_detection_list
-                validated_annotations[left_annotation_file.stem] = left_annotation_list
-                discarded_annotations[left_annotation_file.stem] = left_discarded_list
-                detection_not_found[left_annotation_file.stem] = left_detection_not_found_list
-
-
-
-                right_detection_file_names = recognition_fnames[right_label]
-                right_annotation_file = annotations[1]
-
-                right_valid_detection_list, right_valid_annotation_list, right_discarded_list, right_detection_not_found_list \
-                    = self._map_detections_to_gt(right_detection_file_names, right_annotation_file, anno_type)
-                recognition_label_dict[right_annotation_file.stem] = right_label
-                annotated_detection_fnames[right_annotation_file.stem] = right_valid_detection_list
-                validated_annotations[right_annotation_file.stem] = right_valid_annotation_list
-                discarded_annotations[right_annotation_file.stem] = right_discarded_list
-                detection_not_found[right_annotation_file.stem] = right_detection_not_found_list
-
-                # THE FOLLOWING CASE SHOULD NEVER HAPPEN
-            else:
-                print(f"Unexpected annotation case found.")
-                print(suffs)
-                raise RuntimeError(f"Unexpected annotation case found: {str(suffs)}")
-
-        out_folder = self._get_path_to_sequence_detections(sequence_id)
-        out_file = out_folder / "valid_annotations.pkl"
-        FaceVideoDataModule._save_annotations(out_file, annotated_detection_fnames, validated_annotations,
-                                              recognition_label_dict, discarded_annotations, detection_not_found)
-
 def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, output_video=None, overwrite=False):
     output_video = output_video or (Path(input_video).parent / (str(Path(input_video).stem) + "_with_sound.mp4"))
     if output_video.exists() and not overwrite:
@@ -2426,6 +3151,7 @@ def attach_audio_to_reconstruction_video(input_video, input_video_with_audio, ou
     cmd = "ffmpeg -y -i %s -i %s -c copy -map 0:0 -map 1:1 -shortest %s" \
           % (input_video, input_video_with_audio, output_video)
     os.system(cmd)
+    return output_video
 
 
 
@@ -2436,12 +3162,14 @@ class TestFaceVideoDM(FaceVideoDataModule):
                  face_detector_threshold=0.9,
                  image_size=224,
                  scale=1.25,
+                 detect = True,
                  batch_size=8,
                  num_workers=4,
                  device=None):
         self.video_path = Path(video_path)
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.detect = detect
         super().__init__(self.video_path.parent, output_dir, 
                 processed_subfolder,
                  face_detector,
@@ -2449,7 +3177,6 @@ class TestFaceVideoDM(FaceVideoDataModule):
                  image_size,
                  scale,
                  device)
-        
     
     def prepare_data(self, *args, **kwargs):
         outdir = Path(self.output_dir)
@@ -2461,9 +3188,15 @@ class TestFaceVideoDM(FaceVideoDataModule):
             self._loadMeta()
             return
         # else:
-        self._gather_data()
+        self._gather_data(exist_ok=True)
         self._unpack_videos() 
+        # if self.detect:
         self._detect_faces()
+        # else: 
+        #     src = self._get_path_to_sequence_frames(0)
+        #     dst = self._get_path_to_sequence_detections(0)
+        #     # create a symlink from src to dst 
+        #     os.symlink(src, dst, target_is_directory=True)
         self._saveMeta()
 
     # def _get_unpacked_video_subfolder(self, video_idx):
@@ -2479,22 +3212,44 @@ class TestFaceVideoDM(FaceVideoDataModule):
         self.annotation_list = []
         self._gather_video_metadata()
 
+    def _detect_faces_in_image(self, image_path, detected_faces=None):
+        if self.detect:
+            return super()._detect_faces_in_image(image_path, None)
+        else: 
+            # the image is already a detection 
+            # get the size of the image from image_path using PIL 
+            img = Image.open(image_path, mode="r") # mode=r does not load the whole image
+            #get the image dimensions 
+            width, height = img.size
+            detected_faces = [np.array([0,0, width, height]) ]
+            return super()._detect_faces_in_image(image_path, detected_faces)
 
     def _get_path_to_sequence_results(self, sequence_id, rec_method='EMOCA', suffix=''):
         return self._get_path_to_sequence_files(sequence_id, "results", rec_method, suffix)
 
-    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca', retarget_suffix=None, image_type=None):
-        out_folder = self._get_path_to_sequence_results(sid, rec_method=rec_method, 
-            suffix=retarget_suffix)
+    def _get_reconstructions_for_sequence(self, sid, rec_method='emoca', retarget_suffix=None, image_type=None, out_folder=None):
+        if out_folder is None:
+            out_folder = self._get_path_to_sequence_results(sid, rec_method=rec_method, 
+                suffix=retarget_suffix)
+        else: 
+            out_folder = Path(out_folder)
         if image_type is None:
             image_type = "geometry_detail"
+        assert image_type in ["geometry_detail", "geometry_coarse", "out_im_detail", "out_im_coarse"], f"Invalid image type: '{image_type}'"
+        # use subprocess to find all the image_type.png files in the out_folder, 
+        # and sort them. 
+        # vis_fnames = subprocess.check_output(["find", str(out_folder), "-name", f"{image_type}.png"])
         vis_fnames = sorted(list(out_folder.glob(f"**/{image_type}.png")))
         return vis_fnames
 
 
+    def _get_path_to_sequence_detections(self, sequence_id): 
+        return self._get_path_to_sequence_files(sequence_id, "detections")
+
+
     def _get_path_to_sequence_files(self, sequence_id, file_type, method="", suffix=""): 
         assert file_type in ['videos', 'detections', "landmarks", "segmentations", 
-            "emotions", "reconstructions", "results"]
+            "emotions", "reconstructions", "results", "audio"], f"'{file_type}' is not a valid file type"
         video_file = self.video_list[sequence_id]
         if len(method) > 0:
             file_type += "/" + method 
@@ -2516,3 +3271,15 @@ class TestFaceVideoDM(FaceVideoDataModule):
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(self.testdata, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
+
+
+
+def dict_to_device(d, device): 
+    for k, v in d.items():
+        if isinstance(v, torch.Tensor):
+            d[k] = v.to(device)
+        elif isinstance(v, dict):
+            d[k] = dict_to_device(v, device)
+        else: 
+            pass
+    return d
