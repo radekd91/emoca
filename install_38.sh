@@ -10,9 +10,10 @@ bash pull_submodules.sh
 echo "Installing mamba"
 conda install mamba -n base -c conda-forge
 echo "Creating conda environment"
-mamba env create python=3.8 --file conda-environment_py38_cu11_ubuntu.yml 
+mamba env create -n work38 python=3.8 
 eval "$(conda shell.bash hook)" # make sure conda works in the shell script
 conda activate work38
+mamba env update -n work38 --file conda-environment_py38_cu11_ubuntu.yml 
 echo "Installing GDL"
 pip install Cython==0.29
 pip install -e . 
