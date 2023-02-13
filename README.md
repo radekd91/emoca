@@ -121,8 +121,12 @@ but you can also use plain conda if you want (but it will be slower):
 conda env create python=3.8 --file conda-environment_py38_cu11_ubuntu.yml
 ```
 
+In case the specified pytorch version somehow did not install, try again manually: 
+```bash
+mamba install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+```
 
-Note: the environment might contain some packages. If you find an environment is missing then just `conda/mamba`- or  `pip`- install it and please notify me.
+Note: If you find the environment has a missing then just `conda/mamba`- or  `pip`- install it and please notify me.
 
 2) Activate the environment: 
 ```bash 
