@@ -9,7 +9,7 @@ then
     exit
 fi
 echo "Creating conda environment"
-mamba env create -n work38 python=3.8 
+mamba create -n work38 python=3.8 
 eval "$(conda shell.bash hook)" # make sure conda works in the shell script
 conda activate work38
 echo "Installing conda packages"
