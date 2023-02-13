@@ -12,6 +12,13 @@ echo "Creating conda environment"
 mamba create -n work38 python=3.8 
 eval "$(conda shell.bash hook)" # make sure conda works in the shell script
 conda activate work38
+if echo $CONDA_PREFIX | grep work38
+then
+    echo "Conda environment successfully activated"
+else
+    echo "Conda environment not activated. Probably it was not created successfully for some reason. Please activate the conda environment before running this script"
+    exit
+fi
 echo "Installing conda packages"
 mamba env update -n work38 --file conda-environment_py38_cu11_ubuntu.yml 
 echo "Installing GDL"
