@@ -27,12 +27,25 @@ def bbox2point(left, right, top, bottom, type='bbox'):
     '''
     if type == 'kpt68':
         old_size = (right - left + bottom - top) / 2 * 1.1
-        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
+        center_x = right - (right - left) / 2.0
+        center_y =  bottom - (bottom - top) / 2.0
+        # center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
     elif type == 'bbox':
         old_size = (right - left + bottom - top) / 2
-        center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size * 0.12])
+        center_x = right - (right - left) / 2.0 
+        center_y = bottom - (bottom - top) / 2.0 + old_size * 0.12
+        # center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size * 0.12])
+    elif type == "mediapipe":
+        old_size = (right - left + bottom - top) / 2 * 1.1
+        center_x = right - (right - left) / 2.0 
+        center_y = bottom - (bottom - top) / 2.0
+        # center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f" bbox2point not implemented for {type} ")
+    if isinstance(center_x, np.ndarray):
+        center = np.stack([center_x, center_y], axis=1)
+    else: 
+        center = np.array([center_x, center_y])
     return old_size, center
 
 
@@ -53,15 +66,31 @@ def point2transform(center, size, target_size_height, target_size_width):
     return tform
 
 
-def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True, landmarks=None):
+def bbpoint_warp(image, center, size, target_size_height, target_size_width=None, output_shape=None, inv=True, landmarks=None, 
+        order=3 # order of interpolation, bicubic by default
+        ):
     target_size_width = target_size_width or target_size_height
     tform = point2transform(center, size, target_size_height, target_size_width)
     tf = tform.inverse if inv else tform
     output_shape = output_shape or (target_size_height, target_size_width)
-    dst_image = warp(image, tf, output_shape=output_shape, order=3)
+    dst_image = warp(image, tf, output_shape=output_shape, order=order)
     if landmarks is None:
         return dst_image
     # points need the matrix
-    tf_lmk = tform if inv else tform.inverse
-    dst_landmarks = tf_lmk(landmarks)
+    if isinstance(landmarks, np.ndarray):
+        assert isinstance(landmarks, np.ndarray)
+        tf_lmk = tform if inv else tform.inverse
+        dst_landmarks = tf_lmk(landmarks[:, :2])
+    elif isinstance(landmarks, list): 
+        tf_lmk = tform if inv else tform.inverse
+        dst_landmarks = [] 
+        for i in range(len(landmarks)):
+            dst_landmarks += [tf_lmk(landmarks[i][:, :2])]
+    elif isinstance(landmarks, dict): 
+        tf_lmk = tform if inv else tform.inverse
+        dst_landmarks = {}
+        for key, value in landmarks.items():
+            dst_landmarks[key] = tf_lmk(landmarks[key][:, :2])
+    else: 
+        raise ValueError("landmarks must be np.ndarray, list or dict")
     return dst_image, dst_landmarks
