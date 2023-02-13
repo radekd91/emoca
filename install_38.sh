@@ -1,18 +1,18 @@
 #!/bin/bash
-if ! command -v mamba &> /dev/null
-then
-    echo "mamba could not be found. Please install mamba before running this script"
-    exit
-fi
-
 echo "Pulling submodules"
 bash pull_submodules.sh
 echo "Installing mamba"
 conda install mamba -n base -c conda-forge
+if ! command -v mamba &> /dev/null
+then
+    echo "mamba could not be found. The installation must have failed. Please install mamba before running this script."
+    exit
+fi
 echo "Creating conda environment"
 mamba env create -n work38 python=3.8 
 eval "$(conda shell.bash hook)" # make sure conda works in the shell script
 conda activate work38
+echo "Installing conda packages"
 mamba env update -n work38 --file conda-environment_py38_cu11_ubuntu.yml 
 echo "Installing GDL"
 pip install Cython==0.29
