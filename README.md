@@ -70,6 +70,8 @@ This is achieved by:
 
 You will have to upgrade to the new environment in order to use EMOCA v2. Please follow the steps bellow to install the package. Then, go to the [EMOCA](gdl_apps/EMOCA) subfolder and follow the steps described there.
 
+While using the new version of this repo is recommended, you can still access the old release [here](https://github.com/radekd91/emoca/tree/EMOCA-v1.0).
+
 ## EMOCA project 
 The training and testing script for EMOCA can be found in this subfolder: 
 
