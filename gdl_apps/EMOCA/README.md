@@ -35,6 +35,8 @@ The available models are:
 3) `EMOCA_v2_lr_cos_1.5` - EMOCA v2 trained with mediapipe landmarks and with the lip reading loss (cosine similarity on lip reading features, similarly to SPECTRE) 
 4) `EMOCA_v2_lr_mse_20` - (default) EMOCA v2 trained with mediapipe landmarks and with the lip reading loss (MSE on lip reading features)
 
+You can find the [comparison video here](https://download.is.tue.mpg.de/emoca/assets/emoca_v2_comparison.mp4)
+
 Notes: 
 The SPECTRE paper uses a cosine similarity metric on lip reading features for supervision. In practice, we found that the cosine similarity loss can sometimes be artifact prone (over-exaggerated lip motion). This is the `EMOCA_v2_lr_cos_1.5` model. We found the supervision by mean squared error metric to be more stable in this regard and hence we recommend using the `EMOCA_v2_lr_mse_20` model. If you find that even this one produces undesirable artifacts, we suggest using `EMOCA_v2_mp`, which does not use the lip reading loss but is still much better thatn the original `EMOCA` model.
 

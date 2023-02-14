@@ -63,12 +63,16 @@ Compared to the original model it produces:
 1) Much better lip and eye alignment 
 2) Much better lip articulation 
 
+You can find the [comparison video here](https://download.is.tue.mpg.de/emoca/assets/emoca_v2_comparison.mp4)
+
 This is achieved by: 
 1) Using a subset of mediapipe landmarks for mouth, eyes and eyebrows (as opposed to FAN landmarks that EMOCA v1 uses)
 2) Using absolute landmark loss in combination with the relative losses (as opposed to only relative landmark losses in EMOCA v1)
 3) Incorporating perceptual lip reading loss. Inspired by [spectre](https://filby89.github.io/spectre/). Big shout-out to these guys!
 
 You will have to upgrade to the new environment in order to use EMOCA v2. Please follow the steps bellow to install the package. Then, go to the [EMOCA](gdl_apps/EMOCA) subfolder and follow the steps described there.
+
+
 
 While using the new version of this repo is recommended, you can still access the old release [here](https://github.com/radekd91/emoca/tree/EMOCA-v1.0).
 
