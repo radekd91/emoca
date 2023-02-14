@@ -113,11 +113,11 @@ python training/train_expdeca.py emoca.yaml
 
 If you use this work in your publication, please cite the following publications:
 ```
-@inproceedings{EMOCA:CVPR:2022,
+@inproceedings{EMOCA:CVPR:2021,
   title = {{EMOCA}: {E}motion Driven Monocular Face Capture and Animation},
   author = {Danecek, Radek and Black, Michael J. and Bolkart, Timo},
   booktitle = {Conference on Computer Vision and Pattern Recognition (CVPR)},
-  pages = {},
+  pages = {20311--20322},
   year = {2022}
 }
 ```
