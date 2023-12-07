@@ -44,23 +44,26 @@ def save_images(batch, predictions, output_folder):
         img = img * 255
         img = img.astype(np.uint8)
 
-        plt.figure()
-        # plot the image with matplotlib 
-        plt.imshow(img)
+        # plt.figure()
+        # # plot the image with matplotlib 
+        # plt.imshow(img)
         # write valence and arousal to the image
         expr = AffectNetExpressions(int(top_expr[i].item()))
         text = "Predicted emotion:\n"
         text += f'Arousal: {predictions["arousal"][i].item():.2f} \nValence: {predictions["valence"][i].item():.2f}'
         text += f"\nExpression: {expr.name}, {softmax[i][expr.value].item()*100:.2f}%"
-        plt.title(text)
-        out_fname = Path(output_folder) / f"{batch['image_name'][i]}.png"
-        # save the image to the output folder
+
+        # plt.title(text)
+        # out_fname = Path(output_folder) / f"{batch['image_name'][i]}.png"
+        # # save the image to the output folder
+        # # axis off 
+        # plt.axis('off')
         
-        # axis off 
-        plt.axis('off')
-        
-        plt.savefig(out_fname)
-        plt.close()
+        # plt.savefig(out_fname)
+        # plt.close()
+
+        with open(Path(output_folder) / f"{batch['image_name'][i]}.txt", "w") as f:
+            f.write(text)
 
 
 def main():

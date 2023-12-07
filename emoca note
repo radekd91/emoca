@@ -1,0 +1,68 @@
+sudo apt 
+	update
+	install g++ gcc git ffmpeg
+cài driver nvidia (có thể dùng trong additional driver có sẵn của Ubuntu, chọn bản của Nvidia (k phải bản open và server))	
+
+git clone https://github.com/radekd91/emoca.git
+
+bash install38.sh
+
+cài cython
+	sudo apt-get install libssl-dev
+	pip install Cython==0.29.14
+cài (lại)
+	pip install -r requirements38.txt
+	pip install numpy==1.23.5 pandas opencv-python==4.5.1.48 scikit-video ffmpeg-python chardet face-alignment==1.3.4
+
+
+cài đúng với bản cuda (đang dùng 11.7, 11.8)
+	cudatoolkit (conda)
+	torch (1.13.1 trên trang chủ)
+	
+	pytorch3d (0.7.4, chú ý các requirement trên github page) 
+		pip uninstall pytorch3d
+		FORCE_CUDA=1 pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+		(pip install --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/		 packaging/wheels/py38_cu113_pyt1110/download.html)
+
+
+
+
+Fix lỗi:
+	AttributeError: _2D:
+		đã sửa bằng cách thay pban face-alignment == 1.3.4
+	import pytorch3d.utils lỗi _C
+	ImportError: libc10_cuda.so: cannot open shared object file: No such file or directory
+		cài lại pytorch3d
+		FORCE_CUDA=1 pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+	khi test torch.cuda.is_available() = false
+		sudo rmmod nvidia_uvm
+		sudo modprobe nvidia_uvm
+
+
+EmotionRecognition:
+
+nếu gặp lỗi lúc chạy (như CUBLAS_NOT_SUPPORTED ...)
+	unset LD_LIBRARY_PATH
+	
+nếu cần chạy EmotionRecognition:
+	chạy download_assets trong demos hoặc:
+		tải trên trang chủ emoca bộ model
+			bỏ vào emoca/assets/
+				/face_reconstruction_based/ với emoca
+				/image_based_networks/ với resnet,...
+	sửa là tạm thời, ko chắc chắn !
+	để chạy resnet50
+		sửa trong file gdl/module/EmoCnnModule.py:
+			dòng 69 thay thành 
+				load_state_dict(self.backbone, "/home/huy/emoca/assets/FaceRecognition/resnet50_ft_weight.pkl") 
+		
+		chạy (vd):
+			python demos/test_emotion_recognition_on_images.py --input_folder /home/huy/emoca/gdl_apps/EMOCA/output/vid5/EMOCA_v2_lr_mse_20/processed_2023_Jul_11_17-43-09/vid5/detections --output_folder output/vid5  --model_type image --model_name ResNet50
+			
+	để chạy EMOCA-emorec
+		sửa trong file cfg.yaml của EMOCA-emorec, đoạn load path của model
+			dòng 82-89, sửa path cho đúng /home/<USERNAME>/emoca/assets/...
+		sửa trong file gdl/models/EmoDeca.py
+			56-62 chuyển thành 1 trường hợp luôn làm
+			self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test")
+

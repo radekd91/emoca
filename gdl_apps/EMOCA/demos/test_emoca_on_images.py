@@ -62,7 +62,7 @@ def main():
     emoca.eval()
 
     # 2) Create a dataset
-    dataset = TestData(input_folder, face_detector="fan", max_detection=20)
+    dataset = TestData(input_folder, face_detector="fan", max_detection=20,scaling_factor=0.5)
 
     ## 4) Run the model on the data
     for i in auto.tqdm( range(len(dataset))):

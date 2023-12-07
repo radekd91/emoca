@@ -53,14 +53,16 @@ class EmoDECA(EmotionRecognitionBaseModule):
             "inout_params": config.model.deca_cfg.inout,
             "stage_name": "testing",
         }
-        # instantiate the face net
-        if bool(deca_checkpoint):
-            self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test", deca_checkpoint, deca_checkpoint_kwargs)
-            self.deca.inout_params.full_run_dir = config.inout.full_run_dir
-            self._setup_deca(False)
-        else: 
-            self.deca = None
-
+        # # instantiate the face net
+        # if bool(deca_checkpoint):
+        #     self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test", deca_checkpoint, deca_checkpoint_kwargs)
+        #     self.deca.inout_params.full_run_dir = config.inout.full_run_dir
+        #     self._setup_deca(False)
+        # else: 
+        #     self.deca = None
+        self.deca = instantiate_deca(config.model.deca_cfg, deca_stage , "test")
+        self.deca.inout_params.full_run_dir = config.inout.full_run_dir
+        self._setup_deca(False)
         # which latent codes are being used
         in_size = 0
         if self.config.model.use_identity:
