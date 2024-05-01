@@ -21,6 +21,8 @@
 
 This repository is the official implementation of the [CVPR 2022](https://cvpr2022.thecvf.com/) paper [EMOCA: Emotion-Driven Monocular Face Capture and Animation](https://ps.is.mpg.de/uploads_file/attachment/attachment/686/EMOCA__CVPR22.pdf). 
 
+EMOCA is now DEPRECATED! For a better face reconstruction method, please go to the new [inferno](https://github.com/radekd91/emoca) library.
+
 
 
   <!-- 
