@@ -47,9 +47,9 @@ def load_configs(run_path):
 
 
 
-def replace_asset_dirs(cfg, output_dir : Path, ): 
+def replace_asset_dirs(cfg, output_dir : Path, deca_checkpoint_path : Path = None):
     asset_dir = get_path_to_assets()
-    if 'deca_cfg' in cfg.keys():
+    if 'deca_cfg' in cfg.model.keys():
         # cfg.model.deca_cfg.inout.output_dir = str(output_dir.parent)
         # cfg.model.deca_cfg.inout.full_run_dir = str(output_dir / mode)
         # cfg.model.deca_cfg.inout.checkpoint_dir = str(output_dir / mode / "checkpoints")
@@ -70,6 +70,12 @@ def replace_asset_dirs(cfg, output_dir : Path, ):
         # cfg.model.emonet_model_path = str(asset_dir /  "EmotionRecognition/image_based_networks/ResNet50")
         cfg.model.deca_cfg.model.emonet_model_path = ""
 
+        if not bool(cfg.model.deca_checkpoint):
+            if deca_checkpoint_path is not None:
+                cfg.model.deca_checkpoint = str(deca_checkpoint_path)
+            else:
+                print("[WARNING] Pointing the EMOCA-based emotion recognition model to the original EMOCA version")
+                cfg.model.deca_checkpoint = str(asset_dir / "EMOCA/models/EMOCA/detail/checkpoints/deca-epoch=03-val_loss/dataloader_idx_0=9.44489288.ckpt")
     return cfg
 
 
